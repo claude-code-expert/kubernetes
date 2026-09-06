@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow193" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-stage { font-size: 11px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-stage" x="120" y="34" text-anchor="middle">리포지터리</text>
+  <rect class="box" x="20" y="46" width="200" height="80" rx="4"/>
+  <text class="t-title" x="120" y="72" text-anchor="middle">OpenSSF Scorecard</text>
+  <text class="t-sub" x="120" y="92" text-anchor="middle">의존성 리포의 보안 태세를</text>
+  <text class="t-sub" x="120" y="106" text-anchor="middle">0~10점으로 평가</text>
+
+  <line class="line" x1="220" y1="86" x2="256" y2="86" marker-end="url(#arrow193)"/>
+
+  <text class="t-stage" x="360" y="34" text-anchor="middle">빌드 (5장 CI)</text>
+  <rect class="box" x="260" y="46" width="200" height="80" rx="4"/>
+  <text class="t-title" x="360" y="72" text-anchor="middle">넌루트 · 무배포 이미지</text>
+  <text class="t-sub" x="360" y="92" text-anchor="middle">멀티스테이지 빌드</text>
+  <text class="t-sub" x="360" y="106" text-anchor="middle">(5장 복습)</text>
+
+  <line class="line" x1="460" y1="86" x2="496" y2="86" marker-end="url(#arrow193)"/>
+
+  <text class="t-stage" x="600" y="34" text-anchor="middle">스캔 (CI)</text>
+  <rect class="box" x="500" y="46" width="200" height="80" rx="4"/>
+  <text class="t-title" x="600" y="72" text-anchor="middle">Trivy</text>
+  <text class="t-sub" x="600" y="92" text-anchor="middle">이미지 취약점 베이스라인</text>
+  <text class="t-sub" x="600" y="106" text-anchor="middle">결과 기반 배포 정책 수립</text>
+
+  <line class="line" x1="700" y1="86" x2="736" y2="86" marker-end="url(#arrow193)"/>
+
+  <text class="t-stage" x="820" y="34" text-anchor="middle">서명 (5장)</text>
+  <rect class="box-accent" x="740" y="46" width="150" height="80" rx="4"/>
+  <text class="t-title" x="815" y="72" text-anchor="middle">SLSA + Cosign</text>
+  <text class="t-sub" x="815" y="92" text-anchor="middle">레벨 1부터 시작</text>
+  <text class="t-sub" x="815" y="106" text-anchor="middle">서명·SBOM</text>
+
+  <line class="line" x1="815" y1="126" x2="815" y2="156"/>
+  <line class="line" x1="120" y1="126" x2="120" y2="156"/>
+  <line class="line" x1="120" y1="156" x2="815" y2="156"/>
+  <line class="line" x1="467" y1="156" x2="467" y2="192" marker-end="url(#arrow193)"/>
+
+  <rect class="box-accent" x="267" y="196" width="400" height="80" rx="6"/>
+  <text class="t-title" x="467" y="222" text-anchor="middle">클러스터 진입</text>
+  <text class="t-sub" x="467" y="244" text-anchor="middle">11장 정책 엔진(Kyverno·VAP)이 서명·스캔 결과를 검사</text>
+  <text class="t-sub" x="467" y="260" text-anchor="middle">17장 어드미션 단계에서 최종 관문</text>
+
+  <text class="t-cap" x="450" y="304" text-anchor="middle">코드 보안의 목표는 하나 — 검증되지 않은 이미지가 애초에 어드미션을 통과하지 못하게 앞 단계에서 걸러내는 것.</text>
+</svg>

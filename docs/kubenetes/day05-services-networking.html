@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D5 · 파드 IP는 바뀐다 — 서비스와 클러스터 안 네트워크의 실제 경로</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D4와 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 2단계 배포와 노출 · Day 5</p>
+  <h1>파드 IP는 바뀐다 — 서비스와 클러스터 안 네트워크의 실제 경로</h1>
+  <p class="lede">어제 파드 4개에 IP가 4개 있었고, 지우면 다 바뀌었다. 오늘은 그 앞에 고정된 이름과 주소를 하나 세운다. 그 주소는 실체가 없는 가상 IP다. 프록시 서버가 있는 게 아니라 커널의 주소 변환과 CNI의 배달만 있다. 이걸 알아야 "왜 port-forward는 한 파드로만 가는가", "왜 이름이 안 풀리는가"에 답할 수 있다. 클러스터를 3노드로 늘려 다른 노드의 파드까지 요청이 가는 것을 확인하고, 두 번째 앱 <code>gateway</code>를 올려 서비스 이름으로 호출한다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 45분 · 따라하기 75분</b></span>
+    <span>전제 <b>D4 완료 · order-api:v2 이미지 · ~/k8s-study/day04/order-api-deploy.yaml</b></span>
+    <span>버전 <b>Kubernetes v1.36 · Spring Cloud 2025.1.2 · Gateway Server WebFlux</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>ClusterIP 서비스를 만들고, 같은 이름으로 반복 호출했을 때 응답 호스트명이 여러 파드로 분산되는 것을 보인다.</li>
+    <li>서비스 이름이 IP로 풀리는 과정을 <code>nslookup</code>과 <code>/etc/resolv.conf</code>로 설명하고, 다른 네임스페이스에서 FQDN이 필요한 이유를 말한다.</li>
+    <li>EndpointSlice가 비어 있는 서비스를 <code>describe</code>와 <code>get endpointslices</code>로 진단한다.</li>
+    <li>kube-proxy 규칙에서 서비스 IP가 파드 IP로 바뀌는 줄을 찾고, 노드의 라우팅 테이블에서 다른 노드의 파드 CIDR로 가는 경로를 찾는다.</li>
+    <li>LoadBalancer 서비스로 <code>localhost</code>에서 앱에 접속하고, <code>gateway → order-api</code> 호출이 다른 노드의 파드까지 도달함을 증명한다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+  <p class="sub">서비스가 무엇을 고정하는지, 네 가지 타입, 이름이 풀리는 규칙, 그리고 요청 하나가 실제로 지나는 경로.</p>
+
+  <h3>1.1 서비스는 이름과 가상 IP를 고정한다</h3>
+  <p><dfn title="Service">서비스(Service)</dfn>는 라벨 셀렉터로 고른 파드 집합에 <b>고정 이름</b>과 <b>고정 가상 IP</b>(ClusterIP)를 준다. 파드가 죽고 새로 생겨 IP가 바뀌어도 서비스 IP는 그대로다. 호출하는 쪽은 파드 IP를 몰라도 되고 알아서도 안 된다.</p>
+  <p>서비스와 파드 사이에는 <dfn title="EndpointSlice">엔드포인트슬라이스(EndpointSlice)</dfn>가 있다. 컨트롤러가 셀렉터에 맞는 파드의 IP·포트 목록을 이 오브젝트에 계속 갱신한다. 서비스 IP로 온 요청은 이 목록 중 하나로 보내진다. 셀렉터가 틀리면 목록이 비고, 요청은 갈 곳이 없다. 오류 메시지 없이.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 250" width="100%" role="img" aria-label="서비스, 엔드포인트슬라이스, 파드의 관계">
+    <rect x="20" y="70" width="200" height="90" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="32" y="94" font-size="12" font-weight="600" fill="#6d28d9">Service order-api</text>
+    <text x="32" y="114" class="mono" font-size="11" fill="#4a4a4a">ClusterIP 10.96.34.18</text>
+    <text x="32" y="130" class="mono" font-size="11" fill="#4a4a4a">port 8080 → targetPort 8080</text>
+    <text x="32" y="148" class="mono" font-size="11" fill="#6d28d9">selector: app=order-api</text>
+    <text x="20" y="184" font-size="11" fill="#767676">가상 IP · 프로세스 없음</text>
+    <line x1="220" y1="115" x2="296" y2="115" stroke="#767676" stroke-width="1.2"/><polygon points="296,111 304,115 296,119" fill="#767676"/>
+    <text x="226" y="106" font-size="10" fill="#767676">컨트롤러가 갱신</text>
+    <rect x="306" y="70" width="230" height="90" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="318" y="94" font-size="12" font-weight="600" fill="#1d4ed8">EndpointSlice order-api-xxxx</text>
+    <text x="318" y="114" class="mono" font-size="11" fill="#4a4a4a">10.244.1.5:8080  ready</text>
+    <text x="318" y="130" class="mono" font-size="11" fill="#4a4a4a">10.244.2.7:8080  ready</text>
+    <text x="318" y="146" class="mono" font-size="11" fill="#4a4a4a">10.244.2.8:8080  ready</text>
+    <text x="306" y="184" font-size="11" fill="#767676">셀렉터에 맞는 파드의 IP 목록</text>
+    <line x1="536" y1="95" x2="612" y2="55" stroke="#1d4ed8" stroke-width="1.2"/>
+    <line x1="536" y1="115" x2="612" y2="125" stroke="#1d4ed8" stroke-width="1.2"/>
+    <line x1="536" y1="135" x2="612" y2="195" stroke="#1d4ed8" stroke-width="1.2"/>
+    <rect x="620" y="30" width="180" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="632" y="50" font-size="12" fill="#15803d">order-api-…-k2p8n</text><text x="632" y="68" class="mono" font-size="11" fill="#4a4a4a">10.244.1.5 · 노드 worker</text>
+    <rect x="620" y="100" width="180" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="632" y="120" font-size="12" fill="#15803d">order-api-…-q7w3m</text><text x="632" y="138" class="mono" font-size="11" fill="#4a4a4a">10.244.2.7 · 노드 worker2</text>
+    <rect x="620" y="170" width="180" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="632" y="190" font-size="12" fill="#15803d">order-api-…-z9c4v</text><text x="632" y="208" class="mono" font-size="11" fill="#4a4a4a">10.244.2.8 · 노드 worker2</text>
+    <text x="810" y="120" font-size="10" fill="#767676">app=order-api</text>
+  </svg>
+  <figcaption>도판 1. 보라 점선=서비스(가상, 실체 없음), 파랑=엔드포인트슬라이스(실제 목록), 초록=파드. 파드가 바뀌면 가운데 목록만 바뀐다.</figcaption>
+  </figure>
+
+  <h3>1.2 네 가지 타입</h3>
+  <table>
+    <thead><tr><th style="width:130px">type</th><th>무엇이 열리나</th><th style="width:250px">이 환경에서</th></tr></thead>
+    <tbody>
+      <tr><td><code>ClusterIP</code></td><td>클러스터 안에서만 닿는 가상 IP. 기본값. 파드끼리 부를 때 쓴다.</td><td>기본. 밖에서는 port-forward로만</td></tr>
+      <tr><td><code>NodePort</code></td><td>ClusterIP에 더해 <b>모든 노드</b>의 같은 포트(30000~32767)를 연다. 어느 노드로 들어와도 서비스로 간다.</td><td>노드 컨테이너끼리는 닿는다. macOS에서 직접은 보장 안 됨</td></tr>
+      <tr><td><code>LoadBalancer</code></td><td>NodePort에 더해 외부 로드밸런서를 요청한다. 클라우드에서는 클라우드 LB, 로컬에서는 구현체가 있어야 한다.</td><td>Docker Desktop이 <code>localhost</code>로 열어 준다</td></tr>
+      <tr><td><code>ExternalName</code></td><td>IP 없이 DNS CNAME만 만든다. 클러스터 밖 주소에 클러스터 안 이름을 붙일 때.</td><td>오늘은 안 씀 (D14 지도)</td></tr>
+    </tbody>
+  </table>
+  <p>세 타입은 층층이 쌓인다. LoadBalancer 서비스도 ClusterIP와 NodePort를 함께 가진다. 그리고 <code>clusterIP: None</code>으로 만드는 <dfn title="headless">헤드리스(headless)</dfn> 서비스는 가상 IP 없이 DNS가 파드 IP들을 직접 돌려준다. 파드를 개별로 지목해야 하는 스테이트풀셋(D9)이 쓴다.</p>
+
+  <h3>1.3 이름이 풀리는 규칙</h3>
+  <p>D2에서 본 <code>coredns</code> 파드가 클러스터 DNS다. 서비스마다 <code>&lt;서비스&gt;.&lt;네임스페이스&gt;.svc.cluster.local</code>이라는 이름이 생기고, 그 이름은 ClusterIP로 풀린다. 파드의 <code>/etc/resolv.conf</code>에는 kubelet이 넣어 준 검색 목록(<code>search study.svc.cluster.local svc.cluster.local cluster.local</code>)이 있어서, 같은 네임스페이스면 <code>order-api</code>만 쳐도 첫 항목이 붙어 풀린다. 다른 네임스페이스의 서비스는 <code>order-api.study</code>처럼 최소 네임스페이스까지 적어야 한다.</p>
+
+  <h3>1.4 요청 하나가 지나는 실제 경로</h3>
+  <p>서비스 IP에는 프로세스가 없다. 그 IP로 보낸 패킷을 파드 IP로 바꾸는 것은 각 노드의 <code>kube-proxy</code>가 커널에 써 넣은 규칙(iptables 또는 nftables)이다. 바뀐 패킷을 다른 노드의 파드까지 실어 나르는 것은 CNI 플러그인(<code>kindnet</code>)이 만든 라우팅이다. 컨트롤 플레인은 이 경로에 개입하지 않는다. API 서버가 죽어도 이미 만들어진 규칙은 동작한다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 400" width="100%" role="img" aria-label="gateway 파드가 order-api 서비스를 부를 때의 실제 경로">
+    <!-- control plane -->
+    <rect x="20" y="16" width="860" height="60" rx="4" fill="#f7f7f7" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="34" y="36" font-size="12" font-weight="600" fill="#4a4a4a">컨트롤 플레인</text>
+    <text x="34" y="60" font-size="11" fill="#767676">kube-apiserver · etcd · 스케줄러 · 컨트롤러 매니저 — 이 경로에 개입하지 않는다 (규칙을 만들 때만 관여)</text>
+    <!-- CoreDNS & Service -->
+    <rect x="300" y="96" width="230" height="46" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="312" y="116" font-size="12" font-weight="600" fill="#6d28d9">CoreDNS</text>
+    <text x="312" y="134" class="mono" font-size="11" fill="#4a4a4a">order-api → 10.96.34.18</text>
+    <rect x="610" y="96" width="270" height="46" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="622" y="116" font-size="12" font-weight="600" fill="#6d28d9">Service order-api</text>
+    <text x="622" y="134" class="mono" font-size="11" fill="#4a4a4a">가상 IP 10.96.34.18 · 실체 없음</text>
+    <!-- node worker -->
+    <rect x="20" y="160" width="410" height="220" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="34" y="182" font-size="12" font-weight="600" fill="#1d4ed8">노드 worker</text><text x="140" y="182" class="mono" font-size="11" fill="#4a4a4a">192.168.97.3 · podCIDR 10.244.1.0/24</text>
+    <rect x="34" y="196" width="170" height="46" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="46" y="216" font-size="12" font-weight="600" fill="#15803d">gateway 파드</text><text x="46" y="234" class="mono" font-size="11" fill="#4a4a4a">10.244.1.9</text>
+    <rect x="34" y="262" width="380" height="46" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="46" y="282" font-size="12" font-weight="600" fill="#6d28d9">kube-proxy 규칙 (커널 DNAT)</text><text x="46" y="300" class="mono" font-size="11" fill="#4a4a4a">dst 10.96.34.18:8080 → 10.244.2.7:8080</text>
+    <rect x="34" y="322" width="380" height="46" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="46" y="342" font-size="12" font-weight="600" fill="#6d28d9">CNI 라우팅</text><text x="46" y="360" class="mono" font-size="11" fill="#4a4a4a">10.244.2.0/24 via 192.168.97.4</text>
+    <!-- node worker2 -->
+    <rect x="470" y="160" width="410" height="220" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="484" y="182" font-size="12" font-weight="600" fill="#1d4ed8">노드 worker2</text><text x="596" y="182" class="mono" font-size="11" fill="#4a4a4a">192.168.97.4 · podCIDR 10.244.2.0/24</text>
+    <rect x="484" y="196" width="180" height="46" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="496" y="216" font-size="12" font-weight="600" fill="#15803d">order-api 파드</text><text x="496" y="234" class="mono" font-size="11" fill="#4a4a4a">10.244.2.7</text>
+    <rect x="684" y="196" width="180" height="46" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="696" y="216" font-size="12" font-weight="600" fill="#15803d">order-api 파드</text><text x="696" y="234" class="mono" font-size="11" fill="#4a4a4a">10.244.2.8</text>
+    <rect x="484" y="262" width="380" height="46" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="496" y="282" font-size="12" font-weight="600" fill="#6d28d9">CNI · 파드로 전달</text><text x="496" y="300" class="mono" font-size="11" fill="#4a4a4a">10.244.2.7 → veth → 파드</text>
+    <rect x="484" y="322" width="380" height="46" rx="3" fill="#fff" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="496" y="342" font-size="12" fill="#4a4a4a">kube-proxy 규칙 (같은 규칙을 모든 노드가 가짐)</text>
+    <!-- arrows with sequence -->
+    <line x1="204" y1="210" x2="298" y2="130" stroke="#767676" stroke-width="1.2"/><polygon points="292,130 300,127 296,136" fill="#767676"/>
+    <circle cx="268" cy="152" r="9" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="264" y="156" font-size="10" fill="#c2410c">1</text>
+    <line x1="120" y1="242" x2="120" y2="262" stroke="#767676" stroke-width="1.2"/><polygon points="116,256 120,264 124,256" fill="#767676"/>
+    <circle cx="140" cy="252" r="9" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="136" y="256" font-size="10" fill="#c2410c">2</text>
+    <line x1="120" y1="308" x2="120" y2="322" stroke="#767676" stroke-width="1.2"/><polygon points="116,316 120,324 124,316" fill="#767676"/>
+    <circle cx="140" cy="315" r="9" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="136" y="319" font-size="10" fill="#c2410c">3</text>
+    <line x1="414" y1="345" x2="484" y2="285" stroke="#767676" stroke-width="1.2"/><polygon points="478,284 486,283 482,292" fill="#767676"/>
+    <circle cx="450" cy="325" r="9" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="446" y="329" font-size="10" fill="#c2410c">4</text>
+    <line x1="574" y1="262" x2="574" y2="242" stroke="#767676" stroke-width="1.2"/><polygon points="570,248 574,240 578,248" fill="#767676"/>
+    <circle cx="594" cy="252" r="9" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="590" y="256" font-size="10" fill="#c2410c">5</text>
+    <line x1="745" y1="142" x2="745" y2="160" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="20" y="396" font-size="11" fill="#767676">① 이름 조회 ② 커널이 목적지 주소를 파드 IP로 변환 ③ 라우팅 테이블로 노드 선택 ④ 노드 간 이동 ⑤ 파드 도착. 프록시 프로세스는 어디에도 없다.</text>
+  </svg>
+  <figcaption>도판 2. 보라=네트워크 경로 요소, 초록=파드, 파랑=노드, 주황=순서. 서비스 오브젝트는 점선이다. 패킷은 거기를 지나지 않는다.</figcaption>
+  </figure>
+
+  <h3>1.5 CNI가 하는 일</h3>
+  <p><dfn title="Container Network Interface">CNI(Container Network Interface)</dfn> 플러그인은 두 가지를 맡는다. 파드가 생길 때 네트워크 인터페이스를 만들어 노드의 파드 CIDR에서 IP를 하나 주는 것, 그리고 노드끼리 "저 CIDR은 저 노드로"라는 경로를 유지하는 것. kind의 기본 플러그인 <code>kindnet</code>은 노드마다 <code>/24</code>를 하나씩 배정하고(<code>10.244.0.0/24</code>, <code>10.244.1.0/24</code>, …) 각 노드의 라우팅 테이블에 다른 노드의 CIDR을 그 노드 IP 경유로 적는다. 오버레이 터널도 NAT도 없다. 모든 파드 IP는 클러스터 안 어디서든 직접 닿는다. 이것이 쿠버네티스 네트워크 모델의 요구 사항이고, 플러그인마다 구현 방식만 다르다.</p>
+
+  <h3>1.6 Docker Desktop이 LoadBalancer를 여는 방식</h3>
+  <p>클라우드가 없으니 로드밸런서도 없어야 하지만, D2에서 본 <code>desktop-cloud-provider-kind</code> 컨테이너가 그 역할을 흉내 낸다. LoadBalancer 서비스가 생기면 Envoy 프록시를 하나 띄워 노드의 NodePort로 보내고, 그 포트를 macOS의 <code>localhost</code>로 포워딩한다. <code>kubectl get svc</code>의 EXTERNAL-IP에 <code>localhost</code>가 찍히면 된 것이다. 같은 포트를 두 서비스가 요구하면 두 번째는 <code>&lt;pending&gt;</code>에 머문다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · 클러스터를 3노드로</h2>
+  <p class="sub">노드 수를 바꾸면 클러스터가 다시 만들어진다. 어제까지의 리소스가 사라지므로 파일로 다시 올린다. 그래서 파일이 원본이어야 했다.</p>
+
+  <h3>2.1 노드 수 변경</h3>
+  <ol>
+    <li>Docker Desktop → <b>Kubernetes</b> 화면 → <b>Edit cluster</b>.</li>
+    <li>Node count를 <b>3</b>으로. 버전은 그대로(v1.36.x). Show system containers는 켠 채로.</li>
+    <li>적용. 기존 클러스터가 삭제되고 새로 만들어진다(약 1분).</li>
+  </ol>
+<pre><code><span class="p">$</span> kubectl config use-context docker-desktop
+<span class="p">$</span> kubectl get nodes
+<span class="c">NAME                    STATUS   ROLES           AGE   VERSION
+desktop-control-plane   Ready    control-plane   90s   v1.36.4
+desktop-worker          Ready    &lt;none&gt;          60s   v1.36.4
+desktop-worker2         Ready    &lt;none&gt;          60s   v1.36.4</span>
+
+<span class="p">$</span> docker ps --format '{{.Names}}' | grep desktop-
+<span class="c">desktop-worker2
+desktop-worker
+desktop-control-plane
+desktop-cloud-provider-kind
+desktop-containerd-registry-mirror</span>
+
+<span class="p">$</span> kubectl describe node desktop-control-plane | grep -A1 '^Taints'
+<span class="c">Taints:             node-role.kubernetes.io/control-plane:NoSchedule</span></code></pre>
+  <p class="expect"><b>읽을 것</b> — 노드 컨테이너가 3개다. 컨트롤 플레인 노드에 <code>NoSchedule</code> 테인트가 있으면 일반 파드는 워커 2대에만 놓인다(D8에서 다룬다). 테인트가 없다면 셋 다에 놓인다. 어느 쪽이든 이후 실습은 동일하다.</p>
+
+  <h3>2.2 어제 상태 복원</h3>
+<pre><code><span class="p">$</span> cd ~/k8s-study
+<span class="p">$</span> kubectl apply -f day03/ns-study.yaml
+<span class="p">$</span> kubectl config set-context --current --namespace=study
+<span class="p">$</span> kubectl apply -f day04/order-api-deploy.yaml
+<span class="p">$</span> kubectl rollout status deployment/order-api
+<span class="c">deployment "order-api" successfully rolled out</span>
+<span class="p">$</span> kubectl get pods -o wide -l app=order-api
+<span class="c">NAME                         READY   STATUS    RESTARTS   AGE   IP           NODE              ...
+order-api-5b8d7c9f2-k2p8n    1/1     Running   0          40s   10.244.1.5   desktop-worker
+order-api-5b8d7c9f2-q7w3m    1/1     Running   0          40s   10.244.2.7   desktop-worker2
+order-api-5b8d7c9f2-z9c4v    1/1     Running   0          40s   10.244.2.8   desktop-worker2
+order-api-5b8d7c9f2-a1b2c    1/1     Running   0          40s   10.244.1.6   desktop-worker</span>
+
+<span class="p">$</span> mkdir -p day05 &amp;&amp; cd day05</code></pre>
+  <p class="expect"><b>읽을 것</b> — 파일 세 개로 어제 상태가 돌아왔다. 이미지 <code>order-api:v2</code>는 호스트 스토어에 남아 있어 새 노드들이 미러로 받았다. 파드 IP의 세 번째 자리가 노드마다 다르다(<code>10.244.1.x</code>는 worker, <code>10.244.2.x</code>는 worker2). 1.5절의 노드별 CIDR이다. Headlamp가 필요하면 D3 7단계를 다시 실행한다(2분).</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>ClusterIP: 이름 하나로 파드 넷을 부른다</h3>
+    <p class="why">서비스를 만들고, 클러스터 안의 임시 파드에서 같은 이름을 반복 호출한다.</p>
+<pre><code><span class="p">$</span> cat &gt; order-api-svc.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+spec:
+  selector:
+    app: order-api
+  ports:
+  - port: 8080
+    targetPort: 8080
+EOF
+<span class="p">$</span> kubectl apply -f order-api-svc.yaml
+<span class="p">$</span> kubectl get svc order-api
+<span class="c">NAME        TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+order-api   ClusterIP   10.96.34.18   &lt;none&gt;        8080/TCP   5s</span>
+
+<span class="p">$</span> kubectl get endpointslices -l kubernetes.io/service-name=order-api
+<span class="c">NAME              ADDRESSTYPE   PORTS   ENDPOINTS                                   AGE
+order-api-7xk2m   IPv4          8080    10.244.1.5,10.244.2.7,10.244.2.8 + 1 more   5s</span>
+
+<span class="p">$</span> kubectl run client --image=alpine:3.24 --restart=Never -- sleep 3600
+<span class="p">$</span> kubectl wait --for=condition=Ready pod/client
+<span class="p">$</span> kubectl exec client -- sh -c 'for i in 1 2 3 4 5 6; do wget -qO- http://order-api:8080/; done'
+<span class="c">order-api v2 on order-api-5b8d7c9f2-q7w3m
+order-api v2 on order-api-5b8d7c9f2-k2p8n
+order-api v2 on order-api-5b8d7c9f2-z9c4v
+order-api v2 on order-api-5b8d7c9f2-q7w3m
+order-api v2 on order-api-5b8d7c9f2-a1b2c
+order-api v2 on order-api-5b8d7c9f2-k2p8n</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 엔드포인트슬라이스에 파드 IP 4개가 들어 있고, 같은 이름을 여섯 번 불렀는데 호스트명이 바뀐다. 분배 순서는 무작위에 가깝다(iptables 모드는 확률 기반). <code>port</code>는 서비스가 여는 포트, <code>targetPort</code>는 파드 컨테이너의 포트다. 둘이 같아도 따로 적는 습관을 들인다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>DNS: 이름이 풀리는 과정</h3>
+    <p class="why">1.3절의 검색 목록을 파드 안에서 직접 본다.</p>
+<pre><code><span class="p">$</span> kubectl exec client -- cat /etc/resolv.conf
+<span class="c">search study.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.96.0.10
+options ndots:5</span>
+
+<span class="p">$</span> kubectl get svc -n kube-system kube-dns
+<span class="c">NAME       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)                  AGE
+kube-dns   ClusterIP   10.96.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   8m</span>
+
+<span class="p">$</span> kubectl exec client -- nslookup order-api
+<span class="c">Server:    10.96.0.10
+Address 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local
+
+Name:      order-api
+Address 1: 10.96.34.18 order-api.study.svc.cluster.local</span>
+
+<span class="p">$</span> kubectl exec client -- nslookup order-api.study.svc.cluster.local | tail -2
+<span class="c">Name:      order-api.study.svc.cluster.local
+Address 1: 10.96.34.18 order-api.study.svc.cluster.local</span>
+
+<span class="c"># 다른 네임스페이스에서는 짧은 이름이 안 풀린다</span>
+<span class="p">$</span> kubectl run client-default -n default --image=alpine:3.24 --restart=Never -- sleep 3600
+<span class="p">$</span> kubectl wait -n default --for=condition=Ready pod/client-default
+<span class="p">$</span> kubectl exec -n default client-default -- nslookup order-api 2&gt;&amp;1 | tail -1
+<span class="c">nslookup: can't resolve 'order-api': Name does not resolve</span>
+<span class="p">$</span> kubectl exec -n default client-default -- wget -qO- http://order-api.study:8080/
+<span class="c">order-api v2 on order-api-5b8d7c9f2-z9c4v</span>
+<span class="p">$</span> kubectl delete pod client-default -n default --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — nameserver <code>10.96.0.10</code>은 <code>kube-dns</code> 서비스의 ClusterIP이고, 그 뒤에 D2의 coredns 파드 둘이 있다. DNS 자체도 서비스로 노출된 파드다. 검색 목록의 첫 항목이 내 네임스페이스라서 <code>order-api</code>가 <code>order-api.study.svc.cluster.local</code>로 완성됐다. default 네임스페이스의 파드는 첫 항목이 <code>default.svc.cluster.local</code>이므로 <code>order-api.study</code>까지 적어야 한다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>엔드포인트는 살아 움직인다</h3>
+    <p class="why">파드를 지우고 새로 생기는 동안 목록이 갱신되는 것을 본다. 터미널 A에서 <code>kubectl get endpointslices -l kubernetes.io/service-name=order-api -w</code>를 켜 둔다.</p>
+<pre><code><span class="p">$</span> kubectl delete pod -l app=order-api --wait=false
+<span class="p">$</span> sleep 8 &amp;&amp; kubectl get endpointslices -l kubernetes.io/service-name=order-api
+<span class="c">NAME              ADDRESSTYPE   PORTS   ENDPOINTS                                      AGE
+order-api-7xk2m   IPv4          8080    10.244.1.7,10.244.2.9,10.244.2.10 + 1 more     6m</span>
+<span class="p">$</span> kubectl exec client -- wget -qO- http://order-api:8080/
+<span class="c">order-api v2 on order-api-5b8d7c9f2-n8v3x</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 터미널 A에 슬라이스가 여러 번 갱신됐다. 파드 IP가 전부 바뀌었지만(<code>10.244.1.7</code>…) 서비스 IP와 이름은 그대로이고 호출은 계속 된다. 호출하는 쪽은 아무것도 바꾸지 않았다. 이것이 서비스가 존재하는 이유다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>고장: 셀렉터 오타로 목록이 빈다</h3>
+    <p class="why">가장 흔한 서비스 장애. 오류가 없다는 것이 이 장애의 특징이다.</p>
+<pre><code><span class="p">$</span> sed 's/app: order-api/app: order-apu/' order-api-svc.yaml | kubectl apply -f -
+<span class="c">service/order-api configured</span>
+<span class="p">$</span> kubectl exec client -- wget -qO- -T 3 http://order-api:8080/ ; echo "exit=$?"
+<span class="c">wget: can't connect to remote host (10.96.34.18): Connection refused
+exit=1</span>
+
+<span class="p">$</span> kubectl get endpointslices -l kubernetes.io/service-name=order-api
+<span class="c">NAME              ADDRESSTYPE   PORTS    ENDPOINTS   AGE
+order-api-7xk2m   IPv4          &lt;unset&gt;  &lt;unset&gt;     9m</span>
+<span class="p">$</span> kubectl describe svc order-api | grep -E '^(Selector|Endpoints)'
+<span class="c">Selector:          app=order-apu
+Endpoints:         </span>
+<span class="p">$</span> kubectl get pods -l app=order-apu
+<span class="c">No resources found in study namespace.</span>
+
+<span class="p">$</span> kubectl apply -f order-api-svc.yaml
+<span class="p">$</span> kubectl exec client -- wget -qO- http://order-api:8080/
+<span class="c">order-api v2 on order-api-5b8d7c9f2-n8v3x</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — DNS는 풀렸고(IP가 나왔다) 연결이 거부됐다. 서비스 IP는 있는데 보낼 곳이 없을 때의 증상이다. 진단 순서: <code>describe svc</code>에서 Endpoints가 비었는지 → 그 Selector로 <code>get pods -l</code>을 쳐서 0개인지. 셀렉터와 파드 라벨을 나란히 놓으면 오타가 보인다. 이 순서를 외운다. D6의 HTTPRoute, D11의 ServiceMonitor도 같은 방식으로 고장 난다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>실제 경로 ①: kube-proxy 규칙</h3>
+    <p class="why">서비스 IP를 파드 IP로 바꾸는 줄을 노드의 커널에서 찾는다.</p>
+<pre><code><span class="p">$</span> kubectl -n kube-system get cm kube-proxy -o jsonpath='{.data.config\.conf}' | grep -E '^mode'
+<span class="c">mode: iptables</span>
+
+<span class="c"># iptables 모드일 때</span>
+<span class="p">$</span> docker exec desktop-worker sh -c 'iptables-save -t nat | grep -E "order-api" | head -8'
+<span class="c">-A KUBE-SERVICES -d 10.96.34.18/32 -p tcp -m comment --comment "study/order-api cluster IP" -m tcp --dport 8080 -j KUBE-SVC-XXXX
+-A KUBE-SVC-XXXX -m comment --comment "study/order-api -&gt; 10.244.1.7:8080" -m statistic --mode random --probability 0.25000000000 -j KUBE-SEP-AAAA
+-A KUBE-SVC-XXXX -m comment --comment "study/order-api -&gt; 10.244.1.8:8080" -m statistic --mode random --probability 0.33333333349 -j KUBE-SEP-BBBB
+-A KUBE-SVC-XXXX -m comment --comment "study/order-api -&gt; 10.244.2.9:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-CCCC
+-A KUBE-SVC-XXXX -m comment --comment "study/order-api -&gt; 10.244.2.10:8080" -j KUBE-SEP-DDDD
+-A KUBE-SEP-AAAA -p tcp -m comment --comment "study/order-api" -m tcp -j DNAT --to-destination 10.244.1.7:8080
+...</span>
+
+<span class="c"># nftables 모드라면 (mode: nftables)</span>
+<span class="p">$</span> docker exec desktop-worker sh -c 'nft list ruleset | grep -A4 "order-api" | head -20'</code></pre>
+    <p class="expect"><b>읽을 것</b> — 첫 줄: 목적지가 <code>10.96.34.18:8080</code>이면 서비스 체인으로. 다음 넷: 1/4, 1/3, 1/2, 나머지 확률로 엔드포인트 체인 하나를 고른다(균등 분배를 확률로 구현). 마지막: 목적지 주소를 파드 IP로 <code>DNAT</code>. 이 규칙은 모든 노드에 똑같이 있다(<code>desktop-worker2</code>에서도 확인해 본다). 프로세스가 아니라 커널 규칙이므로 kube-proxy 파드를 잠시 지워도 기존 규칙은 남아 동작한다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>실제 경로 ②: 노드 간 라우팅</h3>
+    <p class="why">DNAT된 패킷이 다른 노드로 가는 길을 라우팅 테이블에서 찾는다.</p>
+<pre><code><span class="p">$</span> kubectl get nodes -o custom-columns='NODE:.metadata.name,IP:.status.addresses[0].address,PODCIDR:.spec.podCIDR'
+<span class="c">NODE                    IP             PODCIDR
+desktop-control-plane   192.168.97.2   10.244.0.0/24
+desktop-worker          192.168.97.3   10.244.1.0/24
+desktop-worker2         192.168.97.4   10.244.2.0/24</span>
+
+<span class="p">$</span> docker exec desktop-worker ip route | grep 10.244
+<span class="c">10.244.0.0/24 via 192.168.97.2 dev eth0
+10.244.1.7 dev veth3a1f2c scope host
+10.244.1.8 dev veth9d0e4b scope host
+10.244.2.0/24 via 192.168.97.4 dev eth0</span>
+
+<span class="p">$</span> kubectl get pod client -o jsonpath='{.spec.nodeName}{"\n"}'
+<span class="c">desktop-worker</span>
+<span class="p">$</span> kubectl exec client -- wget -qO- http://10.244.2.9:8080/
+<span class="c">order-api v2 on order-api-5b8d7c9f2-p4r7t</span>
+<span class="p">$</span> kubectl exec client -- traceroute -n -m 3 10.244.2.9 2&gt;/dev/null | tail -2
+<span class="c"> 1  10.244.1.1  0.05 ms
+ 2  10.244.2.9  0.21 ms</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — worker의 라우팅 테이블에 "<code>10.244.2.0/24</code>는 <code>192.168.97.4</code>(worker2)로"가 있다. kindnet이 적어 둔 줄이다. 같은 노드의 파드는 <code>veth</code> 인터페이스로 직접, 다른 노드의 파드는 그 노드 IP를 경유. 서비스 없이 파드 IP로 직접 호출해도 되고, traceroute가 2홉(내 노드의 게이트웨이 → 상대 파드)으로 끝난다. 터널도 NAT도 없다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>NodePort와 LoadBalancer: 밖으로 여는 두 단계</h3>
+    <p class="why">타입을 바꾸며 무엇이 추가로 열리는지 본다. LoadBalancer에서 macOS의 curl이 파드 넷에 분산되는 것으로 D4의 숙제를 푼다.</p>
+<pre><code><span class="p">$</span> kubectl patch svc order-api -p '{"spec":{"type":"NodePort"}}'
+<span class="p">$</span> kubectl get svc order-api
+<span class="c">NAME        TYPE       CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
+order-api   NodePort   10.96.34.18   &lt;none&gt;        8080:31742/TCP   20m</span>
+
+<span class="c"># 노드 컨테이너에서: 어느 노드의 31742로 들어가도 서비스에 닿는다</span>
+<span class="p">$</span> docker exec desktop-control-plane sh -c 'curl -s http://192.168.97.4:31742/'
+<span class="c">order-api v2 on order-api-5b8d7c9f2-n8v3x</span>
+<span class="p">$</span> docker exec desktop-control-plane sh -c 'curl -s http://192.168.97.3:31742/'
+<span class="c">order-api v2 on order-api-5b8d7c9f2-p4r7t</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — ClusterIP는 그대로이고 <code>31742</code>가 추가됐다. 컨트롤 플레인 노드(파드가 없는 노드)의 IP로 들어가도 워커의 파드가 응답한다. kube-proxy 규칙이 모든 노드에 있기 때문이다. macOS에서 <code>localhost:31742</code>는 kind 프로비저너에서 열리지 않는다. 노드는 VM 안의 컨테이너이고 그 포트는 macOS에 게시되지 않았다. 그래서 다음 단계가 필요하다.</p>
+<pre><code><span class="p">$</span> kubectl patch svc order-api -p '{"spec":{"type":"LoadBalancer"}}'
+<span class="p">$</span> sleep 5 &amp;&amp; kubectl get svc order-api
+<span class="c">NAME        TYPE           CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
+order-api   LoadBalancer   10.96.34.18   localhost     8080:31742/TCP   21m</span>
+
+<span class="c"># macOS 터미널에서</span>
+<span class="p">$</span> for i in 1 2 3 4 5 6; do curl -s localhost:8080/; done
+<span class="c">order-api v2 on order-api-5b8d7c9f2-n8v3x
+order-api v2 on order-api-5b8d7c9f2-p4r7t
+order-api v2 on order-api-5b8d7c9f2-n8v3x
+order-api v2 on order-api-5b8d7c9f2-w2e5r
+order-api v2 on order-api-5b8d7c9f2-p4r7t
+order-api v2 on order-api-5b8d7c9f2-x6y8z</span>
+
+<span class="p">$</span> docker ps --format '{{.Names}}\t{{.Image}}' | grep -i envoy
+<span class="c">desktop-...-envoy   envoyproxy/envoy:v1.36.7</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — EXTERNAL-IP가 <code>localhost</code>다. Docker Desktop이 Envoy 컨테이너를 하나 띄워 NodePort로 이어 줬다. 이제 macOS에서 서비스로 들어가고, 여섯 번의 curl이 여러 파드로 흩어진다. 어제 port-forward로는 볼 수 없던 장면이다. 서비스는 이 상태(LoadBalancer)로 두고 간다. D6에서 Gateway API를 올린 뒤 다시 ClusterIP로 되돌린다.</p>
+    <p>트래픽을 흘리면서 롤링 업데이트를 한 번 다시 본다.</p>
+<pre><code><span class="c"># 터미널 A</span>
+<span class="p">$</span> while true; do curl -s -m 1 localhost:8080/ || echo "FAIL $(date +%T)"; sleep 0.3; done
+<span class="c"># 터미널 B</span>
+<span class="p">$</span> kubectl rollout restart deployment/order-api
+<span class="p">$</span> kubectl rollout status deployment/order-api</code></pre>
+    <p class="expect"><b>읽을 것</b> — 호스트명이 새 파드 이름으로 하나씩 바뀐다. 중간에 <code>FAIL</code>이나 빈 줄이 몇 개 섞일 수 있다. 새 파드의 컨테이너가 떴지만 Spring Boot가 아직 포트를 열기 전에 엔드포인트에 들어가기 때문이다. 이 빈틈을 D8의 readinessProbe가 막는다. 오늘은 빈틈이 있다는 사실만 확인하고 터미널 A를 <kbd>Ctrl-C</kbd>로 끝낸다.</p>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step" id="s8">
+    <h3><span class="sn">8</span>gateway: 두 번째 앱이 첫 번째 앱을 이름으로 부른다</h3>
+    <p class="why">Spring Cloud Gateway로 <code>/orders/**</code>를 <code>http://order-api:8080</code>에 넘긴다. 코드에는 서비스 이름만 있고 IP는 없다.</p>
+<pre><code><span class="p">$</span> mkdir -p gateway/src/main/java/study gateway/src/main/resources &amp;&amp; cd gateway
+<span class="p">$</span> cat &gt; pom.xml &lt;&lt;'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+  &lt;parent&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+    &lt;version&gt;4.1.0&lt;/version&gt;
+    &lt;relativePath/&gt;
+  &lt;/parent&gt;
+  &lt;groupId&gt;study&lt;/groupId&gt;
+  &lt;artifactId&gt;gateway&lt;/artifactId&gt;
+  &lt;version&gt;0.0.1&lt;/version&gt;
+  &lt;properties&gt;
+    &lt;java.version&gt;21&lt;/java.version&gt;
+    &lt;spring-cloud.version&gt;2025.1.2&lt;/spring-cloud.version&gt;
+  &lt;/properties&gt;
+  &lt;dependencyManagement&gt;
+    &lt;dependencies&gt;
+      &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-cloud-dependencies&lt;/artifactId&gt;
+        &lt;version&gt;${spring-cloud.version}&lt;/version&gt;
+        &lt;type&gt;pom&lt;/type&gt;
+        &lt;scope&gt;import&lt;/scope&gt;
+      &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+  &lt;/dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-cloud-starter-gateway-server-webflux&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+  &lt;build&gt;
+    &lt;plugins&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;
+      &lt;/plugin&gt;
+    &lt;/plugins&gt;
+  &lt;/build&gt;
+&lt;/project&gt;
+EOF
+
+<span class="p">$</span> cat &gt; src/main/java/study/GatewayApplication.java &lt;&lt;'EOF'
+package study;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class GatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GatewayApplication.class, args);
+    }
+}
+EOF
+
+<span class="p">$</span> cat &gt; src/main/resources/application.yaml &lt;&lt;'EOF'
+server:
+  port: 8080
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+          - id: orders
+            uri: http://order-api:8080
+            predicates:
+            - Path=/orders/**
+EOF
+
+<span class="p">$</span> cp ../../day04/order-api/Dockerfile ../../day04/order-api/.dockerignore .
+<span class="p">$</span> docker build --build-arg APP_VERSION=v1 -t gateway:v1 .
+<span class="p">$</span> cd ..
+
+<span class="p">$</span> cat &gt; gateway.yaml &lt;&lt;'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels:
+    app: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+      - name: app
+        image: gateway:v1
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway
+  ports:
+  - port: 8081
+    targetPort: 8080
+EOF
+<span class="p">$</span> kubectl apply -f gateway.yaml
+<span class="p">$</span> kubectl rollout status deployment/gateway
+<span class="p">$</span> kubectl get svc
+<span class="c">NAME        TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+gateway     LoadBalancer   10.96.201.44   localhost     8081:30213/TCP   30s
+order-api   LoadBalancer   10.96.34.18    localhost     8080:31742/TCP   40m</span>
+
+<span class="p">$</span> for i in 1 2 3 4; do curl -s localhost:8081/orders | cut -c1-60; echo; done
+<span class="c">{"version":"v2","host":"order-api-5b8d7c9f2-n8v3x","orders":[
+{"version":"v2","host":"order-api-5b8d7c9f2-w2e5r","orders":[
+{"version":"v2","host":"order-api-5b8d7c9f2-p4r7t","orders":[
+{"version":"v2","host":"order-api-5b8d7c9f2-n8v3x","orders":[</span>
+
+<span class="p">$</span> kubectl get pods -o wide -l 'app in (gateway,order-api)' -o custom-columns='POD:.metadata.name,NODE:.spec.nodeName,IP:.status.podIP'
+<span class="c">POD                          NODE              IP
+gateway-6c7d8e9f0-a2b3c      desktop-worker    10.244.1.12
+gateway-6c7d8e9f0-d4e5f      desktop-worker2   10.244.2.14
+order-api-5b8d7c9f2-n8v3x    desktop-worker    10.244.1.9
+order-api-5b8d7c9f2-p4r7t    desktop-worker2   10.244.2.11
+order-api-5b8d7c9f2-w2e5r    desktop-worker2   10.244.2.12
+order-api-5b8d7c9f2-x6y8z    desktop-worker    10.244.1.10</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>localhost:8081/orders</code> → gateway 파드 → <code>order-api</code> 이름 조회 → DNAT → 어느 노드의 파드든. 응답의 host가 worker와 worker2 양쪽 파드를 오간다. 마지막 표에서 gateway 파드가 있는 노드와 응답한 order-api 파드의 노드가 다른 경우가 도판 2의 경로 그대로다. gateway 설정에는 <code>http://order-api:8080</code> 한 줄뿐이다. 이 두 서비스가 D14까지 실습 앱 스택이다.</p>
+    <div class="note">
+      <h5>actuator gateway 엔드포인트는 열지 않는다</h5>
+      <p>D11에서 actuator를 붙일 때 <code>management.endpoints.web.exposure.include</code>에 <code>gateway</code>를 넣지 않는다. 그 엔드포인트가 열려 있고 인증이 없으면 라우트를 원격에서 조작할 수 있다(CVE-2025-41243). 메트릭은 <code>prometheus</code>만 연다.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <p class="sub">문서를 덮고 진행한다.</p>
+  <div class="check">
+    <ol>
+      <li><code>gateway</code> 서비스의 ClusterIP·NodePort·EXTERNAL-IP 세 값을 읽고, 각각 어디서 닿는 주소인지 말한다.</li>
+      <li>임시 파드에서 <code>order-api</code>를 반복 호출해 서로 다른 두 노드의 파드가 응답했음을 <code>-o wide</code>와 대조해 보인다.</li>
+      <li>서비스 셀렉터를 일부러 틀리게 한 뒤 <code>describe svc</code>·<code>get endpointslices</code>·<code>get pods -l</code> 세 명령으로 원인을 찾아 고친다.</li>
+      <li>default 네임스페이스의 파드에서 <code>order-api</code>가 안 풀리고 <code>order-api.study</code>가 풀리는 이유를 <code>/etc/resolv.conf</code>로 설명한다.</li>
+      <li>노드의 라우팅 테이블에서 다른 노드 파드 CIDR로 가는 줄 하나를 가리킨다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D6으로 간다. 3번이 막히면 4단계의 진단 순서를 다시 본다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">order-api·gateway 디플로이먼트와 서비스는 남긴다. 임시 클라이언트만 지운다.</p>
+<pre><code><span class="p">$</span> kubectl delete pod client --wait=false
+<span class="p">$</span> kubectl get deploy,svc
+<span class="c">NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gateway     2/2     2            2           10m
+deployment.apps/order-api   4/4     4            4           55m
+
+NAME                TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+service/gateway     LoadBalancer   10.96.201.44   localhost     8081:30213/TCP   10m
+service/order-api   LoadBalancer   10.96.34.18    localhost     8080:31742/TCP   50m</span>
+<span class="p">$</span> ls ~/k8s-study/day05
+<span class="c">gateway  gateway.yaml  order-api-svc.yaml</span></code></pre>
+  <p>현재 파일과 클러스터가 어긋난 것이 하나 있다. <code>order-api-svc.yaml</code>에는 type이 없고(ClusterIP) 클러스터는 LoadBalancer다. D6에서 Gateway API를 올린 뒤 이 파일을 다시 apply해 ClusterIP로 되돌린다. 그때까지는 알고 둔다.</p>
+
+  <div class="note">
+    <h5>D6 예고</h5>
+    <p>오늘 서비스 두 개가 각각 <code>localhost:8080</code>, <code>localhost:8081</code>을 차지했다. 서비스가 열 개면 포트 열 개다. 내일은 진입점 하나(80번)를 세우고 경로(<code>/orders</code>, <code>/</code>)와 호스트로 나누는 Gateway API를 올린다. 서비스는 전부 ClusterIP로 되돌리고 Gateway 뒤로 숨긴다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>서비스 — <a href="https://kubernetes.io/ko/docs/concepts/services-networking/service/">kubernetes.io/ko/docs/concepts/services-networking/service/</a> · 엔드포인트슬라이스 — <a href="https://kubernetes.io/ko/docs/concepts/services-networking/endpoint-slices/">kubernetes.io/ko/docs/concepts/services-networking/endpoint-slices/</a></li>
+    <li>서비스·파드 DNS — <a href="https://kubernetes.io/ko/docs/concepts/services-networking/dns-pod-service/">kubernetes.io/ko/docs/concepts/services-networking/dns-pod-service/</a></li>
+    <li>가상 IP와 서비스 프록시(kube-proxy 모드) — <a href="https://kubernetes.io/docs/reference/networking/virtual-ips/">kubernetes.io/docs/reference/networking/virtual-ips/</a> · 클러스터 네트워킹 모델 — <a href="https://kubernetes.io/ko/docs/concepts/cluster-administration/networking/">kubernetes.io/ko/docs/concepts/cluster-administration/networking/</a></li>
+    <li>Docker Desktop Kubernetes(kind 프로비저너, cloud-provider-kind) — <a href="https://docs.docker.com/desktop/use-desktop/kubernetes/">docs.docker.com/desktop/use-desktop/kubernetes/</a></li>
+    <li>Spring Cloud Gateway Server WebFlux 설정 — <a href="https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/configuration.html">docs.spring.io/spring-cloud-gateway/reference/…/configuration.html</a> · 프로젝트 페이지 — <a href="https://spring.io/projects/spring-cloud-gateway/">spring.io/projects/spring-cloud-gateway/</a></li>
+    <li>CVE-2025-41243 (gateway actuator 엔드포인트) — <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-41243">nvd.nist.gov/vuln/detail/CVE-2025-41243</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a> · 도판 원본 <code>서비스간호출경로.png</code>, <code>노드간통신CNI.png</code></li>
+  </ul>
+  <div class="prevnext"><a href="day04-deployments-rollouts.html">← D4 디플로이먼트와 롤링 업데이트</a><a href="day06-gateway-api.html">D6 Gateway API →</a></div>
+</div></footer>
+</body>
+</html>

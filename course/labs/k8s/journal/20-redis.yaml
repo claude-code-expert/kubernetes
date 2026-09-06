@@ -1,0 +1,96 @@
+# 레디스 — 상태를 가진 워크로드. 디플로이먼트가 아니라 스테이트풀셋을 쓴다.
+# 차이 세 가지: 파드 이름이 고정(redis-0), 파드마다 자기 PVC, 순서대로 생성·삭제.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis                      # 스테이트풀셋의 serviceName 과 같아야 한다
+  labels:
+    app: redis
+spec:
+  clusterIP: None                  # 헤드리스 — redis-0.redis 라는 고정 DNS 이름을 만든다
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-read                 # 책 1장의 읽기 전용 서비스 자리
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis                     # 복제본이 1개인 지금은 redis 와 같은 파드를 가리킨다
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  serviceName: redis               # 헤드리스 서비스 이름. 파드 DNS 는 <파드>.<이 이름> 이 된다
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      # ── 파드 수준 보안 (M24) ────────────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999              # 이미지 안의 redis 사용자
+        fsGroup: 999                # PVC 의 소유자를 이 그룹으로 바꿔 준다 (M18)
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: redis
+          image: redis:8.2-alpine
+          imagePullPolicy: IfNotPresent
+          # $(VAR) 는 쿠버네티스가 같은 컨테이너의 env 에서 치환한다. 셸이 하는 일이 아니다.
+          args: ["--requirepass", "$(REDIS_PASSWORD)", "--appendonly", "yes"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: journal-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:                      # M16 — 상태가 있는 워크로드일수록 예약이 중요하다
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data     # appendonly 파일이 여기 쌓인다
+  # 디플로이먼트에는 없는 필드. 파드마다 PVC 를 하나씩 만들어 붙인다.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # storageClassName 을 생략하면 클러스터의 기본 스토리지클래스를 쓴다.
+        # kind 는 local-path-provisioner 의 standard 가 기본이다: kubectl get sc
+        resources:
+          requests:
+            storage: 1Gi

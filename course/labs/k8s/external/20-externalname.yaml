@@ -1,0 +1,13 @@
+# M34 — ExternalName 은 DNS 별칭이다. 프록시가 아니다.
+#
+# 파드가 이 이름을 물으면 CoreDNS 가 CNAME 을 돌려준다.
+# 그 뒤의 연결은 파드가 직접 한다 — 클러스터는 관여하지 않는다.
+apiVersion: v1
+kind: Service
+metadata:
+  name: alias-redis
+  namespace: m34
+spec:
+  type: ExternalName
+  # 이 이름이 실제로 풀려야 한다. 클러스터 DNS 밖의 이름이면 상위 DNS 로 나간다.
+  externalName: ext-redis.m34.svc.cluster.local

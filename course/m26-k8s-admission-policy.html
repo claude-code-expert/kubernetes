@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 5 · 보안과 정책] M26 어드미션 컨트롤과 정책 엔진 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 26 / 38 · PART 5 보안과 정책</div>
+  <h1>어드미션 컨트롤과 정책 엔진</h1>
+  <p class="ch-desc">M24의 PSA와 M25의 네트워크 정책은 쿠버네티스가 <strong>미리 정해 둔 규칙</strong>이었다. 조직에는 그 목록에 없는 규칙이 있다 — "<code>latest</code> 태그 금지", "허용된 레지스트리만", "토큰은 기본으로 끈다". 이 모듈에서 그 규칙을 CEL 표현식으로 써서 API 서버 안에 심고, <strong>경고에서 거부로 승격하는 순서</strong>와 <strong>이미 배포된 위반을 찾아내는 방법</strong>을 함께 만든다.</p>
+  <div class="meta">
+    <span class="tag">중후반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m23-k8s-rbac-authz.html">M23</a> 완료 — 요청이 인증·인가를 지나는 것을 봤다</li>
+    <li><a href="m24-k8s-pod-container-security.html">M24</a> 완료 — 어드미션이 파드를 거부하는 것을 봤다. 이 모듈은 그 자리에 <strong>직접 만든 규칙</strong>을 얹는다</li>
+    <li>클러스터가 1.30 이상. 확인: <code>kubectl api-resources --api-group=admissionregistration.k8s.io</code>에 <code>validatingadmissionpolicies</code></li>
+    <li>새로 만들 파일: <code>course/labs/k8s/policy/</code>의 <code>00-no-latest.yaml</code>·<code>10-allowed-registries.yaml</code>·<code>20-default-no-token.yaml</code> · <code>course/labs/scripts/policy-audit.sh</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. CEL 한 줄로 <code>latest</code> 태그를 거부하는 정책을 만들고, <code>Warn</code>에서 <code>Deny</code>로 승격하는 순서를 밟는다.</p>
+  <p>2. 서버 드라이런으로 <strong>이미 배포된 위반</strong>을 클러스터 전체에서 찾아내는 스크립트를 만든다 — 정책을 켜기 전에 반드시 하는 일이다.</p>
+  <p>3. 표현식 오타 하나가 <strong>위반이 없는 배포까지 전부 막는</strong> 상황을 재현하고, 그것을 미리 잡는 자리(<code>status.typeChecking</code>)를 확인한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">26.1</span>규칙이 사람 머릿속에만 있다</a>
+  <a href="#s2"><span class="num">26.2</span>이론 — 요청 파이프라인과 CEL</a>
+  <a href="#s3"><span class="num">26.3</span>따라하기 ① latest 태그를 막는다</a>
+  <a href="#s4"><span class="num">26.4</span>따라하기 ② 이미 배포된 위반을 찾는다</a>
+  <a href="#s5"><span class="num">26.5</span>따라하기 ③ 목록을 정책 밖으로 뺀다</a>
+  <a href="#s6"><span class="num">26.6</span>따라하기 ④ 기본값을 주입한다</a>
+  <a href="#s7"><span class="num">26.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">26.8</span>운영 관점 — 어디까지 정책으로 만들 것인가</a>
+  <a href="#s9"><span class="num">26.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">26.1</span>규칙이 사람 머릿속에만 있다</h2>
+  <p class="lead">이 교재는 M02부터 <strong>latest 태그를 쓰지 않는다</strong>는 규칙을 지켜 왔다. 매니페스트마다 태그를 박았고, 도커 이미지에 다이제스트를 적었다. 그런데 그 규칙은 지금 어디에도 <strong>기록되어 있지 않다</strong> — 문서에 문장으로 있을 뿐, 클러스터는 <code>nginx:latest</code>를 아무 저항 없이 받는다.</p>
+  <p>규칙이 문서에만 있으면 세 가지가 일어난다. 새로 온 사람이 모른다. 급할 때 예외가 생긴다. 그리고 <strong>예외가 몇 개인지 아무도 세지 못한다.</strong> 세 번째가 가장 나쁘다 — 규칙을 지키자는 결정보다 지금 무엇이 어긋나 있는지 아는 것이 먼저인데, 그것을 셀 방법이 없다.</p>
+  <p>M24에서 이미 이 문제의 절반을 봤다. PSA는 "비루트로 실행하라"는 규칙을 <strong>라벨 하나로</strong> 강제했고, 강제한 순간 우리 워크로드 셋이 전부 거부당했다. 위반이 몇 개인지 그때 즉시 알게 됐다. 다만 PSA가 강제할 수 있는 것은 쿠버네티스가 미리 정의한 항목뿐이다. <code>latest</code> 태그도, 레지스트리 화이트리스트도, 리소스 요청 필수화도 그 목록에 없다.</p>
+  <p>예전에는 이런 규칙을 <dfn class="term">어드미션 웹훅<span class="en">admission webhook</span></dfn>으로 만들었다. 클러스터 안에 HTTPS 서버를 띄우고, API 서버가 모든 요청을 그 서버에 물어보게 하는 방식이다. 규칙 하나 때문에 <strong>운영해야 할 서비스가 하나 늘어나고</strong>, 그 서비스가 죽으면 클러스터의 쓰기가 멈춘다. 1.30부터 그 대가 없이 같은 일을 하는 길이 생겼고, 그것이 이 모듈의 주제다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">26.2</span>이론 — 요청 파이프라인과 CEL</h2>
+  <p><span class="lbl">책 매핑</span>17.1 요청 파이프라인 · 11장 정책 엔진(제약 조건 템플릿·감사)과 현재의 대안</p>
+
+  <h3>요청은 네 관문을 지난다</h3>
+  <p><code>kubectl apply</code> 한 번이 저장되기까지 API 서버는 네 단계를 거친다. <strong>인증</strong>(누구인가) → <strong>인가</strong>(이 동사를 허용하는가, M23) → <strong>어드미션</strong> → <strong>etcd 저장</strong>이다. 어드미션은 다시 둘로 나뉘는데, <strong>뮤테이팅이 먼저</strong>고 <strong>밸리데이팅이 나중</strong>이다. 순서에 이유가 있다 — 검증은 <strong>변형이 끝난 최종 형태</strong>를 봐야 한다. 기본값을 채워 넣는 쪽이 먼저 돌지 않으면, 검증이 아직 채워지지 않은 필드를 보고 거부하게 된다.</p>
+  <p>이 순서는 M24에서 이미 겪었다. PSA가 파드를 거부한 것은 밸리데이팅 단계였고, 서비스어카운트 토큰 볼륨이 자동으로 붙은 것은 뮤테이팅 단계였다. 26.6에서 이 순서 때문에 <strong>같은 정책이 대상에 따라 효과가 달라지는</strong> 것을 측정한다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+      <text class="t-h" x="40" y="46">요청 하나가 저장되기까지 — 정책이 끼어드는 자리</text>
+
+      <rect class="node" x="40" y="70" width="112" height="46" rx="4"/>
+      <text class="t-title" x="96" y="90" text-anchor="middle">인증</text>
+      <text class="t-mono" x="96" y="107" text-anchor="middle">M23</text>
+      <path class="line" d="M 152 93 L 182 93" marker-end="url(#ar1)"/>
+
+      <rect class="node" x="184" y="70" width="112" height="46" rx="4"/>
+      <text class="t-title" x="240" y="90" text-anchor="middle">인가 RBAC</text>
+      <text class="t-mono" x="240" y="107" text-anchor="middle">M23</text>
+      <path class="line" d="M 296 93 L 326 93" marker-end="url(#ar1)"/>
+
+      <rect class="accent" x="328" y="70" width="146" height="46" rx="4"/>
+      <text class="t-title" x="401" y="90" text-anchor="middle">뮤테이팅 어드미션</text>
+      <text class="t-mono" x="401" y="107" text-anchor="middle">기본값을 넣는다</text>
+      <path class="aline" d="M 474 93 L 504 93" marker-end="url(#ar2)"/>
+
+      <rect class="accent" x="506" y="70" width="160" height="46" rx="4"/>
+      <text class="t-title" x="586" y="90" text-anchor="middle">밸리데이팅 어드미션</text>
+      <text class="t-mono" x="586" y="107" text-anchor="middle">PSA · VAP · 웹훅</text>
+      <path class="line" d="M 666 93 L 696 93" marker-end="url(#ar1)"/>
+
+      <rect class="node" x="698" y="70" width="142" height="46" rx="4"/>
+      <text class="t-title" x="769" y="90" text-anchor="middle">etcd 에 저장</text>
+      <text class="t-mono" x="769" y="107" text-anchor="middle">여기부터 실재한다</text>
+
+      <text class="t-sub" x="40" y="140">변형이 먼저, 검증이 나중이다. 검증은 <tspan font-family="ui-monospace,Consolas,monospace">변형된 결과</tspan>를 본다</text>
+
+      <!-- 정책+바인딩 -->
+      <rect class="soft" x="40" y="158" width="400" height="146" rx="4"/>
+      <text class="t-h" x="56" y="182">정책과 바인딩은 따로다</text>
+      <rect class="accent" x="56" y="194" width="170" height="52" rx="3"/>
+      <text class="t-title" x="141" y="214" text-anchor="middle">Policy</text>
+      <text class="t-mono" x="141" y="232" text-anchor="middle">무엇을 검사하는가</text>
+      <path class="aline" d="M 226 220 L 258 220" marker-end="url(#ar2)"/>
+      <rect class="accent" x="260" y="194" width="164" height="52" rx="3"/>
+      <text class="t-title" x="342" y="214" text-anchor="middle">Binding</text>
+      <text class="t-mono" x="342" y="232" text-anchor="middle">어디에·어떻게</text>
+      <text class="t-warn" x="56" y="268">정책만 만들면 아무것도 검사하지 않는다</text>
+      <text class="t-sub" x="56" y="288">바인딩의 validationActions 가 Warn 인지 Deny 인지가 승격 단계다</text>
+
+      <!-- 선택 -->
+      <rect class="soft" x="456" y="158" width="384" height="146" rx="4"/>
+      <text class="t-h" x="472" y="182">웹훅과 무엇이 다른가</text>
+      <rect class="box" x="472" y="194" width="352" height="44" rx="3"/>
+      <text class="t-mono" x="482" y="212">웹훅 — 파드·인증서·가용성을 직접 운영</text>
+      <text class="t-sub" x="482" y="229">임의 로직 가능. 그 프록시가 죽으면 클러스터가 멈춘다</text>
+      <rect class="accent" x="472" y="246" width="352" height="44" rx="3"/>
+      <text class="t-mono" x="482" y="264">VAP — API 서버 안에서 CEL 로 평가</text>
+      <text class="t-acc" x="482" y="281">운영할 것이 없다. 대신 외부 조회·상태 저장은 못 한다</text>
+
+      <!-- 실패 -->
+      <text class="t-h" x="56" y="336">막힌 자리를 읽는 법</text>
+      <rect class="warnbox" x="56" y="348" width="384" height="72" rx="3"/>
+      <text class="t-mono" x="66" y="368">CEL 타입 오류</text>
+      <text class="t-sub" x="66" y="386">apply 는 성공한다. 오류는 status.typeChecking 에만 있다</text>
+      <text class="t-warn" x="66" y="404">failurePolicy: Fail 이면 위반 없는 요청까지 거부된다</text>
+
+      <rect class="warnbox" x="456" y="348" width="384" height="72" rx="3"/>
+      <text class="t-mono" x="466" y="368">이미 배포된 위반</text>
+      <text class="t-sub" x="466" y="386">정책은 새 요청에만 걸린다. 돌던 것은 계속 돈다</text>
+      <text class="t-warn" x="466" y="404">--dry-run=server 로 하나씩 다시 제출해 찾아낸다</text>
+    </svg>
+    <figcaption>그림 26.1 — 변형이 먼저, 검증이 나중이다. 정책과 바인딩이 분리돼 있어 "무엇을 검사하는가"와 "어디에 적용하는가"를 따로 배포할 수 있다.</figcaption>
+  </figure>
+
+  <h3>정책과 바인딩이 나뉘어 있다</h3>
+  <p><dfn class="term">ValidatingAdmissionPolicy<span class="en">VAP</span></dfn>는 검사 내용만 담는다. 그 검사를 <strong>어느 네임스페이스에, 경고로 할지 거부로 할지</strong>는 <dfn class="term">ValidatingAdmissionPolicyBinding</dfn>이 정한다. M23의 Role과 RoleBinding, M20의 ServiceMonitor와 라벨 연결과 같은 구조다 — <strong>정의와 적용 범위를 따로 배포한다.</strong></p>
+  <p>이 분리가 실무에서 하는 일이 승격이다. 같은 정책에 바인딩을 <code>[Warn]</code>으로 먼저 붙여 아무도 막지 않으면서 경고만 흘리고, 위반이 정리된 뒤 <code>[Deny]</code>로 바꾼다. 정책 파일은 그대로 두고 바인딩 한 줄만 고치는 것이 승격의 전부다. 세 번째 값 <code>[Audit]</code>은 감사 로그에 남기는데, 그것은 감사 로깅을 켜야 의미가 있으므로 M27에서 다룬다.</p>
+
+  <h3>CEL — API 서버 안에서 도는 표현식</h3>
+  <p>검사 내용은 <dfn class="term">CEL<span class="en">Common Expression Language</span></dfn>로 쓴다. 표현식 하나가 <code>true</code>면 통과, <code>false</code>면 위반이다. 다음 세 이름이 대부분의 정책에서 쓰인다.</p>
+  <table>
+    <thead><tr><th>이름</th><th>무엇</th></tr></thead>
+    <tbody>
+      <tr><td><code>object</code></td><td>지금 들어온 리소스. 삭제 요청에서는 <code>null</code>이다</td></tr>
+      <tr><td><code>oldObject</code></td><td>수정 전 상태. 생성 요청에서는 <code>null</code>이다</td></tr>
+      <tr><td><code>params</code></td><td><code>paramKind</code>로 연결한 외부 리소스 (26.5)</td></tr>
+    </tbody>
+  </table>
+  <p>목록을 다루는 <code>all()</code>·<code>exists()</code>·<code>map()</code>이 자주 쓰인다. <code>containers.all(c, 조건)</code>은 "모든 컨테이너가 조건을 만족한다"이고, 컨테이너가 하나도 없으면 <strong>참</strong>이다. 빈 목록에서 <code>all()</code>이 참이 되는 것은 CEL만의 규칙이 아니라 수학적 관례인데, 정책을 쓸 때는 <strong>"조건을 만족하는 것이 하나도 없다"와 "전부 만족한다"가 같은 값이 되는</strong> 지점이므로 주의한다.</p>
+  <p>CEL이 못 하는 것도 분명하다. 외부에 HTTP 요청을 보낼 수 없고, 클러스터의 다른 리소스를 조회할 수 없으며(<code>params</code> 하나만 예외), 상태를 저장할 수 없다. "이미 같은 호스트를 쓰는 인그레스가 있는지"처럼 <strong>다른 리소스를 봐야 하는 규칙은 VAP로 만들 수 없다.</strong> 그때는 여전히 웹훅이 필요하고, 그 선택 기준은 26.8에 쓴다.</p>
+
+  <h3>이 클러스터에 이미 들어 있다</h3>
+  <p>VAP는 앞으로 쓸 기능이 아니라 이미 쓰이고 있는 기능이다. M13에서 Gateway API를 설치했을 때 정책 하나가 함께 들어왔다.</p>
+<pre><code>kubectl get validatingadmissionpolicy</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>NAME                                        VALIDATIONS   PARAMKIND   AGE
+safe-upgrades.gateway.networking.k8s.io     2             &lt;unset&gt;     2d</code></div>
+  <p>Gateway API가 자기 CRD를 보호하려고 싣고 온 것이다. 웹훅이었다면 그 프로젝트가 우리 클러스터에 <strong>파드와 인증서를 배포해야 했다.</strong> 정책 오브젝트 하나로 끝나는 것이 이 방식의 실질적인 이점이다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">26.3</span>따라하기 ① latest 태그를 막는다</h2>
+
+  <div class="step">
+    <h4>1단계 — 무엇을 쓸 수 있는지 먼저 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>클러스터 버전에 따라 쓸 수 있는 것이 다르다. 특히 뮤테이팅 쪽은 최근에야 정식이 됐다.</p>
+<pre><code>kubectl api-resources --api-group=admissionregistration.k8s.io</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME                                APIVERSION                        NAMESPACED   KIND
+mutatingadmissionpolicies           admissionregistration.k8s.io/v1   false        MutatingAdmissionPolicy
+mutatingadmissionpolicybindings     admissionregistration.k8s.io/v1   false        MutatingAdmissionPolicyBinding
+mutatingwebhookconfigurations       admissionregistration.k8s.io/v1   false        MutatingWebhookConfiguration
+validatingadmissionpolicies         admissionregistration.k8s.io/v1   false        ValidatingAdmissionPolicy
+validatingadmissionpolicybindings   admissionregistration.k8s.io/v1   false        ValidatingAdmissionPolicyBinding
+validatingwebhookconfigurations     admissionregistration.k8s.io/v1   false        ValidatingWebhookConfiguration</code></div>
+    <div class="verdict"><span class="lbl">판정</span>여섯 줄 전부 <code>v1</code>이고 <code>NAMESPACED</code>가 <code>false</code>다. <strong>정책은 클러스터 범위</strong>라서 네임스페이스마다 만들지 않는다 — 범위를 좁히는 것은 바인딩의 일이다. 오래된 클러스터에서는 <code>v1beta1</code>로 나오거나 <code>mutatingadmissionpolicies</code> 줄이 아예 없을 수 있고, 그때는 이 모듈의 26.6을 건너뛴다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 정책을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>조직 규칙 하나를 CEL 표현식으로 옮긴다.</p>
+<pre><code>mkdir -p course/labs/k8s/policy
+cat &gt; course/labs/k8s/policy/00-no-latest.yaml &lt;&lt;'EOF'
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: no-latest-tag
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["deployments", "statefulsets", "daemonsets"]
+  validations:
+    - expression: &gt;-
+        object.spec.template.spec.containers.all(c,
+          !c.image.endsWith(":latest") &amp;&amp; c.image.contains(":"))
+      message: "이미지에 :latest 를 쓰거나 태그를 생략할 수 없다. 고정 태그나 다이제스트를 쓴다."
+      reason: Invalid
+EOF
+kubectl apply -f course/labs/k8s/policy/00-no-latest.yaml</code></pre>
+    <table>
+      <thead><tr><th>필드</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td><code>failurePolicy</code></td><td>표현식 <strong>평가 자체가 실패</strong>했을 때. <code>Fail</code>은 거부, <code>Ignore</code>는 통과. 26.7에서 이 값의 무게를 본다</td></tr>
+        <tr><td><code>matchConstraints</code></td><td>어떤 리소스의 어떤 동사를 볼 것인가. 파드가 아니라 <strong>컨트롤러</strong>를 대상으로 한 이유는 아래에 쓴다</td></tr>
+        <tr><td><code>expression</code></td><td>참이면 통과. <code>contains(":")</code>는 태그를 아예 생략한 <code>nginx</code>도 잡으려는 것이다</td></tr>
+        <tr><td><code>reason</code></td><td>거부 시 HTTP 상태 코드로 번역된다. <code>Invalid</code>는 422</td></tr>
+      </tbody>
+    </table>
+    <p>대상을 파드가 아니라 디플로이먼트로 잡은 이유는 M24에서 배운 것이다. 파드에 걸면 거부가 <strong>레플리카셋 컨트롤러의 이벤트로</strong> 가서, <code>apply</code>를 친 사람은 아무 메시지도 받지 못한다. 컨트롤러를 대상으로 잡아야 거부가 사람의 터미널에 도착한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 정책만 있을 때 무슨 일이 일어나는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>정책과 바인딩이 나뉘어 있다는 것을 말이 아니라 결과로 확인한다.</p>
+<pre><code>kubectl create ns m26
+cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: bad}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: bad}}
+  template:
+    metadata: {labels: {app: bad}}
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/bad created</code></div>
+    <div class="verdict"><span class="lbl">판정</span>경고도 거부도 없다. <strong>정책만 만들면 아무것도 검사하지 않는다.</strong> M23에서 Role만 만들고 RoleBinding을 빼먹었을 때와 같은 상황이고, 이것이 "정책을 넣었는데 안 막혀요"의 첫 번째 원인이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 경고부터 붙인다</h4>
+    <p class="purpose"><span class="lbl">목적</span>운영 클러스터에 정책을 넣는 순서를 그대로 따른다. 처음부터 거부로 넣지 않는다.</p>
+<pre><code>kubectl label ns m26 policy=enforced
+
+cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: no-latest-tag-binding
+spec:
+  policyName: no-latest-tag
+  validationActions: [Warn]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        policy: enforced
+EOF
+sleep 5</code></pre>
+    <div class="note-2026">
+      <p><code>sleep 5</code>가 실습 편의를 위한 것이 아니다. 바인딩을 만들거나 고친 직후 <strong>몇 초 동안은 이전 동작이 나온다.</strong> 실측에서 바인딩을 만들자마자 친 요청은 경고 없이 통과했고, 5초 뒤 같은 요청에 경고가 붙었다. 정책을 CI에서 테스트할 때 이 지연을 넣지 않으면 <strong>테스트가 간헐적으로 통과</strong>한다.</p>
+    </div>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: bad3}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: bad3}}
+  template:
+    metadata: {labels: {app: bad3}}
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Warning: Validation failed for ValidatingAdmissionPolicy 'no-latest-tag' with binding 'no-latest-tag-binding': 이미지에 :latest 를 쓰거나 태그를 생략할 수 없다. 고정 태그나 다이제스트를 쓴다.
+deployment.apps/bad3 created</code></div>
+    <div class="verdict"><span class="lbl">판정</span>경고가 나오고 <strong>생성은 된다.</strong> 이 상태로 며칠 두면 팀의 CI 로그와 터미널에 경고가 쌓이고, 그 사이에 매니페스트를 고칠 시간이 생긴다. 메시지에 정책 이름과 바인딩 이름이 <strong>둘 다</strong> 들어 있는 것이 중요하다 — 정책은 하나인데 바인딩이 여러 개일 때 어느 범위에서 걸렸는지 알아야 한다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — 거부로 승격한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>정책 파일을 건드리지 않고 바인딩 한 줄로 강도를 바꾼다.</p>
+<pre><code>kubectl patch validatingadmissionpolicybinding no-latest-tag-binding --type=json \
+  -p '[{"op":"replace","path":"/spec/validationActions","value":["Deny"]}]'
+sleep 5
+
+cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: bad2}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: bad2}}
+  template:
+    metadata: {labels: {app: bad2}}
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The deployments "bad2" is invalid: : ValidatingAdmissionPolicy 'no-latest-tag' with binding 'no-latest-tag-binding' denied request: 이미지에 :latest 를 쓰거나 태그를 생략할 수 없다. 고정 태그나 다이제스트를 쓴다.</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Warning:</code>이 <code>is invalid:</code>로 바뀌었고 <code>created</code> 줄이 사라졌다. 우리가 쓴 <code>message</code>가 그대로 사람에게 전달된다는 점이 중요하다 — <strong>메시지는 오류 문구가 아니라 지시문으로 쓴다.</strong> "정책 위반"이라고만 쓰면 받은 사람이 무엇을 고쳐야 할지 모른다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">26.4</span>따라하기 ② 이미 배포된 위반을 찾는다</h2>
+  <p>26.3의 <code>bad</code>와 <code>bad3</code>은 아직 돌고 있다. 정책은 <strong>새 요청에만</strong> 걸리기 때문이다. 운영에서 이 성질은 안전장치이면서 동시에 함정이다 — 정책을 켰다고 클러스터가 깨끗해지지 않는다.</p>
+
+  <div class="step">
+    <h4>1단계 — 아직 돌고 있는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"거부됐다"와 "사라졌다"를 구분한다.</p>
+<pre><code>kubectl -n m26 get deploy</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+bad    1/1     1            1           4m
+bad3   1/1     1            1           3m34s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>nginx:latest</code>로 만든 둘이 정상 동작 중이다. 다음에 이 디플로이먼트를 <strong>수정하려는 순간</strong> 거부당한다 — <code>matchConstraints</code>에 <code>UPDATE</code>를 넣었기 때문이다. 즉 위반은 "지금 배포를 시도한 사람"이 아니라 <strong>다음에 이 리소스를 건드리는 사람</strong>에게 터진다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 한 번에 훑어보면 왜 안 되는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>먼저 떠오르는 방법을 시도해서 그 한계를 확인한다.</p>
+<pre><code>kubectl get deploy,sts,ds -A -o yaml | kubectl apply --dry-run=server -f - 2>&amp;1 | grep 'no-latest-tag'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Warning: Validation failed for ValidatingAdmissionPolicy 'no-latest-tag' with binding 'no-latest-tag-binding': 이미지에 :latest 를 쓰거나 태그를 생략할 수 없다. 고정 태그나 다이제스트를 쓴다.</code></div>
+    <div class="verdict"><span class="lbl">판정</span>위반이 있다는 것은 알겠는데 <strong>어느 리소스인지가 없다.</strong> 경고는 요청 단위로 나오는데 이 방식은 여러 리소스를 한 요청에 담았기 때문이다. 하나씩 돌려야 이름이 붙는다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 감사 스크립트를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>정책을 <code>Deny</code>로 올리기 전에 반드시 하는 작업을 재실행 가능한 형태로 남긴다.</p>
+<pre><code>cat &gt; course/labs/scripts/policy-audit.sh &lt;&lt;'EOF'
+#!/usr/bin/env bash
+set -u
+POLICY="${1:-no-latest-tag}"
+
+RESULT=$(
+  kubectl get deploy,sts,ds -A \
+    -o custom-columns=K:.kind,NS:.metadata.namespace,N:.metadata.name --no-headers |
+  while read -r KIND NS NAME; do
+    HIT=$(kubectl -n "$NS" get "$KIND" "$NAME" -o yaml |
+          kubectl apply --dry-run=server -f - 2&gt;&amp;1 |
+          grep -c "ValidatingAdmissionPolicy '$POLICY'")
+    [ "$HIT" -gt 0 ] &amp;&amp; echo "위반: $NS/$KIND/$NAME"
+  done
+)
+if [ -z "$RESULT" ]; then echo "(위반 없음)"; else echo "$RESULT"; fi
+EOF
+chmod +x course/labs/scripts/policy-audit.sh
+bash course/labs/scripts/policy-audit.sh</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>위반: m26/Deployment/bad
+위반: m26/Deployment/bad3</code></div>
+    <div class="verdict"><span class="lbl">판정</span>클러스터 전체에서 이 둘만 나온다. 관측 스택·인그레스·게이트웨이·우리 앱 두 개를 모두 훑고도 위반이 없다는 뜻이고, <strong>교재가 M02부터 지켜 온 태그 고정 규약이 실제로 지켜졌다는 증거</strong>다. 규칙을 정책으로 옮길 때 얻는 첫 번째 값이 이 숫자다 — 지키자는 결정보다 지금 몇 개가 어긋나 있는지가 먼저다.</div>
+    <p>스크립트에서 <code>while</code>을 파이프 뒤에 두면 서브셸에서 돌기 때문에 안에서 바꾼 변수가 밖으로 나오지 않는다. 그래서 결과를 <code>RESULT</code>에 모아서 마지막에 판정한다. 처음 쓸 때 이 함정에 걸려 "위반이 있는데도 <code>(위반 없음)</code>이 함께 출력되는" 상태가 됐다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">26.5</span>따라하기 ③ 목록을 정책 밖으로 뺀다</h2>
+  <p>"허용된 레지스트리만 쓴다"는 규칙을 그대로 CEL에 박으면, 레지스트리를 하나 추가할 때마다 정책을 다시 배포해야 한다. 정책 변경은 클러스터 전체에 영향을 주므로 승인 절차가 붙는 일이고, <strong>목록 갱신이 그 절차를 타야 할 이유는 없다.</strong> <code>paramKind</code>가 그 둘을 분리한다.</p>
+
+  <div class="step">
+    <h4>1단계 — 목록을 컨피그맵에 둔다</h4>
+    <p class="purpose"><span class="lbl">목적</span>바뀌는 것(목록)과 바뀌지 않는 것(검사 방식)을 다른 오브젝트로 나눈다.</p>
+<pre><code>kubectl create ns policy
+kubectl -n policy create cm allowed-registries \
+  --from-literal=registries='docker.io,ghcr.io,registry.k8s.io,quay.io'</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — params를 읽는 정책을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>표현식이 길어질 때 <code>variables</code>로 쪼개는 방법을 함께 익힌다.</p>
+<pre><code>cat &gt; course/labs/k8s/policy/10-allowed-registries.yaml &lt;&lt;'EOF'
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: allowed-registries}
+spec:
+  failurePolicy: Fail
+  paramKind: {apiVersion: v1, kind: ConfigMap}
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["deployments", "statefulsets", "daemonsets"]
+  variables:
+    - name: allowed
+      expression: "params.data.registries.split(',')"
+    - name: images
+      expression: "object.spec.template.spec.containers.map(c, c.image)"
+  validations:
+    - expression: &gt;-
+        variables.images.all(i,
+          variables.allowed.exists(r, i.startsWith(r + '/'))
+          || (!i.split('/')[0].contains('.') &amp;&amp; 'docker.io' in variables.allowed))
+      messageExpression: &gt;-
+        "허용되지 않은 레지스트리다. 허용 목록: " + params.data.registries
+EOF
+kubectl apply -f course/labs/k8s/policy/10-allowed-registries.yaml</code></pre>
+    <p><code>messageExpression</code>은 <code>message</code>와 달리 <strong>표현식</strong>이다. 거부 메시지에 실제 허용 목록을 넣을 수 있어서, 받은 사람이 정책 파일을 열어 보지 않고도 무엇이 허용되는지 안다.</p>
+    <p><code>variables</code>는 표현식 안에서 <code>variables.이름</code>으로 참조한다. 같은 값을 여러 번 쓸 때 <strong>평가가 한 번만 일어나므로</strong> 성능에도 도움이 되지만, 실제 이유는 읽기 쉬워서다 — 한 줄짜리 CEL은 두 달 뒤에 아무도 못 읽는다.</p>
+    <p>두 번째 조건절(<code>!i.split('/')[0].contains('.')</code>)의 이유는 26.7 실패 ②에서 만든다. 지금은 이 줄이 없다고 생각하고 넘어가도 된다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 바인딩에서 어느 컨피그맵을 쓸지 지정한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 정책을 <strong>환경마다 다른 목록</strong>으로 굴리는 구조를 만든다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: allowed-registries-binding}
+spec:
+  policyName: allowed-registries
+  paramRef:
+    name: allowed-registries
+    namespace: policy
+    parameterNotFoundAction: Deny
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels: {policy: enforced}
+EOF
+sleep 5</code></pre>
+    <p><code>parameterNotFoundAction: Deny</code>는 컨피그맵이 없을 때의 동작이다. <code>Allow</code>로 두면 <strong>누군가 컨피그맵을 지우는 순간 정책이 조용히 무력화된다.</strong> 정책의 파라미터는 정책의 일부이므로 없으면 거부하는 쪽이 맞다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: evil}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: evil}}
+  template:
+    metadata: {labels: {app: evil}}
+    spec:
+      containers: [{name: web, image: "evil.example.com/web:1.0"}]
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The deployments "evil" is invalid: : ValidatingAdmissionPolicy 'allowed-registries' with binding 'allowed-registries-binding' denied request: 허용되지 않은 레지스트리다. 허용 목록: docker.io,ghcr.io,registry.k8s.io,quay.io</code></div>
+    <div class="verdict"><span class="lbl">판정</span>메시지에 허용 목록이 들어 있다. 이 목록은 정책이 아니라 컨피그맵에서 온 값이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 목록만 바꿔 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>분리해 둔 값을 실제로 확인한다. 정책은 손대지 않는다.</p>
+<pre><code>kubectl -n policy patch cm allowed-registries \
+  -p '{"data":{"registries":"docker.io,ghcr.io,registry.k8s.io,quay.io,evil.example.com"}}'
+sleep 5
+# 위와 완전히 같은 매니페스트를 다시 적용한다</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/evil created</code></div>
+    <div class="verdict"><span class="lbl">판정</span>정책 오브젝트는 그대로인데 판정이 바뀌었다. 운영에서는 이 컨피그맵을 <strong>다른 저장소·다른 승인 흐름</strong>에 둘 수 있다는 뜻이다 — 정책 변경은 플랫폼 팀, 목록 갱신은 보안 팀 식으로.</div>
+    <p>확인이 끝나면 목록을 원래대로 되돌린다.</p>
+<pre><code>kubectl -n policy patch cm allowed-registries \
+  -p '{"data":{"registries":"docker.io,ghcr.io,registry.k8s.io,quay.io"}}'
+kubectl -n m26 delete deploy evil</code></pre>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">26.6</span>따라하기 ④ 기본값을 주입한다</h2>
+  <p>여기까지는 전부 거부였다. M24에서 매니페스트마다 손으로 넣은 <code>automountServiceAccountToken: false</code>를 <strong>아무도 쓰지 않아도 붙게</strong> 만든다. 검증이 아니라 변형이다.</p>
+
+  <div class="step">
+    <h4>1단계 — 파드를 대상으로 걸어 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>가장 자연스러운 선택(토큰은 파드의 속성이니 파드에 건다)이 어떻게 되는지 먼저 본다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata: {name: default-no-token-pod}
+spec:
+  failurePolicy: Fail
+  reinvocationPolicy: Never
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: &gt;-
+          Object{ spec: Object.spec{ automountServiceAccountToken: false } }
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicyBinding
+metadata: {name: default-no-token-pod-binding}
+spec:
+  policyName: default-no-token-pod
+  matchResources:
+    namespaceSelector:
+      matchLabels: {policy: enforced}
+EOF
+sleep 6
+kubectl -n m26 run tokentest --image=curlimages/curl:8.19.0 --restart=Never \
+  --command -- sleep 300
+kubectl -n m26 wait --for=condition=Ready pod/tokentest --timeout=90s</code></pre>
+    <p><code>Object{...}</code> 문법은 <strong>부분 적용 구성</strong>이다. 전체 파드 스펙을 다시 쓰는 게 아니라 바꿀 필드만 적으면 서버가 병합한다. <code>reinvocationPolicy: Never</code>는 다른 변형이 이 뒤에 리소스를 또 바꿔도 <strong>다시 부르지 않는다</strong>는 뜻이고, 정책끼리 무한히 서로를 되돌리는 상황을 막는다.</p>
+<pre><code>kubectl -n m26 get po tokentest -o jsonpath='{.spec.automountServiceAccountToken}{"\n"}'
+kubectl -n m26 exec tokentest -- ls /var/run/secrets/kubernetes.io/serviceaccount/</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>false
+ca.crt
+namespace
+token</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>필드는 <code>false</code>인데 토큰이 그대로 마운트돼 있다.</strong> 26.2에서 본 순서 때문이다 — 서비스어카운트 어드미션이 토큰 볼륨을 <strong>먼저</strong> 넣었고, 그 뒤에 우리 정책이 필드만 바꿨다. 필드는 "볼륨을 넣을지 말지 결정할 때 참조되는 값"이지 볼륨을 지우는 스위치가 아니다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 대상을 디플로이먼트로 옮긴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파드가 만들어지기 <strong>전에</strong> 템플릿을 고치면 순서 문제가 사라지는지 확인한다.</p>
+<pre><code>kubectl delete mutatingadmissionpolicybinding default-no-token-pod-binding
+kubectl delete mutatingadmissionpolicy default-no-token-pod
+kubectl -n m26 delete pod tokentest
+
+cat &gt; course/labs/k8s/policy/20-default-no-token.yaml &lt;&lt;'EOF'
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata: {name: default-no-token}
+spec:
+  failurePolicy: Fail
+  reinvocationPolicy: Never
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["deployments"]
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: &gt;-
+          Object{ spec: Object.spec{ template: Object.spec.template{
+            spec: Object.spec.template.spec{ automountServiceAccountToken: false } } } }
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicyBinding
+metadata: {name: default-no-token-binding}
+spec:
+  policyName: default-no-token
+  matchResources:
+    namespaceSelector:
+      matchLabels: {policy: enforced}
+EOF
+kubectl apply -f course/labs/k8s/policy/20-default-no-token.yaml
+sleep 6
+
+cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: tokendeploy}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: tokendeploy}}
+  template:
+    metadata: {labels: {app: tokendeploy}}
+    spec:
+      containers: [{name: c, image: "curlimages/curl:8.19.0", command: ["sleep","300"]}]
+EOF</code></pre>
+<pre><code>POD=$(kubectl -n m26 get po -l app=tokendeploy -o jsonpath='{.items[0].metadata.name}')
+kubectl -n m26 wait --for=condition=Ready pod/$POD --timeout=90s
+kubectl -n m26 get deploy tokendeploy -o jsonpath='{.spec.template.spec.automountServiceAccountToken}{"\n"}'
+kubectl -n m26 get po $POD -o jsonpath='{.spec.volumes[*].name}{"\n"}'
+kubectl -n m26 exec $POD -- ls /var/run/secrets/kubernetes.io/serviceaccount/</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>false
+
+ls: /var/run/secrets/kubernetes.io/serviceaccount/: No such file or directory
+command terminated with exit code 1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>템플릿에 필드가 붙었고, 볼륨 목록이 <strong>비어 있고</strong>, 토큰 디렉터리 자체가 없다. 아무도 매니페스트에 그 줄을 쓰지 않았는데 M24에서 손으로 넣었던 설정이 자동으로 적용된 것이다. <strong>변형 정책은 "어느 리소스를 대상으로 하는가"가 효과를 좌우한다</strong> — 같은 표현식이 대상에 따라 되기도 하고 안 되기도 한다.</div>
+  </div>
+
+  <div class="note-2026">
+    <p>변형 정책은 <strong>남이 쓴 매니페스트를 몰래 바꾸는</strong> 도구다. 배포한 사람이 자기 YAML과 클러스터의 실제 상태가 다르다는 것을 모르면 디버깅이 아주 어려워진다. 그래서 변형은 <strong>기본값을 채우는 데만</strong> 쓰고, 사용자가 명시한 값을 덮어쓰지 않는 것이 관례다. 위 표현식도 사용자가 <code>true</code>를 명시했다면 그것을 덮어쓴다 — 실제 운영에 넣는다면 <code>has(object.spec.template.spec.automountServiceAccountToken)</code>으로 이미 값이 있는지 먼저 확인하는 조건을 붙여야 한다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">26.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 표현식 오타가 클러스터의 배포를 전부 막는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>정책 하나의 오타가 어디까지 번지는지 본다. 이 모듈에서 가장 위험한 실수다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: broken-cel}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE","UPDATE"]
+        resources: ["deployments"]
+  validations:
+    - expression: "object.spec.replicas &gt; '3'"
+      message: "레플리카는 3 이하"
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>validatingadmissionpolicy.admissionregistration.k8s.io/broken-cel created</code></div>
+    <p>숫자와 문자열을 비교하는 표현식인데 <strong>생성이 성공했다.</strong> 오류는 다른 곳에 있다.</p>
+<pre><code>kubectl get validatingadmissionpolicy broken-cel -o jsonpath='{.status}' | python3 -m json.tool</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{
+    "observedGeneration": 1,
+    "typeChecking": {
+        "expressionWarnings": [
+            {
+                "fieldRef": "spec.validations[0].expression",
+                "warning": "apps/v1, Kind=Deployment: ERROR: &lt;input&gt;:1:22: found no matching overload for '_&gt;_' applied to '(int, string)'\n | object.spec.replicas &gt; '3'\n | .....................^\n"
+            }
+        ]
+    }
+}</code></div>
+    <p>이 상태로 <code>Deny</code> 바인딩을 붙이고, <strong>위반이 전혀 없는</strong> 디플로이먼트를 올린다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: broken-cel-binding}
+spec:
+  policyName: broken-cel
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels: {policy: enforced}
+EOF
+sleep 6
+# image: nginx:1.29-alpine — 태그도 레지스트리도 문제없는 디플로이먼트</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The deployments "good" is invalid: : ValidatingAdmissionPolicy 'broken-cel' with binding 'broken-cel-binding' denied request: expression 'object.spec.replicas &gt; '3'' resulted in error: no such overload</code></div>
+    <div class="verdict"><span class="lbl">판정</span>정책과 아무 상관 없는 배포가 거부됐다. <code>failurePolicy: Fail</code>은 "<strong>평가에 실패하면 거부</strong>"라는 뜻이고, 표현식이 깨져 있으면 <strong>모든 요청의 평가가 실패한다.</strong> 바인딩의 범위가 클러스터 전체였다면 그 클러스터의 모든 디플로이먼트 배포가 이 시점에 멈춘다.</div>
+    <p>막는 방법은 셋이다. 첫째, <strong>정책을 만든 뒤 <code>status.typeChecking</code>을 확인한다.</strong> 비어 있어야 한다. 둘째, 바인딩을 항상 <code>[Warn]</code>으로 먼저 붙인다 — <code>Warn</code>에서는 평가 실패도 경고로만 나온다. 셋째, 좁은 네임스페이스에서 먼저 시험한다. 이 세 가지가 26.3의 승격 순서를 지켜야 하는 진짜 이유다.</p>
+<pre><code>kubectl delete validatingadmissionpolicybinding broken-cel-binding
+kubectl delete validatingadmissionpolicy broken-cel</code></pre>
+    <p><code>failurePolicy: Ignore</code>로 두면 이 사고는 나지 않지만, 대신 <strong>정책이 조용히 아무것도 검사하지 않는 상태</strong>가 된다. 보안 정책에서는 대개 <code>Fail</code>이 맞고, 그래서 검증을 앞에 두는 것이다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 레지스트리 정책이 도커 허브 이미지를 막는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>맞는 것 같은 표현식이 실제 이미지 이름 규칙과 어긋나는 지점을 찾는다.</p>
+    <p>26.5의 표현식에서 마지막 조건절을 빼고(즉 <code>variables.allowed.exists(r, i.startsWith(r + '/'))</code>만 남기고) 도커 허브 이미지를 배포한다.</p>
+<pre><code># containers: [{name: c, image: "curlimages/curl:8.19.0"}]</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The deployments "tokendeploy" is invalid: : ValidatingAdmissionPolicy 'allowed-registries' with binding 'allowed-registries-binding' denied request: 허용되지 않은 레지스트리다. 허용 목록: docker.io,ghcr.io,registry.k8s.io,quay.io</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>docker.io</code>가 허용 목록에 있는데 도커 허브 이미지가 막혔다. 이미지 이름에서 <strong>레지스트리 호스트가 생략돼 있기 때문</strong>이다. <code>curlimages/curl</code>은 컨테이너 런타임이 <code>docker.io/curlimages/curl</code>로 해석하지만, 정책이 보는 문자열에는 그 해석이 반영돼 있지 않다. <strong>정책은 런타임이 아니라 문자열을 본다.</strong></div>
+    <p>이 문제는 M02에서 다뤘던 이미지 이름 규칙과 같은 것이다. 호스트를 생략하면 도커 허브, 슬래시가 없으면 <code>library/</code> 네임스페이스. 정책도 그 규칙을 알아야 한다.</p>
+<pre><code>    - expression: &gt;-
+        variables.images.all(i,
+          variables.allowed.exists(r, i.startsWith(r + '/'))
+          || (!i.split('/')[0].contains('.') &amp;&amp; 'docker.io' in variables.allowed))</code></pre>
+    <p>첫 구간에 점이 있으면 호스트, 없으면 생략된 것으로 본다. 완벽하지는 않다 — 포트가 붙은 <code>localhost:5000/app</code>이나 점 없는 사내 호스트명은 이 판별을 통과하지 못한다. 정책을 쓸 때는 <strong>이런 예외를 어디까지 감당할지</strong>를 먼저 정하고, 감당하지 않기로 한 것은 주석으로 남긴다.</p>
+    <span class="out-lbl">고친 뒤</span>
+    <div class="out"><code>deployment.apps/tokendeploy created
+The deployments "evil2" is invalid: : ValidatingAdmissionPolicy 'allowed-registries' with binding 'allowed-registries-binding' denied request: 허용되지 않은 레지스트리다. 허용 목록: docker.io,ghcr.io,registry.k8s.io,quay.io</code></div>
+    <div class="verdict"><span class="lbl">판정</span>통과시킬 것은 통과하고 막을 것은 여전히 막힌다. <strong>정책을 고칠 때는 항상 두 방향을 같이 확인한다</strong> — 열었을 때 막던 것까지 열리지 않았는지. M25의 네트워크 정책에서 배운 것과 같은 습관이다.</div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">26.8</span>운영 관점 — 어디까지 정책으로 만들 것인가</h2>
+
+  <h3>VAP로 되는 것과 안 되는 것</h3>
+  <p>VAP는 <strong>요청 하나만 보고 판정할 수 있는 규칙</strong>에 맞는다. 태그·레지스트리·리소스 요청 필수화·라벨 규약·레플리카 상한이 전부 여기 들어간다. 반대로 다른 리소스를 조회해야 하는 규칙(같은 호스트를 쓰는 인그레스가 이미 있는가), 외부 시스템에 물어봐야 하는 규칙(이 이미지가 스캐너에서 통과했는가), 상태를 기억해야 하는 규칙은 <strong>표현식만으로 만들 수 없다.</strong></p>
+  <p>그 경우에 남는 선택이 웹훅이고, 웹훅을 직접 만드는 대신 <strong>정책 엔진</strong>을 쓴다. 책이 소개하는 게이트키퍼는 제약 조건 템플릿(Rego로 검사 로직)과 제약 조건(적용 범위)을 나누는데, VAP의 정책·바인딩 분리는 그 구조를 쿠버네티스가 내장한 것이다. 지금 새로 시작한다면 <strong>먼저 VAP로 써 보고, 표현식으로 안 되는 것만 엔진에 맡기는</strong> 순서가 맞다. 엔진 하나를 운영하는 비용이 규칙 몇 개보다 크기 때문이다.</p>
+
+  <h3>이미지 서명 검증은 여기서 하지 않는다</h3>
+  <p>M07에서 이미지 서명을 예고했다. 서명 검증은 <strong>레지스트리에 붙어 서명을 내려받고 공개 키로 검증</strong>해야 하므로 CEL로는 불가능하다. 집행 지점은 어드미션이 맞지만 구현은 전용 컨트롤러(예: 정책 엔진의 이미지 검증 기능)를 쓴다. 이 교재에서는 M29의 CI에서 서명을 <strong>만드는</strong> 쪽을 다루고, 클러스터에서 <strong>검증하는</strong> 쪽은 구조만 설명한다 — 키 관리까지 실습에 넣으면 모듈 하나로 끝나지 않는다.</p>
+
+  <h3>정책을 조직에 넣는 순서</h3>
+  <p>이 모듈에서 밟은 순서가 그대로 실무 순서다. <strong>정책을 쓴다 → <code>status.typeChecking</code>이 비었는지 본다 → 좁은 네임스페이스에 <code>Warn</code>으로 붙인다 → 감사 스크립트로 기존 위반을 센다 → 위반이 0이 되면 범위를 넓히고 <code>Deny</code>로 올린다.</strong> 이 중 어느 단계를 건너뛰어도 26.7의 사고가 난다.</p>
+  <p>범위를 넓힐 때 <code>kube-system</code>은 대개 제외한다. 시스템 구성요소는 우리가 고칠 수 없는 매니페스트로 배포되고, 거기서 정책이 걸리면 클러스터 복구가 막힌다. 바인딩의 <code>namespaceSelector</code>에 <code>matchExpressions</code>로 <code>NotIn</code> 조건을 쓴다.</p>
+<pre><code>  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - {key: kubernetes.io/metadata.name, operator: NotIn, values: [kube-system]}</code></pre>
+  <p>M24에서 PSA의 <code>privileged</code> 수준을 시스템 네임스페이스에 남겨 둔 것과 같은 판단이다. <strong>정책은 우리가 고칠 수 있는 것에만 건다.</strong></p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">26.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get validatingadmissionpolicy no-latest-tag allowed-registries -o name | wc -l</code> → <code>2</code></li>
+      <li><code>kubectl get validatingadmissionpolicy no-latest-tag -o jsonpath='{.status.typeChecking}'</code> → <code>{}</code></li>
+      <li><code>kubectl get validatingadmissionpolicybinding no-latest-tag-binding -o jsonpath='{.spec.validationActions}'</code> → <code>["Deny"]</code></li>
+      <li><code>kubectl -n m26 create deploy x --image=nginx:latest --dry-run=server</code> → <code>denied request</code> 문구가 나온다</li>
+      <li><code>kubectl -n m26 create deploy y --image=evil.example.com/w:1.0 --dry-run=server</code> → <code>허용되지 않은 레지스트리</code></li>
+      <li><code>kubectl -n m26 create deploy z --image=registry.k8s.io/pause:3.10 --dry-run=server</code> → <code>created (server dry run)</code></li>
+      <li><code>bash course/labs/scripts/policy-audit.sh</code> → <code>위반: m26/Deployment/bad</code>가 목록에 있다</li>
+      <li><code>kubectl get mutatingadmissionpolicybinding default-no-token-binding -o name</code> → 출력이 있다</li>
+      <li><code>kubectl -n m26 get deploy tokendeploy -o jsonpath='{.spec.template.spec.automountServiceAccountToken}'</code> → <code>false</code> (매니페스트에는 그 줄이 없다)</li>
+      <li><code>kubectl -n policy get cm allowed-registries -o jsonpath='{.data.registries}'</code> → <code>docker.io,ghcr.io,registry.k8s.io,quay.io</code></li>
+      <li><code>kubectl get ns m26 -o jsonpath='{.metadata.labels.policy}'</code> → <code>enforced</code></li>
+      <li><code>ls course/labs/k8s/policy/</code> → 파일 4개</li>
+      <li>(이해 확인) <code>Warn</code> 바인딩과 <code>failurePolicy: Ignore</code>가 각각 무엇을 무력화하는지 구분해서 적는다</li>
+      <li>(이해 확인) 같은 변형 표현식을 파드에 걸었을 때와 디플로이먼트에 걸었을 때 결과가 달랐던 이유를 한 문장으로 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/policy/00-no-latest.yaml</code> — 정책 + <code>Deny</code> 바인딩</li>
+      <li><code>course/labs/k8s/policy/10-allowed-registries.yaml</code> — <code>policy</code> 네임스페이스·컨피그맵·파라미터 정책</li>
+      <li><code>course/labs/k8s/policy/20-default-no-token.yaml</code> — 변형 정책 (디플로이먼트 대상)</li>
+      <li><code>course/labs/k8s/policy/kustomization.yaml</code> — <code>kubectl apply -k</code>로 한 번에</li>
+      <li><code>course/labs/scripts/policy-audit.sh</code> — 기존 위반 감사. M29의 CI에서 다시 쓴다</li>
+      <li>클러스터: 정책 2개 + 변형 정책 1개. <code>policy=enforced</code> 라벨이 붙은 네임스페이스에만 적용된다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 실습 네임스페이스를 지운다 (안의 디플로이먼트도 함께 사라진다)
+kubectl delete ns m26 m26b --ignore-not-found
+
+# 정책은 남긴다. 남아 있는지 확인
+kubectl get validatingadmissionpolicy,mutatingadmissionpolicy --no-headers | awk '{print $1}'</code></pre>
+  <p>정책과 <code>policy</code> 네임스페이스는 <strong>지우지 않는다.</strong> M27의 태세 점검에서 "정책이 걸리지 않은 네임스페이스"를 찾는 실습이 이 상태를 전제하고, M29의 CI 파이프라인이 <code>policy-audit.sh</code>를 그대로 호출한다.</p>
+  <p><code>journal</code>과 <code>apps</code>에는 아직 <code>policy=enforced</code> 라벨을 붙이지 않았다. 지금 붙이면 우리 워크로드가 어떻게 되는지는 M27에서 감사와 함께 확인한다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m25-k8s-networkpolicy-mesh.html">← M25 네트워크 정책과 서비스 메시</a>
+  <a href="m27-k8s-cluster-security-posture.html">M27 클러스터 보안 태세 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>M23부터 여기까지 인가·파드 보안·네트워크·어드미션을 하나씩 걸었다. 그런데 <strong>지금 이 클러스터가 전체적으로 어떤 상태인지</strong>는 아직 아무도 모른다 — 정책이 걸리지 않은 네임스페이스가 몇 개인지, 누가 어제 무엇을 지웠는지, etcd가 어떻게 보호되고 있는지.</p>
+  <p>M27에서 감사 로깅을 켜서 <strong>누가 무엇을 했는지</strong>를 읽고, 파드에서 클라우드 메타데이터로 나가는 경로를 막고, 진단 도구로 클러스터 전체를 훑어 상위 지적 셋을 고친다. 이 모듈에서 만든 <code>policy-audit.sh</code>가 그 점검 목록의 한 항목이 된다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>ValidatingAdmissionPolicy: https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/</li>
+    <li>MutatingAdmissionPolicy: https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/</li>
+    <li>어드미션 컨트롤러 목록: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/</li>
+    <li>CEL in Kubernetes: https://kubernetes.io/docs/reference/using-api/cel/</li>
+    <li>CEL 언어 정의: https://github.com/google/cel-spec/blob/master/doc/langdef.md</li>
+    <li>어드미션 웹훅: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 17.1 요청 파이프라인 · 11장 정책과 거버넌스 · 11.5 집행 액션과 감사</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · curlimages/curl:8.19.0 · registry.k8s.io/pause:3.10</p>
+</footer>
+
+</div>
+</body>
+</html>

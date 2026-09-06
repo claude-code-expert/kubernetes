@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow61" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow61r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b23b3b"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-bad { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-bad { font-size: 11px; fill: #b23b3b; font-weight: 600; }
+    .t-good { font-size: 11px; fill: #2456c4; font-weight: 600; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-r { stroke: #b23b3b; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+  </style>
+
+  <!-- 상단: 잘못된 패턴 -->
+  <text class="t-lane" x="20" y="30">잘못된 패턴 — 셀렉터에 버전을 넣음</text>
+
+  <rect class="box-bad" x="20" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="66" text-anchor="middle">Deployment selector</text>
+  <text class="t-sub" x="150" y="86" text-anchor="middle">matchLabels: app=web, ver=1.5.8</text>
+  <text class="t-bad" x="150" y="106" text-anchor="middle">생성 후 변경 불가</text>
+
+  <line class="line-r" x1="280" y1="82" x2="336" y2="82" marker-end="url(#arrow61r)"/>
+  <text class="t-bad" x="308" y="70" text-anchor="middle">v1.5.9로</text>
+  <text class="t-bad" x="308" y="128" text-anchor="middle">올리려면?</text>
+
+  <rect class="box-bad" x="340" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="470" y="66" text-anchor="middle">파드 template label을</text>
+  <text class="t-title" x="470" y="84" text-anchor="middle">ver=1.5.9로 바꾼다</text>
+  <text class="t-bad" x="470" y="106" text-anchor="middle">→ 더 이상 셀렉터와 안 맞음</text>
+
+  <line class="line-r" x1="470" y1="122" x2="470" y2="152" marker-end="url(#arrow61r)"/>
+  <rect class="box-bad" x="340" y="156" width="260" height="70" rx="4"/>
+  <text class="t-title" x="470" y="182" text-anchor="middle">디플로이먼트 자체가 거부되거나</text>
+  <text class="t-title" x="470" y="200" text-anchor="middle">파드 0개인 채로 멈춘다</text>
+
+  <!-- 구분선 -->
+  <line class="line" x1="20" y1="250" x2="880" y2="250" stroke-dasharray="2 4"/>
+
+  <!-- 하단: 올바른 패턴 -->
+  <text class="t-lane" x="20" y="278">올바른 패턴 — 셀렉터는 고정, 버전은 템플릿 레이블에만</text>
+
+  <rect class="box-accent" x="20" y="290" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="314" text-anchor="middle">Deployment selector</text>
+  <text class="t-sub" x="150" y="334" text-anchor="middle">matchLabels: app=web</text>
+  <text class="t-good" x="150" y="354" text-anchor="middle">한 번 정하면 그대로 둔다</text>
+
+  <line class="line" x1="280" y1="330" x2="336" y2="330" marker-end="url(#arrow61)"/>
+
+  <rect class="box-accent" x="340" y="290" width="260" height="80" rx="4"/>
+  <text class="t-title" x="470" y="314" text-anchor="middle">파드 template label</text>
+  <text class="t-sub" x="470" y="334" text-anchor="middle">app=web, ver=1.5.9, release=…</text>
+  <text class="t-good" x="470" y="354" text-anchor="middle">여기서만 자유롭게 갱신</text>
+
+  <line class="line" x1="600" y1="330" x2="656" y2="330" marker-end="url(#arrow61)"/>
+
+  <rect class="box" x="660" y="290" width="200" height="80" rx="4"/>
+  <text class="t-title" x="760" y="320" text-anchor="middle">정상적인 롤링 업데이트</text>
+  <text class="t-sub" x="760" y="340" text-anchor="middle">기존 ReplicaSet 축소</text>
+  <text class="t-sub" x="760" y="356" text-anchor="middle">새 ReplicaSet 확장</text>
+
+  <text class="t-cap" x="450" y="404" text-anchor="middle">selector는 생성 후 절대 바꿀 수 없다 — 버전처럼 자주 바뀌는 값은 셀렉터가 아니라 파드 템플릿 레이블에만 둔다.</text>
+</svg>

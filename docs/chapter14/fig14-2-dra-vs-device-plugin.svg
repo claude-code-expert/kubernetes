@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow142" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-old { font-size: 11px; fill: #888888; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 왼쪽: 디바이스 플러그인 (원서 기준) -->
+  <rect class="lane" x="20" y="20" width="410" height="330" rx="6"/>
+  <text class="t-lane" x="36" y="44">디바이스 플러그인 (원서 14.3.4 기준)</text>
+  <text class="t-old" x="36" y="60">2017년부터 · 정수 카운트 모델</text>
+
+  <rect class="box" x="40" y="76" width="370" height="66" rx="4"/>
+  <text class="t-title" x="225" y="102" text-anchor="middle">파드가 요청: nvidia.com/gpu: 1</text>
+  <text class="t-sub" x="225" y="122" text-anchor="middle">"GPU 하나 줘" — 그 이상 표현 불가</text>
+
+  <rect class="box" x="40" y="160" width="370" height="90" rx="4"/>
+  <text class="t-title" x="225" y="186" text-anchor="middle">스케줄러가 아는 것</text>
+  <text class="t-sub" x="225" y="208" text-anchor="middle">이 노드에 GPU가 몇 개 남았는지만</text>
+  <text class="t-sub" x="225" y="224" text-anchor="middle">어떤 모델인지, 메모리가 얼마인지,</text>
+  <text class="t-sub" x="225" y="240" text-anchor="middle">토폴로지는 어떤지 — 전혀 모름</text>
+
+  <rect class="box" x="40" y="268" width="370" height="66" rx="4"/>
+  <text class="t-title" x="225" y="294" text-anchor="middle">실무 우회책</text>
+  <text class="t-sub" x="225" y="314" text-anchor="middle">노드 레이블 + 테인트/톨러레이션으로</text>
+  <text class="t-sub" x="225" y="330" text-anchor="middle">사람이 수동으로 세밀 제어를 흉내</text>
+
+  <!-- 오른쪽: DRA -->
+  <rect class="lane" x="460" y="20" width="420" height="330" rx="6"/>
+  <text class="t-lane" x="476" y="44">DRA (Dynamic Resource Allocation)</text>
+  <text class="t-old" x="476" y="60">쿠버네티스 1.34 GA · resource.k8s.io</text>
+
+  <rect class="box-accent" x="480" y="76" width="380" height="66" rx="4"/>
+  <text class="t-title" x="670" y="102" text-anchor="middle">ResourceClaim — 속성으로 요청</text>
+  <text class="t-sub" x="670" y="122" text-anchor="middle">"메모리 80GB 이상, H100 모델" 등 CEL로 표현</text>
+
+  <rect class="box-accent" x="480" y="160" width="380" height="90" rx="4"/>
+  <text class="t-title" x="670" y="186" text-anchor="middle">DeviceClass · ResourceSlice</text>
+  <text class="t-sub" x="670" y="208" text-anchor="middle">드라이버가 노드별 실제 장비 속성을</text>
+  <text class="t-sub" x="670" y="224" text-anchor="middle">스케줄러에 구조화된 데이터로 공개</text>
+  <text class="t-sub" x="670" y="240" text-anchor="middle">→ MIG 파티셔닝·공유도 인식</text>
+
+  <rect class="box-accent" x="480" y="268" width="380" height="66" rx="4"/>
+  <text class="t-title" x="670" y="294" text-anchor="middle">스케줄러가 직접 최적 매칭</text>
+  <text class="t-sub" x="670" y="314" text-anchor="middle">레이블·테인트 수작업 없이 실제 하드웨어로</text>
+  <text class="t-sub" x="670" y="330" text-anchor="middle">"유동적인 자원 풀"처럼 다룸</text>
+
+  <line class="line" x1="410" y1="180" x2="456" y2="180" marker-end="url(#arrow142)"/>
+
+  <text class="t-cap" x="450" y="382" text-anchor="middle">NVIDIA가 자사 DRA 드라이버를 CNCF에 기증했고, KAI 스케줄러가 갱 스케줄링·큐잉을 더한 참조 구현으로 떠올랐다.</text>
+  <text class="t-cap" x="450" y="404" text-anchor="middle">PersistentVolume/PVC가 스토리지에 한 일을, DRA는 GPU 같은 가속기에 대해 한다고 보면 된다.</text>
+</svg>

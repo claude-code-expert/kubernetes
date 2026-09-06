@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-label="라벨이 붙은 ConfigMap을 사이드카가 감시해 공유 볼륨에 파일로 쓰고 그라파나가 읽는 구조">
+      <rect width="960" height="360" fill="#ffffff"/>
+
+      <!-- ConfigMap -->
+      <rect x="24" y="60" width="230" height="150" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="40" y="86" font-size="13.5" fill="#15181d">ConfigMap</text>
+      <text x="40" y="110" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">metadata:</text>
+      <text x="52" y="130" font-family="ui-monospace,monospace" font-size="11" fill="#1a4fa0">labels:</text>
+      <text x="64" y="150" font-family="ui-monospace,monospace" font-size="11" fill="#1a4fa0">grafana_dashboard: "1"</text>
+      <text x="40" y="174" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">data:</text>
+      <text x="52" y="194" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">board.json: { ... }</text>
+
+      <path d="M256 132 L318 132" fill="none" stroke="#6a4a9c" stroke-width="1.5" marker-end="url(#r1)"/>
+      <text x="287" y="122" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#6a4a9c">watch</text>
+
+      <!-- 파드 -->
+      <rect x="320" y="40" width="614" height="248" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="336" y="30" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">grafana 파드</text>
+
+      <rect x="344" y="70" width="248" height="76" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.5"/>
+      <text x="360" y="96" font-size="13" fill="#15181d">사이드카</text>
+      <text x="360" y="118" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">grafana-sc-dashboard</text>
+      <text x="360" y="136" font-size="11" fill="#585f6b">라벨을 감시해 파일로 저장</text>
+
+      <path d="M468 148 L468 186" fill="none" stroke="#6a4a9c" stroke-width="1.5" marker-end="url(#r1)"/>
+      <text x="480" y="172" font-family="ui-monospace,monospace" font-size="10.5" fill="#6a4a9c">write</text>
+
+      <rect x="344" y="188" width="248" height="72" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="360" y="214" font-size="13" fill="#15181d">공유 볼륨 (emptyDir)</text>
+      <text x="360" y="238" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">/tmp/dashboards/*.json</text>
+
+      <path d="M596 224 L668 224" fill="none" stroke="#2e7d4f" stroke-width="1.5" marker-end="url(#r2)"/>
+      <text x="632" y="214" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#2e7d4f">read</text>
+
+      <rect x="670" y="140" width="240" height="120" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="686" y="166" font-size="13.5" fill="#15181d">grafana</text>
+      <text x="686" y="190" font-size="11.5" fill="#585f6b">프로비저닝 경로를 읽어</text>
+      <text x="686" y="210" font-size="11.5" fill="#585f6b">대시보드로 등록</text>
+      <text x="686" y="238" font-family="ui-monospace,monospace" font-size="11" fill="#8f4408">UI에서 편집해도 원본은 ConfigMap</text>
+
+      <line x1="24" y1="308" x2="936" y2="308" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="24" y="334" font-size="12.5" fill="#15181d">파드를 지웠다 살려도 대시보드가 그대로인 이유 — 원본이 클러스터 리소스로 남아 있기 때문이다</text>
+
+      <defs>
+        <marker id="r1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+        </marker>
+        <marker id="r2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/>
+        </marker>
+      </defs>
+    </svg>

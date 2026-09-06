@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow103" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-phase { font-size: 12.5px; font-weight: 700; fill: #2456c4; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .timeline { stroke: #d8d8d8; stroke-width: 2; }
+  </style>
+
+  <line class="timeline" x1="60" y1="180" x2="840" y2="180"/>
+
+  <!-- 시점 1: 생성 전 -->
+  <text class="t-phase" x="150" y="40" text-anchor="middle">배포 시점 — 생성 자체를 막는다</text>
+  <circle cx="150" cy="180" r="6" fill="#2456c4"/>
+  <rect class="box-accent" x="50" y="60" width="200" height="100" rx="4"/>
+  <text class="t-title" x="150" y="88" text-anchor="middle">파드 시큐리티</text>
+  <text class="t-title" x="150" y="106" text-anchor="middle">어드미션 (10.1)</text>
+  <text class="t-sub" x="150" y="128" text-anchor="middle">privileged 필드 등</text>
+  <text class="t-sub" x="150" y="144" text-anchor="middle">위험한 스펙을 원천 차단</text>
+  <line class="line" x1="150" y1="160" x2="150" y2="176"/>
+
+  <!-- 시점 2: 실행 준비 -->
+  <text class="t-phase" x="450" y="40" text-anchor="middle">스케줄 시점 — 격리 강도를 정한다</text>
+  <circle cx="450" cy="180" r="6" fill="#2456c4"/>
+  <rect class="box" x="350" y="60" width="200" height="100" rx="4"/>
+  <text class="t-title" x="450" y="88" text-anchor="middle">런타임클래스 (10.2)</text>
+  <text class="t-sub" x="450" y="110" text-anchor="middle">신뢰 못 할 코드는</text>
+  <text class="t-sub" x="450" y="126" text-anchor="middle">gVisor·Kata 등으로</text>
+  <text class="t-sub" x="450" y="142" text-anchor="middle">커널 자체를 분리</text>
+  <line class="line" x1="450" y1="160" x2="450" y2="176"/>
+
+  <!-- 시점 3: 실행 중 -->
+  <text class="t-phase" x="750" y="40" text-anchor="middle">실행 중 — 이상 행동을 잡아낸다</text>
+  <circle cx="750" cy="180" r="6" fill="#2456c4"/>
+  <rect class="box" x="650" y="60" width="200" height="100" rx="4"/>
+  <text class="t-title" x="750" y="88" text-anchor="middle">Falco / Tetragon (10.3)</text>
+  <text class="t-sub" x="750" y="110" text-anchor="middle">eBPF로 시스템 콜 감시</text>
+  <text class="t-sub" x="750" y="126" text-anchor="middle">비정상 셸 실행·파일</text>
+  <text class="t-sub" x="750" y="142" text-anchor="middle">접근 등을 실시간 탐지</text>
+
+  <!-- 하단 설명 -->
+  <rect class="box" x="50" y="200" width="800" height="90" rx="6"/>
+  <text class="t-title" x="70" y="224">세 계층이 막는 것이 다르다</text>
+  <text class="t-sub" x="70" y="246">① 애초에 위험한 설정으로 파드가 뜨는 것 자체를 막고(사전 차단)</text>
+  <text class="t-sub" x="70" y="264">② 그래도 뜬 워크로드가 커널까지 뚫고 나가지 못하게 격리 두께를 조절하고(구조적 방어)</text>
+  <text class="t-sub" x="70" y="282">③ 그 안에서 일어나는 수상한 행동을 실시간으로 잡아낸다(탐지·대응) — 어느 하나도 나머지를 대체하지 못한다.</text>
+
+  <text class="t-cap" x="450" y="320" text-anchor="middle">10장의 세 절은 시간순으로 이어지는 방어선이다. 하나가 뚫려도 다음 계층이 남는다.</text>
+</svg>

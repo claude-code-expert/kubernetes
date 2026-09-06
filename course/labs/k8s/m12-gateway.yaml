@@ -1,0 +1,40 @@
+# M12 — 같은 라우팅을 Gateway API v1.6 으로. 역할이 세 리소스로 분리된다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: journal-gateway
+spec:
+  gatewayClassName: nginx        # 어떤 구현체가 이 게이트웨이를 맡을지
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "gw.journal.local"
+      allowedRoutes:
+        namespaces:
+          from: Same             # 같은 네임스페이스의 라우트만 붙을 수 있다
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: journal-route
+spec:
+  parentRefs:
+    - name: journal-gateway      # 이 게이트웨이에 붙는다
+  hostnames:
+    - "gw.journal.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: journal-api
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: web-static
+          port: 80

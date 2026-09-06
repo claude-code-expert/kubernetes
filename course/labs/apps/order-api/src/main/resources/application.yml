@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: order-api
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 필요한 것만 연다. '*' 로 열면 env·heapdump 같은 민감 엔드포인트까지 노출된다.
+        include: health,info,prometheus
+  endpoint:
+    health:
+      # /actuator/health/liveness 와 /readiness 가 생긴다. 03단계 프로브에서 쓴다.
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    distribution:
+      # 이 설정이 있어야 _bucket 시계열이 생기고 P95·P99를 계산할 수 있다.
+      percentiles-histogram:
+        http.server.requests: true
+      # SLO 경계를 명시하면 해당 지점에 버킷이 추가된다.
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s

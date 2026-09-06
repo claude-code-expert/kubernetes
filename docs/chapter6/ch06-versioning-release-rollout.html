@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH06 버저닝, 릴리스, 롤아웃 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .pitfall { border: 1px solid var(--line); border-left: 3px solid #b23b3b; padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .pitfall .lbl { display: block; font-size: 12.5px; font-weight: 700; color: #b23b3b; letter-spacing: 0.05em; margin-bottom: 6px; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 14.5px; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 06</div>
+  <h1>버저닝, 릴리스, 롤아웃</h1>
+  <p class="ch-desc">5장이 "코드가 이미지가 되기까지"였다면, 6장은 "그 이미지가 클러스터에서 정확히 무엇으로 불리고, 어떻게 바뀌는가"다. 쿠버네티스에는 릴리스라는 개념이 아예 없다 — 레이블로 흉내 낼 뿐이다. 이 장은 그 사실 하나에서 출발해 롤아웃의 실제 메커니즘까지 파고든다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함 · 실습 명령은 0장 kind 클러스터 기준</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 쿠버네티스에는 릴리스 컨트롤러가 없다 — "릴리스"는 레이블(예: release, release-number)로 여러 리소스를 하나의 배포 단위로 묶어 흉내 내는 관례일 뿐이다.</p>
+  <p>2. Deployment의 selector는 생성 후 절대 바꿀 수 없다 — 버전처럼 자주 바뀌는 값을 셀렉터에 넣으면 롤아웃 자체가 막힌다.</p>
+  <p>3. 롤아웃은 파일 하나를 고치는 게 아니라 리비전마다 새 ReplicaSet을 만드는 것이다 — 그래서 롤백은 "되돌리기"가 아니라 "이전 ReplicaSet을 다시 키우기"다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s6-1"><span class="num">6.1</span>버저닝</a>
+  <a href="#s6-2"><span class="num">6.2</span>릴리스</a>
+  <a href="#s6-3"><span class="num">6.3</span>롤아웃</a>
+  <a href="#s6-4"><span class="num">6.4</span>종합 예제</a>
+  <a href="#s6-5"><span class="num">6.5</span>모범 사례</a>
+</nav>
+
+<section id="s6-1">
+  <h2 class="sec"><span class="num">6.1</span>버저닝</h2>
+  <p class="lead">버전 관리 체계 자체를 발명할 필요는 없다 — <dfn class="term">시맨틱 버저닝 <span class="en">(Semantic Versioning, SemVer)</span></dfn>이 이미 표준이다. <code>MAJOR.MINOR.PATCH</code> 형식으로, MAJOR는 호환 깨지는 변경, MINOR는 하위 호환되는 기능 추가, PATCH는 버그 수정을 뜻한다.</p>
+  <p>이 장의 관심사는 "어떤 체계를 쓸까"가 아니라 <strong>"정한 체계를 클러스터 전역에서 일관되게 유지하는 법"</strong>이다. 애플리케이션 버전(SemVer), 이미지 태그(5.5절 — 불변 태그), 쿠버네티스 리소스의 레이블에 적는 버전 표기가 서로 다른 규칙을 쓰면, "지금 프로덕션에 뭐가 떠 있지?"라는 가장 기본적인 질문에 답할 수 없게 된다. 세 곳 모두 같은 값을 가리키게 하는 것이 6장 전체의 밑그림이다.</p>
+</section>
+
+<section id="s6-2">
+  <h2 class="sec"><span class="num">6.2</span>릴리스</h2>
+  <p>먼저 짚어야 할 사실 — <strong>쿠버네티스에는 릴리스라는 오브젝트도, 릴리스 컨트롤러도 없다.</strong> Deployment, Job, ConfigMap은 각자 독립적으로 존재할 뿐, "이것들이 한 릴리스다"라고 선언하는 API가 애초에 없다. 그래서 이 개념은 전적으로 <strong>레이블 관례</strong>로 흉내 낸다 — <code>release: journal-stable</code>, <code>release-number: 34e57f01</code> 같은 레이블을 관련된 모든 리소스에 똑같이 붙이는 것.</p>
+  <p>이름 붙이기에 조직 나름의 규칙이 있다면 릴리스 레이블은 특히 유용해진다. <code>stable</code>, <code>canary</code> 같은 값은 서비스 메시나 인그레스가 라우팅을 결정할 때 손잡이가 되고, 사용자 계층을 나눠 점진 배포하는 조직은 <code>ring-0</code>, <code>ring-1</code> 같은 <dfn class="term">링 배포 <span class="en">(Ring Deployment)</span></dfn> 체계를 쓰기도 한다.</p>
+  <p>헬름을 쓴다면 이 개념이 이미 내장되어 있다 — 헬름의 <dfn class="term">릴리스 <span class="en">(Release)</span></dfn>는 특정 차트를 특정 이름으로 설치한 한 인스턴스를 가리키며, 설치 이력을 자동으로 보관해 <code>helm rollback</code> 한 줄로 되돌릴 수 있게 해 준다. 많은 CD 도구가 헬름을 릴리스 관리 계층으로 그대로 채택하는 이유다.</p>
+  <div class="pitfall">
+    <span class="lbl">함정 — 셀렉터에 변하는 값을 넣지 않는다</span>
+    레이블은 API 문법만 지키면 어떤 키/값이든 자유롭게 쓸 수 있다. 문제는 <strong>레이블 셀렉터(selector)는 한번 생성되면 절대 바꿀 수 없다</strong>는 점이다. Deployment든 Job이든 DaemonSet이든 마찬가지다. 만약 selector에 <code>ver: 1.5.8</code>처럼 버전을 넣었다면, 다음 배포에서 <code>ver: 1.5.9</code>로 바뀐 파드는 <strong>더 이상 이 셀렉터와 매치되지 않는다</strong> — 기존 ReplicaSet이 갱신되는 게 아니라 아예 새 리소스가 필요해지거나, 최악의 경우 파드가 하나도 없는 채로 멈춘다. 다음 절의 롤아웃을 이해하는 데 가장 중요한 전제다.
+  </div>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow61" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow61r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b23b3b"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-bad { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-bad { font-size: 11px; fill: #b23b3b; font-weight: 600; }
+    .t-good { font-size: 11px; fill: #2456c4; font-weight: 600; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-r { stroke: #b23b3b; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+  </style>
+
+  <!-- 상단: 잘못된 패턴 -->
+  <text class="t-lane" x="20" y="30">잘못된 패턴 — 셀렉터에 버전을 넣음</text>
+
+  <rect class="box-bad" x="20" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="66" text-anchor="middle">Deployment selector</text>
+  <text class="t-sub" x="150" y="86" text-anchor="middle">matchLabels: app=web, ver=1.5.8</text>
+  <text class="t-bad" x="150" y="106" text-anchor="middle">생성 후 변경 불가</text>
+
+  <line class="line-r" x1="280" y1="82" x2="336" y2="82" marker-end="url(#arrow61r)"/>
+  <text class="t-bad" x="308" y="70" text-anchor="middle">v1.5.9로</text>
+  <text class="t-bad" x="308" y="128" text-anchor="middle">올리려면?</text>
+
+  <rect class="box-bad" x="340" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="470" y="66" text-anchor="middle">파드 template label을</text>
+  <text class="t-title" x="470" y="84" text-anchor="middle">ver=1.5.9로 바꾼다</text>
+  <text class="t-bad" x="470" y="106" text-anchor="middle">→ 더 이상 셀렉터와 안 맞음</text>
+
+  <line class="line-r" x1="470" y1="122" x2="470" y2="152" marker-end="url(#arrow61r)"/>
+  <rect class="box-bad" x="340" y="156" width="260" height="70" rx="4"/>
+  <text class="t-title" x="470" y="182" text-anchor="middle">디플로이먼트 자체가 거부되거나</text>
+  <text class="t-title" x="470" y="200" text-anchor="middle">파드 0개인 채로 멈춘다</text>
+
+  <!-- 구분선 -->
+  <line class="line" x1="20" y1="250" x2="880" y2="250" stroke-dasharray="2 4"/>
+
+  <!-- 하단: 올바른 패턴 -->
+  <text class="t-lane" x="20" y="278">올바른 패턴 — 셀렉터는 고정, 버전은 템플릿 레이블에만</text>
+
+  <rect class="box-accent" x="20" y="290" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="314" text-anchor="middle">Deployment selector</text>
+  <text class="t-sub" x="150" y="334" text-anchor="middle">matchLabels: app=web</text>
+  <text class="t-good" x="150" y="354" text-anchor="middle">한 번 정하면 그대로 둔다</text>
+
+  <line class="line" x1="280" y1="330" x2="336" y2="330" marker-end="url(#arrow61)"/>
+
+  <rect class="box-accent" x="340" y="290" width="260" height="80" rx="4"/>
+  <text class="t-title" x="470" y="314" text-anchor="middle">파드 template label</text>
+  <text class="t-sub" x="470" y="334" text-anchor="middle">app=web, ver=1.5.9, release=…</text>
+  <text class="t-good" x="470" y="354" text-anchor="middle">여기서만 자유롭게 갱신</text>
+
+  <line class="line" x1="600" y1="330" x2="656" y2="330" marker-end="url(#arrow61)"/>
+
+  <rect class="box" x="660" y="290" width="200" height="80" rx="4"/>
+  <text class="t-title" x="760" y="320" text-anchor="middle">정상적인 롤링 업데이트</text>
+  <text class="t-sub" x="760" y="340" text-anchor="middle">기존 ReplicaSet 축소</text>
+  <text class="t-sub" x="760" y="356" text-anchor="middle">새 ReplicaSet 확장</text>
+
+  <text class="t-cap" x="450" y="404" text-anchor="middle">selector는 생성 후 절대 바꿀 수 없다 — 버전처럼 자주 바뀌는 값은 셀렉터가 아니라 파드 템플릿 레이블에만 둔다.</text>
+</svg>
+    <figcaption>그림 6-1. 셀렉터에 버전을 넣었을 때(위)와 셀렉터를 고정하고 템플릿 레이블에만 버전을 둘 때(아래)의 차이.</figcaption>
+  </figure>
+</section>
+
+<section id="s6-3">
+  <h2 class="sec"><span class="num">6.3</span>롤아웃</h2>
+  <p>Deployment가 없던 시절엔 <code>kubectl rolling-update</code>가 유일한 롤아웃 수단이었다 — 문제는 이 명령이 매니페스트의 일부가 아니라 그때그때 실행하는 명령이라, 선언형 CD와는 궁합이 나빴다(무엇을 배포했는지가 Git이 아니라 누군가의 터미널 히스토리에만 남았다). Deployment 컨트롤러는 롤아웃 자체를 <strong>선언된 상태</strong>로 바꿔 이 문제를 해결했다.</p>
+  <p>메커니즘은 단순하다 — Deployment는 파드를 직접 관리하지 않는다. 파드 템플릿이 바뀔 때마다(정확히는 파드 템플릿의 해시가 바뀔 때마다) <strong>새 ReplicaSet을 하나 만들고</strong>, 기존 ReplicaSet은 서서히 줄이면서 새 것을 서서히 키운다. 각 ReplicaSet에는 <code>pod-template-hash</code> 레이블이 자동으로 붙어 리비전을 구분한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow62" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow62b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-dim { fill: #fafaf8; stroke: #d8d8d8; stroke-width: 1; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-hash { font-size: 10px; font-family: monospace; fill: #2456c4; }
+    .t-note { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-back { stroke: #2456c4; stroke-width: 1.2; fill: none; stroke-dasharray: 5 4; }
+  </style>
+
+  <!-- Deployment -->
+  <rect class="box-accent" x="350" y="20" width="200" height="60" rx="4"/>
+  <text class="t-title" x="450" y="45" text-anchor="middle">Deployment: frontend</text>
+  <text class="t-sub" x="450" y="64" text-anchor="middle">image: journal:v1.5.9</text>
+
+  <line class="line" x1="450" y1="80" x2="450" y2="108" marker-end="url(#arrow62)"/>
+
+  <!-- ReplicaSet 이력 3개 -->
+  <rect class="box-dim" x="60" y="112" width="230" height="100" rx="4"/>
+  <text class="t-title" x="175" y="136" text-anchor="middle">ReplicaSet rev.1</text>
+  <text class="t-hash" x="175" y="154" text-anchor="middle">pod-template-hash: 7c9f4</text>
+  <text class="t-sub" x="175" y="172" text-anchor="middle">v1.5.7 · replicas: 0</text>
+  <text class="t-sub" x="175" y="190" text-anchor="middle">(보관 중 — revisionHistoryLimit)</text>
+
+  <rect class="box-dim" x="335" y="112" width="230" height="100" rx="4"/>
+  <text class="t-title" x="450" y="136" text-anchor="middle">ReplicaSet rev.2</text>
+  <text class="t-hash" x="450" y="154" text-anchor="middle">pod-template-hash: a12de</text>
+  <text class="t-sub" x="450" y="172" text-anchor="middle">v1.5.8 · replicas: 0</text>
+  <text class="t-sub" x="450" y="190" text-anchor="middle">(보관 중)</text>
+
+  <rect class="box-accent" x="610" y="112" width="230" height="100" rx="4"/>
+  <text class="t-title" x="725" y="136" text-anchor="middle">ReplicaSet rev.3</text>
+  <text class="t-hash" x="725" y="154" text-anchor="middle">pod-template-hash: f930b</text>
+  <text class="t-sub" x="725" y="172" text-anchor="middle">v1.5.9 · replicas: 4</text>
+  <text class="t-note" x="725" y="190" text-anchor="middle">현재 활성</text>
+
+  <line class="line" x1="290" y1="162" x2="331" y2="162" marker-end="url(#arrow62)"/>
+  <line class="line" x1="565" y1="162" x2="606" y2="162" marker-end="url(#arrow62)"/>
+
+  <!-- rollout undo -->
+  <path class="line-back" d="M 725 216 C 725 254, 175 254, 175 216" marker-end="url(#arrow62b)"/>
+  <text class="t-note" x="450" y="272" text-anchor="middle">kubectl rollout undo — 직전 ReplicaSet을 다시 확장</text>
+
+  <!-- maxSurge/maxUnavailable 인셋 -->
+  <rect class="box" x="60" y="312" width="780" height="130" rx="6"/>
+  <text class="t-title" x="80" y="336">전환 중 파드 수 — maxSurge: 25% · maxUnavailable: 25% (기본값)</text>
+
+  <text class="t-sub" x="80" y="362">rev.2 (구버전)</text>
+  <rect class="box-dim" x="80" y="370" width="26" height="26" rx="3"/>
+  <rect class="box-dim" x="112" y="370" width="26" height="26" rx="3"/>
+  <rect class="box-dim" x="144" y="370" width="26" height="26" rx="3"/>
+  <text class="t-sub" x="220" y="388">3개 유지 (4개 중 1개까지만 동시 중단 허용)</text>
+
+  <text class="t-sub" x="500" y="362">rev.3 (신버전)</text>
+  <rect class="box-accent" x="500" y="370" width="26" height="26" rx="3"/>
+  <text class="t-sub" x="620" y="388">1개 먼저 추가 (surge — 총합이 잠깐 5개까지 늘어남)</text>
+
+  <text class="t-sub" x="80" y="422">→ 이 비율이 클수록 전환은 빠르지만 신버전 결함의 영향 범위도 커진다.</text>
+
+  <text class="t-cap" x="450" y="458" text-anchor="middle">디플로이먼트 하나 뒤에는 리비전마다 ReplicaSet이 새로 생긴다 — 롤백은 되돌리는 게 아니라 "이전 리비전을 다시 키우는" 동작이다.</text>
+</svg>
+    <figcaption>그림 6-2. 롤아웃마다 새 ReplicaSet이 쌓인다. 롤백은 옛 ReplicaSet을 다시 확장하는 동작이다.</figcaption>
+  </figure>
+<pre><code># 롤아웃 조작의 전부
+kubectl rollout status deployment/frontend      # 진행 상황 실시간 관찰
+kubectl rollout history deployment/frontend     # 리비전 이력
+kubectl rollout undo deployment/frontend        # 직전 리비전으로
+kubectl rollout undo deployment/frontend --to-revision=2   # 특정 리비전으로
+kubectl rollout pause deployment/frontend       # 진행 중인 롤아웃 일시 정지
+kubectl rollout resume deployment/frontend      # 재개</code></pre>
+  <p>전환 속도와 안전성은 두 필드가 결정한다 — <code>maxSurge</code>(원하는 개수를 넘어 얼마나 더 만들 수 있는가)와 <code>maxUnavailable</code>(원하는 개수에서 얼마나 부족해도 되는가). 둘 다 기본값은 25%다. 무중단이 절대적으로 중요하다면 <code>maxUnavailable: 0</code>으로 낮추고, 배포 속도가 더 중요하다면 <code>maxSurge</code>를 올린다.</p>
+<pre><code>spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%</code></pre>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 확인</span>
+    apps/v1 API 기준 현재 기본값을 정리하면: <code>maxSurge</code>·<code>maxUnavailable</code> 각 25%, <code>revisionHistoryLimit</code>(보관할 옛 ReplicaSet 개수) 10, <code>progressDeadlineSeconds</code>(진행이 멈췄다고 판단하는 시간) 600초다. 오래된 자료에 종종 나오는 <code>spec.rollbackTo</code> 필드는 apps/v1에서 완전히 제거됐다 — 롤백은 오직 <code>kubectl rollout undo</code>로만 한다.
+    <span class="src">출처: kubernetes.io/docs/reference/using-api/deprecation-guide (apps/v1 전환 시 기본값·제거 필드 명시)</span>
+  </div>
+</section>
+
+<section id="s6-4">
+  <h2 class="sec"><span class="num">6.4</span>종합 예제</h2>
+  <p>지금까지의 개념을 저널 앱에 적용한다. 웹·DB·백업 잡, 세 리소스가 하나의 릴리스로 묶이는 모습이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow63" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .group { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-shared { font-size: 10.5px; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .t-cmd { font-size: 12px; font-family: monospace; fill: #2456c4; }
+    .line { stroke: #2456c4; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 릴리스 그룹 프레임 -->
+  <rect class="group" x="30" y="20" width="840" height="230" rx="6"/>
+  <text class="t-sub" x="46" y="42">release: journal-stable · release-number: 34e57f01 · app: journal (세 리소스 공통)</text>
+
+  <rect class="box" x="60" y="60" width="230" height="150" rx="4"/>
+  <text class="t-title" x="175" y="88" text-anchor="middle">Deployment</text>
+  <text class="t-title" x="175" y="106" text-anchor="middle">journal-web</text>
+  <text class="t-shared" x="175" y="128" text-anchor="middle">공통: release · release-number</text>
+  <text class="t-sub" x="175" y="148" text-anchor="middle">고유: component=web</text>
+  <text class="t-sub" x="175" y="166" text-anchor="middle">ver=1.5.9</text>
+  <text class="t-sub" x="175" y="188" text-anchor="middle">strategy: RollingUpdate</text>
+
+  <rect class="box" x="335" y="60" width="230" height="150" rx="4"/>
+  <text class="t-title" x="450" y="88" text-anchor="middle">Deployment</text>
+  <text class="t-title" x="450" y="106" text-anchor="middle">journal-db</text>
+  <text class="t-shared" x="450" y="128" text-anchor="middle">공통: release · release-number</text>
+  <text class="t-sub" x="450" y="148" text-anchor="middle">고유: component=db</text>
+  <text class="t-sub" x="450" y="166" text-anchor="middle">ver=5.7</text>
+  <text class="t-sub" x="450" y="188" text-anchor="middle">strategy: Recreate (상태 보유)</text>
+
+  <rect class="box" x="610" y="60" width="230" height="150" rx="4"/>
+  <text class="t-title" x="725" y="88" text-anchor="middle">Job</text>
+  <text class="t-title" x="725" y="106" text-anchor="middle">journal-db-backup</text>
+  <text class="t-shared" x="725" y="128" text-anchor="middle">공통: release · release-number</text>
+  <text class="t-sub" x="725" y="148" text-anchor="middle">고유: component=backup</text>
+  <text class="t-sub" x="725" y="166" text-anchor="middle">batch/v1</text>
+  <text class="t-sub" x="725" y="188" text-anchor="middle">1회성 실행</text>
+
+  <!-- 조회 명령 -->
+  <line class="line" x1="450" y1="254" x2="450" y2="290" marker-end="url(#arrow63)"/>
+  <rect class="box-accent" x="220" y="294" width="460" height="56" rx="4"/>
+  <text class="t-cmd" x="450" y="328" text-anchor="middle">kubectl get all -l release=journal-stable</text>
+
+  <text class="t-cap" x="450" y="380" text-anchor="middle">각 리소스는 자기 종류(컴포넌트·버전)를 가리키는 레이블과, 릴리스 전체를 가리키는 공통 레이블을 함께 가진다 — 후자가 "이 배포 묶음 전체"를 한 번에 조회·롤백하는 손잡이가 된다.</text>
+</svg>
+    <figcaption>그림 6-3. 릴리스 레이블은 리소스마다 다른 "고유 레이블"과, 릴리스 전체가 공유하는 "공통 레이블"로 나뉜다.</figcaption>
+  </figure>
+<pre><code># 웹 — 무상태, 롤링 업데이트
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-web
+  labels:
+    app: journal
+    release: journal-stable
+    release-number: "34e57f01"
+spec:
+  replicas: 4
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: journal
+      component: web
+  template:
+    metadata:
+      labels:
+        app: journal
+        component: web
+        ver: "1.5.9"
+        release: journal-stable
+        release-number: "34e57f01"
+    spec:
+      containers:
+      - name: web
+        image: myrepo/journal-web:1.5.9-34e57f0
+---
+# DB — 상태 보유, Recreate 전략
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-db
+  labels:
+    app: journal
+    release: journal-stable
+    release-number: "34e57f01"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: journal
+      component: db
+  template:
+    metadata:
+      labels:
+        app: journal
+        component: db
+        release: journal-stable
+        release-number: "34e57f01"
+    spec:
+      containers:
+      - name: db
+        image: mysql:8.0</code></pre>
+  <p>두 가지만 눈여겨보면 된다. 첫째, <code>selector</code>에는 <code>app</code>·<code>component</code>처럼 <strong>절대 안 바뀌는 값만</strong> 들어 있고, <code>ver</code>·<code>release-number</code>처럼 매번 바뀌는 값은 <code>template.metadata.labels</code>에만 있다(6.2절 함정의 실제 적용). 둘째, DB는 왜 <code>RollingUpdate</code>가 아니라 <code>Recreate</code>인가 — 상태 보유 워크로드는 신·구버전이 동시에 같은 볼륨에 쓰기 경합을 할 수 있어, 구버전을 완전히 내린 뒤에야 신버전을 올리는 편이 안전하다(1장 StatefulSet과 같은 이유).</p>
+</section>
+
+<section id="s6-5">
+  <h2 class="sec"><span class="num">6.5</span>모범 사례</h2>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>시맨틱 버저닝을 전 영역에 일관되게</td><td>앱 버전·이미지 태그·레이블의 버전 표기가 서로 다른 규칙을 쓰고 있진 않은가?</td></tr>
+    <tr><td>셀렉터에는 불변 값만</td><td>selector에 버전·타임스탬프처럼 매번 바뀌는 키가 들어 있진 않은가?</td></tr>
+    <tr><td>릴리스 단위 공통 레이블을 정해 둔다</td><td><code>kubectl get all -l release=…</code> 한 줄로 배포 묶음 전체를 조회할 수 있는가?</td></tr>
+    <tr><td>maxSurge/maxUnavailable을 워크로드 특성에 맞게</td><td>무중단이 중요한 서비스에 기본값(25%)을 그냥 쓰고 있진 않은가?</td></tr>
+    <tr><td>상태 보유 워크로드는 Recreate 또는 신중한 전략</td><td>DB류에 기본 RollingUpdate를 그대로 쓰고 있진 않은가?</td></tr>
+    <tr><td>롤백 경로를 미리 연습해 둔다</td><td>장애 상황이 아니라 평상시에 <code>rollout undo</code>를 실행해 본 적이 있는가?</td></tr>
+    <tr><td>revisionHistoryLimit·progressDeadlineSeconds를 인지</td><td>기본값(10 / 600초)이 우리 배포 주기·속도에 맞는가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: kubernetes.io/docs/reference/using-api/deprecation-guide (apps/v1 기본값·제거 필드) · kubernetes.io/docs/concepts/workloads/controllers/deployment — 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig06-1 ~ fig06-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

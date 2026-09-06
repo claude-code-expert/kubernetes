@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Istio에서 Cilium까지 — Kubernetes 네트워크 데이터 플레인</title>
+<style>
+  :root{
+    --bg:#141428; --bg2:#1c2140; --bg3:#0f3460; --card:#1a2240;
+    --cardA:#1b2438; --code-bg:#0d1117; --border:#2a3358;
+    --cyan:#00d4ff; --cyan2:#7fdbff; --gold:#ffd700; --green:#00ff88;
+    --fg:#e6ecf5; --mut:#9fb0cc; --red:#ff6b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;background:#07070f;
+    font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:var(--fg);}
+
+  .stage-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  .stage{width:1280px;height:720px;position:relative;transform-origin:center center;}
+
+  .slide{
+    position:absolute;inset:0;padding:52px 60px 70px;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(0,212,255,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,215,0,.07), transparent 55%),
+      linear-gradient(160deg,#161634 0%,#11112a 60%,#0d0d22 100%);
+    border:1px solid var(--border);border-radius:16px;
+    opacity:0;visibility:hidden;transform:translateY(14px) scale(.995);
+    transition:opacity .42s ease, transform .42s ease, visibility .42s;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:none;}
+
+  .kicker{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;
+    font-size:15px;letter-spacing:.06em;color:var(--cyan2);
+    background:rgba(0,212,255,.10);border:1px solid rgba(0,212,255,.30);
+    padding:5px 13px;border-radius:999px;margin-bottom:14px;}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);}
+
+  h1{font-size:40px;font-weight:800;line-height:1.12;letter-spacing:-.01em;
+    color:#fff;margin-bottom:20px;}
+  h1 .hl{color:var(--cyan);}
+  h2{font-size:26px;color:var(--cyan);margin:6px 0 12px;}
+  h3{font-size:21px;color:var(--cyan2);margin-bottom:8px;}
+  p,li{font-size:20px;line-height:1.5;}
+  ul,ol{padding-left:24px;}
+  li{margin:8px 0;}
+  strong{color:var(--gold);font-weight:700;}
+  .mut{color:var(--mut);}
+  .small{font-size:17px;}
+  .tiny{font-size:15px;}
+  code{font-family:'SFMono-Regular',Consolas,monospace;background:#11203a;color:var(--green);
+    padding:1px 6px;border-radius:5px;font-size:.9em;}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;overflow:auto;}
+  pre code{background:none;color:#e6edf3;padding:0;font-size:15px;line-height:1.5;}
+  pre.sm{padding:10px 12px;}
+  pre.sm code{font-size:12px;line-height:1.42;}
+  pre.sm .cm{color:#7f93b5;}
+  .cm{color:#7f93b5;}
+  .body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+
+  /* cards */
+  .grid{display:grid;gap:16px;}
+  .g2{grid-template-columns:1fr 1fr;}
+  .g3{grid-template-columns:1fr 1fr 1fr;}
+  .card{background:linear-gradient(160deg,rgba(40,52,96,.55),rgba(22,28,56,.55));
+    border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+  .card.hot{border-color:rgba(255,215,0,.5);box-shadow:0 0 0 1px rgba(255,215,0,.15) inset;}
+  .card.cyan{border-color:rgba(0,212,255,.45);}
+  .card.red{border-color:rgba(255,107,107,.4);}
+  .card .ic{font-size:30px;margin-bottom:6px;display:block;}
+  .card h3{margin-bottom:6px;}
+  .card p,.card li{font-size:16px;line-height:1.45;}
+  .card ul{padding-left:20px;}
+
+  /* table */
+  table{border-collapse:collapse;width:100%;font-size:17px;}
+  th{background:#16203c;color:var(--cyan);padding:10px 13px;text-align:left;border:1px solid #26314f;font-weight:700;}
+  td{background:rgba(15,52,96,.45);padding:10px 13px;border:1px solid #26314f;vertical-align:top;}
+  td strong{color:var(--gold);}
+  table.kt{font-size:14px;}
+  table.kt th,table.kt td{padding:6px 10px;}
+  table.kt td code{font-size:.92em;}
+  table.kt td:first-child{white-space:nowrap;width:1%;}
+
+  blockquote{border-left:4px solid var(--gold);background:rgba(255,215,0,.06);
+    padding:12px 20px;border-radius:0 10px 10px 0;font-size:18px;}
+
+  .pillrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+  .pill{background:rgba(0,212,255,.10);border:1px solid rgba(0,212,255,.3);
+    color:var(--cyan2);padding:6px 14px;border-radius:999px;font-size:15px;}
+  .pill.gold{background:rgba(255,215,0,.10);border-color:rgba(255,215,0,.35);color:var(--gold);}
+
+  /* lead/section slides */
+  .lead{align-items:center;justify-content:center;text-align:center;}
+  .lead .body{align-items:center;}
+  .lead .big{font-size:84px;font-weight:900;letter-spacing:-.02em;
+    background:linear-gradient(120deg,#00d4ff,#7fdbff 40%,#ffd700);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .lead .sub{font-size:32px;color:var(--cyan2);margin-top:6px;font-weight:700;}
+  .lead .desc{font-size:23px;color:var(--fg);margin-top:24px;line-height:1.5;}
+  .lead .tag{margin-top:34px;font-size:18px;color:var(--gold);
+    border:1px solid rgba(255,215,0,.3);padding:8px 18px;border-radius:999px;}
+  .secnum{font-size:120px;font-weight:900;color:rgba(0,212,255,.14);line-height:1;margin-bottom:-10px;}
+
+  svg{display:block;width:100%;height:auto;}
+  .svgtext{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;}
+
+  /* nav */
+  .nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:14px;z-index:50;
+    background:rgba(16,18,38,.82);backdrop-filter:blur(8px);
+    border:1px solid var(--border);border-radius:999px;padding:8px 14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);}
+  .nav button{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);
+    background:linear-gradient(160deg,#22305a,#161c3a);
+    color:var(--cyan);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:.18s;}
+  .nav button:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-1px);}
+  .nav button:disabled{opacity:.32;cursor:default;transform:none;border-color:var(--border);color:var(--mut);}
+  .counter{font-size:16px;color:var(--fg);min-width:74px;text-align:center;font-variant-numeric:tabular-nums;}
+  .counter b{color:var(--cyan);}
+  .nav .title{max-width:280px;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;padding-right:6px;border-right:1px solid var(--border);}
+
+  .progress{position:fixed;top:0;left:0;height:4px;background:linear-gradient(90deg,#00d4ff,#ffd700);
+    width:0;z-index:60;transition:width .35s ease;box-shadow:0 0 12px rgba(0,212,255,.6);}
+
+  .hint{position:fixed;bottom:20px;right:20px;font-size:12px;color:var(--mut);z-index:50;opacity:.7;}
+  .edge{position:fixed;top:0;bottom:0;width:14%;z-index:40;cursor:pointer;}
+  .edge.l{left:0;} .edge.r{right:0;}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+
+  <!-- ============ 1 TITLE ============ -->
+  <section class="slide lead" data-title="표지">
+    <div class="body">
+      <div class="big">Istio → Cilium</div>
+      <div class="sub">Kubernetes 네트워크 데이터 플레인 심화</div>
+      <div class="desc">네트워킹 · 서비스 메시 · 관측을 <strong>eBPF로 통합</strong> — <strong>Cilium을 공부해야 하는 이유와 장단점</strong></div>
+    </div>
+  </section>
+
+  <!-- ============ 2 로드맵 ============ -->
+  <section class="slide" data-title="이 발표의 지도">
+    <span class="kicker"><span class="dot"></span>ROADMAP</span>
+    <h1>이 발표의 <span class="hl">지도</span></h1>
+    <div class="body">
+      <div class="grid g3">
+        <div class="card cyan"><span class="ic">🧩</span><h3>배경</h3>
+          <p class="mut tiny">Part I</p>
+          <p>Istio는 왜 등장했고<br>Sidecar·Ambient의 <strong>구조</strong></p></div>
+        <div class="card cyan"><span class="ic">🔀</span><h3>동작 메커니즘</h3>
+          <p class="mut tiny">Part II~IV</p>
+          <p>Envoy 프록시 · DNS · kube-proxy<br><strong>Ingress/Egress</strong></p></div>
+        <div class="card cyan"><span class="ic">🐝</span><h3>Cilium</h3>
+          <p class="mut tiny">Part V~VI</p>
+          <p>eBPF로 이 모두를<br><strong>대체·통합</strong>하는 방식</p></div>
+      </div>
+      <blockquote style="margin-top:18px"><strong>큰 그림:</strong> Istio는 통신 문제를 <strong>프록시(Envoy)</strong>로, Cilium은 네트워크 자체를 <strong>eBPF 데이터 플레인</strong>으로 해결한다.</blockquote>
+      <p class="small mut" style="margin-top:10px;text-align:center">Cilium 공부 = 새 서비스 메시 하나가 아니라, <strong>K8s 네트워크 동작 방식 전체</strong>를 공부하는 것.</p>
+    </div>
+  </section>
+
+  <!-- ============ 3 SECTION 1 ============ -->
+  <section class="slide lead" data-title="섹션 1: 배경">
+    <div class="body">
+      <div class="secnum">01</div>
+      <div class="big" style="font-size:60px">배경 — 왜 서비스 메시인가</div>
+      <div class="desc">Kubernetes가 준 것과, <strong>애플리케이션이 떠안던 것</strong></div>
+    </div>
+  </section>
+
+  <!-- ============ 4 Istio 등장 이유 ============ -->
+  <section class="slide" data-title="Istio는 왜 등장했나">
+    <span class="kicker"><span class="dot"></span>WHY ISTIO</span>
+    <h1>Istio는 왜 <span class="hl">등장했나</span></h1>
+    <div class="body">
+      <div class="grid g2">
+        <div class="card cyan"><h3>✅ K8s가 기본 제공</h3>
+          <ul class="small"><li>Pod 간 연결 (CNI)</li>
+          <li>Service 디스커버리·LB (kube-proxy)</li>
+          <li>Deployment 배포</li>
+          <li>NetworkPolicy (L3/L4)</li></ul>
+          <p class="tiny mut" style="margin-top:8px">= <strong>L3/L4 연결과 로드밸런싱</strong>까지</p></div>
+        <div class="card red"><h3 style="color:#ff9b9b">⚠️ 앱이 떠안던 것</h3>
+          <ul class="small"><li>재시도 · 타임아웃 · 서킷브레이커</li>
+          <li>카나리 · A/B 트래픽 분배</li>
+          <li>서비스 간 <strong>mTLS</strong> · 신원 기반 인가</li>
+          <li>tracing · L7(경로/헤더) 라우팅</li></ul></div>
+      </div>
+      <blockquote style="margin-top:16px">서비스마다 이 기능을 <strong>언어·프레임워크별로 제각각</strong> 반복 구현 → 정책 일관성 붕괴. 이걸 앱 밖으로 빼자는 게 서비스 메시.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 5 Istio 해법: Envoy ============ -->
+  <section class="slide" data-title="Istio 해법: Envoy 사이드카">
+    <span class="kicker"><span class="dot"></span>SIDECAR</span>
+    <h1>해법 — 공통 기능을 <span class="hl">Envoy로</span></h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 220" style="max-height:230px">
+        <defs><marker id="a1" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00d4ff"/></marker>
+        <marker id="a1g" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#ffd700"/></marker></defs>
+        <!-- Pod A -->
+        <rect x="30" y="40" width="380" height="140" rx="12" fill="rgba(0,212,255,.05)" stroke="#26314f" stroke-width="1.5"/>
+        <text class="svgtext" x="220" y="30" fill="#7fdbff" font-size="14" text-anchor="middle">Pod A</text>
+        <rect x="60" y="80" width="130" height="62" rx="9" fill="#0f3460" stroke="#00d4ff" stroke-width="2"/>
+        <text class="svgtext" x="125" y="116" fill="#e6ecf5" font-size="15" text-anchor="middle" font-weight="700">App A</text>
+        <rect x="250" y="80" width="130" height="62" rx="9" fill="#16203c" stroke="#ffd700" stroke-width="2.2"/>
+        <text class="svgtext" x="315" y="108" fill="#ffd700" font-size="15" text-anchor="middle" font-weight="700">Envoy</text>
+        <text class="svgtext" x="315" y="128" fill="#9fb0cc" font-size="11" text-anchor="middle">sidecar</text>
+        <line x1="190" y1="111" x2="248" y2="111" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#a1)"/>
+        <!-- Pod B -->
+        <rect x="590" y="40" width="380" height="140" rx="12" fill="rgba(0,212,255,.05)" stroke="#26314f" stroke-width="1.5"/>
+        <text class="svgtext" x="780" y="30" fill="#7fdbff" font-size="14" text-anchor="middle">Pod B</text>
+        <rect x="620" y="80" width="130" height="62" rx="9" fill="#16203c" stroke="#ffd700" stroke-width="2.2"/>
+        <text class="svgtext" x="685" y="108" fill="#ffd700" font-size="15" text-anchor="middle" font-weight="700">Envoy</text>
+        <text class="svgtext" x="685" y="128" fill="#9fb0cc" font-size="11" text-anchor="middle">sidecar</text>
+        <rect x="810" y="80" width="130" height="62" rx="9" fill="#0f3460" stroke="#00d4ff" stroke-width="2"/>
+        <text class="svgtext" x="875" y="116" fill="#e6ecf5" font-size="15" text-anchor="middle" font-weight="700">App B</text>
+        <line x1="750" y1="111" x2="808" y2="111" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#a1)"/>
+        <!-- mTLS between envoys -->
+        <path d="M382 111 L618 111" fill="none" stroke="#ffd700" stroke-width="2.6" marker-end="url(#a1g)"/>
+        <text class="svgtext" x="500" y="100" fill="#ffd700" font-size="14" text-anchor="middle" font-weight="700">mTLS</text>
+        <text class="svgtext" x="500" y="200" fill="#9fb0cc" font-size="13" text-anchor="middle">앱 코드 수정 없이 retry·timeout·mTLS·tracing·라우팅 주입</text>
+      </svg>
+      <blockquote style="margin-top:14px">애플리케이션 트래픽이 <strong>반드시 Envoy를 통과</strong>하므로, 통신 안정성·보안·관측을 인프라 계층에서 일괄 처리.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 6 Sidecar 문제점 ============ -->
+  <section class="slide" data-title="Sidecar 방식의 문제점">
+    <span class="kicker"><span class="dot"></span>COST</span>
+    <h1>Sidecar 방식의 <span class="hl">문제점</span></h1>
+    <div class="body">
+      <div class="grid g3">
+        <div class="card red"><span class="ic">📦</span><h3 style="color:#ff9b9b">Pod마다 Envoy</h3>
+          <p class="tiny">App 1,000개 → Envoy ~1,000개. CPU·메모리·시작지연↑, 노드당 Pod수↓. mTLS만 필요해도 범용 L7 프록시 = <strong>과잉</strong>.</p></div>
+        <div class="card red"><span class="ic">🔗</span><h3 style="color:#ff9b9b">생명주기 결합</h3>
+          <p class="tiny">프록시 업그레이드·설정·인증서 문제가 <strong>앱 Pod 재시작</strong>을 유발. 앱 코드는 그대로인데도.</p></div>
+        <div class="card red"><span class="ic">🕵️</span><h3 style="color:#ff9b9b">장애 경로 증가</h3>
+          <p class="tiny">App→Envoy→iptables→net→Envoy→App. 문제 위치를 앱/Envoy/Istiod/인증서/정책 중에서 골라야.</p></div>
+      </div>
+      <blockquote style="margin-top:18px">해결한 문제는 분명하지만, <strong>모든 Pod에 범용 L7 프록시</strong>를 두는 구조가 새 비용을 만들었다 → Ambient의 동기.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 6b Envoy 자원 ============ -->
+  <section class="slide" data-title="Envoy가 요구하는 자원 (공식)">
+    <span class="kicker"><span class="dot"></span>RESOURCE · 공식</span>
+    <h1>Envoy 사이드카가 <span class="hl">요구하는 자원</span></h1>
+    <div class="body">
+      <div class="grid g2" style="align-items:start">
+        <table class="kt">
+          <tr><th>항목</th><th>값 (Istio 공식)</th></tr>
+          <tr><td>처리량당 (1.8.3)</td><td><strong>0.35 vCPU + 40 MB</strong> / 1,000 rps</td></tr>
+          <tr><td>처리량당 (1.24)</td><td><strong>~0.20 vCPU + 60 MB</strong> / 1,000 rps</td></tr>
+          <tr><td>기본 requests</td><td><strong>CPU 100m · Mem 128Mi</strong></td></tr>
+          <tr><td>기본 limits</td><td><strong>CPU 2000m · Mem 1024Mi</strong></td></tr>
+        </table>
+        <div>
+          <ul class="small">
+            <li>메모리는 <strong>config state</strong>(listener·cluster·route·endpoint)에 비례 → <code>Sidecar</code>로 스코프 축소.</li>
+            <li>CPU limit 과소 → 스파이크 때 <strong>스로틀링 = 앱 지연</strong>. limit은 높게/unset 권장.</li>
+            <li>오버라이드: <code>global.proxy.resources</code> 또는 <code>sidecar.istio.io/proxyCPU</code> 등 애노테이션.</li>
+          </ul>
+        </div>
+      </div>
+      <blockquote style="margin-top:14px"><strong>규모 감각:</strong> Pod 1,000개 = 사이드카 requests만 <strong>100 vCPU + ~125 GiB</strong>(1000×128Mi), limits로는 <strong>~2,000 vCPU + ~1 TiB</strong>. 앱이 아니라 <strong>프록시 계층에만</strong> 드는 비용 — Ambient·eBPF가 이 곱셈을 없애려는 이유.</blockquote>
+      <p class="tiny mut" style="margin-top:8px;text-align:center">출처: Istio <em>Performance and Scalability</em> · 기본값 = 차트 <code>values.global.proxy.resources</code></p>
+    </div>
+  </section>
+
+  <!-- ============ 7 Ambient ============ -->
+  <section class="slide" data-title="Istio Ambient: L4/L7 분리">
+    <span class="kicker"><span class="dot"></span>AMBIENT</span>
+    <h1>Istio Ambient — <span class="hl">L4/L7 계층화</span></h1>
+    <div class="body">
+      <div class="grid g2" style="grid-template-columns:1.05fr .95fr;align-items:center">
+        <svg viewBox="0 0 380 220">
+          <rect x="20" y="20" width="340" height="70" rx="10" fill="#16203c" stroke="#ffd700" stroke-width="2"/>
+          <text class="svgtext" x="190" y="48" fill="#ffd700" font-size="15" text-anchor="middle" font-weight="700">L7 · Waypoint (Envoy)</text>
+          <text class="svgtext" x="190" y="70" fill="#9fb0cc" font-size="12" text-anchor="middle">HTTP·L7 authz·retry — Deployment · 선택</text>
+          <rect x="20" y="120" width="340" height="80" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="2"/>
+          <text class="svgtext" x="190" y="150" fill="#00d4ff" font-size="15" text-anchor="middle" font-weight="700">L4 · ztunnel · DaemonSet</text>
+          <text class="svgtext" x="190" y="172" fill="#9fb0cc" font-size="12" text-anchor="middle">mTLS·identity·L4 authz·HBONE</text>
+          <text class="svgtext" x="190" y="190" fill="#00ff88" font-size="12" text-anchor="middle">노드당 1개 · 기본</text>
+        </svg>
+        <div>
+          <ul class="small">
+            <li><strong>ztunnel</strong> (<strong>DaemonSet</strong>·노드당 1개): L4 mTLS·신원·정책. <strong>HTTP 미파싱</strong>.</li>
+            <li><strong>Waypoint</strong> (<strong>Deployment</strong>·네임스페이스/SA 단위, DaemonSet 아님): L7 필요 시만. <code>istioctl waypoint apply</code>로 생성, 앱과 독립 스케일.</li>
+          </ul>
+          <blockquote style="margin-top:12px;font-size:15px">기본 보안은 공유 L4, <strong>필요할 때만 L7</strong>. 다만 여전히 K8s 네트워크 <strong>위에</strong> 얹는 메시.</blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8 SECTION 2 ============ -->
+  <section class="slide lead" data-title="섹션 2: Envoy 사이드카">
+    <div class="body">
+      <div class="secnum">02</div>
+      <div class="big" style="font-size:52px">Envoy는 어떻게 뜨고<br>어떻게 프록시하나</div>
+      <div class="desc">주입 → 가로채기 → 프록시 → 설정 배포</div>
+    </div>
+  </section>
+
+  <!-- ============ 8b Envoy란 ============ -->
+  <section class="slide" data-title="Envoy란 무엇인가">
+    <span class="kicker"><span class="dot"></span>먼저 · 용어</span>
+    <h1>그런데 <span class="hl">Envoy</span>가 뭔가</h1>
+    <div class="body">
+      <p class="small mut" style="margin-bottom:12px">Envoy = Istio가 데이터 플레인으로 쓰는 <strong>고성능 L4/L7 프록시</strong>(CNCF 졸업 프로젝트·C++·원래 Lyft 제작). 앱 <strong>대신</strong> 연결을 받고/보내며 그 사이에서 정책을 적용하는 중개자.</p>
+      <div class="grid g3">
+        <div class="card cyan"><span class="ic">🔀</span><h3>L4/L7 처리</h3><p class="tiny">TCP뿐 아니라 HTTP/2·gRPC를 이해 → 경로·헤더 라우팅, 재시도·타임아웃·서킷브레이커, TLS(mTLS).</p></div>
+        <div class="card cyan"><span class="ic">⚙️</span><h3>동적 설정 (xDS)</h3><p class="tiny">재시작 없이 API로 설정을 받아 실시간 반영 → istiod가 수천 Envoy를 중앙 조종. 메시의 핵심.</p></div>
+        <div class="card cyan"><span class="ic">🔭</span><h3>관측 내장</h3><p class="tiny">상세 통계·분산 트레이싱·액세스 로그 기본 제공.</p></div>
+      </div>
+      <div class="grid g2" style="grid-template-columns:1.1fr .9fr;align-items:center;margin-top:14px">
+        <pre class="sm"><code>Listener  <span class="cm"># 수신 지점 15006/15001</span>
+  └ Filter Chain <span class="cm"># TLS·HTTP</span>
+      └ Route     <span class="cm"># host/path → Cluster</span>
+          └ Cluster   <span class="cm"># upstream 서비스</span>
+              └ Endpoint <span class="cm"># 실제 Pod IP</span></code></pre>
+        <blockquote style="font-size:15px">각 계층이 <strong>xDS(LDS/RDS/CDS/EDS)</strong>에 대응. Sidecar·Waypoint·Cilium의 L7 — "L7 프록시"라 하면 대부분 이 Envoy다.</blockquote>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9 주입 ============ -->
+  <section class="slide" data-title="사이드카 주입 (Webhook)">
+    <span class="kicker"><span class="dot"></span>① 주입</span>
+    <h1>사이드카 주입 — <span class="hl">Mutating Webhook</span></h1>
+    <div class="body">
+      <div class="grid g2" style="grid-template-columns:1fr 1fr;align-items:center">
+        <div>
+          <ul class="small">
+            <li>Pod 생성 요청을 <strong>MutatingAdmissionWebhook</strong>(istio-sidecar-injector)이 가로채 스펙을 수정.</li>
+            <li>대상: 네임스페이스 <code>istio-injection=enabled</code> 또는 Pod <code>sidecar.istio.io/inject</code>.</li>
+            <li>주입되는 것: <strong>istio-init</strong>(initContainer) + <strong>istio-proxy</strong>(사이드카).</li>
+          </ul>
+        </div>
+        <pre class="sm"><code><span class="cm"># 주입 후 Pod</span>
+spec:
+  initContainers:
+  - name: istio-init        <span class="cm"># ① iptables 세팅 후 종료</span>
+    args: [istio-iptables,
+      -p,"15001", -z,"15006",
+      -u,"1337", -m,REDIRECT]
+  containers:
+  - name: my-app            <span class="cm"># 원래 앱</span>
+  - name: istio-proxy       <span class="cm"># ② pilot-agent + Envoy</span></code></pre>
+      </div>
+      <p class="small mut" style="margin-top:12px;text-align:center"><strong>istio-init</strong>은 앱보다 먼저 실행돼 netns에 iptables를 심고 종료 · <strong>istio-proxy</strong> 안 pilot-agent가 Envoy를 부트스트랩.</p>
+    </div>
+  </section>
+
+  <!-- ============ 10 iptables ============ -->
+  <section class="slide" data-title="istio-init: iptables 가로채기">
+    <span class="kicker"><span class="dot"></span>② 가로채기</span>
+    <h1>iptables로 <span class="hl">투명하게 가로채기</span></h1>
+    <div class="body">
+      <div class="grid g2" style="align-items:center">
+        <pre class="sm"><code><span class="cm">[Inbound] PREROUTING</span>
+  ISTIO_INBOUND      <span class="cm"># 들어오는 TCP</span>
+   └ (15090/15021/15020 제외)
+  ISTIO_IN_REDIRECT
+   └ REDIRECT → <span style="color:#ffd700">15006</span>
+
+<span class="cm">[Outbound] OUTPUT</span>
+  ISTIO_OUTPUT       <span class="cm"># 나가는 TCP</span>
+   ├ UID/GID 1337 발 → RETURN <span class="cm">(루프X)</span>
+   ├ dst 127.0.0.1   → RETURN
+   └ ISTIO_REDIRECT
+      └ REDIRECT → <span style="color:#ffd700">15001</span></code></pre>
+        <div>
+          <table class="kt">
+            <tr><th>인자</th><th>의미</th></tr>
+            <tr><td><code>-p 15001</code></td><td>outbound → Envoy 15001</td></tr>
+            <tr><td><code>-z 15006</code></td><td>inbound → Envoy 15006</td></tr>
+            <tr><td><code>-u 1337</code></td><td>Envoy UID (루프 방지 키)</td></tr>
+            <tr><td><code>-m REDIRECT</code></td><td>캡처 모드 (또는 TPROXY)</td></tr>
+          </table>
+          <blockquote style="margin-top:12px;font-size:15px"><strong>UID 1337</strong>이 핵심: Envoy가 내보내는 패킷도 OUTPUT을 지나므로, 소유자 UID가 1337이면 <code>RETURN</code>해서 <strong>무한 루프를 막는다</strong>.</blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11 포트 ============ -->
+  <section class="slide" data-title="Envoy 포트 구성">
+    <span class="kicker"><span class="dot"></span>③ 프록시 · 포트</span>
+    <h1>Envoy <span class="hl">포트 구성</span></h1>
+    <div class="body">
+      <table class="kt">
+        <tr><th>포트</th><th>역할</th></tr>
+        <tr><td><strong>15001</strong></td><td>Envoy <strong>outbound</strong> listener — 앱이 밖으로 보내는 트래픽이 iptables로 도착</td></tr>
+        <tr><td><strong>15006</strong></td><td>Envoy <strong>inbound</strong> listener — 밖에서 이 Pod로 오는 트래픽이 iptables로 도착</td></tr>
+        <tr><td>15000</td><td>Envoy admin API (config_dump·통계, 디버깅)</td></tr>
+        <tr><td>15020</td><td>istio-agent 병합 텔레메트리 + health check 집계</td></tr>
+        <tr><td>15021</td><td>health check (<code>/healthz/ready</code>, kubelet readiness probe)</td></tr>
+        <tr><td>15090</td><td>Envoy Prometheus 메트릭 (pilot-agent가 scrape)</td></tr>
+      </table>
+      <blockquote style="margin-top:14px">15090·15021·15020은 iptables 캡처에서 <strong>제외</strong> — health check·metrics·admin이 Envoy로 되돌려지면 안 되므로.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 12 Inbound 흐름 ============ -->
+  <section class="slide" data-title="Inbound 흐름 (들어오는 것)">
+    <span class="kicker"><span class="dot"></span>INBOUND</span>
+    <h1>트래픽이 <span class="hl">들어오는</span> 흐름</h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 250" style="max-height:250px">
+        <defs><marker id="ai" markerWidth="11" markerHeight="11" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00d4ff"/></marker></defs>
+        <rect x="20" y="95" width="150" height="60" rx="10" fill="#16203c" stroke="#3a4670" stroke-width="1.5"/>
+        <text class="svgtext" x="95" y="120" fill="#e6ecf5" font-size="14" text-anchor="middle" font-weight="700">원격 클라이언트</text>
+        <text class="svgtext" x="95" y="140" fill="#9fb0cc" font-size="11" text-anchor="middle">dst = PodIP:8080</text>
+        <!-- pod boundary -->
+        <rect x="250" y="40" width="700" height="180" rx="12" fill="rgba(0,212,255,.05)" stroke="#26314f" stroke-width="1.5"/>
+        <text class="svgtext" x="600" y="30" fill="#7fdbff" font-size="13" text-anchor="middle">This Pod netns</text>
+        <rect x="275" y="90" width="180" height="70" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="365" y="116" fill="#00d4ff" font-size="13" text-anchor="middle" font-weight="700">PREROUTING</text>
+        <text class="svgtext" x="365" y="136" fill="#9fb0cc" font-size="11" text-anchor="middle">ISTIO_IN_REDIRECT</text>
+        <rect x="510" y="90" width="180" height="70" rx="10" fill="#16203c" stroke="#ffd700" stroke-width="2"/>
+        <text class="svgtext" x="600" y="116" fill="#ffd700" font-size="14" text-anchor="middle" font-weight="700">Envoy :15006</text>
+        <text class="svgtext" x="600" y="136" fill="#9fb0cc" font-size="11" text-anchor="middle">mTLS 종료·L7 authz·관측</text>
+        <rect x="745" y="90" width="180" height="70" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="835" y="120" fill="#e6ecf5" font-size="14" text-anchor="middle" font-weight="700">App :8080</text>
+        <text class="svgtext" x="835" y="140" fill="#9fb0cc" font-size="11" text-anchor="middle">localhost로만 받음</text>
+        <line x1="170" y1="125" x2="272" y2="125" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ai)"/>
+        <line x1="455" y1="125" x2="507" y2="125" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ai)"/>
+        <text class="svgtext" x="481" y="82" fill="#ffd700" font-size="11" text-anchor="middle">REDIRECT</text>
+        <line x1="690" y1="125" x2="742" y2="125" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ai)"/>
+        <text class="svgtext" x="716" y="82" fill="#9fb0cc" font-size="11" text-anchor="middle">127.0.0.1</text>
+      </svg>
+      <blockquote style="margin-top:12px">앱은 항상 <strong>localhost로 들어온 요청</strong>만 본다. mTLS 검증·L7 인가·관측은 앱이 받기 <strong>전에</strong> Envoy가 끝낸다.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 13 Outbound 흐름 ============ -->
+  <section class="slide" data-title="Outbound 흐름 (나가는 것)">
+    <span class="kicker"><span class="dot"></span>OUTBOUND</span>
+    <h1>트래픽이 <span class="hl">나가는</span> 흐름</h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 250" style="max-height:250px">
+        <defs><marker id="ao" markerWidth="11" markerHeight="11" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00d4ff"/></marker>
+        <marker id="aog" markerWidth="11" markerHeight="11" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#ffd700"/></marker></defs>
+        <rect x="20" y="40" width="640" height="180" rx="12" fill="rgba(0,212,255,.05)" stroke="#26314f" stroke-width="1.5"/>
+        <text class="svgtext" x="340" y="30" fill="#7fdbff" font-size="13" text-anchor="middle">This Pod netns</text>
+        <rect x="45" y="90" width="165" height="70" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="127" y="116" fill="#e6ecf5" font-size="14" text-anchor="middle" font-weight="700">App</text>
+        <text class="svgtext" x="127" y="136" fill="#9fb0cc" font-size="11" text-anchor="middle">connect(payment CIP)</text>
+        <rect x="255" y="90" width="165" height="70" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="337" y="116" fill="#00d4ff" font-size="13" text-anchor="middle" font-weight="700">OUTPUT</text>
+        <text class="svgtext" x="337" y="136" fill="#9fb0cc" font-size="11" text-anchor="middle">ISTIO_REDIRECT</text>
+        <rect x="465" y="90" width="175" height="70" rx="10" fill="#16203c" stroke="#ffd700" stroke-width="2"/>
+        <text class="svgtext" x="552" y="112" fill="#ffd700" font-size="14" text-anchor="middle" font-weight="700">Envoy :15001</text>
+        <text class="svgtext" x="552" y="132" fill="#9fb0cc" font-size="11" text-anchor="middle">라우팅·retry·mTLS 개시</text>
+        <line x1="210" y1="125" x2="252" y2="125" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ao)"/>
+        <line x1="420" y1="125" x2="462" y2="125" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ao)"/>
+        <text class="svgtext" x="441" y="82" fill="#ffd700" font-size="11" text-anchor="middle">15001</text>
+        <!-- to remote -->
+        <rect x="720" y="90" width="240" height="70" rx="10" fill="#16203c" stroke="#ffd700" stroke-width="1.8"/>
+        <text class="svgtext" x="840" y="116" fill="#ffd700" font-size="14" text-anchor="middle" font-weight="700">상대 Envoy :15006</text>
+        <text class="svgtext" x="840" y="136" fill="#9fb0cc" font-size="11" text-anchor="middle">→ 상대 App</text>
+        <path d="M640 125 L716 125" fill="none" stroke="#ffd700" stroke-width="2.6" marker-end="url(#aog)"/>
+        <text class="svgtext" x="678" y="82" fill="#9fb0cc" font-size="10" text-anchor="middle">UID1337</text>
+        <text class="svgtext" x="678" y="176" fill="#9fb0cc" font-size="10" text-anchor="middle">RETURN(루프X)</text>
+      </svg>
+      <blockquote style="margin-top:12px">앱은 그냥 <code>payment</code> ClusterIP로 connect했을 뿐 — iptables가 소켓을 15001로 돌리고 Envoy가 엔드포인트 선택·mTLS·정책을 대신 수행.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 14 xDS ============ -->
+  <section class="slide" data-title="istiod ↔ Envoy (xDS)">
+    <span class="kicker"><span class="dot"></span>④ 설정 배포</span>
+    <h1>제어 플레인 — <span class="hl">istiod ↔ Envoy (xDS)</span></h1>
+    <div class="body">
+      <p class="small mut" style="margin-bottom:10px">xDS = istiod가 Envoy에 설정을 내려주는 <strong>API 묶음</strong>(x = L/R/C/E/S, DS = Discovery Service). Envoy는 스스로 라우팅을 모르고, istiod가 K8s API를 watch해 <strong>gRPC 스트림</strong>으로 실시간 push한다.</p>
+      <table class="kt">
+        <tr><th>종류</th><th>무엇을</th><th>쉽게 말하면</th></tr>
+        <tr><td><strong>LDS</strong><br><span class="tiny mut">Listener</span></td><td>어떤 포트에서 받을지</td><td>"15001(out)·15006(in)에서 받아라"</td></tr>
+        <tr><td><strong>RDS</strong><br><span class="tiny mut">Route</span></td><td>HTTP를 어디로 보낼지</td><td>host/path 보고 어느 서비스로 (VirtualService)</td></tr>
+        <tr><td><strong>CDS</strong><br><span class="tiny mut">Cluster</span></td><td>upstream 서비스 묶음</td><td>보낼 수 있는 백엔드 그룹 + LB/TLS (DestinationRule)</td></tr>
+        <tr><td><strong>EDS</strong><br><span class="tiny mut">Endpoint</span></td><td>실제 Pod IP 목록</td><td>그 서비스의 진짜 Pod IP들 (죽/뜨면 갱신)</td></tr>
+        <tr><td><strong>SDS</strong><br><span class="tiny mut">Secret</span></td><td>인증서·키·CA</td><td>mTLS용 인증서, istio-agent가 발급·회전</td></tr>
+      </table>
+      <blockquote style="margin-top:12px;font-size:15px"><strong>4단계 요약:</strong> 주입(webhook) → 가로채기(iptables 15006/15001) → 프록시(Envoy) → 설정 배포(istiod xDS/SDS).</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 15 SECTION 3 ============ -->
+  <section class="slide lead" data-title="섹션 3: CoreDNS & kube-proxy">
+    <div class="body">
+      <div class="secnum">03</div>
+      <div class="big" style="font-size:50px">K8s 기본 네트워크<br>CNI · CoreDNS · kube-proxy</div>
+      <div class="desc">Pod가 <strong>IP를 얻는 법(CNI)</strong>부터, DNS 질의가 흐르는 법까지</div>
+    </div>
+  </section>
+
+  <!-- ============ 15b CNI란 ============ -->
+  <section class="slide" data-title="CNI란 무엇인가">
+    <span class="kicker"><span class="dot"></span>CNI · 기초</span>
+    <h1>Pod는 어떻게 <span class="hl">IP를 얻나</span> — CNI</h1>
+    <div class="body">
+      <p class="small mut" style="margin-bottom:12px"><strong>CNI(Container Network Interface)</strong> = 컨테이너에 네트워크를 붙이는 방법을 규정한 CNCF 표준 + 그 구현 플러그인(Cilium·Calico·Flannel·AWS VPC CNI…). <strong>CNI 자체는 네트워킹을 "제공"하지 않는다</strong> — 런타임이 플러그인을 어떻게 호출할지만 정의.</p>
+      <div class="grid g3">
+        <div class="card cyan"><span class="ic">🔢</span><h3>IPAM</h3><p class="tiny">Pod에 클러스터에서 <strong>겹치지 않는 IP</strong> 할당.</p></div>
+        <div class="card cyan"><span class="ic">🔌</span><h3>인터페이스</h3><p class="tiny"><strong>veth pair</strong> 생성 — Pod의 eth0 ↔ 호스트 namespace.</p></div>
+        <div class="card cyan"><span class="ic">🧭</span><h3>라우팅</h3><p class="tiny">같은/다른 노드 Pod·외부와 통신하도록 경로 세팅.</p></div>
+      </div>
+      <blockquote style="margin-top:14px"><strong>K8s 네트워크 모델:</strong> ① 모든 Pod는 고유 IP ② Pod↔Pod는 <strong>NAT 없이</strong>(노드 넘어서도) ③ 노드 에이전트는 그 노드 Pod와 통신. <span class="mut">Service LB(kube-proxy)·DNS는 CNI의 일이 아니다 — CNI는 IP·L3 연결까지.</span></blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 15c CNI 흐름 ============ -->
+  <section class="slide" data-title="CNI 호출 흐름 · datapath">
+    <span class="kicker"><span class="dot"></span>CNI · 흐름</span>
+    <h1>Pod가 뜰 때 <span class="hl">CNI 호출</span> 흐름</h1>
+    <div class="body">
+      <div class="grid g2" style="grid-template-columns:1.05fr .95fr;align-items:center">
+        <pre class="sm"><code><span class="cm"># kubelet → 런타임 → CNI</span>
+kubelet → CRI: sandbox(pause) 생성
+런타임: Pod netns 생성
+런타임 → CNI 플러그인 (CNI_COMMAND=ADD)
+   <span class="cm"># conf: /etc/cni/net.d</span>
+   <span class="cm"># bin:  /opt/cni/bin</span>
+플러그인: IP 할당 → veth 생성 → 라우팅
+→ Pod가 IP 획득, 앱 컨테이너 시작
+   <span class="cm"># 삭제 시 CNI_COMMAND=DEL</span></code></pre>
+        <div>
+          <p class="small" style="margin-bottom:8px">플러그인 명령: <strong>ADD / DEL / CHECK</strong></p>
+          <p class="small mut" style="margin-bottom:6px">노드 넘는 Pod 통신 = 두 datapath:</p>
+          <div class="card cyan" style="margin-bottom:8px"><h3 style="font-size:16px">오버레이</h3><p class="tiny">VXLAN/Geneve로 <strong>캡슐화</strong>. 이식성↑·오버헤드有. (Flannel, Cilium VXLAN)</p></div>
+          <div class="card cyan"><h3 style="font-size:16px">네이티브 라우팅</h3><p class="tiny">BGP·클라우드 라우트로 직접 광고. 성능↑·하부 지원 필요. (Calico BGP, Cilium native)</p></div>
+        </div>
+      </div>
+      <blockquote style="margin-top:12px;font-size:15px"><strong>Cilium은 CNI이면서</strong> veth·iptables 대신 <strong>eBPF(tc/XDP)</strong>로 datapath 처리 → IP 할당(CNI)과 Service LB·정책·관측을 <strong>한 데이터 플레인</strong>에서.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 16 배포 형태 ============ -->
+  <section class="slide" data-title="무엇이 DaemonSet인가">
+    <span class="kicker"><span class="dot"></span>배포 형태</span>
+    <h1>무엇이 <span class="hl">DaemonSet</span>인가</h1>
+    <div class="body">
+      <table>
+        <tr><th>컴포넌트</th><th>배포 형태</th><th>노드 분포</th><th>역할</th></tr>
+        <tr><td><strong>kube-proxy</strong></td><td><strong>DaemonSet</strong></td><td>노드마다 1개</td><td>Service→Pod LB 규칙(iptables/IPVS)을 각 노드 커널에</td></tr>
+        <tr><td><strong>CoreDNS</strong></td><td><strong>Deployment</strong> (기본)</td><td>노드별 아님 (기본 2 replica)</td><td>클러스터 DNS 서버 · <code>kube-dns</code> Service로 프론트</td></tr>
+        <tr><td>NodeLocal DNSCache</td><td>DaemonSet</td><td>노드마다 1개</td><td>노드 로컬 DNS 캐시 · <strong>선택</strong> 애드온</td></tr>
+      </table>
+      <blockquote style="margin-top:16px"><strong>CoreDNS는 기본이 DaemonSet이 아니라 Deployment다.</strong> 노드별로 확실히 하나씩 도는 것은 kube-proxy. 이어서 DNS 질의가 어떻게 CoreDNS Pod까지 도달하는지 따라가 본다.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 17 kube-proxy ============ -->
+  <section class="slide" data-title="kube-proxy는 무엇을 하나">
+    <span class="kicker"><span class="dot"></span>kube-proxy</span>
+    <h1>kube-proxy는 <span class="hl">프록시가 아니다</span></h1>
+    <div class="body">
+      <div class="grid g2" style="grid-template-columns:1fr 1fr;align-items:center">
+        <pre class="sm"><code><span class="cm"># iptables nat 테이블</span>
+KUBE-SERVICES        <span class="cm"># dst=ClusterIP:port</span>
+  └ KUBE-SVC-XXXX    <span class="cm"># 가상 LB (random)</span>
+      ├ KUBE-SEP-A 33% → DNAT PodA:port
+      ├ KUBE-SEP-B 33% → DNAT PodB:port
+      └ KUBE-SEP-C 34% → DNAT PodC:port</code></pre>
+        <div>
+          <ul class="small">
+            <li>API를 watch → Service/EndpointSlice 변경 시 <strong>커널 규칙만 갱신</strong>(규칙 프로그래머).</li>
+            <li>ClusterIP는 <strong>가상 IP</strong> — 커널이 DNAT로 실제 Pod IP로 바꿀 뿐.</li>
+            <li>규칙은 <strong>모든 노드에 동일</strong>(그래서 DaemonSet).</li>
+            <li>DNAT 후 <strong>노드 간 라우팅은 CNI</strong>가 담당.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="small mut" style="margin-top:12px;text-align:center">실제 패킷 변환(DNAT)은 <strong>커널</strong>이 한다. kube-proxy는 트래픽을 직접 나르지 않는다.</p>
+    </div>
+  </section>
+
+  <!-- ============ 18 DNS 경로 ============ -->
+  <section class="slide" data-title="Pod DNS 조회 end-to-end">
+    <span class="kicker"><span class="dot"></span>DNS 경로</span>
+    <h1>Pod의 DNS 조회 <span class="hl">end-to-end</span></h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 210" style="max-height:210px">
+        <defs><marker id="ad" markerWidth="11" markerHeight="11" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00d4ff"/></marker></defs>
+        <rect x="10" y="70" width="180" height="70" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="100" y="96" fill="#e6ecf5" font-size="13" text-anchor="middle" font-weight="700">App</text>
+        <text class="svgtext" x="100" y="116" fill="#9fb0cc" font-size="11" text-anchor="middle">dst=10.96.0.10:53</text>
+        <text class="svgtext" x="100" y="132" fill="#7f93b5" font-size="10" text-anchor="middle">(kube-dns ClusterIP)</text>
+        <rect x="250" y="60" width="220" height="90" rx="10" fill="#16203c" stroke="#ffd700" stroke-width="2"/>
+        <text class="svgtext" x="360" y="88" fill="#ffd700" font-size="13" text-anchor="middle" font-weight="700">노드 커널 iptables</text>
+        <text class="svgtext" x="360" y="108" fill="#9fb0cc" font-size="11" text-anchor="middle">KUBE-SVC → KUBE-SEP</text>
+        <text class="svgtext" x="360" y="126" fill="#00ff88" font-size="11" text-anchor="middle">DNAT → CoreDNS Pod IP</text>
+        <text class="svgtext" x="360" y="143" fill="#7f93b5" font-size="10" text-anchor="middle">(kube-proxy가 심음)</text>
+        <rect x="530" y="70" width="200" height="70" rx="10" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="630" y="94" fill="#e6ecf5" font-size="13" text-anchor="middle" font-weight="700">CoreDNS Pod</text>
+        <text class="svgtext" x="630" y="112" fill="#9fb0cc" font-size="10.5" text-anchor="middle">kubernetes 플러그인 / forward</text>
+        <text class="svgtext" x="630" y="128" fill="#7f93b5" font-size="10" text-anchor="middle">타 노드면 CNI 라우팅</text>
+        <rect x="790" y="70" width="200" height="70" rx="10" fill="#16203c" stroke="#3a4670" stroke-width="1.6"/>
+        <text class="svgtext" x="890" y="96" fill="#e6ecf5" font-size="12.5" text-anchor="middle" font-weight="700">payment = ClusterIP</text>
+        <text class="svgtext" x="890" y="116" fill="#9fb0cc" font-size="10.5" text-anchor="middle">→ 다시 kube-proxy DNAT</text>
+        <line x1="190" y1="105" x2="248" y2="105" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ad)"/>
+        <line x1="470" y1="105" x2="528" y2="105" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ad)"/>
+        <line x1="730" y1="105" x2="788" y2="105" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#ad)"/>
+      </svg>
+      <p class="small" style="margin-top:8px"><code>resolv.conf</code>: <code>nameserver 10.96.0.10</code> · <code>ndots:5</code> (점 5개 미만이면 search 도메인부터 순차 시도 → 외부 도메인은 불필요 질의 다수, 튜닝 포인트)</p>
+      <blockquote style="margin-top:10px;font-size:16px">둘은 <strong>직접 통신하지 않는다.</strong> CoreDNS는 <code>kube-dns</code> Service 뒤의 평범한 Pod이고, kube-proxy가 심은 Service DNAT 덕에 질의가 CoreDNS로 <strong>로드밸런싱</strong>돼 도달할 뿐.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 19 SECTION 4 ============ -->
+  <section class="slide lead" data-title="섹션 4: Ingress & Egress">
+    <div class="body">
+      <div class="secnum">04</div>
+      <div class="big" style="font-size:60px">Ingress & Egress</div>
+      <div class="desc">외부 ↔ 클러스터, <strong>North-South</strong> 트래픽 관리</div>
+    </div>
+  </section>
+
+  <!-- ============ 20 Ingress ============ -->
+  <section class="slide" data-title="Ingress (외부→내부)">
+    <span class="kicker"><span class="dot"></span>INGRESS</span>
+    <h1>Ingress — <span class="hl">외부를 안으로</span></h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 120" style="max-height:130px">
+        <defs><marker id="ag2" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00d4ff"/></marker></defs>
+        <rect x="10" y="35" width="130" height="50" rx="9" fill="#16203c" stroke="#3a4670" stroke-width="1.5"/>
+        <text class="svgtext" x="75" y="65" fill="#e6ecf5" font-size="13" text-anchor="middle">인터넷</text>
+        <rect x="200" y="35" width="150" height="50" rx="9" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="275" y="65" fill="#00d4ff" font-size="13" text-anchor="middle">클라우드 LB</text>
+        <rect x="410" y="30" width="230" height="60" rx="9" fill="#16203c" stroke="#ffd700" stroke-width="2"/>
+        <text class="svgtext" x="525" y="56" fill="#ffd700" font-size="13" text-anchor="middle" font-weight="700">Ingress/Gateway 컨트롤러</text>
+        <text class="svgtext" x="525" y="75" fill="#9fb0cc" font-size="11" text-anchor="middle">L7 프록시 · host/path 매칭</text>
+        <rect x="700" y="35" width="150" height="50" rx="9" fill="#0f3460" stroke="#00d4ff" stroke-width="1.8"/>
+        <text class="svgtext" x="775" y="58" fill="#e6ecf5" font-size="12.5" text-anchor="middle">Service(ClusterIP)</text>
+        <text class="svgtext" x="775" y="74" fill="#9fb0cc" font-size="10" text-anchor="middle">→ DNAT → Pod</text>
+        <line x1="140" y1="60" x2="198" y2="60" stroke="#00d4ff" stroke-width="2.4" marker-end="url(#ag2)"/>
+        <line x1="350" y1="60" x2="408" y2="60" stroke="#00d4ff" stroke-width="2.4" marker-end="url(#ag2)"/>
+        <line x1="640" y1="60" x2="698" y2="60" stroke="#00d4ff" stroke-width="2.4" marker-end="url(#ag2)"/>
+      </svg>
+      <div class="grid g3" style="margin-top:14px">
+        <div class="card"><h3 style="font-size:17px">Ingress + Controller</h3><p class="tiny">host/path→Service 규칙을 nginx/Envoy 컨트롤러가 L7로 구현.</p></div>
+        <div class="card"><h3 style="font-size:17px">Gateway API</h3><p class="tiny">후속 표준. GatewayClass/Gateway/HTTPRoute로 역할 분리, 멀티테넌시.</p></div>
+        <div class="card"><h3 style="font-size:17px">Istio</h3><p class="tiny">istio-ingressgateway(Envoy)가 입구에서 Gateway+VirtualService로 메시 전달.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 21 Egress ============ -->
+  <section class="slide" data-title="Egress (내부→외부)">
+    <span class="kicker"><span class="dot"></span>EGRESS</span>
+    <h1>Egress — <span class="hl">밖으로 나가는 통제</span></h1>
+    <div class="body">
+      <p class="small mut" style="margin-bottom:12px">기본은 <strong>모든 egress 허용</strong>. 통제하려면:</p>
+      <div class="grid g2">
+        <div class="card cyan"><h3>NetworkPolicy (egress)</h3><p class="tiny">L3/L4로 "이 CIDR/포트로만". 단 <strong>IP/포트 기반</strong>이라 도메인 통제는 어려움(외부 IP가 자주 바뀜).</p></div>
+        <div class="card cyan"><h3>DNS/FQDN 기반</h3><p class="tiny">도메인 단위 통제. 표준으론 불가 → <strong>Cilium toFQDNs</strong> 같은 확장 필요.</p></div>
+        <div class="card hot"><h3>Egress Gateway</h3><p class="tiny">특정 Pod 트래픽을 게이트웨이 노드로 몰아 <strong>고정 IP로 SNAT</strong>. 외부 방화벽 allowlist·레거시 연동.</p></div>
+        <div class="card"><h3>Istio Egress</h3><p class="tiny"><code>ServiceEntry</code>로 외부 등록, 선택적 <strong>istio-egressgateway</strong>로 한 지점에서 정책·mTLS.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 22 SECTION 5 ============ -->
+  <section class="slide lead" data-title="섹션 5: Cilium">
+    <div class="body">
+      <div class="secnum">05</div>
+      <div class="big" style="font-size:56px">Cilium은 이 모두를<br>어떻게 바꾸나</div>
+      <div class="desc">흩어진 조각을 <strong>eBPF 데이터 플레인</strong>으로 통합</div>
+    </div>
+  </section>
+
+  <!-- ============ 23 eBPF 철학 ============ -->
+  <section class="slide" data-title="eBPF datapath 철학">
+    <span class="kicker"><span class="dot"></span>PHILOSOPHY</span>
+    <h1>커널에서 <span class="hl">eBPF</span>로, 필요할 때만 <span class="hl">Envoy</span></h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 130" style="max-height:140px">
+        <defs><marker id="ap" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00ff88"/></marker>
+        <marker id="apg" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#ffd700"/></marker></defs>
+        <text class="svgtext" x="40" y="42" fill="#9fb0cc" font-size="12">L3/L4</text>
+        <rect x="90" y="20" width="90" height="40" rx="8" fill="#0f3460" stroke="#00d4ff" stroke-width="1.6"/><text class="svgtext" x="135" y="45" fill="#e6ecf5" font-size="13" text-anchor="middle">Pod</text>
+        <rect x="430" y="20" width="140" height="40" rx="8" fill="#16203c" stroke="#00ff88" stroke-width="1.8"/><text class="svgtext" x="500" y="45" fill="#00ff88" font-size="13" text-anchor="middle" font-weight="700">eBPF (커널)</text>
+        <rect x="820" y="20" width="90" height="40" rx="8" fill="#0f3460" stroke="#00d4ff" stroke-width="1.6"/><text class="svgtext" x="865" y="45" fill="#e6ecf5" font-size="13" text-anchor="middle">Pod</text>
+        <line x1="180" y1="40" x2="428" y2="40" stroke="#00ff88" stroke-width="2.4" marker-end="url(#ap)"/>
+        <line x1="570" y1="40" x2="818" y2="40" stroke="#00ff88" stroke-width="2.4" marker-end="url(#ap)"/>
+        <text class="svgtext" x="40" y="105" fill="#9fb0cc" font-size="12">L7 필요</text>
+        <rect x="90" y="83" width="90" height="40" rx="8" fill="#0f3460" stroke="#00d4ff" stroke-width="1.6"/><text class="svgtext" x="135" y="108" fill="#e6ecf5" font-size="13" text-anchor="middle">Pod</text>
+        <rect x="360" y="83" width="120" height="40" rx="8" fill="#16203c" stroke="#00ff88" stroke-width="1.6"/><text class="svgtext" x="420" y="108" fill="#00ff88" font-size="12" text-anchor="middle">eBPF</text>
+        <rect x="520" y="83" width="120" height="40" rx="8" fill="#16203c" stroke="#ffd700" stroke-width="2"/><text class="svgtext" x="580" y="108" fill="#ffd700" font-size="13" text-anchor="middle" font-weight="700">Envoy</text>
+        <rect x="820" y="83" width="90" height="40" rx="8" fill="#0f3460" stroke="#00d4ff" stroke-width="1.6"/><text class="svgtext" x="865" y="108" fill="#e6ecf5" font-size="13" text-anchor="middle">Pod</text>
+        <line x1="180" y1="103" x2="358" y2="103" stroke="#00ff88" stroke-width="2.2" marker-end="url(#ap)"/>
+        <line x1="480" y1="103" x2="518" y2="103" stroke="#ffd700" stroke-width="2.2" marker-end="url(#apg)"/>
+        <line x1="640" y1="103" x2="818" y2="103" stroke="#ffd700" stroke-width="2.2" marker-end="url(#apg)"/>
+      </svg>
+      <blockquote style="margin-top:14px">Cilium은 <strong>서비스 메시가 아닌 CNI</strong>에서 출발. CNI + Service LB + kube-proxy 대체 + NetworkPolicy + Hubble + Ingress/Gateway + 일부 메시를 <strong>하나의 데이터 플레인</strong>으로.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 24 socket LB ============ -->
+  <section class="slide" data-title="kube-proxy 대체: socket LB">
+    <span class="kicker"><span class="dot"></span>kube-proxy 대체</span>
+    <h1>소켓 레벨 <span class="hl">로드밸런싱</span></h1>
+    <div class="body">
+      <div class="grid g2">
+        <div class="card red"><h3 style="color:#ff9b9b">iptables 모드</h3>
+          <pre class="sm" style="margin-top:6px"><code>connect
+ → KUBE-SERVICES 선형 매칭
+ → DNAT → conntrack
+ → 전송</code></pre>
+          <p class="tiny" style="margin-top:6px">규칙이 서비스 수만큼 <strong>선형 증가</strong> → 대규모에서 지연↑.</p></div>
+        <div class="card cyan"><h3>Cilium socket LB</h3>
+          <pre class="sm" style="margin-top:6px"><code>connect()
+ → cgroup eBPF (connect/sendmsg)
+   가 <span style="color:#00ff88">즉시 백엔드IP로 치환</span>
+ → 바로 전송 (스택 우회)</code></pre>
+          <p class="tiny" style="margin-top:6px">eBPF 해시맵 <strong>O(1) 조회</strong> · per-packet DNAT·conntrack 없음.</p></div>
+      </div>
+      <blockquote style="margin-top:14px"><code>kubeProxyReplacement</code> 활성화 시 kube-proxy DaemonSet과 iptables Service 규칙이 <strong>사라진다</strong>. DNS 질의도 이 경로로 CoreDNS에 도달 → DNS 경로에서 iptables 제거.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 25 DNS proxy ============ -->
+  <section class="slide" data-title="Cilium DNS proxy + FQDN">
+    <span class="kicker"><span class="dot"></span>DNS · FQDN</span>
+    <h1>DNS Proxy로 <span class="hl">도메인 egress 통제</span></h1>
+    <div class="body">
+      <svg viewBox="0 0 1000 130" style="max-height:140px">
+        <defs><marker id="af" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00d4ff"/></marker></defs>
+        <rect x="10" y="45" width="120" height="50" rx="9" fill="#0f3460" stroke="#00d4ff" stroke-width="1.6"/><text class="svgtext" x="70" y="75" fill="#e6ecf5" font-size="13" text-anchor="middle">Pod</text>
+        <rect x="200" y="35" width="230" height="70" rx="10" fill="#16203c" stroke="#ffd700" stroke-width="2"/>
+        <text class="svgtext" x="315" y="62" fill="#ffd700" font-size="13" text-anchor="middle" font-weight="700">Cilium DNS proxy</text>
+        <text class="svgtext" x="315" y="82" fill="#9fb0cc" font-size="11" text-anchor="middle">정책 필터 · 응답 관찰</text>
+        <text class="svgtext" x="315" y="98" fill="#7f93b5" font-size="10" text-anchor="middle">(eBPF가 redirect)</text>
+        <rect x="500" y="45" width="180" height="50" rx="9" fill="#0f3460" stroke="#00d4ff" stroke-width="1.6"/><text class="svgtext" x="590" y="70" fill="#e6ecf5" font-size="12.5" text-anchor="middle">CoreDNS/업스트림</text>
+        <rect x="750" y="35" width="240" height="70" rx="10" fill="#16203c" stroke="#00ff88" stroke-width="1.8"/>
+        <text class="svgtext" x="870" y="62" fill="#00ff88" font-size="12.5" text-anchor="middle" font-weight="700">응답 IP → toFQDNs 허용</text>
+        <text class="svgtext" x="870" y="82" fill="#9fb0cc" font-size="10.5" text-anchor="middle">TTL 동안 데이터패스 등록</text>
+        <line x1="130" y1="70" x2="198" y2="70" stroke="#00d4ff" stroke-width="2.4" marker-end="url(#af)"/>
+        <line x1="430" y1="70" x2="498" y2="70" stroke="#00d4ff" stroke-width="2.4" marker-end="url(#af)"/>
+        <line x1="680" y1="70" x2="748" y2="70" stroke="#00d4ff" stroke-width="2.4" marker-end="url(#af)"/>
+      </svg>
+      <blockquote style="margin-top:14px">표준 NetworkPolicy로 불가능한 <strong>도메인 단위 egress</strong>를 해결: <code>toFQDNs: api.github.com</code> → 응답 IP만 TTL 동안 허용. 이후 그 IP로의 L3 연결만 통과.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 26 Ingress/Egress GW (Cilium) ============ -->
+  <section class="slide" data-title="Cilium Ingress & Egress Gateway">
+    <span class="kicker"><span class="dot"></span>Ingress · Egress</span>
+    <h1>Cilium의 <span class="hl">Ingress & Egress Gateway</span></h1>
+    <div class="body">
+      <div class="grid g2">
+        <div class="card cyan"><span class="ic">⬇️</span><h3>Ingress / Gateway API</h3>
+          <ul class="small"><li>네이티브 지원 — 별도 Controller Deployment 불필요.</li>
+          <li>L7 라우팅은 Cilium이 관리하는 <strong>노드 단위 Envoy</strong>로 위임.</li>
+          <li>L3/L4는 eBPF, <strong>L7 HTTP만 Envoy</strong> — 같은 철학.</li></ul></div>
+        <div class="card hot"><span class="ic">⬆️</span><h3>Egress Gateway</h3>
+          <ul class="small"><li>특정 Pod(라벨)→특정 외부 CIDR를 <strong>게이트웨이 노드</strong>로.</li>
+          <li>그 노드의 <strong>고정 IP로 SNAT</strong> — 방화벽 allowlist·레거시.</li>
+          <li>전제: <strong>BPF masquerade + kube-proxy 대체</strong> 활성화.</li></ul></div>
+      </div>
+      <p class="small mut" style="margin-top:14px;text-align:center">Envoy는 Cilium에서 <strong>L7일 때만</strong> 등장 — 그리고 그 <strong>L7 심층 사용 자체가 실무에선 드물다</strong>. L3/L4·Service LB·NetworkPolicy·마스커레이드는 전부 eBPF(커널).</p>
+    </div>
+  </section>
+
+  <!-- ============ 27 대응표 ============ -->
+  <section class="slide" data-title="대응표: 기존 → Cilium">
+    <span class="kicker"><span class="dot"></span>MAPPING</span>
+    <h1>기존 구성 요소 <span class="hl">→ Cilium</span></h1>
+    <div class="body">
+      <table class="kt">
+        <tr><th>기존 Kubernetes/Istio</th><th>Cilium에서</th><th>계층</th></tr>
+        <tr><td>CNI 플러그인</td><td>Cilium CNI (eBPF datapath)</td><td>L3</td></tr>
+        <tr><td>kube-proxy (iptables DNAT)</td><td><strong>eBPF socket LB</strong> + Service map</td><td>L4</td></tr>
+        <tr><td>NetworkPolicy (L3/L4)</td><td>eBPF 정책 (identity 기반)</td><td>L3/L4</td></tr>
+        <tr><td>도메인 egress (표준 불가)</td><td>DNS proxy + <code>toFQDNs</code></td><td>L7-aware</td></tr>
+        <tr><td>고정 출구 IP (별도 장비)</td><td>Egress Gateway (eBPF SNAT)</td><td>L3</td></tr>
+        <tr><td>Ingress Controller</td><td>Cilium Ingress/Gateway (Envoy)</td><td>L7</td></tr>
+        <tr><td>메트릭·flow 가시성</td><td><strong>Hubble</strong></td><td>관측</td></tr>
+        <tr><td>Envoy 사이드카(모든 Pod)</td><td>노드 단위 Envoy (L7 필요 시만)</td><td>L7</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 28 Cilium vs Ambient ============ -->
+  <section class="slide" data-title="Cilium vs Istio Ambient">
+    <span class="kicker"><span class="dot"></span>대체재가 아니다</span>
+    <h1>Cilium <span class="hl">vs</span> Istio Ambient</h1>
+    <div class="body">
+      <table class="kt">
+        <tr><th>항목</th><th>Istio Ambient</th><th>Cilium</th></tr>
+        <tr><td>출발점</td><td>서비스 메시</td><td>CNI·K8s 네트워킹</td></tr>
+        <tr><td>기본 데이터 플레인</td><td>ztunnel(L4 프록시)</td><td><strong>eBPF 커널</strong></td></tr>
+        <tr><td>Service 라우팅</td><td>기존 kube-proxy 위에</td><td><strong>kube-proxy까지 대체</strong></td></tr>
+        <tr><td>강점</td><td><strong>성숙한 mTLS</strong>·풍부한 L7 메시</td><td>네트워크·정책·관측 통합</td></tr>
+        <tr><td>mTLS 성숙도</td><td>핵심·성숙</td><td>버전별 확인 필요</td></tr>
+      </table>
+      <blockquote style="margin-top:14px"><strong>완전한 대체재가 아니다.</strong> Cilium은 CNI·kube-proxy 대체·FQDN·flow 가시성에 강하고, Ambient는 성숙한 mTLS·Zero Trust·정교한 L7에 앞선다. <strong>Cilium을 CNI로 깔고 그 위에 Ambient</strong> 조합도 쓰인다.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 28b 실무 관점 ============ -->
+  <section class="slide" data-title="실무 관점 — 왜 Cilium을 먼저">
+    <span class="kicker"><span class="dot"></span>실무 관점</span>
+    <h1>왜 <span class="hl">Cilium을 먼저</span> 고려하는가</h1>
+    <div class="body">
+      <p class="small mut" style="margin-bottom:12px">현실에서 <strong>깊은 L7 트래픽 관리(정교한 라우팅·fault injection·복잡한 L7 authz)를 쓰는 경우는 많지 않다.</strong> 대다수 워크로드는 L4·mTLS·기본 정책·관측 수준이면 충분 — 이때 Cilium의 이점이 커진다.</p>
+      <div class="grid g3">
+        <div class="card cyan"><span class="ic">🧩</span><h3>Mesh + CNI 단일 관리</h3><p class="tiny">별도 CNI + 별도 메시(각자 제어 플레인·업그레이드) 대신 <strong>하나의 eBPF 데이터 플레인</strong>으로 통합 → 운영 표면 축소.</p></div>
+        <div class="card cyan"><span class="ic">🔭</span><h3>Hubble 옵저버빌리티</h3><p class="tiny">커널 데이터 플레인이라 allow/drop·identity·DNS·flow를 <strong>사이드카 없이</strong> 관찰 → "어느 계층에서 끊겼나" 즉시 추적.</p></div>
+        <div class="card cyan"><span class="ic">📉</span><h3>L7 의존 낮음</h3><p class="tiny">깊은 L7을 안 쓰면 Ambient가 앞서는 <strong>성숙한 L7 메시</strong>의 이점이 상대적으로 작아진다.</p></div>
+      </div>
+      <blockquote style="margin-top:16px"><strong>판단:</strong> L7을 깊게 다루지 않는 대다수 환경이라면 <strong>Cilium을 Istio Ambient보다 먼저 도입</strong>하는 편이 낫다. 단 <strong>mTLS·Zero Trust·정교한 L7</strong>이 핵심이면 Ambient(또는 Cilium 위 Ambient 병용) 검토.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 28c 장단점 ============ -->
+  <section class="slide" data-title="Cilium 장단점">
+    <span class="kicker"><span class="dot"></span>장단점</span>
+    <h1>Cilium <span class="hl">장단점</span> 한눈에</h1>
+    <div class="body">
+      <div class="grid g2">
+        <div class="card cyan"><h3>✅ 장점</h3>
+          <ul class="small"><li><strong>Mesh + CNI 단일 관리</strong> — 하나의 eBPF 데이터 플레인.</li>
+          <li><strong>kube-proxy 대체</strong>(socket LB, O(1)) — iptables 제거.</li>
+          <li><strong>Hubble 관측</strong> — 사이드카 없이 flow 가시성.</li>
+          <li><strong>FQDN egress·Egress Gateway</strong> 등 정책 강력.</li>
+          <li>사이드카 없음 → <strong>리소스·지연 절감</strong>.</li></ul></div>
+        <div class="card red"><h3 style="color:#ff9b9b">⚠️ 단점 · 주의</h3>
+          <ul class="small"><li><strong>mTLS·Zero Trust 성숙도</strong>는 Istio에 못 미침(버전 확인).</li>
+          <li><strong>정교한 L7 트래픽 관리</strong>(fault injection 등)는 Istio가 앞섬.</li>
+          <li>eBPF·<strong>커널 버전 의존</strong>, 러닝커브.</li>
+          <li>깊은 서비스 메시 기능은 여전히 Istio 생태계가 풍부.</li></ul></div>
+      </div>
+      <blockquote style="margin-top:14px">L7을 깊게 안 쓰는 대다수 환경 → <strong>Cilium 우선</strong>. mTLS·정교한 L7이 핵심 → <strong>Ambient(또는 Cilium+Ambient 병용)</strong>.</blockquote>
+    </div>
+  </section>
+
+  <!-- ============ 29 SECTION 6 ============ -->
+  <section class="slide lead" data-title="섹션 6: 정리">
+    <div class="body">
+      <div class="secnum">06</div>
+      <div class="big" style="font-size:60px">정리</div>
+      <div class="desc">왜 Cilium을 <strong>공부</strong>하는가</div>
+    </div>
+  </section>
+
+  <!-- ============ 30 공부 이유 ============ -->
+  <section class="slide" data-title="Cilium을 공부해야 하는 이유">
+    <span class="kicker"><span class="dot"></span>WHY STUDY</span>
+    <h1>Cilium을 <span class="hl">공부해야 하는 이유</span></h1>
+    <div class="body">
+      <div class="grid g2">
+        <div class="card cyan"><h3>① 가장 아래 계층까지</h3><p class="tiny">Pod 패킷이 노드를 어떻게 나가고, Service IP가 어떻게 Endpoint로, kube-proxy/iptables가 무엇을, eBPF가 어느 훅에서 — 데이터 플레인 전체를 배운다.</p></div>
+        <div class="card cyan"><h3>② 통합의 방향</h3><p class="tiny">CNI·kube-proxy·정책·관측·Ingress·메시로 흩어진 역할이 왜 하나의 eBPF 데이터패스로 수렴하는지 보인다.</p></div>
+        <div class="card cyan"><h3>③ 흐름 기준 장애 분석</h3><p class="tiny">DNS 실패? Endpoint 선택? NetworkPolicy drop? L7 거절? — Hubble로 allow/drop·identity·flow를 관찰.</p></div>
+        <div class="card cyan"><h3>④ Ambient도 정확히</h3><p class="tiny">ztunnel이 왜 노드 단위 공유 프록시인지, 사이드카를 왜 없앴는지 — netns·리다이렉션·identity를 알아야 보인다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 31 결론 ============ -->
+  <section class="slide lead" data-title="결론">
+    <div class="body">
+      <div class="big" style="font-size:44px">Istio = 프록시로 추상화<br>Cilium = 네트워크 자체를 재설계</div>
+      <div class="desc" style="max-width:960px">사이드카가 어떻게 뜨는지(webhook·iptables·Envoy·xDS), Service·DNS가 어떻게 도는지(kube-proxy DNAT·kube-dns), Ingress·Egress가 어떻게 통제되는지를 알고 나면 —<br>Cilium은 그 조각들을 <strong>커널로 끌어내려 하나로 합친 결과</strong>임이 보인다.</div>
+      <div class="tag">Cilium 공부 = Kubernetes 네트워킹의 다음 단계를 공부하는 것</div>
+    </div>
+  </section>
+
+  </div><!-- /stage -->
+</div><!-- /stage-wrap -->
+
+<div class="edge l" id="edgeL"></div>
+<div class="edge r" id="edgeR"></div>
+
+<nav class="nav">
+  <span class="title" id="navTitle"></span>
+  <button id="prev" aria-label="이전">‹</button>
+  <span class="counter"><b id="cur">1</b> / <span id="total">37</span></span>
+  <button id="next" aria-label="다음">›</button>
+</nav>
+<div class="hint">← → · Space 이동 · F 전체화면</div>
+
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+  var slides=Array.prototype.slice.call(stage.querySelectorAll('.slide'));
+  var i=0, N=slides.length;
+  var curEl=document.getElementById('cur'), totalEl=document.getElementById('total');
+  var prevB=document.getElementById('prev'), nextB=document.getElementById('next');
+  var prog=document.getElementById('progress'), title=document.getElementById('navTitle');
+  totalEl.textContent=N;
+
+  function fit(){
+    var s=Math.min(window.innerWidth/1280, window.innerHeight/720);
+    stage.style.transform='scale('+s+')';
+  }
+  function show(n){
+    i=Math.max(0,Math.min(N-1,n));
+    slides.forEach(function(sl,k){ sl.classList.toggle('active',k===i); });
+    curEl.textContent=i+1;
+    prog.style.width=((i)/(N-1)*100)+'%';
+    prevB.disabled=(i===0); nextB.disabled=(i===N-1);
+    title.textContent=slides[i].getAttribute('data-title')||'';
+    if(location.hash!=='#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+  }
+  function next(){ show(i+1); } function prev(){ show(i-1); }
+
+  nextB.onclick=next; prevB.onclick=prev;
+  document.getElementById('edgeR').onclick=next;
+  document.getElementById('edgeL').onclick=prev;
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(N-1);}
+    else if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();} else {document.exitFullscreen&&document.exitFullscreen();} }
+  });
+  window.addEventListener('resize',fit);
+  window.addEventListener('hashchange',function(){
+    var h=parseInt((location.hash||'#1').slice(1),10);
+    if(!isNaN(h)&&h-1!==i) show(h-1);
+  });
+  fit();
+  var start=parseInt((location.hash||'#1').slice(1),10); show(isNaN(start)?0:start-1);
+})();
+</script>
+</body>
+</html>

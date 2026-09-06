@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-open { fill: #ffffff; stroke: #3a8a5c; stroke-width: 1.5; }
+    .box-closed { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .box-allow { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- Before: 정책 없음 -->
+  <text class="t-lane" x="450" y="30" text-anchor="middle">정책 적용 전 — 모두 서로 통신 가능 (기본 동작)</text>
+  <rect class="box-open" x="60" y="46" width="140" height="60" rx="4"/>
+  <text class="t-title" x="130" y="72" text-anchor="middle">파드 A</text>
+  <rect class="box-open" x="240" y="46" width="140" height="60" rx="4"/>
+  <text class="t-title" x="310" y="72" text-anchor="middle">파드 B</text>
+  <rect class="box-open" x="420" y="46" width="140" height="60" rx="4"/>
+  <text class="t-title" x="490" y="72" text-anchor="middle">파드 C</text>
+  <rect class="box-open" x="600" y="46" width="220" height="60" rx="4"/>
+  <text class="t-title" x="710" y="72" text-anchor="middle">클러스터 밖 어디든</text>
+  <text class="t-sub" x="450" y="126" text-anchor="middle">NetworkPolicy 오브젝트가 하나도 없으면, 모든 파드는 서로 그리고 외부와 자유롭게 통신한다.</text>
+
+  <!-- 구분선 -->
+  <line x1="20" y1="152" x2="880" y2="152" stroke="#d8d8d8" stroke-dasharray="2 4"/>
+
+  <!-- After: B에 정책 적용 -->
+  <text class="t-lane" x="450" y="178" text-anchor="middle">파드 B에 NetworkPolicy 하나를 걸면 — B만 "화이트리스트 모드"로 전환</text>
+
+  <rect class="box-open" x="60" y="196" width="140" height="60" rx="4"/>
+  <text class="t-title" x="130" y="222" text-anchor="middle">파드 A</text>
+  <text class="t-sub" x="130" y="242" text-anchor="middle">정책 대상 아님</text>
+  <text class="t-sub" x="130" y="256" text-anchor="middle">— 계속 자유롭게 통신</text>
+
+  <rect class="box-closed" x="240" y="196" width="180" height="60" rx="4"/>
+  <text class="t-title" x="330" y="222" text-anchor="middle">파드 B — 정책 대상</text>
+  <text class="t-sub" x="330" y="242" text-anchor="middle">명시하지 않은 모든</text>
+  <text class="t-sub" x="330" y="256" text-anchor="middle">인그레스·이그레스 차단</text>
+
+  <rect class="box-allow" x="460" y="196" width="180" height="60" rx="4"/>
+  <text class="t-title" x="550" y="222" text-anchor="middle">ingress 규칙에 명시된</text>
+  <text class="t-sub" x="550" y="242" text-anchor="middle">podSelector: app=frontend</text>
+  <text class="t-sub" x="550" y="256" text-anchor="middle">→ 이것만 예외적으로 허용</text>
+
+  <rect class="box-open" x="680" y="196" width="140" height="60" rx="4"/>
+  <text class="t-title" x="750" y="222" text-anchor="middle">파드 C</text>
+  <text class="t-sub" x="750" y="242" text-anchor="middle">정책 대상 아님</text>
+  <text class="t-sub" x="750" y="256" text-anchor="middle">— 영향 없음</text>
+
+  <text class="t-cap" x="450" y="304" text-anchor="middle">핵심: 정책의 대상(셀렉터에 매치)이 되는 순간부터 기본이 "전체 차단"으로 뒤집힌다.</text>
+  <text class="t-cap" x="450" y="326" text-anchor="middle">대상이 아닌 파드는 몇 개의 정책이 클러스터에 있든 계속 예전처럼 자유롭게 통신한다.</text>
+</svg>

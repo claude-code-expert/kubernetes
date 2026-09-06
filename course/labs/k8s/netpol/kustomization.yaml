@@ -1,0 +1,8 @@
+# M25 — 네트워크 정책 일습. kubectl apply -k course/labs/k8s/netpol 으로 배포한다.
+# 순서가 중요하다: 기본 거부를 먼저 걸고 허용을 얹는다.
+# (같은 apply 안에서는 순서가 무의미하지만, 파일을 읽는 사람에게는 순서가 설명이다)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-default-deny.yaml
+  - 10-allow.yaml

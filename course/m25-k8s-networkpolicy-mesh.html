@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 5 · 보안과 정책] M25 네트워크 정책과 서비스 메시 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 25 / 38 · PART 5 보안과 정책</div>
+  <h1>네트워크 정책과 서비스 메시</h1>
+  <p class="ch-desc">M24까지 온 클러스터에서 <code>apps</code> 네임스페이스의 파드는 <code>journal</code>의 레디스에 지금 붙을 수 있다. 비밀번호만 알면 데이터를 읽는다. 이 모듈에서 그것을 먼저 확인하고, <strong>정책 하나로 전부 끊은 다음</strong> 필요한 경로만 다시 연다. 마지막에 네트워크 정책이 <strong>볼 수 없는 것</strong>을 측정해서, 서비스 메시가 무엇을 채우는지를 말이 아니라 숫자로 확인한다.</p>
+  <div class="meta">
+    <span class="tag">중후반</span><span class="tag">95분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 (kind v0.33.0 · kindnetd v20260820-69b56db7) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m24-k8s-pod-container-security.html">M24</a> 완료 — <code>journal</code> 네임스페이스가 <code>enforce=restricted</code>이고 세 워크로드가 비루트로 돈다</li>
+    <li><a href="m19-k8s-metrics-pipeline.html">M19</a>의 <code>order-api</code>가 <code>apps</code> 네임스페이스에 떠 있다. 확인: <code>kubectl -n apps get deploy</code></li>
+    <li><a href="m20-k8s-promql-instrumentation.html">M20</a>의 ServiceMonitor가 <code>journal-api</code>를 긁고 있다. 확인: 프로메테우스 <code>Targets</code>에서 <code>journal-api</code> 3개가 <code>up</code></li>
+    <li>인그레스가 <code>localhost:18080</code>으로 열려 있다. 확인: <code>curl -H 'Host: journal.local' http://localhost:18080/api/entries</code></li>
+    <li>새로 만들 파일: <code>course/labs/k8s/netpol/00-default-deny.yaml</code> · <code>10-allow.yaml</code> · <code>kustomization.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 네임스페이스 경계가 네트워크를 나누지 않는다는 것을 측정으로 확인하고, <code>default-deny</code> 하나로 전부 끊었다가 필요한 다섯 경로만 연다.</p>
+  <p>2. 이그레스 정책에서 DNS를 빠뜨렸을 때의 증상을 재현한다 — <strong>지금 도는 요청은 멀쩡하고 몇 시간 뒤 재시작할 때 죽는다</strong>는 것이 이 사고의 본질이다.</p>
+  <p>3. 정책이 <strong>경로도 신원도 보지 못한다</strong>는 것을 <code>/metrics</code>가 200으로 뚫리는 것으로 확인하고, 거기서부터 메시를 쓸지 판단한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">25.1</span>지금은 누구나 레디스에 붙을 수 있다</a>
+  <a href="#s2"><span class="num">25.2</span>이론 — 허용만 있고 거부는 없다</a>
+  <a href="#s3"><span class="num">25.3</span>따라하기 ① 막히지 않는다는 것을 측정한다</a>
+  <a href="#s4"><span class="num">25.4</span>따라하기 ② 전부 끊는다</a>
+  <a href="#s5"><span class="num">25.5</span>따라하기 ③ 다섯 경로만 연다</a>
+  <a href="#s6"><span class="num">25.6</span>따라하기 ④ 정책이 보지 못하는 것</a>
+  <a href="#s7"><span class="num">25.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">25.8</span>운영 관점 — 메시를 쓸 것인가</a>
+  <a href="#s9"><span class="num">25.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">25.1</span>지금은 누구나 레디스에 붙을 수 있다</h2>
+  <p class="lead">M23은 API 서버를 통해 무엇을 할 수 있는지를 제한했고, M24는 파드 안에서 무엇을 할 수 있는지를 제한했다. 둘 다 <strong>파드가 다른 파드와 어떤 대화를 할 수 있는지</strong>는 건드리지 않았다.</p>
+  <p>쿠버네티스의 기본 네트워크 모델은 명시적으로 <strong>모든 파드가 NAT 없이 모든 파드와 통신할 수 있다</strong>이다. 이것은 버그가 아니라 설계다. 서비스 디스커버리와 라우팅을 단순하게 만들려고 평평한 주소 공간을 택했고, 격리는 별도의 기능으로 빼 뒀다. 그래서 네임스페이스를 나누는 것은 이름을 나누는 것이고, 쿼터를 나누는 것이고(M17), RBAC의 범위를 나누는 것이지만(M23), <strong>네트워크를 나누는 것은 아니다.</strong></p>
+  <p>지금 이 클러스터에서 그 결과는 구체적이다. <code>apps</code>에서 도는 <code>order-api</code> 옆에 파드 하나를 띄우면 <code>journal</code>의 레디스에 TCP로 붙는다. M14에서 넣은 레디스 비밀번호가 유일한 방어선이고, 그 비밀번호는 시크릿에 들어 있으며 시크릿은 <strong>같은 네임스페이스의 파드가 읽는다.</strong> 침해가 한 네임스페이스에서 시작해도 옆으로 번지는 경로가 열려 있다는 뜻이다.</p>
+  <p>이 모듈은 그 경로를 닫는다. 그리고 닫는 과정에서 배우는 것은 문법이 아니라 <strong>순서</strong>다 — 먼저 전부 끊고, 무엇이 깨지는지 보고, 깨진 것만 다시 연다. 반대로 하면 무엇이 열려 있는지 영원히 모른다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">25.2</span>이론 — 허용만 있고 거부는 없다</h2>
+  <p><span class="lbl">책 매핑</span>9.4 기본 허용을 기본 거부로 · 9.6 서비스 메시가 주는 것과 대가</p>
+
+  <h3>정책이 붙는 순간 화이트리스트가 된다</h3>
+  <p><dfn class="term">NetworkPolicy<span class="en">networking.k8s.io/v1</span></dfn>에는 거부 규칙이 없다. 방화벽 ACL처럼 "이건 막고 저건 열고"를 순서대로 쓰는 물건이 아니다. 규칙은 단 하나다 — <strong>어떤 파드가 어떤 정책의 <code>podSelector</code>에 선택되면, 그 파드는 그 방향(ingress/egress)에 대해 격리되고, 이후 그 파드에 붙은 모든 정책의 허용 규칙을 합집합한 것만 통한다.</strong></p>
+  <p>여기서 두 가지가 따라 나온다. 첫째, 정책이 하나도 붙지 않은 파드는 전부 열려 있다 — 옆 파드에 정책을 걸어도 그 파드는 그대로다. 둘째, 정책 여러 개를 붙이면 서로 <strong>합쳐질 뿐 서로를 좁히지 못한다.</strong> 넓게 여는 정책 하나가 뒤에 있으면 앞의 좁은 정책은 의미가 없다. 그래서 정책을 추가할 때는 "이걸 더하면 무엇이 더 열리는가"만 생각하면 되고, 반대로 <strong>무언가를 막고 싶으면 정책을 추가하는 게 아니라 허용을 지워야 한다.</strong></p>
+
+  <h3>selector 두 개를 붙이는 자리가 의미를 바꾼다</h3>
+  <p><code>from</code>과 <code>to</code>는 목록이다. 목록의 <strong>항목끼리는 OR</strong>이고, <strong>한 항목 안의 selector끼리는 AND</strong>다. YAML에서 이 둘의 차이는 하이픈 하나뿐이다.</p>
+<pre><code># AND — ingress-nginx 네임스페이스에 있으면서 그 라벨을 가진 파드
+from:
+  - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
+    podSelector: {matchLabels: {app.kubernetes.io/name: ingress-nginx}}
+
+# OR — ingress-nginx 네임스페이스의 모든 파드 (또는 이 네임스페이스의 그 라벨 파드)
+from:
+  - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
+  - podSelector: {matchLabels: {app.kubernetes.io/name: ingress-nginx}}</code></pre>
+  <p>OR로 잘못 쓰면 정책이 <strong>넓어지는 방향으로</strong> 틀린다. 넓어지는 실수는 스모크 테스트를 통과한다. 25.7에서 이것을 측정으로 잡는다.</p>
+  <p><code>namespaceSelector</code>가 없이 <code>podSelector</code>만 쓰면 <strong>정책이 있는 네임스페이스 안에서만</strong> 찾는다. 다른 네임스페이스의 파드를 허용하려면 <code>namespaceSelector</code>가 반드시 있어야 한다. 네임스페이스에 라벨을 따로 붙이지 않았어도 쿠버네티스가 <code>kubernetes.io/metadata.name</code>을 자동으로 넣어 주므로 이름으로 고를 수 있다.</p>
+
+  <h3>이그레스는 DNS부터 생각한다</h3>
+  <p>인그레스 정책은 잘못 써도 그 서비스만 죽는다. 이그레스 정책은 잘못 쓰면 <strong>이름 해석이 죽어서 전부 죽는다.</strong> 파드가 <code>redis-0.redis</code>를 부르려면 먼저 <code>kube-system</code>의 CoreDNS에 UDP/TCP 53으로 나가야 하는데, 이 경로를 열어 두지 않은 이그레스 정책은 그 파드의 모든 이름 기반 통신을 끊는다. 이그레스를 쓰는 클러스터에서 <code>allow-dns</code>는 사실상 필수 항목이고, 대개 <code>podSelector: {}</code>로 네임스페이스 전체에 건다.</p>
+
+  <h3>집행하는 것은 쿠버네티스가 아니라 CNI다</h3>
+  <p>API 서버는 NetworkPolicy 오브젝트를 저장할 뿐이다. 실제로 패킷을 떨어뜨리는 것은 CNI 플러그인이고, <strong>집행하지 않는 CNI에서는 정책이 만들어지기만 하고 아무것도 막지 않는다.</strong> 오류도 경고도 없다 — <code>kubectl get netpol</code>에 줄이 보이니까 되고 있다고 착각하기 딱 좋다. 그래서 이 모듈의 첫 명령은 정책 작성이 아니라 <strong>CNI 확인</strong>이다. 이 교재의 kind 클러스터는 kindnet을 쓰고, 지금 버전의 kindnet은 정책을 집행한다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+      <text class="t-h" x="40" y="46">정책이 붙는 순간 그 파드는 화이트리스트로 바뀐다</text>
+
+      <!-- 왼쪽: 정책 없음 -->
+      <rect class="nsbox" x="40" y="66" width="380" height="150" rx="4"/>
+      <text class="t-title" x="56" y="88">정책이 하나도 없을 때</text>
+      <rect class="node" x="60" y="102" width="100" height="40" rx="3"/>
+      <text class="t-mono" x="110" y="126" text-anchor="middle">apps 파드</text>
+      <rect class="node" x="240" y="102" width="100" height="40" rx="3"/>
+      <text class="t-mono" x="290" y="126" text-anchor="middle">journal-api</text>
+      <rect class="node" x="240" y="158" width="100" height="40" rx="3"/>
+      <text class="t-mono" x="290" y="182" text-anchor="middle">redis</text>
+      <path class="line" d="M 160 122 L 234 122" marker-end="url(#ar1)"/>
+      <path class="line" d="M 160 130 L 234 176" marker-end="url(#ar1)"/>
+      <text class="t-sub" x="56" y="210">네임스페이스는 이름의 경계일 뿐 네트워크 경계가 아니다</text>
+
+      <!-- 오른쪽: 정책 있음 -->
+      <rect class="nsbox" x="480" y="66" width="380" height="150" rx="4"/>
+      <text class="t-title" x="496" y="88">그 파드에 정책이 하나라도 붙으면</text>
+      <rect class="node" x="500" y="102" width="100" height="40" rx="3"/>
+      <text class="t-mono" x="550" y="126" text-anchor="middle">apps 파드</text>
+      <rect class="warnbox" x="680" y="102" width="100" height="40" rx="3"/>
+      <text class="t-mono" x="730" y="126" text-anchor="middle">journal-api</text>
+      <rect class="warnbox" x="680" y="158" width="100" height="40" rx="3"/>
+      <text class="t-mono" x="730" y="182" text-anchor="middle">redis</text>
+      <path class="wline" d="M 600 122 L 664 122" marker-end="url(#ar2)"/>
+      <text class="t-warn" x="640" y="114" text-anchor="middle">000</text>
+      <path class="wline" d="M 600 130 L 664 176" marker-end="url(#ar2)"/>
+      <text class="t-sub" x="496" y="210">거부 규칙은 없다. 허용에 없으면 막힌 것이다</text>
+
+      <!-- AND/OR -->
+      <rect class="soft" x="40" y="234" width="820" height="118" rx="4"/>
+      <text class="t-h" x="56" y="258">하이픈 하나가 범위를 바꾼다</text>
+      <rect class="accent" x="56" y="270" width="386" height="66" rx="3"/>
+      <text class="t-mono" x="66" y="290">- namespaceSelector: ingress-nginx</text>
+      <text class="t-mono" x="66" y="306">  podSelector: name=ingress-nginx</text>
+      <text class="t-acc" x="66" y="326">AND — 그 네임스페이스의 그 파드만</text>
+      <rect class="warnbox" x="458" y="270" width="386" height="66" rx="3"/>
+      <text class="t-mono" x="468" y="290">- namespaceSelector: ingress-nginx</text>
+      <text class="t-mono" x="468" y="306">- podSelector: name=ingress-nginx</text>
+      <text class="t-warn" x="468" y="326">OR — 그 네임스페이스 전체가 열린다</text>
+
+      <!-- 한계 -->
+      <text class="t-h" x="56" y="382">정책이 보는 것과 보지 못하는 것</text>
+      <rect class="box" x="56" y="394" width="386" height="40" rx="3"/>
+      <text class="t-sub" x="66" y="419">본다 — 출발지 IP가 어느 파드·네임스페이스인가, 포트 번호</text>
+      <rect class="warnbox" x="458" y="394" width="386" height="40" rx="3"/>
+      <text class="t-warn" x="468" y="419">못 본다 — HTTP 경로·메서드, 호출자의 신원 증명, 암호화</text>
+    </svg>
+    <figcaption>그림 25.1 — 정책이 붙지 않은 파드는 전부 열려 있고, 하나라도 붙는 순간 그 파드는 허용 목록만 통하는 상태가 된다. 아래쪽 두 칸이 정책이 보지 못하는 것이고, 서비스 메시가 채우는 자리다.</figcaption>
+  </figure>
+
+  <h3>정책이 보는 것은 IP와 포트뿐이다</h3>
+  <p>selector에 <code>app: journal-api</code>라고 쓰지만 CNI가 판정에 쓰는 것은 라벨이 아니라 <strong>그 라벨이 붙은 파드의 IP</strong>다. 컨트롤 플레인이 라벨을 IP 목록으로 번역해 각 노드에 내려 주고, 노드는 패킷의 출발지 IP를 그 목록과 대조한다. 결과적으로 정책은 <strong>출발지가 어디인지(위치)</strong>는 판정하지만 <strong>호출자가 누구인지(신원)</strong>는 증명하지 못하고, HTTP 경로·메서드·헤더는 아예 보이지 않는다. 이 두 칸이 서비스 메시가 채우는 자리다. 25.6에서 그 두 칸이 실제로 비어 있는 것을 확인한 뒤 25.8에서 값을 매긴다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">25.3</span>따라하기 ① 막히지 않는다는 것을 측정한다</h2>
+
+  <div class="step">
+    <h4>1단계 — CNI가 정책을 집행하는지부터 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이 실습 전체가 성립하는 전제를 먼저 확인한다. 여기서 아니면 뒤의 측정이 전부 무의미하다.</p>
+<pre><code>kubectl -n kube-system get ds kindnet \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>docker.io/kindest/kindnetd:v20260820-69b56db7</code></div>
+    <div class="verdict"><span class="lbl">판정</span>kindnet이 이 버전이면 NetworkPolicy를 집행한다. 다른 환경에서 실습한다면 CNI 문서에서 <strong>정책 지원 여부</strong>를 먼저 확인한다. 지원하지 않는 CNI에서는 25.4의 <code>default-deny</code>를 걸어도 응답이 계속 200으로 나오고, 그것이 이 모듈에서 가장 흔한 "안 되는데요"의 원인이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 다른 네임스페이스에서 진단용 파드를 띄운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>침해된 이웃 워크로드의 시점을 흉내 낸다. <code>apps</code>는 <code>order-api</code>가 사는 네임스페이스다.</p>
+<pre><code>kubectl -n apps run netprobe --image=curlimages/curl:8.19.0 \
+  --restart=Never --command -- sleep 3600
+kubectl -n apps wait --for=condition=Ready pod/netprobe --timeout=90s</code></pre>
+    <div class="note-2026">
+      <p>진단 파드를 <code>journal</code>에 띄우지 않는 이유가 있다. M24에서 그 네임스페이스에 <code>enforce=restricted</code>를 걸었기 때문에 <code>kubectl run</code>으로 만든 기본 파드는 <strong>거부된다.</strong> 보안 설정이 실습을 방해하는 것처럼 보이지만, 실제로는 "임시 파드를 아무 데나 못 띄운다"가 그 라벨의 목적이다. <code>apps</code>는 아직 라벨이 없어서 통과한다.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 세 방향을 전부 찔러 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"다 열려 있다"를 문장이 아니라 응답 코드로 남긴다. 정책을 건 뒤 같은 명령을 다시 쳐서 비교할 것이다.</p>
+<pre><code>kubectl -n apps exec netprobe -- sh -c '
+  echo -n "journal-api  -> "; curl -s -o /dev/null -m 4 -w "%{http_code}\n" http://journal-api.journal:8080/api/entries
+  echo -n "order-api    -> "; curl -s -o /dev/null -m 4 -w "%{http_code}\n" http://order-api.apps:8080/api/orders
+'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api  -> 200
+order-api    -> 200</code></div>
+    <p>레디스는 HTTP가 아니므로 프로토콜을 직접 말한다. RESP 핸드셰이크를 손으로 보낸다.</p>
+<pre><code>PW=$(kubectl -n journal get secret journal-secret -o jsonpath='{.data.REDIS_PASSWORD}' | base64 -d)
+kubectl -n apps exec netprobe -- sh -c \
+  "printf 'AUTH $PW\r\nPING\r\n' | nc -w 3 redis-0.redis.journal 6379; echo \"nc exit=\$?\""</code></pre>
+    <table>
+      <thead><tr><th>부분</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td><code>printf 'AUTH ...\r\nPING\r\n'</code></td><td>레디스 프로토콜은 줄 단위 텍스트다. 클라이언트 없이 손으로 두 명령을 보낸다</td></tr>
+        <tr><td><code>nc -w 3</code></td><td>3초 안에 아무 응답이 없으면 포기한다. 이 값이 없으면 차단됐을 때 영원히 매달린다</td></tr>
+      </tbody>
+    </table>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>+OK
++PONG
+nc exit=0</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>+PONG</code>이 나왔다면 다른 네임스페이스의 파드가 레디스와 <strong>대화를 끝냈다는</strong> 뜻이다. 비밀번호를 M23의 RBAC으로 못 읽게 막아 놨더라도, TCP 경로가 열려 있는 한 무차별 대입이든 알려진 취약점이든 시도할 창구는 남아 있다. 여기서 막아야 할 것은 인증이 아니라 <strong>연결 자체</strong>다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">25.4</span>따라하기 ② 전부 끊는다</h2>
+
+  <div class="step">
+    <h4>1단계 — 기본 거부 하나를 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>화이트리스트 모델의 출발점을 만든다. 이 파일 한 장이 <code>journal</code>의 모든 파드를 격리한다.</p>
+<pre><code>mkdir -p course/labs/k8s/netpol
+cat &gt; course/labs/k8s/netpol/00-default-deny.yaml &lt;&lt;'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: journal
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+EOF
+kubectl apply -f course/labs/k8s/netpol/00-default-deny.yaml</code></pre>
+    <table>
+      <thead><tr><th>필드</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td><code>podSelector: {}</code></td><td>빈 selector는 "이 네임스페이스의 모든 파드". <code>null</code>이 아니라 <strong>빈 객체</strong>여야 한다</td></tr>
+        <tr><td><code>policyTypes</code></td><td>이 정책이 관여하는 방향. 여기 적힌 방향에 허용 규칙이 하나도 없으므로 전부 막힌다</td></tr>
+        <tr><td>(<code>ingress</code>/<code>egress</code> 없음)</td><td>규칙 목록을 아예 쓰지 않는 것이 "아무것도 허용하지 않음"의 표현이다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — describe로 읽는 법을 익힌다</h4>
+    <p class="purpose"><span class="lbl">목적</span>YAML이 아니라 <strong>API 서버가 해석한 결과</strong>를 본다. 정책을 디버깅할 때 제일 먼저 치는 명령이다.</p>
+<pre><code>kubectl describe netpol default-deny -n journal</code></pre>
+    <span class="out-lbl">출력 (앞부분 생략)</span>
+    <div class="out"><code>Spec:
+  PodSelector:     &lt;none&gt; (Allowing the specific traffic to all pods in this namespace)
+  Allowing ingress traffic:
+    &lt;none&gt; (Selected pods are isolated for ingress connectivity)
+  Allowing egress traffic:
+    &lt;none&gt; (Selected pods are isolated for egress connectivity)
+  Policy Types: Ingress, Egress</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>isolated for ... connectivity</code>가 핵심 문구다. <code>PodSelector: &lt;none&gt;</code>은 "선택 안 함"이 아니라 <strong>"전부 선택"</strong>이라는 뜻이고, 괄호 안의 설명이 그것을 확인해 준다. 이 출력에서 <code>&lt;none&gt;</code> 두 개의 의미가 서로 반대라는 점이 헷갈리는 부분이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 무엇이 깨졌는지 전부 센다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"필요한 경로"를 상상으로 적지 않는다. 끊고 나서 <strong>깨진 것을 목록으로 받아</strong> 그것만 연다.</p>
+<pre><code>echo -n "인그레스 /api/entries -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
+  -H 'Host: journal.local' http://localhost:18080/api/entries
+echo -n "인그레스 /            -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
+  -H 'Host: journal.local' http://localhost:18080/
+kubectl -n apps exec netprobe -- curl -s -o /dev/null -m 4 -w 'apps -> journal-api: %{http_code}\n' \
+  http://journal-api.journal:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>인그레스 /api/entries -> 000
+인그레스 /            -> 000
+apps -> journal-api: 000</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>000</code>은 curl이 <strong>HTTP 응답을 아예 받지 못했다</strong>는 뜻이다(연결 자체가 성립하지 않음). 막고 싶었던 <code>apps</code>만 막힌 게 아니라 <strong>인그레스 컨트롤러도 같이 막혔다.</strong> 정책은 출발지를 가리지 않았으니 당연한 결과인데, 운영 중에 <code>default-deny</code>만 먼저 커밋하면 서비스가 이렇게 죽는다.</div>
+  </div>
+
+  <div class="note-2026">
+    <p>프로메테우스도 지금 <code>journal</code>을 긁지 못한다. 이 상태를 몇 분 유지하면 M21에서 만든 <code>JournalApiDown</code> 알림이 실제로 발화한다 — 정책 사고를 알림이 잡아 주는 첫 사례다. 다만 이 모듈에서는 곧바로 다음 절로 넘어가 복구하므로 대개 <code>Pending</code>에서 끝난다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">25.5</span>따라하기 ③ 다섯 경로만 연다</h2>
+  <p>깨진 목록은 넷이다 — 인그레스 컨트롤러 → 앱, 앱 → 레디스, 프로메테우스 → 앱, 그리고 모든 파드 → DNS. 이것을 정책 다섯 개로 나눠 쓴다. 하나의 큰 파일에 몰아넣지 않는 이유는 <strong>지우기 쉬우려고</strong>다. 정책은 합집합이므로, 잘못 열었을 때 되돌리는 단위가 파일이 아니라 정책 오브젝트여야 한다.</p>
+
+  <div class="step">
+    <h4>1단계 — 허용 정책 다섯 개를 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>각 정책이 <strong>깨진 항목 하나</strong>에 대응하게 만들어, 나중에 사람이 읽고 이유를 복원할 수 있게 한다.</p>
+<pre><code>cat &gt; course/labs/k8s/netpol/10-allow.yaml &lt;&lt;'EOF'
+---
+# ① DNS. 이그레스를 막으면 이름 해석부터 죽는다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-dns, namespace: journal}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+# ② 인그레스 컨트롤러 -> journal-api / web-static
+#    아래 두 셀렉터는 같은 항목이므로 AND 다 (25.7 실패 ② 참조).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-from-ingress, namespace: journal}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [journal-api, web-static]}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+          podSelector:
+            matchLabels: {app.kubernetes.io/name: ingress-nginx}
+      ports:
+        - {protocol: TCP, port: 8080}
+---
+# ③ journal-api -> redis. 레디스는 이것 말고 아무 데서도 받지 않는다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-api-to-redis, namespace: journal}
+spec:
+  podSelector:
+    matchLabels: {app: redis}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: journal-api}
+      ports:
+        - {protocol: TCP, port: 6379}
+---
+# ④ journal-api 의 이그레스 - 레디스로만
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-api-egress, namespace: journal}
+spec:
+  podSelector:
+    matchLabels: {app: journal-api}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: redis}
+      ports:
+        - {protocol: TCP, port: 6379}
+---
+# ⑤ 프로메테우스 스크레이프 (M20 의 ServiceMonitor 가 이 경로를 쓴다)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-scrape, namespace: journal}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [journal-api, web-static]}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: monitoring}
+      ports:
+        - {protocol: TCP, port: 8080}
+EOF
+kubectl apply -f course/labs/k8s/netpol/10-allow.yaml</code></pre>
+    <p>③과 ④가 짝이라는 점을 놓치기 쉽다. <code>default-deny</code>가 양방향이므로 <strong>보내는 쪽의 이그레스와 받는 쪽의 인그레스가 둘 다 열려야</strong> 연결이 성립한다. 한쪽만 쓰면 조용히 막히고, 어느 쪽이 막았는지는 로그에 남지 않는다.</p>
+    <p>⑤에는 <code>podSelector</code>가 없다. 프로메테우스 파드의 라벨이 차트 릴리스 이름에 따라 바뀌기 때문인데, 이렇게 <strong>일부러 넓게 여는 자리</strong>는 주석으로 이유를 남긴다. 이유 없이 넓은 정책과 이유 있는 정책은 나중에 감사할 때 구분되어야 한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 깨졌던 것이 살아났는지, 막고 싶던 것이 막혀 있는지 동시에 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>복구 확인과 격리 확인을 <strong>같은 화면에서</strong> 한다. 하나만 보면 반대쪽을 놓친다.</p>
+<pre><code>echo -n "인그레스 /api/entries -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
+  -H 'Host: journal.local' http://localhost:18080/api/entries
+echo -n "인그레스 /            -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
+  -H 'Host: journal.local' http://localhost:18080/
+kubectl -n apps exec netprobe -- curl -s -o /dev/null -m 4 -w 'apps -> journal-api: %{http_code}\n' \
+  http://journal-api.journal:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>인그레스 /api/entries -> 200
+인그레스 /            -> 200
+apps -> journal-api: 000</code></div>
+    <div class="verdict"><span class="lbl">판정</span>서비스는 복구됐고 이웃 네임스페이스는 막힌 채다. 이 세 줄이 이 모듈의 결과 전체다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 관측이 살아 있는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>네트워크 정책 사고에서 가장 늦게 발견되는 피해가 <strong>모니터링 경로</strong>다. 앱이 200을 주는 것과 프로메테우스가 긁는 것은 다른 경로다.</p>
+<pre><code>kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 &gt;/dev/null 2&gt;&amp;1 &amp;
+sleep 4
+curl -s 'http://localhost:9090/api/v1/targets?state=active' | python3 -c '
+import json,sys,collections
+d=json.load(sys.stdin)["data"]["activeTargets"]
+print("전체:",dict(collections.Counter(t["health"] for t in d)))
+for t in d:
+    if t["labels"].get("namespace")=="journal":
+        print(" ",t["labels"].get("job"), t["scrapeUrl"], t["health"])'
+kill %1</code></pre>
+    <span class="out-lbl">출력 (IP는 환경마다 다르다)</span>
+    <div class="out"><code>전체: {'up': 33}
+  journal-api http://10.244.2.158:8080/metrics up
+  journal-api http://10.244.1.192:8080/metrics up
+  journal-api http://10.244.2.157:8080/metrics up</code></div>
+    <div class="verdict"><span class="lbl">판정</span>33개 타깃이 전부 <code>up</code>이고 <code>journal-api</code> 3개가 그 안에 있다. 정책 ⑤가 없으면 이 세 줄이 <code>down</code>으로 바뀌고 <strong>대시보드는 빈 그래프</strong>가 된다 — 앱은 멀쩡한데 화면만 죽는, 원인을 찾기 가장 어려운 형태의 장애다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 레디스가 실제로 좁아졌는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>정책 ③은 "<code>journal-api</code>만"이라고 썼다. <strong>같은 네임스페이스의 다른 파드</strong>로 그 말이 참인지 본다.</p>
+<pre><code>kubectl -n journal exec deploy/web-static -- sh -c \
+  'printf "PING\r\n" | nc -w 3 redis-0.redis 6379; echo "nc exit=$?"'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>nc exit=1</code></div>
+    <p>대조군으로 <code>journal-api</code>에서 <strong>같은 명령</strong>을 친다.</p>
+<pre><code>kubectl -n journal exec deploy/journal-api -- sh -c \
+  'printf "PING\r\n" | nc -w 3 redis-0.redis 6379; echo "nc exit=$?"'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>-NOAUTH Authentication required.
+nc exit=0</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 네임스페이스, 같은 명령, 다른 결과다. <code>journal-api</code>는 레디스까지 <strong>연결에 성공해서</strong> 인증 오류를 받았고(<code>-NOAUTH</code>는 대화가 성립했다는 증거다), <code>web-static</code>은 응답이 없어 3초 뒤 포기했다. 네트워크 정책이 막을 때는 <strong>거부 응답이 오지 않고 조용히 늘어진다</strong> — 애플리케이션 쪽에서는 이것이 연결 거부가 아니라 <strong>타임아웃</strong>으로 보인다. 정책 사고를 진단할 때 로그에서 찾아야 할 단어가 <code>refused</code>가 아니라 <code>timeout</code>인 이유다.</div>
+    <p>DNS는 따로 확인한다. <code>web-static</code>이 막힌 것이 이름 해석 실패 때문이 아니라는 것을 분리해서 봐야 한다.</p>
+<pre><code>kubectl -n journal exec deploy/web-static -- nslookup redis-0.redis.journal.svc.cluster.local | tail -3</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Name:	redis-0.redis.journal.svc.cluster.local
+Address: 10.244.2.154</code></div>
+    <p>주소는 나온다. 정책 ①이 DNS를 열어 뒀기 때문이고, 그래서 <code>web-static</code>의 실패는 <strong>이름을 못 찾은 것이 아니라 그 주소로 못 나간 것</strong>이다. 두 실패를 구분하지 못하면 엉뚱한 정책을 고치게 된다.</p>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — kustomization으로 묶는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M28에서 이 디렉터리를 오버레이로 다시 쓴다. 지금 묶어 두면 그때 옮길 것이 없다.</p>
+<pre><code>cat &gt; course/labs/k8s/netpol/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-default-deny.yaml
+  - 10-allow.yaml
+EOF
+kubectl apply -k course/labs/k8s/netpol
+kubectl -n journal get netpol</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME                 POD-SELECTOR                      AGE
+allow-api-egress     app=journal-api                   5m3s
+allow-api-to-redis   app=redis                         5m3s
+allow-dns            &lt;none&gt;                            3m
+allow-from-ingress   app in (journal-api,web-static)   5m3s
+allow-scrape         app in (journal-api,web-static)   5m3s
+default-deny         &lt;none&gt;                            5m3s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>POD-SELECTOR</code> 열이 이 목록에서 제일 중요하다. <code>&lt;none&gt;</code>인 두 줄이 <strong>네임스페이스 전체에 걸리는 정책</strong>이므로, 사고가 나면 여기부터 본다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">25.6</span>따라하기 ④ 정책이 보지 못하는 것</h2>
+  <p>정책 ②는 "인그레스 컨트롤러에서 오는 트래픽을 허용"이라고 읽힌다. 실제로 무엇을 허용했는지 측정한다.</p>
+
+  <div class="step">
+    <h4>1단계 — 허용된 위치에 아무 파드나 띄운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"인그레스 컨트롤러에서 온다"와 "인그레스 컨트롤러의 네임스페이스에서 온다"의 차이를 확인한다.</p>
+<pre><code>kubectl -n ingress-nginx run l7probe --image=curlimages/curl:8.19.0 \
+  --restart=Never --command -- sleep 300
+kubectl -n ingress-nginx wait --for=condition=Ready pod/l7probe --timeout=90s</code></pre>
+    <p>지금 정책 ②는 네임스페이스와 파드 라벨을 AND로 보므로 이 파드는 막힌다. 흔히 쓰는 형태 — <strong>네임스페이스만 보는 정책</strong> — 이 무엇을 여는지 보기 위해 <code>podSelector</code>를 한 번 떼어 낸다.</p>
+<pre><code>kubectl -n journal patch netpol allow-from-ingress --type=json \
+  -p '[{"op":"remove","path":"/spec/ingress/0/from/0/podSelector"}]'
+sleep 3
+
+for P in /api/entries /metrics /healthz; do
+  printf "  %-14s -> " "$P"
+  kubectl -n ingress-nginx exec l7probe -- \
+    curl -s -o /dev/null -m 4 -w '%{http_code}\n' http://journal-api.journal:8080$P
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  /api/entries   -> 200
+  /metrics       -> 200
+  /healthz       -> 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 경로가 전부 200이다. 우리가 열어 주려던 것은 <code>/api/entries</code> 하나였는데 <strong>같은 포트의 모든 경로</strong>가 함께 열렸다. 정책에는 경로를 쓰는 칸이 없기 때문이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 데이터가 실제로 나오는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"200이 떴다"와 "데이터를 가져갔다"는 다르다. 후자를 확인해야 위험이 구체화된다.</p>
+<pre><code>kubectl -n ingress-nginx exec l7probe -- \
+  curl -s -m 4 http://journal-api.journal:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"entries":["{\"text\":\"rebuild smoke test\"}","{\"text\":\"첫 엔트리\"}"]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ingress-nginx</code> 네임스페이스에 파드를 띄울 수 있는 사람은 누구나 저널 데이터를 읽는다. 정책은 <strong>출발지가 그 네임스페이스인지만</strong> 봤고, 그 파드가 인그레스 컨트롤러인지는 확인할 방법이 없다. 이것이 "위치 기반 허용"의 한계다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 좁힐 수 있는 만큼 좁힌다</h4>
+    <p class="purpose"><span class="lbl">목적</span>메시 없이 갈 수 있는 최대치를 확인한다. 파드 라벨까지 AND로 붙이면 위치는 파드 단위까지 좁아진다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/netpol/10-allow.yaml
+sleep 3
+kubectl -n ingress-nginx exec l7probe -- \
+  curl -s -o /dev/null -m 4 -w 'l7probe -> journal-api: %{http_code}\n' \
+  http://journal-api.journal:8080/api/entries
+echo -n "인그레스 경유 /api/entries -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
+  -H 'Host: journal.local' http://localhost:18080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>command terminated with exit code 28
+l7probe -> journal-api: 000
+인그레스 경유 /api/entries -> 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 네임스페이스인데도 <code>l7probe</code>는 막히고 컨트롤러는 통한다. <code>exit code 28</code>은 curl의 타임아웃 코드다. 남은 구멍은 하나 — <strong>그 라벨을 붙인 파드를 띄우면 된다.</strong> 라벨은 누구나 자기 파드에 적을 수 있는 문자열이지 증명이 아니다.</div>
+  </div>
+
+  <h3>남은 두 칸을 메시가 채운다</h3>
+  <p>여기까지 좁히고도 채우지 못한 것이 둘이다. 첫째, <strong>경로와 메서드</strong> — <code>/api/entries</code>는 되고 <code>/metrics</code>는 안 되게, <code>GET</code>은 되고 <code>DELETE</code>는 안 되게 쓸 칸이 NetworkPolicy에는 없다. 둘째, <strong>신원의 증명</strong> — 라벨 대신 워크로드마다 발급된 인증서로 상대를 확인하는 방법이 없다.</p>
+  <p>서비스 메시는 이 둘을 프록시로 해결한다. 모든 파드의 트래픽을 프록시가 가로채고, 프록시끼리 mTLS로 서로의 인증서를 검증하며(신원), 그 위에서 HTTP를 파싱해 경로·메서드 단위로 판정한다(L7). 정책이 IP를 보는 자리에 메시는 <strong>인증서의 주체</strong>를 놓는 것이다.</p>
+  <p>이 교재는 메시를 설치하지 않는다. 이유는 25.8에 쓴다.</p>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">25.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 이그레스를 막으면서 DNS를 잊는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이그레스 정책 사고의 대표 유형을 재현한다. <strong>증상이 늦게 나타난다</strong>는 것이 이 실패의 핵심이다.</p>
+<pre><code>kubectl -n journal delete netpol allow-dns
+kubectl -n journal exec deploy/journal-api -- nslookup redis-0.redis</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>;; connection timed out; no servers could be reached
+
+command terminated with exit code 1</code></div>
+    <p>이름 해석이 죽었으니 새 연결은 전부 실패한다.</p>
+<pre><code>kubectl -n journal exec deploy/journal-api -- wget -qO- http://journal-api:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>wget: bad address 'journal-api:8080'</code></div>
+    <p>그런데 서비스는 <strong>계속 200을 준다.</strong></p>
+<pre><code>curl -s -H 'Host: journal.local' http://localhost:18080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"entries":["{\"text\":\"rebuild smoke test\"}","{\"text\":\"첫 엔트리\"}"]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>앱은 기동할 때 레디스 주소를 <strong>한 번 해석하고</strong> 그 커넥션을 계속 쓴다. 이미 붙은 TCP 커넥션은 정책과 무관하게 살아 있으므로, DNS를 끊어도 지금 도는 요청은 멀쩡하다. 증상은 <strong>몇 시간 뒤 파드가 재시작될 때</strong> 나타난다 — 배포한 사람과 장애를 만난 사람이 달라지는 이유이고, 이그레스 정책을 릴리스한 날 저녁이 아니라 다음 날 새벽에 사고가 나는 이유다.</div>
+    <p>고친다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/netpol/10-allow.yaml
+kubectl -n journal exec deploy/journal-api -- nslookup redis-0.redis 2&gt;&amp;1 | tail -3</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>** server can't find redis-0.redis: NXDOMAIN</code></div>
+    <p>이 <code>NXDOMAIN</code>은 정상이다. M18에서 봤듯 검색 도메인을 순서대로 시도하는 과정의 중간 출력이고, <strong>서버가 대답했다</strong>는 것 자체가 DNS 복구의 증거다. 앞의 <code>connection timed out</code>과 비교하면 차이가 분명하다 — 하나는 대답이 없는 것이고 하나는 "없다"는 대답이다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 하이픈 하나로 네임스페이스 전체를 연다</h4>
+    <p class="purpose"><span class="lbl">목적</span>넓어지는 방향의 실수는 <strong>테스트를 통과한다</strong>는 것을 보인다. 리뷰에서 잡지 못하면 배포된다.</p>
+<pre><code>kubectl -n ingress-nginx get po -o name | head -1   # l7probe 가 살아 있는지 확인
+cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-from-ingress, namespace: journal}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [journal-api, web-static]}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+        - podSelector:
+            matchLabels: {app.kubernetes.io/name: ingress-nginx}
+      ports:
+        - {protocol: TCP, port: 8080}
+EOF</code></pre>
+    <p>바뀐 것은 <code>podSelector</code> 앞의 하이픈 하나뿐이다. 스모크 테스트를 돌린다.</p>
+<pre><code>echo -n "인그레스 /api/entries -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
+  -H 'Host: journal.local' http://localhost:18080/api/entries
+kubectl -n ingress-nginx exec l7probe -- \
+  curl -s -o /dev/null -m 4 -w 'l7probe -> journal-api: %{http_code}\n' \
+  http://journal-api.journal:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>인그레스 /api/entries -> 200
+l7probe -> journal-api: 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>서비스는 200이다. <strong>스모크 테스트만 보면 아무 문제가 없다.</strong> 그런데 아까 막혔던 <code>l7probe</code>가 200으로 바뀌었다 — 네임스페이스 전체가 조용히 다시 열렸다. 두 항목이 되면서 OR이 됐고, 두 번째 항목의 <code>podSelector</code>는 <code>journal</code> 네임스페이스에서 그 라벨을 찾으므로 아무것도 고르지 못해 무해하게 무시된다.</div>
+    <p>정책 변경을 검증할 때 <strong>"열려야 할 것이 열렸는가"만 보면 안 된다.</strong> "닫혀야 할 것이 닫혀 있는가"를 같은 스크립트에 넣어야 이런 변경이 CI에서 잡힌다. M29에서 이 두 줄을 파이프라인에 넣는다.</p>
+    <p>되돌린다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/netpol/10-allow.yaml
+kubectl -n ingress-nginx exec l7probe -- \
+  curl -s -o /dev/null -m 4 -w 'l7probe -> journal-api: %{http_code}\n' \
+  http://journal-api.journal:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>command terminated with exit code 28
+l7probe -> journal-api: 000</code></div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">25.8</span>운영 관점 — 메시를 쓸 것인가</h2>
+  <p><span class="lbl">책 매핑</span>9.6 서비스 메시가 주는 것과 대가</p>
+  <p>25.6에서 확인한 두 칸(경로·신원)은 메시가 채운다. 그런데 그 대가가 무엇인지를 먼저 세는 것이 순서다.</p>
+
+  <h3>사이드카 방식의 비용</h3>
+  <p>고전적인 메시는 파드마다 프록시 컨테이너를 하나씩 더 넣는다. 이 클러스터를 예로 들면 <code>journal-api</code> 3개 + <code>web-static</code> + <code>redis</code> + <code>order-api</code>에 프록시가 붙으므로 <strong>컨테이너 수가 두 배</strong>가 되고, 프록시 하나가 대략 수십 MiB의 메모리와 얼마간의 CPU를 상시 점유한다. M16에서 requests/limits를 잡을 때 앱만 계산했다면 그 계산을 전부 다시 해야 한다. 지연도 공짜가 아니다 — 요청 하나가 프록시를 두 번(보내는 쪽, 받는 쪽) 통과하므로 P99에 밀리초 단위가 더해진다.</p>
+  <p>더 큰 비용은 <strong>디버깅 경로가 하나 늘어난다</strong>는 것이다. 지금까지 "요청이 안 간다"의 용의자는 서비스·엔드포인트·정책이었는데, 메시를 넣으면 프록시 설정과 인증서 만료가 추가된다. M22에서 만든 로그 파이프라인에도 프록시 로그가 섞여 들어온다.</p>
+
+  <h3>앰비언트 방식이 바꾼 것</h3>
+  <p>최근의 앰비언트 모드는 사이드카를 파드에서 빼고 노드 단위 컴포넌트로 옮긴다. 파드 스펙을 건드리지 않으므로 도입할 때 재시작이 필요 없고, mTLS와 L4 정책은 노드 단위 컴포넌트가 처리한다. L7 판정이 필요한 경우에만 별도 프록시를 <strong>선택적으로</strong> 세운다. 비용이 "전부 아니면 전무"에서 "필요한 만큼"으로 바뀐 것이 실질적인 변화다.</p>
+
+  <h3>판단 기준</h3>
+  <p>메시를 검토할 만한 신호는 대체로 셋이다. <strong>서비스 간 호출이 사람이 그림으로 못 그릴 만큼 많을 때</strong>(관측 목적), <strong>규정이 서비스 간 암호화를 요구할 때</strong>(mTLS 목적), <strong>배포 전략이 헤더나 비율 기반 라우팅을 요구할 때</strong>(M30의 카나리를 인그레스만으로 감당하지 못할 때)다. 이 셋 중 어느 것도 해당하지 않는데 "요즘 다 쓴다"로 넣으면, 얻는 것 없이 위의 비용만 낸다.</p>
+  <p>이 교재가 메시를 설치하지 않는 이유가 그것이다. 서비스가 셋이고 호출 관계가 <code>journal-api → redis</code> 하나뿐인 클러스터에서 메시는 배울 것보다 치울 것이 많다. 대신 M30에서 카나리를 인그레스 어노테이션으로 먼저 해 보고, <strong>그 방법이 어디서 막히는지</strong>를 확인한 다음 메시를 다시 이야기한다.</p>
+
+  <h3>정책을 실제 조직에서 굴릴 때</h3>
+  <p>이 모듈은 <code>journal</code> 하나에만 정책을 걸었다. 조직 전체로 확장할 때 흔히 쓰는 순서는 <strong>네임스페이스마다 <code>default-deny</code>를 먼저 배포하되 새 네임스페이스에만 적용</strong>하고, 기존 네임스페이스는 관측으로 통신 목록을 먼저 수집한 뒤 옮기는 것이다. 통신 목록 없이 기존 네임스페이스에 <code>default-deny</code>를 걸면 25.4에서 본 <code>000</code>이 운영에서 재현된다.</p>
+  <p><code>apps</code> 네임스페이스에는 아직 정책을 걸지 않았다. <code>order-api</code>가 외부 의존이 없어서 지금 걸어도 통과하지만, M27에서 클러스터 전체 태세를 점검할 때 <strong>정책이 없는 네임스페이스를 찾아내는 방법</strong>과 함께 다룬다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">25.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n journal get netpol --no-headers | wc -l</code> → <code>6</code></li>
+      <li><code>kubectl -n journal get netpol default-deny -o jsonpath='{.spec.policyTypes}'</code> → <code>["Ingress","Egress"]</code></li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}' -H 'Host: journal.local' http://localhost:18080/api/entries</code> → <code>200</code></li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}' -H 'Host: journal.local' http://localhost:18080/</code> → <code>200</code></li>
+      <li><code>kubectl -n apps exec netprobe -- curl -s -o /dev/null -m 4 -w '%{http_code}' http://journal-api.journal:8080/api/entries</code> → <code>000</code></li>
+      <li><code>kubectl -n journal exec deploy/web-static -- sh -c 'printf "PING\r\n" | nc -w 3 redis-0.redis 6379; echo $?'</code> → <code>1</code></li>
+      <li><code>kubectl -n journal exec deploy/journal-api -- sh -c 'printf "PING\r\n" | nc -w 3 redis-0.redis 6379'</code> → <code>-NOAUTH Authentication required.</code></li>
+      <li><code>kubectl -n journal exec deploy/journal-api -- nslookup redis-0.redis 2&gt;&amp;1 | grep -c 'timed out'</code> → <code>0</code></li>
+      <li>프로메테우스 <code>/api/v1/targets</code>에서 <code>journal-api</code> 타깃 → <code>up</code> 3개</li>
+      <li><code>kubectl -n journal get netpol allow-from-ingress -o jsonpath='{.spec.ingress[0].from[0].podSelector.matchLabels}'</code> → <code>{"app.kubernetes.io/name":"ingress-nginx"}</code></li>
+      <li><code>kubectl -n journal get netpol allow-from-ingress -o jsonpath='{.spec.ingress[0].from}' | python3 -c 'import json,sys;print(len(json.load(sys.stdin)))'</code> → <code>1</code> (2면 OR로 넓어진 상태다)</li>
+      <li><code>kubectl get po -A --no-headers | grep -cE '(netprobe|l7probe)'</code> → <code>0</code></li>
+      <li><code>ls course/labs/k8s/netpol/</code> → <code>00-default-deny.yaml 10-allow.yaml kustomization.yaml</code></li>
+      <li>(이해 확인) <code>journal-api</code>가 레디스에 붙으려면 정책이 <strong>몇 개</strong> 필요한지, 그 이유를 한 문장으로 적는다</li>
+      <li>(이해 확인) <code>default-deny</code>를 지우지 않고 <code>web-static</code>의 이그레스만 다시 여는 방법을 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/netpol/00-default-deny.yaml</code> — 양방향 기본 거부</li>
+      <li><code>course/labs/k8s/netpol/10-allow.yaml</code> — 허용 정책 5개. ②는 네임스페이스+파드 AND</li>
+      <li><code>course/labs/k8s/netpol/kustomization.yaml</code> — M28 오버레이의 입력</li>
+      <li>클러스터: <code>journal</code>이 화이트리스트 상태. <code>apps</code>·<code>ingress-nginx</code>의 임의 파드는 <code>journal</code>에 접근하지 못한다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 진단용 파드 두 개를 지운다
+kubectl -n apps delete pod netprobe --ignore-not-found
+kubectl -n ingress-nginx delete pod l7probe --ignore-not-found
+
+# 남아 있는지 확인
+kubectl get po -A --no-headers | grep -E '(netprobe|l7probe)' || echo "없음"</code></pre>
+  <p>네트워크 정책은 <strong>지우지 않는다.</strong> M27의 태세 점검이 이 상태를 전제하고, M36의 카오스 실험에서 네트워크 장애를 주입할 때도 정책이 걸린 상태에서 한다. 실습 도중 정책을 지웠다면 <code>kubectl apply -k course/labs/k8s/netpol</code>로 되돌린다.</p>
+  <p>부하 생성기를 띄워 뒀다면 지금 끈다: <code>course/labs/scripts/loadgen.sh stop</code>.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m24-k8s-pod-container-security.html">← M24 파드와 컨테이너 보안</a>
+  <a href="m26-k8s-admission-policy.html">M26 어드미션 컨트롤과 정책 엔진 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금까지 만든 규칙은 전부 <strong>이미 만들어진 리소스</strong>에 대한 것이었다. PSA는 파드 스펙을 보고 거부했고, 네트워크 정책은 패킷을 떨어뜨렸다. 그런데 "이미지에 <code>latest</code> 태그를 쓰지 마라", "모든 디플로이먼트에 <code>resources</code>를 적어라" 같은 조직 규칙은 어디에도 걸 곳이 없다 — 지금은 리뷰에서 사람이 잡는 수밖에 없다.</p>
+  <p>M26에서 <code>ValidatingAdmissionPolicy</code>로 그 규칙을 클러스터에 심는다. CEL 표현식 한 줄로 <code>latest</code> 태그를 거부하고, <code>warn</code>에서 <code>enforce</code>로 승격하는 순서를 밟는다. 이미 배포된 위반 리소스를 감사로 찾아내는 방법도 함께 본다 — 정책을 새로 만들 때 항상 뒤따르는 질문이다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>네트워크 정책: https://kubernetes.io/docs/concepts/services-networking/network-policies/</li>
+    <li>네트워크 정책 레시피: https://github.com/ahmetb/kubernetes-network-policy-recipes</li>
+    <li>클러스터 네트워킹 모델: https://kubernetes.io/docs/concepts/cluster-administration/networking/</li>
+    <li>DNS for Services and Pods: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/</li>
+    <li>kindnet: https://github.com/kubernetes-sigs/kind/tree/main/images/kindnetd</li>
+    <li>Istio 앰비언트 모드: https://istio.io/latest/docs/ambient/overview/</li>
+    <li>Cilium 네트워크 정책: https://docs.cilium.io/en/stable/security/policy/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 9.4 네트워크 정책 · 9.6 서비스 메시</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · kindnetd v20260820-69b56db7 · curlimages/curl:8.19.0</p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# M36 실험 ③ — 작동 카오스 (책 20.1.4).
+#
+# 가설: 파드 하나의 CPU 를 고갈시키면
+#       ① 그 파드의 응답이 느려지고
+#       ② M17 의 HPA 가 파드를 늘린다
+#       ③ 실패 요청은 나지 않는다 (다른 파드가 받는다)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-burn
+  namespace: journal
+spec:
+  mode: one
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  stressors:
+    cpu:
+      workers: 2
+      load: 100        # 워커당 100% 를 목표로 돈다
+  duration: "90s"

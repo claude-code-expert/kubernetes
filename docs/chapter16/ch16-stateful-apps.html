@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH16 상태와 스테이트풀 애플리케이션 관리 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .fix { border: 1px solid var(--line); border-left: 3px solid #b8860b; padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .fix .lbl { display: block; font-size: 12.5px; font-weight: 700; color: #b8860b; letter-spacing: 0.05em; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 16</div>
+  <h1>상태와 스테이트풀 애플리케이션 관리</h1>
+  <p class="ch-desc">1장에서 Redis를 StatefulSet으로 띄워 봤을 때는 "이렇게 하면 된다"만 배웠다. 이 장은 그 뒤에 있는 전체 그림이다 — 볼륨이 파드에 마운트되는 원리부터, PV·PVC·StorageClass가 스토리지를 어떻게 추상화하는지, 그리고 StatefulSet만으로 부족할 때 오퍼레이터가 채우는 공백까지.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함 · 원서 예제의 폐기된 필드값 정정 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. PersistentVolume은 실제 디스크, PersistentVolumeClaim은 파드가 "이만큼 달라"고 요청하는 통신 수단이다 — 파드는 항상 PVC만 참조한다.</p>
+  <p>2. StorageClass가 있으면 관리자가 PV를 손으로 안 만들어도 클레임이 생길 때마다 자동으로 만들어진다(동적 프로비저닝).</p>
+  <p>3. StatefulSet은 레플리카셋의 정반대다 — 이름이 고정되고 순서대로 뜨고 파드마다 전용 볼륨을 갖는다. 그래도 안 되는 부분(백업·페일오버 등)은 오퍼레이터가 캡슐화한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s16-1"><span class="num">16.1</span>볼륨과 볼륨 마운트</a>
+  <a href="#s16-2"><span class="num">16.2</span>볼륨 모범 사례</a>
+  <a href="#s16-3"><span class="num">16.3</span>쿠버네티스 스토리지</a>
+  <a href="#s16-4"><span class="num">16.4</span>스테이트풀 애플리케이션</a>
+</nav>
+
+<section id="s16-1">
+  <h2 class="sec"><span class="num">16.1</span>볼륨과 볼륨 마운트</h2>
+  <p class="lead">상태 유지는 복잡한 데이터베이스만의 이야기가 아니다 — 임시 캐시 파일 하나도 상태다. <dfn class="term">볼륨 <span class="en">(Volume)</span></dfn>은 파드 안의 컨테이너에 매핑되는 저장 공간으로, 컨테이너가 재시작돼도 살아남을 수 있고(볼륨 종류에 따라), 같은 파드의 여러 컨테이너가 파일을 공유하는 통로로도 쓰인다.</p>
+</section>
+
+<section id="s16-2">
+  <h2 class="sec"><span class="num">16.2</span>볼륨 모범 사례</h2>
+  <p>볼륨은 여러 컨테이너가 데이터를 공유해야 하는 파드에만 제한적으로 쓴다 — <dfn class="term">어댑터 패턴 <span class="en">(Adapter Pattern)</span></dfn>이나 <dfn class="term">앰배서더 패턴 <span class="en">(Ambassador Pattern)</span></dfn>처럼, 메인 컨테이너를 보조하는 사이드카가 파일을 주고받아야 하는 경우다. 이런 공유에는 파드 생명주기 동안만 존재하는 <code>emptyDir</code>이 적합하다. 노드 기반 에이전트나 모니터링 도구처럼 호스트 자체의 파일에 접근해야 하는 특수한 경우가 아니라면, 그 밖의 용도로 볼륨을 남용하지 않는다.</p>
+</section>
+
+<section id="s16-3">
+  <h2 class="sec"><span class="num">16.3</span>쿠버네티스 스토리지</h2>
+  <p class="lead">지금까지는 컨테이너 엔진의 기본 기능(볼륨을 컨테이너에 매핑)이었다. 여기서부터는 그 볼륨 이면의 <strong>스토리지 자체를 쿠버네티스가 관리</strong>하게 만드는 추상화다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow161" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 정적 프로비저닝 -->
+  <rect class="lane" x="20" y="20" width="860" height="150" rx="6"/>
+  <text class="t-lane" x="36" y="44">정적(Static) 프로비저닝 — 관리자가 미리 만들어 둔다</text>
+
+  <rect class="box" x="40" y="60" width="220" height="80" rx="4"/>
+  <text class="t-title" x="150" y="86" text-anchor="middle">관리자가 직접</text>
+  <text class="t-title" x="150" y="104" text-anchor="middle">PersistentVolume 생성</text>
+  <text class="t-sub" x="150" y="124" text-anchor="middle">tier: silver 레이블</text>
+
+  <line class="line" x1="260" y1="100" x2="316" y2="100" marker-end="url(#arrow161)"/>
+  <text class="t-sub" x="288" y="88" text-anchor="middle">매칭</text>
+
+  <rect class="box-accent" x="320" y="60" width="240" height="80" rx="4"/>
+  <text class="t-title" x="440" y="86" text-anchor="middle">PersistentVolumeClaim</text>
+  <text class="t-sub" x="440" y="106" text-anchor="middle">selector: tier=silver</text>
+  <text class="t-sub" x="440" y="122" text-anchor="middle">요청 크기·접근 모드로 매칭</text>
+
+  <line class="line" x1="560" y1="100" x2="616" y2="100" marker-end="url(#arrow161)"/>
+
+  <rect class="box" x="620" y="60" width="220" height="80" rx="4"/>
+  <text class="t-title" x="730" y="86" text-anchor="middle">파드에 마운트</text>
+  <text class="t-sub" x="730" y="106" text-anchor="middle">클레임 크기·모드·레이블이</text>
+  <text class="t-sub" x="730" y="122" text-anchor="middle">전부 일치해야 바인딩</text>
+
+  <!-- 동적 프로비저닝 -->
+  <rect class="lane" x="20" y="190" width="860" height="150" rx="6"/>
+  <text class="t-lane" x="36" y="214">동적(Dynamic) 프로비저닝 — StorageClass가 그때그때 만든다</text>
+
+  <rect class="box" x="40" y="230" width="220" height="80" rx="4"/>
+  <text class="t-title" x="150" y="256" text-anchor="middle">StorageClass 정의</text>
+  <text class="t-sub" x="150" y="276" text-anchor="middle">볼륨 플러그인(CSI 드라이버)</text>
+  <text class="t-sub" x="150" y="292" text-anchor="middle">마운트 옵션 미리 지정</text>
+
+  <line class="line" x1="260" y1="270" x2="316" y2="270" marker-end="url(#arrow161)"/>
+  <text class="t-sub" x="288" y="258" text-anchor="middle">참조</text>
+
+  <rect class="box-accent" x="320" y="230" width="240" height="80" rx="4"/>
+  <text class="t-title" x="440" y="256" text-anchor="middle">PersistentVolumeClaim</text>
+  <text class="t-sub" x="440" y="276" text-anchor="middle">storageClassName: fast-ssd</text>
+  <text class="t-sub" x="440" y="292" text-anchor="middle">PV가 없으면 자동 생성 트리거</text>
+
+  <line class="line" x1="560" y1="270" x2="616" y2="270" marker-end="url(#arrow161)"/>
+
+  <rect class="box" x="620" y="230" width="220" height="80" rx="4"/>
+  <text class="t-title" x="730" y="256" text-anchor="middle">PV 즉석 생성 + 마운트</text>
+  <text class="t-sub" x="730" y="276" text-anchor="middle">관리자가 PV를 손으로</text>
+  <text class="t-sub" x="730" y="292" text-anchor="middle">만들 필요 없음</text>
+
+  <text class="t-cap" x="450" y="368" text-anchor="middle">클레임(PVC)은 두 경로 모두에서 파드가 실제로 참조하는 유일한 오브젝트다 —</text>
+  <text class="t-cap" x="450" y="390" text-anchor="middle">개발자는 정적이든 동적이든 신경 쓸 필요 없이 "이만큼, 이런 모드로"만 선언한다.</text>
+</svg>
+    <figcaption>그림 16-1. 정적 프로비저닝(관리자가 미리 준비)과 동적 프로비저닝(StorageClass가 그때그때 생성). 파드는 항상 PVC만 본다.</figcaption>
+  </figure>
+
+  <h3>16.3.1 퍼시스턴트볼륨</h3>
+  <p><dfn class="term">PersistentVolume <span class="en">(PV)</span></dfn>은 파드에 마운트되는 모든 볼륨을 떠받치는 실제 디스크다. 볼륨을 쓰는 파드의 생명주기와 <strong>독립적으로</strong> 자신의 생명주기(클레임 정책)를 갖는다는 것이 핵심이다 — 파드가 죽어도 PV 안의 데이터는 정책에 따라 남거나 지워진다.</p>
+<pre><code>apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv001
+  labels:
+    tier: "silver"
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /tmp
+    server: 172.17.0.2</code></pre>
+  <div class="fix">
+    <span class="lbl">원문 예제 값 정정</span>
+    원서의 동일 예제는 <code>persistentVolumeReclaimPolicy: Recycle</code>을 쓴다. 이 값은 공식 문서에서 <strong>폐기(deprecated)</strong>로 명시되어 있다 — 지금 남은 선택지는 <code>Retain</code>(클레임이 삭제돼도 데이터·PV를 보존, 관리자가 수동 정리)과 <code>Delete</code>(클레임 삭제 시 스토리지까지 자동 삭제, 동적 프로비저닝의 기본값) 둘뿐이다. 위 예제는 <code>Retain</code>으로 바꿔 실었다.
+  </div>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    위 예제의 <code>nfs:</code> 블록처럼 볼륨 타입을 PV 스펙에 직접 내장하는 방식을 <dfn class="term">in-tree 플러그인 <span class="en">(In-tree Plugin)</span></dfn>이라 한다 — 쿠버네티스 코드베이스 자체에 볼륨 드라이버가 포함된 방식이다. AWS EBS·Azure Disk·Azure File·Cinder·GCE PD·vSphere 등 주요 클라우드의 in-tree 플러그인은 이미 <strong>공식적으로 폐기</strong>됐고, <strong>CSI(Container Storage Interface)</strong> 드라이버로의 마이그레이션이 기본 활성화되어 있다. CSI는 볼륨 드라이버를 쿠버네티스 코드와 분리해 벤더가 독립적으로 배포·갱신할 수 있게 한 표준 인터페이스다(9장의 CNI, 10장 컨테이너 런타임과 같은 "플러그블 인터페이스" 철학). 신규로 PV를 정의한다면 in-tree 필드가 아니라 CSI 드라이버를 참조하는 StorageClass를 쓰는 것이 표준이다.
+    <span class="src">출처: kubernetes.io/docs/concepts/storage/persistent-volumes(폐기된 플러그인 목록, Recycle 정책 폐기 명시)</span>
+  </div>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow162" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-dead { fill: #fafaf8; stroke: #b23b3b; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-dead { font-size: 10.5px; fill: #b23b3b; font-weight: 600; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 상단: in-tree → CSI -->
+  <text class="t-h" x="20" y="28">볼륨 플러그인 — in-tree에서 CSI로</text>
+
+  <rect class="box-dead" x="20" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="68" text-anchor="middle">in-tree 플러그인</text>
+  <text class="t-sub" x="150" y="88" text-anchor="middle">쿠버네티스 코드 안에 내장</text>
+  <text class="t-dead" x="150" y="108" text-anchor="middle">AWS EBS·Azure Disk 등 대부분 폐기</text>
+
+  <line class="line" x1="280" y1="82" x2="326" y2="82" marker-end="url(#arrow162)"/>
+
+  <rect class="box-accent" x="330" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="460" y="68" text-anchor="middle">CSI 드라이버</text>
+  <text class="t-sub" x="460" y="88" text-anchor="middle">(Container Storage Interface)</text>
+  <text class="t-sub" x="460" y="106" text-anchor="middle">벤더가 독립 배포 · 현재 표준</text>
+
+  <rect class="box" x="620" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="750" y="68" text-anchor="middle">신규 구축 시</text>
+  <text class="t-sub" x="750" y="88" text-anchor="middle">클라우드 프로바이더의 CSI 드라이버를</text>
+  <text class="t-sub" x="750" y="104" text-anchor="middle">StorageClass에서 지정</text>
+
+  <!-- 하단: Reclaim Policy -->
+  <text class="t-h" x="20" y="164">persistentVolumeReclaimPolicy — 원서 예제의 값은 폐기됨</text>
+
+  <rect class="box" x="20" y="178" width="270" height="90" rx="4"/>
+  <text class="t-title" x="155" y="204" text-anchor="middle">Retain</text>
+  <text class="t-sub" x="155" y="224" text-anchor="middle">클레임 삭제돼도 데이터·PV 보존</text>
+  <text class="t-sub" x="155" y="240" text-anchor="middle">관리자가 수동으로 정리</text>
+  <text class="t-sub" x="155" y="256" text-anchor="middle">→ 프로덕션 기본 권장</text>
+
+  <rect class="box" x="315" y="178" width="270" height="90" rx="4"/>
+  <text class="t-title" x="450" y="204" text-anchor="middle">Delete</text>
+  <text class="t-sub" x="450" y="224" text-anchor="middle">클레임 삭제 시 PV와</text>
+  <text class="t-sub" x="450" y="240" text-anchor="middle">실제 스토리지까지 자동 삭제</text>
+  <text class="t-sub" x="450" y="256" text-anchor="middle">→ 동적 프로비저닝 기본값</text>
+
+  <rect class="box-dead" x="610" y="178" width="270" height="90" rx="4"/>
+  <text class="t-title" x="745" y="204" text-anchor="middle">Recycle</text>
+  <text class="t-dead" x="745" y="224" text-anchor="middle">공식 폐기(deprecated)</text>
+  <text class="t-sub" x="745" y="242" text-anchor="middle">— 원서 16.3.1 예제가 쓰는 값</text>
+  <text class="t-sub" x="745" y="258" text-anchor="middle">지금은 Retain 또는 Delete만</text>
+
+  <text class="t-cap" x="450" y="330" text-anchor="middle">원서 예제의 PV YAML은 persistentVolumeReclaimPolicy: Recycle을 쓴다 —</text>
+  <text class="t-cap" x="450" y="352" text-anchor="middle">실습할 땐 Retain(보존 후 수동 정리) 또는 Delete(자동 삭제)로 바꿔 쓴다.</text>
+</svg>
+    <figcaption>그림 16-2. in-tree 플러그인에서 CSI로, 그리고 Recycle 정책의 폐기. 원서 예제가 걸려 있는 지점이 정확히 이 두 곳이다.</figcaption>
+  </figure>
+
+  <h3>16.3.2 퍼시스턴트볼륨클레임</h3>
+  <p><dfn class="term">PersistentVolumeClaim <span class="en">(PVC)</span></dfn>은 파드가 필요한 스토리지 요건을 쿠버네티스에 알리는 통신 수단이다. 클레임과 일치하는 PV가 있으면 그 파드에 볼륨이 할당된다. 크기와 접근 모드는 필수이며, 특정 StorageClass나 레이블 셀렉터로 더 좁혀 지정할 수도 있다.</p>
+<pre><code>apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  storageClassName: nfs
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  selector:
+    matchLabels:
+      tier: "silver"</code></pre>
+  <p>이 클레임은 앞의 PV와 정확히 매치된다 — StorageClass 이름, 셀렉터, 크기, 접근 모드가 전부 일치하기 때문이다.</p>
+
+  <h3>16.3.3 스토리지클래스</h3>
+  <p>PV를 일일이 손으로 정의하는 대신, 쓸 볼륨 플러그인이 지정된 <dfn class="term">StorageClass</dfn> 오브젝트를 만드는 편이 훨씬 실용적이다. 이 클래스를 참조하는 PVC가 생기면, 쿠버네티스가 알아서 맞는 PV를 즉석에서 만들어 준다(16.3.1의 동적 프로비저닝) — 마운트 옵션이나 파라미터도 클래스 단위로 한 번만 정의하면 된다.</p>
+
+  <h3>16.3.4 쿠버네티스 스토리지 모범 사례</h3>
+  <p>클라우드 네이티브의 기본 원칙은 가능한 한 <strong>스테이트리스</strong>로 설계하는 것이다. 하지만 컨테이너로 옮겨오는 서비스가 늘수록 상태를 완전히 피할 수 없는 경우도 늘어난다 — 그럴 때 이 절의 추상화(PV·PVC·StorageClass)가 그 상태를 쿠버네티스 방식으로 다루게 해 준다.</p>
+</section>
+
+<section id="s16-4">
+  <h2 class="sec"><span class="num">16.4</span>스테이트풀 애플리케이션</h2>
+  <p class="lead">쿠버네티스는 초창기부터 MySQL·카프카·카산드라 같은 스테이트풀 애플리케이션을 지원해 왔다 — 다만 당시엔 복잡도가 매우 높았다.</p>
+
+  <h3>16.4.1 스테이트풀셋</h3>
+  <p><dfn class="term">StatefulSet</dfn>은 노드·파드가 안정적으로 유지돼야 하는 애플리케이션을 훨씬 쉽게 실행하게 해 준다 — 레플리카셋에 배포한 파드의 전형적 특성과 거의 <strong>정반대</strong>다. (초기 명칭이던 "펫셋(PetSets)"이라는 이름이 이 차이를 잘 보여준다 — 언제든 교체 가능한 "가축"이 아니라 이름을 가진 "반려동물"처럼 다룬다는 비유였다.)</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow163" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 비교 표 형태 -->
+  <text class="t-h" x="20" y="28">Deployment (레플리카셋)</text>
+  <text class="t-h" x="480" y="28">StatefulSet</text>
+
+  <rect class="box" x="20" y="42" width="400" height="70" rx="4"/>
+  <text class="t-title" x="220" y="66" text-anchor="middle">파드 이름이 매번 무작위</text>
+  <text class="t-sub" x="220" y="86" text-anchor="middle">frontend-7f8c9-x2k1p</text>
+
+  <rect class="box-accent" x="480" y="42" width="400" height="70" rx="4"/>
+  <text class="t-title" x="680" y="66" text-anchor="middle">파드 이름이 고정 · 순번</text>
+  <text class="t-sub" x="680" y="86" text-anchor="middle">redis-0, redis-1, redis-2</text>
+
+  <rect class="box" x="20" y="122" width="400" height="70" rx="4"/>
+  <text class="t-title" x="220" y="146" text-anchor="middle">생성·삭제 순서 무관</text>
+  <text class="t-sub" x="220" y="166" text-anchor="middle">동시에 다 떠도 상관없음</text>
+
+  <rect class="box-accent" x="480" y="122" width="400" height="70" rx="4"/>
+  <text class="t-title" x="680" y="146" text-anchor="middle">생성·삭제가 순서대로</text>
+  <text class="t-sub" x="680" y="166" text-anchor="middle">0번이 Ready여야 1번이 시작</text>
+
+  <rect class="box" x="20" y="202" width="400" height="70" rx="4"/>
+  <text class="t-title" x="220" y="226" text-anchor="middle">볼륨을 공유하거나 없음</text>
+  <text class="t-sub" x="220" y="246" text-anchor="middle">파드가 죽으면 사실상 무의미한 상태</text>
+
+  <rect class="box-accent" x="480" y="202" width="400" height="70" rx="4"/>
+  <text class="t-title" x="680" y="226" text-anchor="middle">파드마다 전용 PVC</text>
+  <text class="t-sub" x="680" y="246" text-anchor="middle">volumeClaimTemplates로 자동 생성</text>
+
+  <!-- 오퍼레이터 레이어 -->
+  <line class="line" x1="680" y1="272" x2="680" y2="300" marker-end="url(#arrow163)"/>
+
+  <rect class="box" x="480" y="304" width="400" height="96" rx="6"/>
+  <text class="t-title" x="680" y="328" text-anchor="middle">오퍼레이터가 그 위에 얹는 것</text>
+  <text class="t-sub" x="680" y="350" text-anchor="middle">백업, 페일오버, 리더 등록, 새 레플리카</text>
+  <text class="t-sub" x="680" y="366" text-anchor="middle">등록, 업그레이드 — 스테이트풀셋은</text>
+  <text class="t-sub" x="680" y="382" text-anchor="middle">전혀 모르는 도메인 지식을 캡슐화</text>
+
+  <text class="t-cap" x="220" y="340" text-anchor="middle">무상태 워크로드에 최적화된</text>
+  <text class="t-cap" x="220" y="360" text-anchor="middle">레플리카셋의 정반대 특성이다.</text>
+</svg>
+    <figcaption>그림 16-3. StatefulSet은 이름·순서·전용 볼륨을 보장한다. 그래도 안 되는 부분을 오퍼레이터가 채운다.</figcaption>
+  </figure>
+
+  <h3>16.4.2 오퍼레이터</h3>
+  <p>StatefulSet은 복잡한 스테이트풀 시스템을 쿠버네티스 워크로드로 가져오는 결정적 요소였지만, 쿠버네티스는 그 워크로드가 StatefulSet 위에서 도는지조차 관심이 없다 — 백업, 페일오버, 리더 등록, 새 레플리카 등록, 업그레이드처럼 주기적으로 필요한 복잡한 운영 작업은 별도로 처리해야 한다.</p>
+  <p>이 공백을 메우려고 CoreOS의 SRE 팀이 만든 것이 <dfn class="term">오퍼레이터 <span class="en">(Operator)</span></dfn>다 — 특정 애플리케이션을 운영하는 데 필요한 도메인 지식을 쿠버네티스 컨트롤러 안에 캡슐화하는 소프트웨어다. 최초의 오퍼레이터는 etcd와 프로메테우스용이었다. 2018년 레드햇이 <strong>오퍼레이터 프레임워크</strong>(SDK, 라이프사이클 매니저 등)를 만들며 표준으로 자리 잡았고, <dfn class="term">OperatorHub</dfn>에서 이미 만들어진 오퍼레이터를 찾아 쓸 수 있다. 오퍼레이터를 직접 만드는 법은 21장에서 다룬다.</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 확인</span>
+    오퍼레이터 생태계는 이 책 집필 이후로도 꾸준히 성숙했다 — PostgreSQL의 <dfn class="term">CloudNativePG</dfn>, 카프카의 <dfn class="term">Strimzi</dfn>처럼 특정 데이터 시스템에 특화된 오퍼레이터가 대규모 프로덕션에서 널리 검증되어 쓰이고 있다. 원리(도메인 지식을 컨트롤러로 캡슐화)는 원서 설명 그대로 유효하다.
+  </div>
+
+  <h3>16.4.3 스테이트풀셋과 오퍼레이터 모범 사례</h3>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>StatefulSet 사용 여부를 신중히 결정</td><td>스테이트풀 애플리케이션은 여전히 오케스트레이터가 완전히 대신할 수 없는 깊은 관리가 필요하다 — 정말 필요한가?</td></tr>
+    <tr><td>StatefulSet용 헤드리스 서비스를 올바르게 구성</td><td>각 파드에 안정적인 개별 DNS 이름이 실제로 부여되는가?</td></tr>
+    <tr><td>백업·페일오버 등은 검증된 오퍼레이터에 위임</td><td>이 운영 로직을 처음부터 직접 짜려 하고 있진 않은가?</td></tr>
+    <tr><td>새 PV 정의는 CSI 기반으로</td><td>in-tree 필드나 폐기된 Recycle 정책이 남아 있는 예제를 그대로 쓰고 있진 않은가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: kubernetes.io/docs/concepts/storage/persistent-volumes(Recycle 정책 폐기, in-tree 플러그인 폐기 목록) — 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig16-1 ~ fig16-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

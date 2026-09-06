@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow132" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-lane { font-size: 12.5px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 클라우드 경로 -->
+  <text class="t-lane" x="230" y="30" text-anchor="middle">클라우드 환경 — 13.2.1</text>
+  <rect class="box" x="40" y="46" width="150" height="64" rx="4"/>
+  <text class="t-title" x="115" y="72" text-anchor="middle">쿠버네티스</text>
+  <text class="t-title" x="115" y="88" text-anchor="middle">Service</text>
+  <line class="line" x1="190" y1="78" x2="226" y2="78" marker-end="url(#arrow132)"/>
+  <rect class="box-accent" x="230" y="46" width="180" height="64" rx="4"/>
+  <text class="t-title" x="320" y="72" text-anchor="middle">내부 로드밸런서</text>
+  <text class="t-sub" x="320" y="90" text-anchor="middle">클라우드 애너테이션 한 줄</text>
+  <line class="line" x1="410" y1="78" x2="446" y2="78" marker-end="url(#arrow132)"/>
+  <rect class="box" x="450" y="46" width="150" height="64" rx="4"/>
+  <text class="t-title" x="525" y="78" text-anchor="middle">온프레미스 클라이언트</text>
+
+  <!-- 온프레미스 경로 -->
+  <text class="t-lane" x="230" y="150" text-anchor="middle">온프레미스 · 내부 LB 미지원 — 13.2.2</text>
+  <rect class="box" x="40" y="166" width="150" height="64" rx="4"/>
+  <text class="t-title" x="115" y="192" text-anchor="middle">쿠버네티스</text>
+  <text class="t-title" x="115" y="208" text-anchor="middle">Service</text>
+  <line class="line" x1="190" y1="198" x2="226" y2="198" marker-end="url(#arrow132)"/>
+  <rect class="box-accent" x="230" y="166" width="180" height="64" rx="4"/>
+  <text class="t-title" x="320" y="192" text-anchor="middle">NodePort</text>
+  <text class="t-sub" x="320" y="210" text-anchor="middle">모든 노드의 고정 포트</text>
+  <line class="line" x1="410" y1="198" x2="446" y2="198" marker-end="url(#arrow132)"/>
+  <rect class="box" x="450" y="166" width="150" height="64" rx="4"/>
+  <text class="t-title" x="525" y="198" text-anchor="middle">온프레미스 클라이언트</text>
+
+  <!-- 긴밀 통합 -->
+  <rect class="box" x="650" y="46" width="210" height="184" rx="4"/>
+  <text class="t-title" x="760" y="72" text-anchor="middle">13.2.3 외부 서버와</text>
+  <text class="t-title" x="760" y="88" text-anchor="middle">긴밀한 통합</text>
+  <text class="t-sub" x="760" y="112" text-anchor="middle">위 두 방식으로 부족할 때</text>
+  <text class="t-sub" x="760" y="130" text-anchor="middle">다이내믹 서비스 디스커버리가</text>
+  <text class="t-sub" x="760" y="146" text-anchor="middle">필요한 최후의 경우</text>
+  <text class="t-sub" x="760" y="170" text-anchor="middle">Consul 같은 외부</text>
+  <text class="t-sub" x="760" y="186" text-anchor="middle">서비스 레지스트리와</text>
+  <text class="t-sub" x="760" y="202" text-anchor="middle">양방향 동기화</text>
+
+  <text class="t-cap" x="450" y="278" text-anchor="middle">13.1절(임포트)과 정확히 대칭이다 — 방향만 바뀌었을 뿐, "안정적인 이름을 어떻게 줄 것인가"라는</text>
+  <text class="t-cap" x="450" y="298" text-anchor="middle">같은 문제를 반대편에서 푼다.</text>
+</svg>

@@ -1,0 +1,807 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Docker 시작하기 3da42ac588ef48b682d4bff993f8d313</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+/* Override strong tags inside headings to maintain consistent weight */
+h1 strong,
+h2 strong,
+h3 strong {
+	font-weight: 600;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+/* For default-background callouts, render the border outline. */
+.callout.block-color-default_background {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+/*
+ * Toggles and callouts hold arbitrary content, so they can easily be taller
+ * than a page. They must stay breakable: avoiding breaks inside them makes
+ * Chromium push the whole block onto the next page, which leaves the previous
+ * page mostly empty before every long toggle.
+ */
+details,
+aside {
+	margin: 1.25em 0;
+}
+
+/* Keep a toggle's title on the same page as the start of its content. */
+summary {
+	page-break-after: avoid;
+	break-after: avoid;
+}
+
+/*
+ * Toggle headings render as <h1/h2/h3 style="display:inline-block"> inside
+ * <summary>. Without this reset, the heading's margin-top pushes it below the
+ * ::marker (▼), so the triangle and the title appear on separate lines.
+ */
+summary h1,
+summary h2,
+summary h3,
+summary h4 {
+	margin-top: 0;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+
+	table.collection-content {
+		width: 100%;
+		table-layout: fixed;
+	}
+
+	table.collection-content th,
+	table.collection-content td {
+		overflow-wrap: anywhere;
+	}
+
+	table.collection-content td > .user,
+	table.collection-content td > time {
+		white-space: pre-wrap;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content-wrapper {
+	overflow-x: auto;
+}
+
+@media only print {
+	.collection-content-wrapper {
+		overflow-x: visible;
+	}
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	gap: 46px;
+}
+
+.column {
+	min-width: 0;
+	overflow: hidden;
+}
+
+.column > *:first-child {
+	margin-top: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding-inline: 0.125rem;
+	padding-block: 0.375rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+table {
+	border-collapse: collapse;
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol.numbered-list.numbered-list-digits-2 {
+	padding-inline-start: 2em;
+}
+
+ol.numbered-list.numbered-list-digits-3plus {
+	padding-inline-start: 2.4em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+/*
+ * Render emoji icons using a ::before pseudo-element to keep the glyph
+ * out of the DOM textContent traversal. This avoids double-rendering icons
+ * in callouts and page titles.
+ * NOTE(slim/html-export-pseudo-icons): I can't tagref this because it will
+ * flag as a duplicate tag after codegen.
+ */
+.icon[data-emoji]::before {
+	content: attr(data-emoji);
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	margin-right: 0.4em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.tab {
+	margin: 1.25em 0;
+	padding-inline: 1rem;
+	border: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(125, 122, 117, 1);
+	fill: rgba(125, 122, 117, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(125, 122, 117, 1);
+	fill: rgba(125, 122, 117, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style><style>@import url('https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex-swap.min.css')</style></head><body><article id="5fccf148-5d0a-46ef-b3b9-4ab2238623f7" class="page sans"><header><h1 class="page-title" dir="auto">Docker 시작하기 3da42ac588ef48b682d4bff993f8d313</h1><p class="page-description" dir="auto"></p></header><div class="page-body"><h1 id="1b483171-6d2c-810e-85ad-dc8cb456db61" class="" dir="auto">Docker 시작하기</h1><h2 id="1b483171-6d2c-8139-bf25-e2f0b8bfa07b" class="" dir="auto">컨테이너의 이해</h2><p id="1b483171-6d2c-8193-bb07-fd122dd20ce9" class="" dir="auto">어플리케이션의 라이브러리나 프레임웍들은 버전 관련 변경사항에 민감하고 보안 패치등 유지 관리 비용이 많이 든다.</p><p id="1b483171-6d2c-81ab-ac55-d7d72d401876" class="" dir="auto">반면에 컨테이너로 운영하게 되면 인프라 사용 자원의 효율성도 늘어나고 빠른 실행이 가능해지며, 불면한 실행 환경을 제공할 수 있다.</p><p id="1b483171-6d2c-8109-9bca-dfb16b31ea29" class="" dir="auto">이라한 차이는 설정의 번거로움에도 한번 설정한 환경으로 개발 부터 리얼 환경까지 커버할 수 있게 됨으로서 이점이 존재하게 된다.</p><h2 id="1b483171-6d2c-8186-bf13-e31068fbd05d" class="" dir="auto">도커에서 NGINX 서버를 띄워보자.</h2><p id="1b483171-6d2c-81a0-be79-e643de286820" class="" dir="auto">도커 이미지 (nginx)를 다운로드 한다.</p><figure id="1b483171-6d2c-8140-a61b-d6d80e86d6bd" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.15.31.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.15.31.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.15.31.png"/></a></figure><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js" integrity="sha512-whYhDwtTmlC/NpZlCr6PSsAaLOrfjVg/iXAnC4H/dtiHawpShhT2SlIMbpIhT/IL/NrpdMm+Hq2C13+VKpHTYw==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><pre id="1b483171-6d2c-817d-a780-e54922ad3de3" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker pull nginx</code></pre><p id="1b483171-6d2c-8191-a6d7-f05ea669812c" class="" dir="auto">nginx 를 실행해본다.</p><pre id="1b483171-6d2c-8148-8d84-d01b9acecc82" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker container run --name webserver -d -p 8000:80 nginx</code></pre><p id="1b483171-6d2c-8167-ba20-fa05033f05b7" class="" dir="auto">도커 이미지를 미리 다운로드 하지 않아도 RUN 명령어를 실행할 수 있다. (이미지가 없으면 다운로드를 진행한 후 명령어가 실행된다)</p><p id="1b483171-6d2c-8105-b5cf-d885587d4413" class="" dir="auto">브라우저를 통해 detached mode (-d 옵션) 로 실행되고 있는 nginx를 실행한다는 명령어이고, 결과는 아래와 같다.</p><figure id="1b483171-6d2c-8120-88f5-d43804b2ca73" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.23.06.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.23.06.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.23.06.png"/></a></figure><p id="1b483171-6d2c-8109-878b-e054a609f300" class="" dir="auto">docker container run : 새로운 컨테이너 생성 및 실행</p><ul id="1b483171-6d2c-8128-824b-f366ad4a1cde" class="bulleted-list" dir="auto"><li style="list-style-type:disc">name webserver : 컨테이너의 이름을 지정</li></ul><ul id="1b483171-6d2c-8175-a2ab-c671e5aaacc0" class="bulleted-list" dir="auto"><li style="list-style-type:disc">d : 백그라운드에서 컨테이너를 실행하며 컨테이너 ID를 출력</li></ul><ul id="1b483171-6d2c-814b-b05f-ed88c4d31ca0" class="bulleted-list" dir="auto"><li style="list-style-type:disc">p 8000:80 : 컨테이너와 호스트OS 포트 번호(80)을 매핑시킴 (ex. -p 8000:80 입력 시 호스트OS 8000 과 컨테이너 80 을 매핑), 도커에서 실행되는 포트와 현재 호스트인 내 PC의 포트를 연결해준다.</li></ul><p id="1b483171-6d2c-81ad-b6ae-f4ff848c789d" class="" dir="auto">정상적으로 실행 중이면 docker container ps 를 입력하여 컨테이너의 프로세스 상태를 확인할 수 있고, docker container stats webserver 를 입력하여 웹서버 컨테이너의 상태를 실시간으로 확인할 수 있다.</p><pre id="1b483171-6d2c-81ac-9780-ef89f4e2b4fe" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker container stats webserver</code></pre><figure id="1b483171-6d2c-810c-af2f-c51a0f1b57a9" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.35.13.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.35.13.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313_2021-05-14__3.35.13.png"/></a></figure><pre id="1b483171-6d2c-8182-b442-d08896574f86" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker container ps</code></pre><figure id="1b483171-6d2c-81bb-be63-d136ce2f7157" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_9.50.55.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_9.50.55.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_9.50.55.png"/></a></figure><p id="1b483171-6d2c-8136-bb8b-d807b5827143" class="" dir="auto">스크린샷 2022-09-05 오전 9.50.55.png</p><p id="1b483171-6d2c-8111-94e7-e8c82c11f0ce" class="" dir="auto">제대로 실행되는지 브라우저를 통해 접근해보자.</p><p id="1b483171-6d2c-819b-ae7c-c88e0ade35ac" class="" dir="auto">정상적으로 실행된다면 webcome to nginx 라는 index 페이지를 볼 수 있을것이다.</p><ul id="1b483171-6d2c-81da-a79c-da2b37918119" class="bulleted-list" dir="auto"><li style="list-style-type:disc">실행 : docker start webserver</li></ul><ul id="1b483171-6d2c-814f-81e2-eef4253fbafe" class="bulleted-list" dir="auto"><li style="list-style-type:disc">재실행 : docker restart webserver</li></ul><ul id="1b483171-6d2c-81ce-afb7-eefb87077725" class="bulleted-list" dir="auto"><li style="list-style-type:disc">중지 : docker stop webserver</li></ul><p id="1b483171-6d2c-81da-a3c4-d5624388be64" class="" dir="auto">만약 도커 컨테이너를 삭제하려고 하면 rm 명령어로 처리할 수 있다.</p><pre id="1b483171-6d2c-81ed-904b-ddc012699120" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker rm [컨테이너 명 | 컨테이너 ID]</code></pre><p id="1b483171-6d2c-811a-9b31-ec3659e1e7c4" class="" dir="auto">여기서는 docker rm webserver 라고 해주면 되는데, 만약 이미지가 실행중이라면 정지 후에 처리하라는 에러메세지가 나온다.</p><pre id="1b483171-6d2c-8179-af9b-e6029d0c70a9" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">Error response from daemon: You cannot remove a running container 81a3ac57769d270ed3e31cd3dea89e0f35ba0fcd21fcf0173dcd31bcbd3b6a1a.
+Stop the container before attempting removal or force remove</code></pre><p id="1b483171-6d2c-8194-b503-ff67697e9eb4" class="" dir="auto">이럴때는 docker ps -a 로 실행중인 프로세스를 확인한 후 정지 (stop) 명령어로 처리 한 후 삭제하도록 한다.</p><p id="1b483171-6d2c-81c1-91c6-caea1c5209a6" class="" dir="auto">만약, 도커 이미지를 삭제하고 싶다면 아래와 같이 입력하면 된다.</p><p id="1b483171-6d2c-81b3-8661-fb67c37af99b" class="" dir="auto">docker rmi [이미지 이름(repository) | Image ID]</p><pre id="1b483171-6d2c-81bc-a5f2-fda04ec4b377" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker rmi f0b8a9a54136
+or$ docker rmi myserver</code></pre><p id="1b483171-6d2c-817a-bc31-fd8429e80cdb" class="" dir="auto">다시 docker images로 확인하면 리스트가 비어있음을 확인할 수 있다.</p><h2 id="1b483171-6d2c-8154-b427-df88cae12783" class="" dir="auto">컨테이너 파일의 수정 (이미지 만들기)</h2><p id="1b483171-6d2c-8196-86ef-f0cdb7bc206a" class="" dir="auto">nginx 의 index.html 문구를 변경해서 이미지를 만들어보자.</p><p id="1b483171-6d2c-81ac-a6b4-f346738e6ce3" class="" dir="auto">도커 내부의 파일을 수정한 후 이미지를 만들어야 한다. nginx 의 index.html 페이지 문구를 변경한 후 이미지를 만들면 된다.</p><p id="1b483171-6d2c-817e-865a-d1db74efac3c" class="" dir="auto">nginx 에 접근하려면 호스트 머신에서 도커로 연결해야 한다. 터미널 환경으로 접속하기 위해서는 호스트 머신 (외부)에서 도커 컨테이너 (내부) 로 쉘을 실행해야 한다.</p><p id="1b483171-6d2c-81fb-b0d2-d963ebcdc46d" class="" dir="auto">exec 명령어를 통해 nginx 내부 쉘을 실행해본다.</p><pre id="1b483171-6d2c-8154-b50e-c28f447343f2" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker exec -it nginx /bin/bash</code></pre><p id="1b483171-6d2c-81ea-9d70-cd7d3d6f7bb8" class="" dir="auto">루트에서 찾으면 아래와 같은 경로가 나온다. (접근 권한이 없는 에러는 무시한다)</p><p id="1b483171-6d2c-817e-a32f-e5f2022cc998" class="" dir="auto">$ /usr/share/nginx/html/index.html</p><p id="1b483171-6d2c-8146-a5fa-ef7fd1a95e3e" class="" dir="auto">컨테이너 밖으로 나와 컨터이너의 내부 파일을 호스트 머신 (PC)로 복사해온다.</p><p id="1b483171-6d2c-8119-a9dd-fa8f97f5fdea" class="" dir="auto">$ exit</p><pre id="1b483171-6d2c-81b6-a255-c577577b5112" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker cp webserver:/usr/share/nginx/html/index.html index.html</code></pre><p id="1b483171-6d2c-8123-a307-cc73477cb0a7" class="" dir="auto">로컬에 본사된 index.html 을 vi 로 수정한다. (여기서는 welcome 메세지 영역을 hello world 로 수정했다.)</p><p id="1b483171-6d2c-81fc-bf92-ce568fbd8aed" class="" dir="auto">이제 수정된 index.html 파일을 다시 컨테이너로 복사한다.</p><pre id="1b483171-6d2c-8117-820c-c43b93dc3a67" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker cp index.html webserver:/usr/share/nginx/html/index.html</code></pre><p id="1b483171-6d2c-81d9-ae7d-f22fd616dce0" class="" dir="auto">webserver 를 재시작하면 변경된 index.html 파일이 브라우저에서 확인될 것이다.</p><figure id="1b483171-6d2c-814d-9b36-fd91f219b587" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.23.25.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.23.25.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.23.25.png"/></a></figure><p id="1b483171-6d2c-8103-9f76-d7ae432b3d11" class="" dir="auto">스크린샷 2022-09-05 오전 11.23.25.png</p><p id="1b483171-6d2c-8116-9e03-edb48bd6e0a3" class="" dir="auto">파일이 수정된 상태로 이미지를 만들어보자.</p><pre id="1b483171-6d2c-8143-8ea9-f279a458ada9" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker commit webserver mynginx</code></pre><p id="1b483171-6d2c-816f-a47b-f5b9560d0cc6" class="" dir="auto">이미 만들어진 이미지를 mynginx 라는 이미지로 만들었다.</p><p id="1b483171-6d2c-812c-98c4-df62b17e639e" class="" dir="auto">이미지를 조회해보면 아래와 같이 보일것이다.</p><figure id="1b483171-6d2c-81f6-bd3e-ed80db2eb329" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.28.38.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.28.38.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.28.38.png"/></a></figure><p id="1b483171-6d2c-819d-93c6-c47f149de560" class="" dir="auto">스크린샷 2022-09-05 오전 11.28.38.png</p><p id="1b483171-6d2c-8198-9a8b-f6bcf89ff1f3" class="" dir="auto">mynginx 라는 이미지가 생성된 것을 확인 할 수 있다.</p><p id="1b483171-6d2c-8133-bbc6-fbbe4c9f63f8" class="" dir="auto">이미 만들어진 webserver 를 종료 하고 새로 만든 mynginx 를 실행해보자.</p><pre id="1b483171-6d2c-810e-9c2e-d5af3d2e07cd" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker stop [container_id] # container_id 로 컨테이너 중지$ docker stop webserver</code></pre><p id="1b483171-6d2c-8110-a281-f16e9a87f5c8" class="" dir="auto">ps -a 로 컨테이너를 확인한 후 삭제해준다.</p><p id="1b483171-6d2c-81c4-86db-c2287564b287" class="" dir="auto">컨테이너 삭제는 docker rm 명령어를 이용한다.</p><pre id="1b483171-6d2c-8137-802f-c4fbc3cbe293" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker rm [container_id] # container_id로 컨테이너 삭제$ docker rm webserver</code></pre><p id="1b483171-6d2c-81e0-b2ba-c7db61fa5ad7" class="" dir="auto">이제 8001 포트로 새로 생성한 mynginx 를 run 시켜 본다.</p><pre id="1b483171-6d2c-81a1-b96f-c4c38cd84a64" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker run --name mynginx -p 8001:80 -d mynginx</code></pre><p id="1b483171-6d2c-81ee-b362-da3e12fb26b4" class="" dir="auto">다시 ps -a 로 살펴보면 제대로 생성된 것을 확인 할 수 있다.</p><figure id="1b483171-6d2c-813d-9adb-ea5cb33d7361" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.42.31.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.42.31.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.42.31.png"/></a></figure><p id="1b483171-6d2c-81c7-8f1e-ea80168f01d6" class="" dir="auto">스크린샷 2022-09-05 오전 11.42.31.png</p><p id="1b483171-6d2c-81e9-9c6b-e7be3534eed1" class="" dir="auto">8001 포트로 접근해본다.</p><figure id="1b483171-6d2c-810a-9216-fb13927c959d" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.46.10.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.46.10.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.46.10.png"/></a></figure><p id="1b483171-6d2c-8109-b986-cdc0b6695441" class="" dir="auto">스크린샷 2022-09-05 오전 11.46.10.png</p><p id="1b483171-6d2c-8123-8887-fe3acd7343df" class="" dir="auto">제대로 나오는것을 확인 할 수 있다.</p><p id="1b483171-6d2c-8145-87c0-e34702770a48" class="" dir="auto">이렇게 스냅샷 형태로 이미지를 만들수도 있고, 도커 파일을 이용해서 이미지를 만들어줄수도 있다.</p><p id="1b483171-6d2c-81ac-ad8b-c9013033fb25" class="" dir="auto">현재 작업 디렉토리에 샘플 디렉토리를 만들고 하위에 Dockerfile 을 생성한 후 아래와 같이 입력한다.</p><pre id="1b483171-6d2c-81c5-9c8f-e5fc69dd86a8" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ mkdir sample
+$ cd sample
+$ touch Dockerfile
+$ vi Dockerfile</code></pre><pre id="1b483171-6d2c-8162-864d-c34a736eb222" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">FROM nginx
+COPY index.html /usr/share/nginx/html/</code></pre><p id="1b483171-6d2c-8111-9d44-d8fa737d1c86" class="" dir="auto">이 Dockerfile 을 저장한 후 아래와 같이 이미지를 만들어보자.</p><pre id="1b483171-6d2c-81f7-84db-cd5aacae6cd0" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker build -t mynginx2 .</code></pre><figure id="1b483171-6d2c-8125-b5b7-ce654af91fa3" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.14.16.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.14.16.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.14.16.png"/></a></figure><p id="1b483171-6d2c-81d4-a832-e201590416ef" class="" dir="auto">스크린샷 2022-09-05 오전 11.14.16.png</p><p id="1b483171-6d2c-8196-a1d1-cc135996d375" class="" dir="auto">이미지를 조회해보자.</p><figure id="1b483171-6d2c-8171-9466-ffbb63009400" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.15.18.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.15.18.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E1848CE185A5E186AB_11.15.18.png"/></a></figure><p id="1b483171-6d2c-8145-b0ef-d3f03adff39f" class="" dir="auto">스크린샷 2022-09-05 오전 11.15.18.png</p><p id="1b483171-6d2c-81a6-bc1a-d90e9ba8e1ba" class="" dir="auto">mynginx2 이미지가 생성된 것을 확인 할 수 있다.</p><p id="1b483171-6d2c-81f1-a4f7-d7e260ec60db" class="" dir="auto">8002 포트로 생성 하였으므로 브라우저로 접근해보면 제대로 index 페이지가 확인될 것이다.</p><p id="1b483171-6d2c-8146-9d2e-d087fd8fb797" class="" dir="auto">컨테이너 정지나 삭제는 위에 설명한 명령어로 동일하게 적용할 수 있다.</p><pre id="1b483171-6d2c-812a-ab41-cce05635caba" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker stop custom1 // 서버 정지</code></pre><pre id="1b483171-6d2c-81d9-9139-dc078b52ee01" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker rmi a1d7723e6426 // 이미지 삭제</code></pre><p id="1b483171-6d2c-8126-8bf2-c376597d179e" class="" dir="auto">이제 docker images 로 확인하면 리스트에서 제외된것을 확인 할 수 있다.</p><h2 id="1b483171-6d2c-81ba-bb4e-e09773ac8087" class="" dir="auto">도커를 사용한 테스트 환경 구축</h2><p id="1b483171-6d2c-81ca-bfc7-fad31629150b" class="" dir="auto">GCP 사용 설명이 필요한데, 여기서는 패스하도록 한다.</p><p id="1b483171-6d2c-81fe-8158-db9c55df3595" class="" dir="auto">첫 사용자라면 정책상 얼마간의 무료 이용이 가능하니 구글 클라우드 플랫폼 문서를 활용해서 instance를 하나 만들어보도록 한다.</p><p id="1b483171-6d2c-810d-85a3-e58d40e050c6" class="" dir="auto">도커를 사용할 때 필요한 라이브러리</p><pre id="1b483171-6d2c-8166-bf12-f2180f52864a" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ sudo apt install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common</code></pre><p id="1b483171-6d2c-81c4-a54e-d085e9c9828f" class="" dir="auto">curl 명령어로 리포지토리의 GPG 키를 가져온다.</p><pre id="1b483171-6d2c-81a4-9523-c8942c246031" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ curl -fsSL [https://download.docker.com/linux/debian/gpg](https://download.docker.com/linux/debian/gpg) | sudo apt-key add</code></pre><p id="1b483171-6d2c-8142-b533-ef96e2aa5943" class="" dir="auto">패키지 매니저에 도커를 설치할 수 있도록 해주는 리포지토리를 추가</p><pre id="1b483171-6d2c-8163-8aa0-fac923e6b1ee" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ sudo add-apt-repository &quot;deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable&quot;</code></pre><p id="1b483171-6d2c-816d-a8b5-eecae5188c6b" class="" dir="auto">패키지 매니저 업데이트</p><pre id="1b483171-6d2c-81a3-9da0-fc3cad2576cb" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ sudo apt update -y</code></pre><p id="1b483171-6d2c-81e7-be89-db0ca82af5d5" class="" dir="auto">도커 설치</p><pre id="1b483171-6d2c-81c8-8420-e1bc5456dafa" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ sudo apt install docker-ce</code></pre><p id="1b483171-6d2c-8166-b167-c7be5c03e1b6" class="" dir="auto">일반 계정 유저도 도커를 사용할 수 있도록 권한 부여</p><pre id="1b483171-6d2c-8136-8c3c-dcc04e51775d" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ sudo usermod -aG docker $USER</code></pre><p id="1b483171-6d2c-8114-b92b-cad418e2b698" class="" dir="auto">MySQL 설치</p><figure id="1b483171-6d2c-818f-9301-d7b626b4d53f" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E18492E185AE_5.41.03.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E18492E185AE_5.41.03.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-05_E1848BE185A9E18492E185AE_5.41.03.png"/></a></figure><p id="1b483171-6d2c-812f-ac6b-c05848c9f725" class="" dir="auto">스크린샷 2022-09-05 오후 5.41.03.png</p><p id="1b483171-6d2c-81c2-b250-ee919ec33568" class="" dir="auto">Start a MySQL instance is simple 부분을 통해 mysql 을 도커에 설치할 수 있다.</p><p id="1b483171-6d2c-8102-bb9c-caf2f7e77f6e" class="" dir="auto">some-mysql 은 도커상에 네이밍이고 my-secret-pw 는 사용자가 지정할 password, tag 는 사용할 버전이라고 이해하면 된다. 8.0 버전을 사용하고 싶다면 mysql:8.0 이라고 지정하면 된다. (해당 버전이 없으면 에러가 난다)</p><p id="1b483171-6d2c-8175-9eb6-f72dfb9eb6af" class="" dir="auto">아래와 같이 설정할 수 있다.</p><pre id="1b483171-6d2c-81c2-b67e-d2abb4d7ed80" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker run --name mysql -e MYSQL_ROOT_PASSWORD=1234 -p 3306:3306 -d mysql:8.0.30</code></pre><p id="1b483171-6d2c-8144-a3f3-fa1bf54bd242" class="" dir="auto">SpringBoot 설치</p><p id="1b483171-6d2c-81e7-81aa-de1098838c65" class="" dir="auto">git에서 샘플을 다운받는다.</p><pre id="1b483171-6d2c-81a6-99ed-c33f16f175a3" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">git clone https://github.com/ceo-nomadlab/docker.git</code></pre><p id="1b483171-6d2c-812d-a1b5-ed58d3336e94" class="" dir="auto">경로는 /home/사용자 계정/docker-sample/docker/target/docker-0.0.1-SNAPSHOT.jar 에 jar가 있음을 확인할 수 있다. docker 경로로 이동하여 아래의 Dockerfile 을 작성한다.</p><p id="1b483171-6d2c-81c7-88a7-fe4f80057d08" class="" dir="auto">Dockerfile</p><pre id="1b483171-6d2c-816c-a1ce-c86628b43e08" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">FROM openjdk:8-jdk-alpine
+ADD docker/target/docker-0.0.1-SNAPSHOT.jar app.jar
+ENTRYPOINT [&quot;java&quot;,&quot;-Djava.security.egd=file:/dev/./urandom&quot;,&quot;-Dspring.profiles.active=dev&quot;,&quot;-jar&quot;,&quot;/app.jar&quot;]</code></pre><p id="1b483171-6d2c-81c6-92a1-f6cdc0c7ee7e" class="" dir="auto">도커 빌드로 이미지를 만들자.</p><p id="1b483171-6d2c-8145-a49b-c975c3c7576c" class="" dir="auto">docker build -t springboot .</p><figure id="1b483171-6d2c-81e9-b79b-d7f14b83cebb" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.50.48.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.50.48.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.50.48.png"/></a></figure><p id="1b483171-6d2c-8138-a32b-f8ec19b80f7a" class="" dir="auto">스크린샷 2022-09-07 오후 2.50.48.png</p><figure id="1b483171-6d2c-8154-bf9e-c7cb10cc08cd" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.51.22.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.51.22.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.51.22.png"/></a></figure><p id="1b483171-6d2c-81a6-b086-f3b65ad61b03" class="" dir="auto">스크린샷 2022-09-07 오후 2.51.22.png</p><p id="1b483171-6d2c-8171-a1bd-c9a4262fa3cc" class="" dir="auto">빌드 한 뒤에 도커 이미지를 보면 제대로 springboot 가 올라온것을 확인할 수 있다.</p><p id="1b483171-6d2c-815b-bb8d-f77bc9ed5c61" class="" dir="auto">이제 서버를 가동하고 접속해보자.</p><p id="1b483171-6d2c-81a5-8ee7-c076595640fb" class="" dir="auto">docker run –name app1 -d -p 80:8080 springboot</p><p id="1b483171-6d2c-815e-b624-d0d1270e55cf" class="" dir="auto">docker ps 를 입력하여 잘 실행 되었는지 확인한다.</p><figure id="1b483171-6d2c-8142-a1c8-dd9624cce20f" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-08_E1848BE185A9E1848CE185A5E186AB_11.09.15.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-08_E1848BE185A9E1848CE185A5E186AB_11.09.15.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-08_E1848BE185A9E1848CE185A5E186AB_11.09.15.png"/></a></figure><p id="1b483171-6d2c-818e-98be-d744abf46cd8" class="" dir="auto">스크린샷 2022-09-08 오전 11.09.15.png</p><p id="1b483171-6d2c-817d-91c4-cde97febcc7e" class="" dir="auto">mysql 과 springboot 가 잘 떠있는 것을 확인할 수 있다.</p><p id="1b483171-6d2c-8157-a972-d7656f3c7694" class="" dir="auto"><strong>로그 확인은 docker logs [option] 컨테이너 명</strong> 으로 확인 할수 있다.</p><pre id="1b483171-6d2c-8198-b382-fc0b3c1e9ae5" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker logs [컨테이너ID]</code></pre><ul id="1b483171-6d2c-8122-b566-e185b297684f" class="bulleted-list" dir="auto"><li style="list-style-type:disc">f, -t 등의 옵션을 사용할 수 있다. 자세한 내용은 - - help를 참고하자.</li></ul><p id="1b483171-6d2c-81a4-9b54-d69a2126e7a3" class="" dir="auto">GCP에서 만든 인스턴스의 외부 IP를 통해 접근할 수 있다. (http 허용이어야 접근이 가능하다)</p><figure id="1b483171-6d2c-8117-aee4-cbebc018a26f" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.55.45.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.55.45.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-07_E1848BE185A9E18492E185AE_2.55.45.png"/></a></figure><p id="1b483171-6d2c-816a-9cf3-cf4555f7156b" class="" dir="auto">스크린샷 2022-09-07 오후 2.55.45.png</p><p id="1b483171-6d2c-81ae-95b5-ff4ac42f640b" class="" dir="auto">컨테이너 로그 아래에서 자세한 설명을 확인할 수 있다.</p><blockquote id="1b483171-6d2c-815c-9d68-c83e1bd12f75" class="" dir="auto">https://docs.docker.com/engine/reference/commandline/logs/</blockquote><p id="1b483171-6d2c-8143-8143-e23d5f70e809" class="" dir="auto">도커에서 호스트 서버의 파일을 컨테이너로 복사하고 싶다면 아래의 명령어로 가능하다.</p><pre id="1b483171-6d2c-816c-9ca2-eccc7021aabf" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker cp 호스트파일 컨테이너명:복사위치/파일명</code></pre><p id="1b483171-6d2c-8155-9f4f-ff7d1d8910e7" class="" dir="auto">반대로 컨테이너의 파일을 호스트 서버로 복사하고 싶다면 다음의 명령어를 입력한다.</p><pre id="1b483171-6d2c-8176-9b33-d7d10a68c417" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker cp 컨테이너명:파일위치/파일명 호스트서버 디렉토리</code></pre><p id="1b483171-6d2c-81c9-a88a-f505dc1c05b6" class="" dir="auto">위와 같은 명령어를 통해 호스트 서버와 컨테이너 사이에 파일을 이동시킬 수 있다.</p><p id="1b483171-6d2c-819d-b43e-e31606cf26fa" class="" dir="auto">하지만 이 경우 테스트 환경 구축 후 실 환경으로 이전한다거나 서버가 여러대가 되어 다시 배포해야 한다면 귀찮아질 수 있다. 이를 해결하기 위해 도커 레지스트리를 활용한다.</p><h2 id="1b483171-6d2c-8195-b314-c9e1605f5c9f" class="" dir="auto">도커 레지스트리를 이용한 테스트 배포</h2><p id="1b483171-6d2c-81a9-8b21-df13a3eab5f4" class="" dir="auto">도커 허브 사이트에서 레파지토리를 생성할수 있다. (public, private 선택 가능)</p><p id="1b483171-6d2c-810c-a5de-edfdb2a4ad3c" class="" dir="auto">무료 사용자는 한개의 private 리포지토리만 사용할 수 있다.</p><blockquote id="1b483171-6d2c-81ef-afa6-da0a21835c5a" class="" dir="auto">https://hub.docker.com/repositories</blockquote><p id="1b483171-6d2c-81c2-ae8e-f51f79e80bc8" class="" dir="auto">먼저 도커 허브의 계정 정보로 로그인 한다.</p><blockquote id="1b483171-6d2c-815e-81ad-c2a380c45012" class="" dir="auto">$ docker login<p id="1b483171-6d2c-81a2-9728-ffc16f0ba5fe" class="" dir="auto">Login with your Docker ID to push and pull images from Docker Hub. If you don’t have a Docker ID, head over to https://hub.docker.com to create one.</p><p id="1b483171-6d2c-81f0-bbf2-c1c8c3267d89" class="" dir="auto">Username: my-accountId</p><p id="1b483171-6d2c-8101-9dc7-f86eeea48c3c" class="" dir="auto">Password:</p><p id="1b483171-6d2c-814f-970a-ea3f9c346d60" class="" dir="auto">Login Succeeded</p></blockquote><p id="1b483171-6d2c-81de-aedb-c12c67d406c2" class="" dir="auto">docker tag 명령어를 통해 로컬의 도커 이미지를 업로드 할 수 있다.</p><blockquote id="1b483171-6d2c-81d1-b677-cb6b3c2f13f9" class="" dir="auto">docker tag 이미지명 도커허브 아이디/레포지토리 이미지명:태그</blockquote><p id="1b483171-6d2c-8123-b729-d75c49d4666c" class="" dir="auto">여기서는 custom-nginx 라는 이미지 저장소를 만들고 거기에 로컬에 작업한 mynginx 이미지를 푸시 할 예정이다.</p><p id="1b483171-6d2c-813c-ac96-cf5c5efeb54a" class="" dir="auto">푸시는 아래와 같은 형식으로 입력한다.</p><blockquote id="1b483171-6d2c-812c-ac9e-f76a5435a0d6" class="" dir="auto">docker push [my-accountId]/custom-nginx:tagname</blockquote><pre id="1b483171-6d2c-814b-bcec-cb4034d93d99" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker push my-accountId/custom-nginx</code></pre><p id="1b483171-6d2c-81b3-bfe3-fe8668eabbab" class="" dir="auto">도커 사이트에서 업로드 된것을 확인할 수 있다.</p><figure id="1b483171-6d2c-8150-b6cf-ca807514fd6f" class="image" data-notion-image="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-13_E1848BE185A9E18492E185AE_2.46.23.png" dir="ltr"><a href="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-13_E1848BE185A9E18492E185AE_2.46.23.png"><img src="Docker%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0%203da42ac588ef48b682d4bff993f8d313/Docker%E1%84%8B%E1%85%AA_Kubernetes_54c52ef52bf541ef9a755ffd25523d05Docker_%E1%84%89%E1%85%B5%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%92%E1%85%A1%E1%84%80%E1%85%B5_3da42ac588ef48b682d4bff993f8d313E18489E185B3E1848FE185B3E18485E185B5E186ABE18489E185A3E186BA_2022-09-13_E1848BE185A9E18492E185AE_2.46.23.png"/></a></figure><p id="1b483171-6d2c-81d5-a024-f0585aee4873" class="" dir="auto">스크린샷 2022-09-13 오후 2.46.23.png</p><p id="1b483171-6d2c-81f2-b0ff-f0b589e27713" class="" dir="auto">저장소를 직접 구축해서 운영하는것이 일반적인 방법이다. (이관이나 정책으로 도커 허브가 막힐 경우)</p><p id="1b483171-6d2c-8144-809b-f7766b7ecd7f" class="" dir="auto">도커 레지스트리 이미지를 다운로드 하여 컨테이너를 생성한다.</p><pre id="1b483171-6d2c-819c-adb1-daeaac34fa31" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker pull registry
+$ docker run -d -p 5000:5000 --restart=always --name registry registry</code></pre><p id="1b483171-6d2c-8101-9b5b-eb3310dd6146" class="" dir="auto">그 다음 도커 이미지를 저장한 후 태깅 하고 완료되면 푸시한다.</p><pre id="1b483171-6d2c-81c2-ac27-dc01c4397693" class="code code-wrap" data-notion-code-syntax="bash"><code class="language-bash" style="white-space:pre-wrap;word-break:break-all">$ docker pull ubuntu
+$ docker image tag ubuntu localhost:5000/ubuntu
+$ docker push localhost:5000/ubuntu</code></pre><p id="1b483171-6d2c-81eb-aa52-e10663164625" class="" dir="auto">클라우드 원격지에 도커 레지스트리를 설치하고 로컬에서는 원격지에 있는 도커 이미지를 다운로드 할 수 있다. (GCP의 경우 VPC네트워크에서 해당 포트의 방화벽을 오픈해야 한다)</p><p id="1b483171-6d2c-8151-b375-ff15e1da91be" class="" dir="auto">윈도우 환경에서는 Docker Engine 메뉴에서 insecure-registries 를 통해 클라우드 서버 외부 IP를 등록해주고, 리눅스의 경우 /etc/docker 디렉토리 안에 deamon.json 파일을 생성해서 그 안에 json 포맷으로 insecure-registries 를 추가해야 한다.</p><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js" integrity="sha512-m3JYEI6gx5fh9jF10FjGoMzVKcV2N6nchcDcqPCdI1L3R2WQV7br2XVNR8iTLb2daOMRl3zldbcfT40xU2ntVw==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><pre id="1b483171-6d2c-81bd-a535-e628f55d7a3a" class="code code-wrap" data-notion-code-syntax="jsx"><code class="language-jsx" style="white-space:pre-wrap;word-break:break-all">$ sudo vi /etc/docker/daemon.json{
+    &quot;insecure-registries&quot; : [&quot;172.31.6.239:5000&quot;]
+}</code></pre><p id="1b483171-6d2c-81de-94e5-c65b7bc69491" class="" dir="auto">저장한 후 도커 서비스를 재시작한다.</p><pre id="1b483171-6d2c-811b-a822-c1816e176b06" class="code code-wrap" data-notion-code-syntax="jsx"><code class="language-jsx" style="white-space:pre-wrap;word-break:break-all">$ sudo systemctl restart docker</code></pre><p id="1b483171-6d2c-8110-bd93-f97680875abc" class="" dir="auto">다시 클라우드 레지스트리에서 로컬로 이미지를 다운로드 해보자.</p><pre id="1b483171-6d2c-819c-8b7f-c66a8bf59154" class="code code-wrap" data-notion-code-syntax="jsx"><code class="language-jsx" style="white-space:pre-wrap;word-break:break-all">$ docker pull 172.31.6.239:5000/ubuntu</code></pre><p id="1b483171-6d2c-8156-80dc-c71c91182e22" class="" dir="auto">정상적으로 다운로드 되는 것을 확인 할 수 있다.</p></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

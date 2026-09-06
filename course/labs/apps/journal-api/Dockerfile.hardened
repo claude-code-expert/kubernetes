@@ -1,0 +1,27 @@
+# Dockerfile.hardened — M07. 실행 이미지에서 npm 을 들어낸다.
+# 런타임에 필요 없는 도구는 취약점 목록만 늘린다.
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
+FROM node:22-alpine
+ARG APP_VERSION=v1
+ENV NODE_ENV=production APP_VERSION=${APP_VERSION}
+# npm · npx 는 애플리케이션 실행에 필요 없다. 지우면 스캔 결과가 줄어든다.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+WORKDIR /app
+USER node
+COPY --from=deps  --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --chown=node:node package.json ./
+EXPOSE 8080
+CMD ["node", "dist/server.js"]

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 3 · 운영 기초] M17 오토스케일링 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 관찰 로그와 수치는 2026-09-05 kind study 클러스터에서 실제로 측정한 값이다.
+  그림은 인라인 SVG — figures/m17-fig1-hpa-loop.svg 에 같은 파일을 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 17 / 38 · PART 3 운영 기초</div>
+  <h1>오토스케일링</h1>
+  <p class="ch-desc">M16에서 붙인 <code>requests.cpu: 50m</code>이 이 모듈의 전제다. HPA는 "지금 쓰는 CPU가 <strong>requests의</strong> 몇 퍼센트인가"로 파드 수를 정하므로, 그 숫자가 없으면 오토스케일링은 시작조차 하지 않는다. 부하를 걸어 파드가 늘어나는 것을 보고, <strong>부하가 끝나도 5분 동안 줄지 않는 이유</strong>를 찾은 뒤 그 시간을 직접 조정한다.</p>
+  <div class="meta">
+    <span class="tag">중반</span><span class="tag">80분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">k6 v2.2.0</span>
+    <br>2026-09-05 검증 (kind v0.33.0 · metrics-server v0.9.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>·<code>k6 version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m16-k8s-resources-scheduling.html">M16</a> 완료 — <code>journal-api</code>에 <code>requests</code>가 있다. 확인: <code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}'</code>가 <code>50m</code></li>
+    <li>metrics-server가 값을 돌려준다 (<a href="m01-setup-environment.html">M01</a>). 확인: <code>kubectl top pod -n journal</code>에 수치가 나온다</li>
+    <li>k6가 설치돼 있다 (<a href="m01-setup-environment.html">M01</a>). 확인: <code>k6 version</code></li>
+    <li>인그레스로 앱에 닿는다 (<a href="m12-k8s-ingress-gateway.html">M12</a>). 확인: <code>curl -s -o /dev/null -w '%{http_code}' -H 'Host: journal.local' http://localhost:18080/api/entries</code>가 <code>200</code></li>
+    <li>고칠 파일: <code>course/labs/k8s/journal/30-journal-api.yaml</code> · <code>kustomization.yaml</code></li>
+    <li>새로 쓰는 파일: <code>course/labs/k8s/journal/70-hpa.yaml</code> · <code>course/labs/scripts/k6-rampup.js</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. HPA를 걸고 k6로 부하를 주며 파드가 3개에서 8개로 늘어나는 과정을 15초 간격으로 기록한다.</p>
+  <p>2. 부하를 걷은 뒤에도 5분 가까이 파드가 줄지 않는 것을 재고, 그 지연이 어디서 오는지 <code>describe hpa</code>의 조건에서 확인한다.</p>
+  <p>3. <code>behavior</code>로 축소 지연을 30초로 줄여 같은 실험을 반복하고, 두 설정의 확장 경로와 복귀 시간을 숫자로 비교한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">17.1</span>왜 파드 수를 손으로 정하면 안 되나</a>
+  <a href="#s2"><span class="num">17.2</span>이론 — 세 층의 오토스케일링과 한 줄의 공식</a>
+  <a href="#s3"><span class="num">17.3</span>따라하기 ① 부하 도구를 세우고 크기를 맞춘다</a>
+  <a href="#s4"><span class="num">17.4</span>따라하기 ② HPA를 걸고 늘어나는 것을 본다</a>
+  <a href="#s5"><span class="num">17.5</span>따라하기 ③ 왜 바로 줄지 않는가</a>
+  <a href="#s6"><span class="num">17.6</span>따라하기 ④ behavior로 조정한다</a>
+  <a href="#s7"><span class="num">17.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">17.8</span>운영 관점 — 무엇을 기준으로 늘릴 것인가</a>
+  <a href="#s9"><span class="num">17.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">17.1</span>왜 파드 수를 손으로 정하면 안 되나</h2>
+  <p class="lead">M10부터 지금까지 <code>journal-api</code>의 파드 수는 매니페스트에 적힌 <code>replicas: 3</code>이었다. 이 숫자는 누가 정했나. 아무도 재지 않았고, 그냥 셋이었다.</p>
+  <p>손으로 정한 숫자에는 두 가지 비용이 붙는다. 최대 부하에 맞춰 잡으면 평소에 노는 파드 값을 계속 낸다. 평소에 맞춰 잡으면 몰릴 때 응답이 무너진다. 둘 사이 어딘가로 정해도, <strong>부하가 언제 얼마나 몰릴지 미리 알 수 없다</strong>는 문제는 그대로다.</p>
+  <p>M16에서 <code>requests.cpu: 50m</code>을 붙인 것이 여기서 쓰인다. 그 숫자가 있으면 "지금 이 파드가 예약한 몫의 몇 퍼센트를 쓰고 있는가"를 계산할 수 있고, 그 비율이 목표보다 높으면 파드를 늘리고 낮으면 줄이면 된다. 사람이 정하던 숫자를 <strong>측정값에서 유도하는 숫자</strong>로 바꾸는 것이다.</p>
+  <p>그런데 늘리는 것과 줄이는 것은 대칭이 아니다. 늦게 늘리면 요청이 떨어지고, 급하게 줄이면 부하가 다시 올 때 또 늘려야 한다. 이 비대칭을 쿠버네티스가 어떻게 처리하는지, 그 기본값이 우리 상황에 맞는지가 이 모듈에서 실제로 잴 대상이다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">17.2</span>이론 — 세 층의 오토스케일링과 한 줄의 공식</h2>
+  <p>책 8.3.7 이후는 오토스케일링을 세 층으로 나눈다. 늘리는 대상이 서로 다르다.</p>
+  <table>
+    <tr><th>층</th><th>무엇을 늘리나</th><th>언제 쓰나</th><th>이 과정에서</th></tr>
+    <tr><td>HPA <span class="t-sub">(수평)</span></td><td>파드 <strong>개수</strong></td><td>요청이 늘어 처리량이 부족할 때</td><td>이 모듈에서 실습한다</td></tr>
+    <tr><td>VPA <span class="t-sub">(수직)</span></td><td>파드 하나의 <strong>requests·limits</strong></td><td>값을 잘못 잡았을 때. 적정값 추천도 한다</td><td>개념만. HPA와 같은 지표로 함께 쓰면 서로 싸운다</td></tr>
+    <tr><td>클러스터 오토스케일러</td><td><strong>노드</strong> 수</td><td>파드가 <code>Pending</code>인데 넣을 노드가 없을 때</td><td>kind에서는 성립하지 않는다. 노드가 고정이다</td></tr>
+  </table>
+  <p>세 층은 위에서 아래로 이어진다. HPA가 파드를 늘리려는데 노드에 자리가 없으면 파드는 <code>Pending</code>이 되고(M16 3단계에서 본 그 상태다), 그때 노드를 늘리는 것이 클러스터 오토스케일러다. 클라우드에서는 이 자리에 Karpenter 같은 도구가 들어가 "어떤 인스턴스 타입을 몇 대 살 것인가"까지 정한다. 노트북 클러스터에서는 노드가 고정이므로 <strong>HPA가 <code>maxReplicas</code>에 닿으면 거기서 끝난다</strong>는 것을 전제로 실습한다.</p>
+
+  <h3>파드 수를 정하는 공식</h3>
+  <p>HPA 컨트롤러는 기본 15초마다 깨어나 아래 한 줄을 계산한다.</p>
+<pre><code>desiredReplicas = ceil( currentReplicas × ( currentMetricValue / desiredMetricValue ) )</code></pre>
+  <p>여기서 <code>desiredMetricValue</code>가 <strong>노드 용량의 몇 퍼센트가 아니라 <code>requests</code>의 몇 퍼센트</strong>라는 점이 핵심이다. <code>requests.cpu: 50m</code>에 목표 50%면 파드당 25m가 기준선이고, 실제 사용량이 파드당 48m이면 <code>ceil(3 × 48/25) = ceil(5.76) = 6</code>이 된다. <code>requests</code>가 없으면 분모를 만들 수 없어 계산 자체가 성립하지 않는다 — 17.7 실패 ①이 그 장면이다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:11.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .t-mono-s { font-size:10.5px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
+      <text class="t-h" x="40" y="46">HPA 는 15초마다 같은 계산을 되풀이한다</text>
+
+      <!-- 파드 -->
+      <rect class="node" x="42" y="74" width="150" height="104" rx="4"/>
+      <text class="t-sub" x="54" y="94">파드 3개</text>
+      <rect class="box" x="56" y="102" width="122" height="20" rx="3"/>
+      <text class="t-mono-s" x="117" y="116" text-anchor="middle">journal-api  48m</text>
+      <rect class="box" x="56" y="126" width="122" height="20" rx="3"/>
+      <text class="t-mono-s" x="117" y="140" text-anchor="middle">journal-api  47m</text>
+      <rect class="box" x="56" y="150" width="122" height="20" rx="3"/>
+      <text class="t-mono-s" x="117" y="164" text-anchor="middle">journal-api  49m</text>
+
+      <path class="line" d="M 192 126 L 246 126" marker-end="url(#ar1)"/>
+      <text class="t-sub" x="219" y="118" text-anchor="middle">kubelet</text>
+
+      <!-- metrics-server -->
+      <rect class="node" x="248" y="98" width="146" height="56" rx="4"/>
+      <text class="t-title" x="321" y="122" text-anchor="middle">metrics-server</text>
+      <text class="t-sub" x="321" y="140" text-anchor="middle">최근값만. 기록은 없다</text>
+
+      <path class="line" d="M 394 126 L 448 126" marker-end="url(#ar1)"/>
+
+      <!-- HPA -->
+      <rect class="accent" x="450" y="74" width="388" height="104" rx="4"/>
+      <text class="t-title" x="466" y="96">HPA 컨트롤러</text>
+      <text class="t-mono" x="466" y="120">desired = ceil( 현재수 x 현재사용량 / 목표사용량 )</text>
+      <text class="t-mono-s" x="466" y="140">= ceil( 3 x 48m / 25m ) = ceil(5.76) = 6</text>
+      <text class="t-sub" x="466" y="162">목표 50% 는 requests(50m) 의 50% — 25m 이다. 노드 용량이 아니다.</text>
+
+      <path class="aline" d="M 644 178 L 644 214" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="656" y="200">replicas 를 6 으로</text>
+
+      <!-- Deployment -->
+      <rect class="node" x="450" y="216" width="388" height="46" rx="4"/>
+      <text class="t-title" x="644" y="244" text-anchor="middle">Deployment journal-api</text>
+
+      <path class="line" d="M 450 239 L 200 239 L 200 182" marker-end="url(#ar1)"/>
+      <text class="t-sub" x="330" y="256" text-anchor="middle">파드가 늘어나면 파드당 사용량이 내려가고, 다음 주기에 다시 잰다</text>
+
+      <!-- 비대칭 -->
+      <rect class="soft" x="42" y="292" width="796" height="118" rx="4"/>
+      <text class="t-h" x="58" y="316">늘릴 때와 줄일 때가 다르다</text>
+
+      <rect class="accent" x="58" y="330" width="370" height="64" rx="3"/>
+      <text class="t-acc" x="243" y="352" text-anchor="middle">확장 — 곧바로</text>
+      <text class="t-sub" x="243" y="370" text-anchor="middle">부족한 상태를 오래 두면 요청이 떨어진다.</text>
+      <text class="t-sub" x="243" y="386" text-anchor="middle">기본 안정화 윈도우 0초</text>
+
+      <rect class="warnbox" x="452" y="330" width="370" height="64" rx="3"/>
+      <text class="t-warn" x="637" y="352" text-anchor="middle">축소 — 300초 기다린 뒤</text>
+      <text class="t-sub" x="637" y="370" text-anchor="middle">그 5분 동안의 권고값 중 <tspan font-weight="600">가장 큰 값</tspan>을 쓴다.</text>
+      <text class="t-sub" x="637" y="386" text-anchor="middle">부하가 오르내릴 때 파드 수가 진동하는 것을 막는다</text>
+    </svg>
+    <figcaption>그림 17.1 — HPA는 metrics-server가 모은 최근값으로 15초마다 같은 계산을 반복한다. 늘릴 때와 줄일 때의 기본 동작이 다르다.</figcaption>
+  </figure>
+
+  <h3>왜 줄일 때만 기다리나</h3>
+  <p>부하는 오르내린다. 매 계산마다 그대로 따르면 파드 수가 위아래로 진동하고, 파드가 뜨고 지는 데 드는 비용(이미지 준비, 프로브 통과, 커넥션 재수립)이 이득보다 커진다. 이것을 <dfn class="term">진동 <span class="en">thrashing</span></dfn>이라고 한다.</p>
+  <p>쿠버네티스는 이를 <dfn class="term">안정화 윈도우 <span class="en">stabilization window</span></dfn>로 막는다. 축소할 때는 <strong>지난 300초 동안 계산된 권고값 중 가장 큰 값</strong>을 쓴다. 부하가 잠깐 꺼졌다고 바로 줄이지 않고, 5분 내내 낮았을 때만 줄인다는 뜻이다. 확장은 반대로 기본값이 0초다 — 부족한 상태를 끄는 것이 더 비싸기 때문이다.</p>
+  <p>이 5분이 우리 상황에 맞는지는 재 봐야 안다. 17.5에서 기본값 그대로 재고, 17.6에서 바꿔서 다시 잰다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">17.3</span>따라하기 ① 부하 도구를 세우고 크기를 맞춘다</h2>
+  <p>M15의 <code>loadgen.sh</code>는 실패 건수를 세는 도구였다. 여기서는 <strong>요청률을 정확히 고정</strong>해야 하므로 k6를 쓴다.</p>
+
+  <div class="step">
+    <h4>1단계 — k6 스크립트를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>초당 요청 수를 일정하게 유지하는 부하를 만든다. 이 값이 일정해야 파드 수 변화가 부하 변화 때문인지 아닌지 구분할 수 있다.</p>
+    <p><code>course/labs/scripts/k6-rampup.js</code>로 저장한다.</p>
+<pre><code>import http from 'k6/http';
+import { check } from 'k6';
+
+const RPS = Number(__ENV.RPS || 120);
+const DURATION = __ENV.DURATION || '5m';
+const HOST = __ENV.HOST || 'journal.local';
+const PORT = __ENV.PORT || '18080';
+
+export const options = {
+  scenarios: {
+    steady: {
+      executor: 'constant-arrival-rate',
+      rate: RPS,
+      timeUnit: '1s',
+      duration: DURATION,
+      preAllocatedVUs: 20,
+      maxVUs: 100,
+    },
+  },
+  thresholds: {
+    http_req_failed: ['rate&lt;0.01'],
+  },
+};
+
+export default function () {
+  const r = http.get(`http://localhost:${PORT}/api/entries`, { headers: { Host: HOST } });
+  check(r, { 'status 200': (x) =&gt; x.status === 200 });
+}</code></pre>
+    <table>
+      <tr><th>설정</th><th>뜻</th></tr>
+      <tr><td><code>executor: 'constant-arrival-rate'</code></td><td>초당 요청 수를 고정한다. VU 수를 고정하는 방식과 다르다</td></tr>
+      <tr><td><code>preAllocatedVUs</code> / <code>maxVUs</code></td><td>요청률을 지키기 위해 k6가 쓸 수 있는 동시 실행 단위. 응답이 느려지면 늘려서 rate를 맞춘다</td></tr>
+      <tr><td><code>thresholds</code></td><td>기준을 못 지키면 k6가 실패로 끝난다. 부하는 계속 돈다</td></tr>
+    </table>
+    <p><strong>왜 VU 수가 아니라 요청률을 고정하나.</strong> VU 수만 정하면 앱이 빨라질수록 요청이 더 많이 들어간다. HPA가 파드를 늘려 응답이 빨라지면 부하도 같이 커지고, 그러면 "같은 부하에 파드가 몇 개 필요한가"를 잴 수 없게 된다. 부하를 상수로 고정해야 파드 수만 변수로 남는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 부하 크기를 맞춘다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파드가 단계적으로 늘어나는 것이 보이는 요청률을 찾는다. 너무 세면 한 번에 최대치로 뛰어 과정이 사라진다.</p>
+    <p>먼저 유휴 상태의 CPU를 본다.</p>
+<pre><code>kubectl top pod -n journal | grep journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-599bf98c7-jgs98   2m           22Mi
+journal-api-599bf98c7-npq44   2m           25Mi
+journal-api-599bf98c7-w9wzf   2m           25Mi</code></div>
+    <p>파드당 2m, <code>requests</code> 50m의 4%다. 요청률을 바꿔 가며 얼마나 오르는지 잰다.</p>
+    <table>
+      <tr><th>요청률</th><th>파드당 CPU</th><th>requests(50m) 대비</th></tr>
+      <tr><td>유휴</td><td>2m</td><td>4%</td></tr>
+      <tr><td>40 rps</td><td>15~32m</td><td>약 48%</td></tr>
+      <tr><td>120 rps</td><td>35~57m</td><td>약 97%</td></tr>
+      <tr><td>15230 rps</td><td>212~977m</td><td>1500~2000%</td></tr>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>목표가 50%(25m)이므로 120 rps면 필요 파드 수가 약 두 배가 된다 — 3개에서 6개 안팎이다. 마지막 줄처럼 세게 걸면 계산상 필요 파드가 80개를 넘어 <strong>첫 계산에서 곧바로 <code>maxReplicas</code>로 뛴다.</strong> 그러면 늘어나는 과정을 볼 수 없다. 이 표의 수치는 노트북 성능에 따라 다르므로, 자기 환경에서 <code>requests</code> 대비 100% 언저리가 되는 요청률을 찾아 그 값을 쓴다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">17.4</span>따라하기 ② HPA를 걸고 늘어나는 것을 본다</h2>
+
+  <div class="step">
+    <h4>3단계 — HPA를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파드 수의 결정권을 사람에게서 컨트롤러로 넘긴다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n journal apply -f -
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: journal-api}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: journal-api}
+  minReplicas: 3
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 50}
+EOF</code></pre>
+    <table>
+      <tr><th>필드</th><th>뜻</th></tr>
+      <tr><td><code>minReplicas: 3</code></td><td>M16에서 만든 PDB의 <code>minAvailable: 2</code>보다 커야 한다. 같거나 작으면 노드를 비울 수 없다</td></tr>
+      <tr><td><code>maxReplicas: 8</code></td><td>상한. 이 값에 닿으면 부하가 더 늘어도 파드는 그대로다</td></tr>
+      <tr><td><code>type: Utilization</code></td><td><code>requests</code> 대비 백분율. <code>AverageValue</code>로 두면 절대값(<code>100m</code> 같은)을 기준으로 삼는다</td></tr>
+    </table>
+    <p><code>kubectl autoscale</code> 한 줄로도 만들 수 있지만 YAML로 쓴다. 17.6에서 <code>behavior</code>를 더할 자리가 필요하고, 명령형으로 만든 것은 파일로 남지 않기 때문이다(M08 8.7).</p>
+<pre><code>kubectl -n journal get hpa journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME          REFERENCE                REFERENCE      TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+journal-api   Deployment/journal-api   cpu: 3%/50%    3         8         3          35s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>TARGETS</code>가 <code>3%/50%</code>다. 앞이 현재값, 뒤가 목표다. 여기가 <code>&lt;unknown&gt;</code>이면 17.7 실패 ①로 간다. 값이 나오기까지 15~30초 걸리므로 바로 안 보인다고 놀랄 필요는 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 관찰 스크립트를 띄우고 부하를 건다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파드 수가 언제 어떻게 바뀌는지 <strong>시각과 함께</strong> 기록한다. 나중에 축소 지연을 재려면 시각이 필요하다.</p>
+    <p>터미널 두 개를 쓴다. 첫 번째에서 관찰을 시작한다.</p>
+<pre><code>while true; do
+  read cur tgt des &lt;&lt;&lt;"$(kubectl -n journal get hpa journal-api \
+    -o jsonpath='{.status.currentMetrics[0].resource.current.averageUtilization} {.spec.metrics[0].resource.target.averageUtilization} {.status.desiredReplicas}')"
+  ready=$(kubectl -n journal get po -l app=journal-api --no-headers | grep -c '1/1')
+  printf '%s  %3s%%  목표 %s%%  desired=%s  ready=%s\n' "$(date +%T)" "${cur:-?}" "${tgt:-?}" "${des:-?}" "$ready"
+  sleep 15
+done</code></pre>
+    <p><code>kubectl get hpa</code>의 <code>TARGETS</code> 열은 <code>cpu: 3%/50%</code>처럼 공백이 들어 있어 <code>awk</code>로 자르면 어긋난다. <code>jsonpath</code>로 필요한 값만 꺼내는 편이 안전하다. <strong>멈추는 방법은 Ctrl-C다.</strong></p>
+    <p>두 번째 터미널에서 부하를 건다.</p>
+<pre><code>k6 run -e RPS=120 -e DURATION=5m course/labs/scripts/k6-rampup.js</code></pre>
+    <div class="note-2026">
+      <span class="lbl">인자 전달 방식</span>
+      <code>k6 run RPS=120 script.js</code>처럼 쓰면 <code>accepts 1 arg(s), received 3</code> 오류가 난다. k6는 스크립트 경로 하나만 인자로 받는다. 스크립트 안의 <code>__ENV</code>로 값을 넘기려면 <code>-e KEY=VALUE</code>를 쓴다.
+    </div>
+    <span class="out-lbl">관찰 출력 (부하 시작 전후)</span>
+    <div class="out"><code>19:20:12    4%  목표 50%  desired=3  ready=3
+19:20:28   64%  목표 50%  desired=4  ready=4
+19:20:43   81%  목표 50%  desired=5  ready=5
+19:20:58   77%  목표 50%  desired=5  ready=5
+19:21:13   71%  목표 50%  desired=8  ready=8
+19:21:28   64%  목표 50%  desired=8  ready=8
+19:21:43   49%  목표 50%  desired=8  ready=8</code></div>
+    <div class="verdict"><span class="lbl">판정</span>부하 시작 약 <strong>8초 뒤</strong>에 첫 확장이 일어났고, <strong>53초 만에</strong> <code>maxReplicas</code> 8에 닿았다. 사용률이 목표 50% 아래로 내려가면서 안정됐다. 시각과 파드 수가 함께 기록돼 있어야 다음 절에서 축소 지연을 잴 수 있다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — 부하 쪽 결과도 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파드가 늘어나는 동안 사용자 쪽 응답이 실제로 유지됐는지 본다. 파드 수만 보면 절반만 본 것이다.</p>
+    <span class="out-lbl">k6 출력 (일부)</span>
+    <div class="out"><code>checks_succeeded...: 100.00% 36001 out of 36001
+http_req_duration..: avg=2.07ms min=602µs med=1.78ms max=55.77ms p(90)=3.37ms p(95)=3.71ms
+http_req_failed....: 0.00%  0 out of 36001
+http_reqs..........: 36001  120.001577/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>36001건 전부 성공, p95가 3.71ms다. 요청률도 정확히 120/s로 유지됐다. 확장이 늦었다면 <code>http_req_failed</code>나 <code>p(95)</code>에 흔적이 남는다.</div>
+  </div>
+
+  <h3>8개가 정답이었나</h3>
+  <p>안정 구간의 사용률은 39~49%였다. 목표가 50%이므로 이 상태에서의 권고값은 <code>ceil(8 × 40/50) = 7</code>이다. <strong>3에서 8로 뛴 것은 과잉 확장이었다.</strong> 파드가 3개일 때 사용률이 81%로 측정됐고 그 값으로 계산하면 <code>ceil(5 × 81/50) = 9</code>가 나와 상한 8에 걸린 것이다.</p>
+  <p>이 과잉이 문제가 되는 이유는 다음 절에서 드러난다. 축소가 8에서 7로 시작한 것이 우연이 아니다.</p>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">17.5</span>따라하기 ③ 왜 바로 줄지 않는가</h2>
+
+  <div class="step">
+    <h4>6단계 — 부하가 끝난 뒤를 계속 지켜본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>CPU가 떨어진 시각과 파드가 줄어든 시각의 차이를 잰다.</p>
+    <p>k6가 끝나도 관찰 스크립트는 그대로 둔다.</p>
+    <span class="out-lbl">관찰 출력 (부하 종료 이후)</span>
+    <div class="out"><code>19:25:14   39%  목표 50%  desired=8  ready=8    ← 부하 종료 직전
+19:25:44    3%  목표 50%  desired=8  ready=8    ← CPU 는 즉시 떨어졌는데 파드는 그대로
+19:26:30    3%  목표 50%  desired=8  ready=8
+19:27:15    3%  목표 50%  desired=8  ready=8
+19:28:15    3%  목표 50%  desired=8  ready=8
+19:28:31    3%  목표 50%  desired=7  ready=8    ← 첫 축소
+19:29:16    3%  목표 50%  desired=7  ready=7
+19:30:12    4%  목표 50%  desired=3  ready=7    ← 최소치로
+19:30:27    3%  목표 50%  desired=3  ready=3</code></div>
+    <div class="verdict"><span class="lbl">판정</span>CPU는 부하 종료와 거의 동시에 3%로 떨어졌는데, 첫 축소는 <strong>약 3분 6초</strong> 뒤, 3개로 완전히 돌아온 것은 <strong>약 4분 52초</strong> 뒤였다. 그동안 쓰지도 않는 파드 다섯 개가 떠 있었다.</div>
+  </div>
+
+  <div class="step">
+    <h4>7단계 — HPA에게 왜 안 줄이는지 묻는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>지연의 원인을 추측하지 않고 컨트롤러가 남긴 조건에서 읽는다.</p>
+<pre><code>kubectl -n journal describe hpa journal-api | sed -n '/Conditions:/,/Events:/p'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Conditions:
+  Type            Status  Reason               Message
+  ----            ------  ------               -------
+  AbleToScale     True    ScaleDownStabilized  recent recommendations were higher than current one, applying the highest recent recommendation
+  ScalingActive   True    ValidMetricFound     the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  False   DesiredWithinRange   the desired count is within the acceptable range</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ScaleDownStabilized</code> — <strong>"최근 권고값이 지금 것보다 컸으므로 그중 가장 큰 값을 쓰고 있다"</strong>는 뜻이다. 지금 계산하면 3이 나오지만 5분 전에는 8이었고, 안정화 윈도우가 그 8을 아직 기억하고 있다.</div>
+  </div>
+
+  <h3>축소가 8이 아니라 7에서 시작한 이유</h3>
+  <p>안정화 윈도우는 <strong>지난 300초 안의 모든 권고값 중 최댓값</strong>을 쓴다. 19:28:31 시점의 창은 19:23:31부터인데, 그 구간에서 사용률은 이미 39~49%로 내려가 있었고 그때의 권고값은 <code>ceil(8 × 40/50) = 7</code>이었다. 창 안에 8이 남아 있지 않았으므로 7이 최댓값이 된 것이다.</p>
+  <p>그래서 축소는 계단식으로 내려온다. 창이 앞으로 밀릴 때마다 더 큰 옛 권고값이 하나씩 빠지고, 남은 것 중 최댓값이 새 목표가 된다. CPU가 3%로 떨어진 19:25:44로부터 300초가 지난 19:30:44 무렵에 창 안이 전부 낮은 값이 되고, 그때 최소치인 3으로 내려온다 — 실제 기록은 19:30:12였다.</p>
+  <p>이 동작 자체는 합리적이다. 문제는 <strong>5분이 우리 상황에 맞느냐</strong>다. 트래픽이 하루 종일 오르내리는 서비스라면 5분은 안전장치지만, 짧은 배치 작업이 끝난 뒤라면 5분치 파드 값을 그냥 버리는 셈이다. 다음 절에서 이 값을 바꾼다.</p>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">17.6</span>따라하기 ④ behavior로 조정한다</h2>
+
+  <div class="step">
+    <h4>8단계 — 확장·축소 정책을 명시한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>기본값에 맡기지 않고 확장 속도와 축소 지연을 직접 정한다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n journal apply -f -
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: journal-api}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: journal-api}
+  minReplicas: 3
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 50}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies: [{type: Percent, value: 50, periodSeconds: 30}]
+    scaleDown:
+      stabilizationWindowSeconds: 30
+      policies: [{type: Pods, value: 1, periodSeconds: 30}]
+EOF</code></pre>
+    <table>
+      <tr><th>설정</th><th>뜻</th></tr>
+      <tr><td><code>scaleUp.stabilizationWindowSeconds: 0</code></td><td>확장은 기다리지 않는다. 기본값도 0이다</td></tr>
+      <tr><td><code>scaleUp.policies: Percent 50 / 30초</code></td><td>30초마다 최대 50%까지만 늘린다. 3개면 다음 단계는 5개(<code>ceil(4.5)</code>)다</td></tr>
+      <tr><td><code>scaleDown.stabilizationWindowSeconds: 30</code></td><td>축소는 30초만 기다린다. 기본값 300초에서 줄였다</td></tr>
+      <tr><td><code>scaleDown.policies: Pods 1 / 30초</code></td><td>30초마다 한 개씩만 줄인다. 한꺼번에 빠져 남은 파드가 몰리는 것을 막는다</td></tr>
+    </table>
+    <p><code>scaleUp</code>에 상한 정책을 두는 이유는 17.4에서 본 과잉 확장 때문이다. 한 번의 측정으로 3에서 8로 뛰는 대신 단계를 밟게 하면, 파드가 늘어 사용률이 내려간 것을 반영하며 필요한 만큼에서 멈춘다.</p>
+  </div>
+
+  <div class="step">
+    <h4>9단계 — 같은 부하를 다시 건다</h4>
+    <p class="purpose"><span class="lbl">목적</span>설정만 바꾸고 부하는 같게 해서 두 결과를 비교한다.</p>
+<pre><code>k6 run -e RPS=120 -e DURATION=2m course/labs/scripts/k6-rampup.js</code></pre>
+    <span class="out-lbl">관찰 출력</span>
+    <div class="out"><code>19:36:50   29%  목표 50%  desired=3  ready=3    ← 부하 시작
+19:37:05   91%  목표 50%  desired=5  ready=5    ← 3 x 1.5 = 4.5 → 5
+19:37:36   79%  목표 50%  desired=7  ready=7    ← 5 x 1.5 = 7.5 → 7
+19:38:36   50%  목표 50%  desired=7  ready=7    ← 안정. 8 에 닿지 않았다
+19:39:06    9%  목표 50%  desired=6  ready=6    ← 부하 종료 약 16초 뒤
+19:39:36    4%  목표 50%  desired=5  ready=5
+19:40:07    4%  목표 50%  desired=4  ready=4
+19:40:37    3%  목표 50%  desired=3  ready=3    ← 약 1분 47초 만에 복귀</code></div>
+    <div class="verdict"><span class="lbl">판정</span>첫 축소가 <strong>3분 6초에서 16초로</strong>, 3개 복귀가 <strong>4분 52초에서 1분 47초로</strong> 줄었다. 확장은 3→5→7 계단을 밟아 <code>maxReplicas</code> 8에 닿지 않고 필요량인 7에서 멈췄다.</div>
+  </div>
+
+  <table>
+    <tr><th></th><th>기본값</th><th><code>behavior</code> 조정</th></tr>
+    <tr><td>확장 경로</td><td>3 → 4 → 5 → 8</td><td>3 → 5 → 7</td></tr>
+    <tr><td>최대 도달</td><td><code>maxReplicas</code> 8 (과잉)</td><td>7 (필요량과 일치)</td></tr>
+    <tr><td>첫 축소까지</td><td>3분 6초</td><td>16초</td></tr>
+    <tr><td>3개 복귀까지</td><td>4분 52초</td><td>1분 47초</td></tr>
+  </table>
+  <p>짧게 잡을수록 좋다는 뜻은 아니다. 부하가 30초 주기로 오르내리는 서비스에 이 설정을 쓰면 파드가 계속 뜨고 지며, 그 비용이 아낀 값을 넘는다. <strong>안정화 윈도우는 트래픽 패턴의 주기보다 길어야 한다</strong>는 것이 정하는 기준이고, 그 주기를 아는 방법은 관측이다(Part 4).</p>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">17.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① requests가 없으면 HPA는 아무 일도 하지 않는다</h4>
+    <p>M16을 건너뛰고 온 워크로드를 흉내 낸다. <code>resources</code>가 없는 디플로이먼트에 HPA를 건다.</p>
+    <span class="lbl">재현</span>
+<pre><code>kubectl create ns m17
+cat &lt;&lt;'EOF' | kubectl -n m17 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: noreq}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: noreq}}
+  template:
+    metadata: {labels: {app: noreq}}
+    spec:
+      containers:
+        - name: c
+          image: nginx:1.29-alpine     # resources 없음 — BestEffort
+EOF
+
+kubectl -n m17 autoscale deploy noreq --cpu=50% --min=2 --max=6
+kubectl -n m17 get hpa noreq</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME    REFERENCE          TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+noreq   Deployment/noreq   cpu: &lt;unknown&gt;/50%   2         6         2          60s</code></div>
+    <p><code>&lt;unknown&gt;</code>이다. 오류로 멈추지도 않고 파드 수도 그대로다. <strong>조용히 아무 일도 하지 않는다</strong>는 것이 이 실패의 성질이고, 그래서 알아채기 어렵다.</p>
+    <span class="lbl">원인 읽기</span>
+<pre><code>kubectl -n m17 describe hpa noreq | sed -n '/Conditions:/,/Events:/p'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Conditions:
+  Type           Status  Reason                   Message
+  ----           ------  ------                   -------
+  AbleToScale    True    SucceededGetScale        the HPA controller was able to get the target's current scale
+  ScalingActive  False   FailedGetResourceMetric  the HPA was unable to compute the replica count: failed to get cpu utilization: missing request for cpu in container c of Pod noreq-b8f47946b-zkb7l</code></div>
+    <p><code>missing request for cpu in container c</code>. 17.2의 공식에서 분모가 없으니 계산이 성립하지 않는다. 이벤트에는 비슷하지만 다른 메시지가 섞여 나오는데, 둘을 구분할 줄 알아야 한다.</p>
+    <table>
+      <tr><th>메시지</th><th>원인</th><th>고치는 법</th></tr>
+      <tr><td><code>no metrics returned from resource metrics API</code></td><td>metrics-server가 아직 값을 못 모았거나 설치되지 않았다</td><td>기다리거나 M01 1.5로 돌아간다</td></tr>
+      <tr><td><code>missing request for cpu in container ...</code></td><td>컨테이너에 <code>requests.cpu</code>가 없다</td><td>매니페스트에 <code>requests</code>를 넣는다</td></tr>
+    </table>
+    <span class="lbl">고친다</span>
+<pre><code>kubectl -n m17 set resources deploy noreq --requests=cpu=25m,memory=32Mi
+kubectl -n m17 rollout status deploy/noreq
+kubectl -n m17 get hpa noreq</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME    REFERENCE          TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+noreq   Deployment/noreq   cpu: 0%/50%   2         6         2          51s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>&lt;unknown&gt;</code>이 <code>0%</code>로 바뀌었고 조건도 <code>ScalingActive: True / ValidMetricFound</code>가 된다. HPA를 걸기 전에 <code>requests</code>부터 확인하는 것이 순서다.</div>
+    <div class="note-2026">
+      <span class="lbl">낡은 명령 — <code>--cpu-percent</code></span>
+      검색하면 대부분 <code>kubectl autoscale deploy X --cpu-percent=50</code>으로 나온다. 1.37에서 실행하면 이렇게 경고한다.
+      <br><code>Flag --cpu-percent has been deprecated, Use --cpu with percentage or resource quantity format (e.g., '70%' for utilization or '500m' for milliCPU).</code>
+      <br>지금은 <code>--cpu=50%</code>를 쓴다. 절대값 기준으로 잡고 싶으면 <code>--cpu=500m</code>처럼 쓸 수 있다는 것이 새 문법이 생긴 이유다.
+      <span class="src">근거: <code>kubectl autoscale --help</code> (kubectl v1.37.0) · 2026-09-05 확인</span>
+    </div>
+<pre><code>kubectl delete ns m17</code></pre>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② 매니페스트의 replicas가 HPA의 결정을 되돌린다</h4>
+    <p><code>30-journal-api.yaml</code>에는 아직 <code>replicas: 3</code>이 남아 있다. HPA가 8로 올려 둔 상태에서 <code>apply</code>를 하면 어떻게 되는지 본다. 배포 파이프라인이 주기적으로 <code>apply</code>를 도는 환경에서 실제로 일어나는 일이다.</p>
+    <span class="lbl">재현</span>
+<pre><code>kubectl -n journal scale deploy journal-api --replicas=6
+kubectl -n journal get deploy journal-api -o jsonpath='{.spec.replicas}{"\n"}'
+
+kubectl apply -k course/labs/k8s/journal
+kubectl -n journal get deploy journal-api -o jsonpath='{.spec.replicas}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>6
+deployment.apps/journal-api configured
+3</code></div>
+    <span class="lbl">원인</span>
+    <p><code>kubectl apply</code>는 매니페스트에 적힌 값을 진실로 삼는다. 파일에 <code>replicas: 3</code>이 있으면 HPA가 무엇을 정했든 3으로 되돌린다. 부하가 몰려 8개로 늘어난 순간 배포가 돌면 <strong>파드가 3개로 줄고 그 상태로 요청을 받는다.</strong> 그리고 HPA가 다시 늘리는 데 수십 초가 걸린다.</p>
+    <span class="lbl">고친다 — replicas의 주인을 하나로 만든다</span>
+<pre><code># 30-journal-api.yaml 에서 replicas 줄을 지운다
+spec:
+  # replicas 를 적지 않는다 (M17). HPA 가 이 필드의 주인이다 —
+  # 여기에 숫자를 남겨 두면 apply 할 때마다 HPA 가 정한 값이 이 값으로 되돌아간다.
+  selector:
+    matchLabels:
+      app: journal-api</code></pre>
+<pre><code>kubectl -n journal scale deploy journal-api --replicas=6
+kubectl apply -k course/labs/k8s/journal
+for i in 1 2 3 4 5 6; do
+  echo "+${i}s: $(kubectl -n journal get deploy journal-api -o jsonpath='{.spec.replicas}')"
+  sleep 1
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>+1s: 6
++2s: 6
++3s: 6
++4s: 6
++5s: 6
++6s: 6</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>apply</code>가 파드 수를 건드리지 않는다. <strong>replicas를 처음 지운 apply는 한 번 값이 떨어진다</strong> — 필드가 제거되면서 기본값으로 돌아갔다가 HPA가 <code>minReplicas</code>로 올린 것이다. 그 이후의 <code>apply</code>부터 안정된다.</div>
+    <p>같은 원리가 GitOps에서도 그대로 적용된다. Flux나 Argo CD가 주기적으로 매니페스트를 맞추므로, HPA가 관리하는 필드를 파일에 남겨 두면 30초마다 파드 수가 되돌아간다. M31에서 드리프트 복구를 다룰 때 이 구분이 다시 나온다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">17.8</span>운영 관점 — 무엇을 기준으로 늘릴 것인가</h2>
+  <p>이 모듈은 CPU를 기준으로 썼다. 그것이 가장 쉽게 얻을 수 있는 지표이기 때문이지, 가장 좋은 기준이어서가 아니다.</p>
+  <p>CPU가 기준으로 잘 맞는 것은 <strong>CPU가 병목인 워크로드</strong>뿐이다. 이미지 변환이나 압축처럼 계산이 일인 서비스가 여기 해당한다. 반면 대부분의 API 서버는 대기가 일이다 — 데이터베이스 응답을 기다리고, 외부 호출을 기다린다. 이런 서비스는 <strong>요청이 밀려 응답이 느려지는데도 CPU는 낮게 유지된다.</strong> 큐가 쌓이고 P99가 무너지는 동안 HPA는 "20%밖에 안 쓰는데 왜 늘려"라고 판단한다.</p>
+  <p>그래서 실무에서는 초당 요청 수, 큐 길이, 활성 커넥션 수 같은 지표로 확장하는 쪽이 실제 부하에 가깝다. HPA는 이런 지표도 받을 수 있다.</p>
+  <table>
+    <tr><th>지표 종류</th><th>어디서 오나</th><th>예</th></tr>
+    <tr><td><code>Resource</code></td><td>metrics-server</td><td>이 모듈에서 쓴 CPU·메모리</td></tr>
+    <tr><td><code>Pods</code> · <code>Object</code></td><td>커스텀 메트릭 API (프로메테우스 어댑터)</td><td>파드당 초당 요청 수, 인그레스의 활성 커넥션 수</td></tr>
+    <tr><td><code>External</code></td><td>외부 메트릭 API</td><td>클라우드 큐의 메시지 수</td></tr>
+  </table>
+  <p>커스텀 메트릭을 쓰려면 그 값을 수집·저장하고 쿠버네티스의 메트릭 API로 노출하는 층이 필요하다. metrics-server는 <strong>최근값만 들고 있고 기록을 남기지 않아서</strong> 이 역할을 못 한다. 프로메테우스를 세우고 어댑터를 붙이는 것이 M19~M20의 산출물이며, 그것이 갖춰진 뒤에야 "P99가 300ms를 넘으면 늘린다" 같은 규칙을 쓸 수 있다.</p>
+
+  <h3>메모리로 확장하지 않는 이유</h3>
+  <p>메모리를 기준으로 삼는 설정을 종종 보는데, 대개 잘 작동하지 않는다. JVM이나 Go 런타임은 <strong>한번 확보한 메모리를 잘 반납하지 않는다.</strong> 부하가 끝나도 사용량이 내려가지 않으므로 HPA는 축소 신호를 받지 못하고, 파드는 늘어난 채로 남는다. 반대로 메모리가 정말 부족하면 확장이 아니라 <code>OOMKilled</code>가 먼저 온다(M16 실패 ③). 메모리는 <code>limits</code>로 막을 대상이지 확장 신호로 쓸 대상이 아니다.</p>
+
+  <h3>HPA와 VPA를 같이 쓰면</h3>
+  <p>둘 다 CPU를 보고 있으면 서로의 결정을 무너뜨린다. HPA가 파드를 늘려 파드당 사용량이 내려가면 VPA는 <code>requests</code>를 낮추고, <code>requests</code>가 낮아지면 사용률(백분율)이 다시 올라 HPA가 또 늘린다. 같은 지표에 두 컨트롤러를 붙이지 않는 것이 원칙이고, 굳이 함께 쓴다면 VPA는 메모리만 조정하게 두고 HPA가 CPU를 맡는 식으로 나눈다.</p>
+
+  <h3>확장에는 시간이 든다</h3>
+  <p>이 실습에서 파드는 1초 안에 떴다. 실제 서비스는 이미지를 받고, 런타임이 올라오고, 커넥션 풀을 채우고, 캐시를 데우는 데 수십 초가 걸린다 — M15에서 <code>sleep 8</code>로 흉내 냈던 그 시간이다. HPA가 확장을 결정하고 나서 <strong>실제로 트래픽을 받기까지의 지연</strong>이 부하가 몰리는 속도보다 느리면, 오토스케일링은 있으나 마나다. 스파이크가 빠른 서비스는 미리 여유를 두거나(<code>minReplicas</code>를 올린다) 예측 기반으로 미리 늘리는 편이 낫고, 이 판단의 근거도 결국 관측이다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">17.9</span>체크포인트와 정리</h2>
+
+  <div class="step">
+    <h4>10단계 — HPA를 매니페스트로 남긴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>지금까지 <code>kubectl apply -f -</code>로 실험한 것을 파일로 옮겨 <code>apply -k</code> 한 줄로 재현되게 한다.</p>
+    <p><code>course/labs/k8s/journal/70-hpa.yaml</code>로 저장하고 <code>kustomization.yaml</code>의 <code>resources</code>에 등록한다.</p>
+<pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: journal-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: journal-api
+  minReplicas: 3            # PDB 의 minAvailable 2 보다 커야 노드를 비울 수 있다 (M16)
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50    # requests(50m) 의 50% = 파드당 25m
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - {type: Percent, value: 50, periodSeconds: 30}
+    scaleDown:
+      # 기본값은 300초다. 실측(M17): 기본값이면 부하가 끝나고 3분 6초 뒤에야 첫 축소가
+      # 시작되고 3개로 돌아오는 데 4분 52초가 걸렸다. 30초로 줄이면 16초 / 1분 47초다.
+      stabilizationWindowSeconds: 30
+      policies:
+        - {type: Pods, value: 1, periodSeconds: 30}</code></pre>
+<pre><code>kubectl apply -k course/labs/k8s/journal
+kubectl -n journal get hpa journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>horizontalpodautoscaler.autoscaling/journal-api configured
+NAME          REFERENCE                TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+journal-api   Deployment/journal-api   cpu: 3%/50%   3         8         3          42m</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>TARGETS</code>에 수치가 나오고 <code>REPLICAS</code>가 <code>minReplicas</code>인 3이면 정상이다.</div>
+  </div>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n journal get hpa journal-api -o jsonpath='{.status.currentMetrics[0].resource.current.averageUtilization}'</code> → 숫자가 나온다 (빈 값이나 <code>&lt;unknown&gt;</code>이 아니다)</li>
+      <li><code>kubectl -n journal get hpa journal-api -o jsonpath='{.spec.behavior.scaleDown.stabilizationWindowSeconds}'</code> → <code>30</code></li>
+      <li><code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.replicas}'</code> → <code>3</code> (부하가 없을 때)</li>
+      <li><code>grep -c 'replicas:' course/labs/k8s/journal/30-journal-api.yaml</code> → <code>0</code> (매니페스트에 파드 수가 없다)</li>
+      <li><code>kubectl -n journal describe hpa journal-api | grep ScalingActive</code> → <code>True</code>, <code>ValidMetricFound</code></li>
+      <li>부하를 걸고(<code>k6 run -e RPS=120 -e DURATION=2m ...</code>) 60초 뒤 <code>kubectl -n journal get hpa journal-api</code> → <code>REPLICAS</code>가 <code>4</code> 이상</li>
+      <li>부하 종료 후 3분 뒤 <code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.replicas}'</code> → <code>3</code></li>
+      <li><code>kubectl get ns m17</code> → <code>NotFound</code></li>
+      <li><code>kubectl -n journal get pdb journal-api -o jsonpath='{.status.disruptionsAllowed}'</code> → <code>1</code> (M16 산출물이 그대로다)</li>
+      <li>(이해 확인) 17.4에서 파드가 8개까지 갔는데 안정 구간의 권고값은 7이었다. 왜 8까지 갔는지 한 문장으로 적어 본다</li>
+      <li>(이해 확인) 축소가 8에서 3으로 한 번에 가지 않고 7을 거친 이유를 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/scripts/k6-rampup.js</code> — 요청률 고정 부하. M37 로드 테스팅이 이 스크립트를 시나리오(램프업·스파이크)로 확장한다</li>
+      <li><code>course/labs/k8s/journal/70-hpa.yaml</code> — 새 파일. <code>kustomization.yaml</code>에 등록했다</li>
+      <li><code>course/labs/k8s/journal/30-journal-api.yaml</code> — <code>replicas</code>를 지웠다. 파드 수의 주인이 HPA로 바뀌었다</li>
+      <li><code>labs/charts/journal/</code>은 여전히 M15·M16·M17 변경분을 반영하지 않았다. M28에서 한 번에 따라잡는다</li>
+      <li>클러스터: <code>journal-api</code>가 부하에 따라 3~8개 사이에서 움직인다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+  <p><strong>k6와 관찰 루프를 반드시 멈춘다.</strong> k6는 포그라운드로 돌면 Ctrl-C로 끝나지만, 백그라운드로 띄웠다면 남아 있을 수 있다.</p>
+<pre><code># 부하가 남아 있지 않은지 확인하고 정리한다
+pkill -f k6-rampup 2&gt;/dev/null
+# 관찰 루프를 돌린 터미널에서는 Ctrl-C
+
+# 실험 네임스페이스
+kubectl delete ns m17 --ignore-not-found
+
+# 파드 수가 최소치로 돌아왔는지 (안정화 윈도우 30초 + 계단식 축소만큼 걸린다)
+kubectl -n journal get hpa journal-api</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>NAME          REFERENCE                TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+journal-api   Deployment/journal-api   cpu: 3%/50%   3         8         3          42m</code></div>
+  <p>HPA는 지우지 않는다. 다음 모듈들이 이 상태를 전제로 진행한다. 파드 수가 3보다 크면 부하가 아직 남아 있다는 뜻이므로 <code>pkill</code>을 다시 확인한다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m16-k8s-resources-scheduling.html">← M16 리소스 · QoS · 스케줄링</a>
+  <a href="m18-k8s-storage-stateful.html">M18 스토리지와 스테이트풀 애플리케이션 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>M15부터 여기까지 다룬 것은 전부 <strong>상태가 없는</strong> 워크로드였다. 파드를 죽여도 되고 옮겨도 되고 늘렸다 줄여도 됐다. M18은 그것이 통하지 않는 쪽을 다룬다 — <code>journal</code> 네임스페이스에서 지금까지 한 번도 건드리지 않은 <code>redis-0</code>이 그 대상이다. M16에서 노드를 비울 때 <code>--pod-selector</code>로 레디스를 제외했던 것도, 이 파드가 노드에 묶인 볼륨을 들고 있기 때문이다. PVC와 스토리지클래스, 스테이트풀셋이 디플로이먼트와 다른 세 가지, 그리고 kind의 기본 스토리지가 볼륨 확장을 거부하는 것을 실패로 재현한다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>수평 파드 오토스케일링: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/</li>
+    <li>HPA 워크스루(behavior 포함): https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/</li>
+    <li>리소스 메트릭 파이프라인: https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/</li>
+    <li>k6 constant-arrival-rate 실행자: https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/constant-arrival-rate/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 8.3.7~8.3.11 오토스케일링</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · metrics-server v0.9.0 · k6 v2.2.0 · 노드 3개(각 14 CPU)</p>
+</footer>
+
+</div>
+</body>
+</html>

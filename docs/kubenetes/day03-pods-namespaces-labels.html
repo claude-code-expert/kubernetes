@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D3 · 파드를 YAML로 쓰고, 네임스페이스와 라벨로 정리한다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1·D2와 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+pre .k{color:var(--net)}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){.two{grid-template-columns:1fr}h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 1단계 기초 · Day 3</p>
+  <h1>파드를 YAML로 쓰고, 네임스페이스와 라벨로 정리한다</h1>
+  <p class="lede">YAML은 네 줄만 읽을 줄 알면 된다. <code>apiVersion · kind · metadata · spec</code>. 앞으로 열하루 동안 쓰는 모든 매니페스트가 이 네 줄의 변주다. 오늘은 파드 하나를 파일로 쓰고, 안 뜨는 파드를 <code>describe</code>로 진단하고, 네임스페이스와 라벨로 리소스를 묶는 법을 익힌다. 마지막에 Headlamp를 설치해 같은 것을 화면으로 본다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D2 클러스터가 켜져 있음 (docker-desktop 컨텍스트)</b></span>
+    <span>버전 <b>Kubernetes v1.36 · Helm 3.19+ · Headlamp (Helm 차트 최신)</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>문서를 보지 않고 파드 매니페스트를 써서 <code>apply</code>하고, <code>get -o yaml</code>에서 내가 쓴 <code>spec</code>과 클러스터가 채운 <code>status</code>를 구분한다.</li>
+    <li><code>ImagePullBackOff</code>·<code>CrashLoopBackOff</code>를 <code>describe</code>의 Events와 <code>logs --previous</code>로 진단하고 고친다.</li>
+    <li>네임스페이스를 만들어 리소스를 나누고, 라벨 셀렉터 하나로 여러 파드를 조회·삭제한다.</li>
+    <li>Headlamp를 Helm으로 설치하고 ServiceAccount 토큰으로 로그인해 같은 파드를 화면에서 찾는다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+  <p class="sub">파드가 무엇인지, 매니페스트 네 줄이 무엇을 뜻하는지, 파드가 어떤 상태를 거치는지, 그리고 리소스를 묶는 두 도구(네임스페이스·라벨).</p>
+
+  <h3>1.1 파드는 컨테이너를 담는 최소 단위다</h3>
+  <p>쿠버네티스는 컨테이너를 직접 다루지 않는다. <dfn title="Pod">파드(Pod)</dfn>가 배포·스케줄링·삭제의 단위이고, 컨테이너는 파드 안에 하나 이상 들어간다. 한 파드 안의 컨테이너들은 세 가지를 공유한다.</p>
+  <ul>
+    <li><b>네트워크</b> — 같은 IP, 같은 포트 공간. 서로를 <code>localhost</code>로 부른다. 그래서 한 파드 안에서 두 컨테이너가 같은 포트를 쓸 수 없다.</li>
+    <li><b>스토리지</b> — 파드에 선언한 볼륨을 여러 컨테이너가 같이 마운트할 수 있다(D9).</li>
+    <li><b>수명</b> — 같은 노드에 함께 배치되고 함께 죽는다.</li>
+  </ul>
+  <p>그래서 "한 파드 = 한 애플리케이션 프로세스 + 그것을 돕는 보조 컨테이너"가 기본형이다. 로그를 수집하거나 프록시를 붙이는 보조 컨테이너를 <dfn title="sidecar">사이드카(sidecar)</dfn>라 부른다. 서로 무관한 두 앱(예: 웹 서버와 DB)을 한 파드에 넣지 않는다. 따로 늘리고 따로 죽일 수 없어지기 때문이다.</p>
+  <p>파드는 일회용이다. 파드가 죽거나 노드가 사라지면 그 파드는 끝이고, D2에서 봤듯 되살리는 것은 상위 컨트롤러(D4)의 몫이다. 파드 IP도 재생성 때마다 바뀐다. 그래서 파드 IP를 어디에도 적어 두지 않는다(D5 Service).</p>
+
+  <h3>1.2 매니페스트 네 줄</h3>
+  <p>API 서버에 보내는 모든 오브젝트는 같은 뼈대를 가진다. <code>kubectl run</code>이 만들어 준 것도 결국 이 구조를 채워 보낸 것이다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 300" width="100%" role="img" aria-label="매니페스트 네 필드와 spec/status">
+    <!-- yaml block -->
+    <rect x="20" y="20" width="330" height="260" rx="4" fill="#f7f7f7" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="34" y="46" class="mono" font-size="12" fill="#6d28d9">apiVersion:</text><text x="130" y="46" class="mono" font-size="12" fill="#1a1a1a">v1</text>
+    <text x="34" y="70" class="mono" font-size="12" fill="#6d28d9">kind:</text><text x="130" y="70" class="mono" font-size="12" fill="#1a1a1a">Pod</text>
+    <text x="34" y="94" class="mono" font-size="12" fill="#6d28d9">metadata:</text>
+    <text x="50" y="112" class="mono" font-size="12" fill="#1a1a1a">name: web</text>
+    <text x="50" y="130" class="mono" font-size="12" fill="#1a1a1a">namespace: study</text>
+    <text x="50" y="148" class="mono" font-size="12" fill="#1a1a1a">labels: {app: web}</text>
+    <text x="34" y="172" class="mono" font-size="12" fill="#6d28d9">spec:</text>
+    <text x="50" y="190" class="mono" font-size="12" fill="#1a1a1a">containers:</text>
+    <text x="50" y="208" class="mono" font-size="12" fill="#1a1a1a">- name: nginx</text>
+    <text x="64" y="226" class="mono" font-size="12" fill="#1a1a1a">image: nginx:1.30</text>
+    <text x="64" y="244" class="mono" font-size="12" fill="#1a1a1a">ports: [{containerPort: 80}]</text>
+    <text x="34" y="270" class="mono" font-size="12" fill="#767676">status: (내가 쓰지 않는다)</text>
+    <!-- annotations -->
+    <line x1="350" y1="46" x2="400" y2="46" stroke="#767676" stroke-width="1.2"/>
+    <text x="410" y="50" font-size="12" fill="#1a1a1a">어느 API 그룹·버전인가. 핵심 오브젝트는 v1, 디플로이먼트는 apps/v1</text>
+    <line x1="350" y1="70" x2="400" y2="70" stroke="#767676" stroke-width="1.2"/>
+    <text x="410" y="74" font-size="12" fill="#1a1a1a">무엇을 만드나. kubectl api-resources의 KIND 열</text>
+    <line x1="350" y1="120" x2="400" y2="120" stroke="#767676" stroke-width="1.2"/>
+    <text x="410" y="116" font-size="12" fill="#1a1a1a">이름표. name은 네임스페이스 안에서 유일해야 하고,</text>
+    <text x="410" y="134" font-size="12" fill="#1a1a1a">labels는 선택 기준, annotations는 메모</text>
+    <line x1="350" y1="208" x2="400" y2="208" stroke="#767676" stroke-width="1.2"/>
+    <text x="410" y="200" font-size="12" fill="#1a1a1a">원하는 상태. kind마다 구조가 다르다.</text>
+    <text x="410" y="218" font-size="12" fill="#1a1a1a">kubectl explain pod.spec 으로 필드를 찾는다</text>
+    <line x1="350" y1="266" x2="400" y2="266" stroke="#767676" stroke-width="1.2"/>
+    <text x="410" y="262" font-size="12" fill="#1a1a1a">현재 상태. 스케줄러·kubelet이 채운다.</text>
+    <text x="410" y="280" font-size="12" fill="#1a1a1a">get -o yaml 에서만 보이고, apply 파일에는 넣지 않는다</text>
+  </svg>
+  <figcaption>도판 1. 보라=네 개의 최상위 키. 내가 쓰는 것은 spec까지이고 status는 클러스터가 돌려준다.</figcaption>
+  </figure>
+
+  <p><code>kubectl create -f</code>는 없으면 만들고 있으면 실패한다. <code>kubectl apply -f</code>는 없으면 만들고 있으면 파일대로 고친다. 파일을 고쳐서 다시 적용하는 흐름이 기본이므로 <b>apply만 쓴다</b>. apply는 마지막으로 적용한 내용을 오브젝트에 기록해 두고(<code>kubectl.kubernetes.io/last-applied-configuration</code>), 다음 apply 때 세 가지(마지막 적용본·현재 파일·실제 오브젝트)를 비교해 바뀐 부분만 반영한다.</p>
+
+  <h3>1.3 파드의 상태: phase와 컨테이너 상태</h3>
+  <p><code>kubectl get pods</code>의 STATUS 열은 두 층의 정보를 합쳐 보여 준다. 파드 전체의 <dfn title="phase">단계(phase)</dfn>와, 그 안 컨테이너 각각의 상태다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 230" width="100%" role="img" aria-label="파드 phase 흐름">
+    <!-- phases -->
+    <rect x="20" y="60" width="150" height="56" rx="3" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+    <text x="32" y="84" font-size="12" font-weight="600" fill="#1a1a1a">Pending</text>
+    <text x="32" y="102" font-size="11" fill="#4a4a4a">수락됨 · 스케줄·pull 대기</text>
+    <line x1="170" y1="88" x2="200" y2="88" stroke="#767676" stroke-width="1.2"/><polygon points="200,84 208,88 200,92" fill="#767676"/>
+    <rect x="210" y="60" width="150" height="56" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="222" y="84" font-size="12" font-weight="600" fill="#15803d">Running</text>
+    <text x="222" y="102" font-size="11" fill="#4a4a4a">노드 배정 · 1개 이상 실행 중</text>
+    <line x1="360" y1="76" x2="390" y2="46" stroke="#767676" stroke-width="1.2"/><polygon points="386,44 396,42 390,52" fill="#767676"/>
+    <line x1="360" y1="100" x2="390" y2="130" stroke="#767676" stroke-width="1.2"/><polygon points="390,124 396,134 386,132" fill="#767676"/>
+    <rect x="400" y="14" width="150" height="56" rx="3" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+    <text x="412" y="38" font-size="12" font-weight="600" fill="#1a1a1a">Succeeded</text>
+    <text x="412" y="56" font-size="11" fill="#4a4a4a">전부 exit 0 · 재시작 안 함</text>
+    <rect x="400" y="106" width="150" height="56" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+    <text x="412" y="130" font-size="12" font-weight="600" fill="#c2410c">Failed</text>
+    <text x="412" y="148" font-size="11" fill="#4a4a4a">전부 종료 · 하나 이상 실패</text>
+    <rect x="400" y="176" width="150" height="40" rx="3" fill="#fff" stroke="#d9d9d9" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="412" y="200" font-size="12" fill="#767676">Unknown · 노드와 통신 불가</text>
+    <!-- container states -->
+    <rect x="600" y="14" width="280" height="202" rx="4" fill="#fff" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="614" y="38" font-size="12" font-weight="600" fill="#1a1a1a">컨테이너 상태 (파드 안 각각)</text>
+    <text x="614" y="66" font-size="12" fill="#1a1a1a">Waiting</text><text x="690" y="66" font-size="11" fill="#4a4a4a">reason: ContainerCreating,</text>
+    <text x="690" y="82" font-size="11" fill="#4a4a4a">ImagePullBackOff, CrashLoopBackOff</text>
+    <text x="614" y="110" font-size="12" fill="#1a1a1a">Running</text><text x="690" y="110" font-size="11" fill="#4a4a4a">startedAt 기록</text>
+    <text x="614" y="140" font-size="12" fill="#1a1a1a">Terminated</text><text x="690" y="140" font-size="11" fill="#4a4a4a">exitCode · reason: Completed,</text>
+    <text x="690" y="156" font-size="11" fill="#4a4a4a">Error, OOMKilled</text>
+    <text x="614" y="190" font-size="11" fill="#767676">get pods의 STATUS 열은 Waiting/Terminated의</text>
+    <text x="614" y="206" font-size="11" fill="#767676">reason을 phase 대신 보여 준다</text>
+  </svg>
+  <figcaption>도판 2. 왼쪽은 파드 단위 phase, 오른쪽은 컨테이너 단위 상태. <code>ImagePullBackOff</code>는 phase가 아니라 컨테이너의 Waiting reason이다.</figcaption>
+  </figure>
+
+  <p>재시작 여부는 <code>spec.restartPolicy</code>가 정한다. 기본값 <code>Always</code>는 컨테이너가 어떤 코드로 끝나든 다시 띄우고, <code>OnFailure</code>는 0이 아닐 때만, <code>Never</code>는 안 띄운다. 재시작이 반복되면 kubelet이 간격을 10초·20초·40초… 최대 5분까지 늘리는데, 그 대기 상태가 <code>CrashLoopBackOff</code>다.</p>
+
+  <h3>1.4 네임스페이스: 클러스터 안의 칸막이</h3>
+  <p><dfn title="Namespace">네임스페이스(Namespace)</dfn>는 이름의 유효 범위다. 같은 이름의 파드가 서로 다른 네임스페이스에 공존할 수 있고, 조회·권한(D12)·리소스 한도가 이 단위로 걸린다. 클러스터를 만들면 네 개가 있다.</p>
+  <table>
+    <thead><tr><th style="width:170px">네임스페이스</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td><code>default</code></td><td>네임스페이스를 안 적으면 여기. 실습이 아니면 쓰지 않는 습관을 들인다.</td></tr>
+      <tr><td><code>kube-system</code></td><td>D2에서 본 컨트롤 플레인·CNI·DNS. 손대지 않는다.</td></tr>
+      <tr><td><code>kube-public</code></td><td>인증 없이 읽을 수 있는 공개 정보(클러스터 정보 컨피그맵).</td></tr>
+      <tr><td><code>kube-node-lease</code></td><td>노드가 살아 있음을 알리는 하트비트(Lease) 오브젝트.</td></tr>
+    </tbody>
+  </table>
+  <p>네임스페이스에 속하지 않는 오브젝트도 있다. 노드, 네임스페이스 자체, 스토리지클래스, 클러스터롤이 그렇다. <code>kubectl api-resources</code>의 NAMESPACED 열이 <code>false</code>인 것들이다.</p>
+
+  <h3>1.5 라벨: 연결의 접착제</h3>
+  <p><dfn title="label">라벨(label)</dfn>은 <code>metadata.labels</code>의 키-값 쌍이다. 이름은 하나뿐이지만 라벨은 여러 개를 붙일 수 있고, 무엇보다 <b>다른 오브젝트가 이것으로 파드를 고른다</b>. 디플로이먼트가 자기 파드를 찾을 때(D4), 서비스가 트래픽을 보낼 파드를 고를 때(D5), 네트워크 정책이 대상을 정할 때(D12) 전부 라벨 <dfn title="selector">셀렉터(selector)</dfn>를 쓴다. 쿠버네티스에는 "이 서비스는 저 파드를 가리킨다"는 직접 참조가 없다. 라벨이 맞으면 연결되고, 틀리면 아무 말 없이 연결되지 않는다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 200" width="100%" role="img" aria-label="라벨 셀렉터로 파드를 고르는 방식">
+    <rect x="20" y="30" width="200" height="60" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="32" y="54" font-size="12" font-weight="600" fill="#6d28d9">Service web</text>
+    <text x="32" y="74" class="mono" font-size="11" fill="#4a4a4a">selector: app=web</text>
+    <rect x="20" y="120" width="200" height="60" rx="3" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+    <text x="32" y="144" font-size="12" font-weight="600" fill="#4a4a4a">kubectl get pods</text>
+    <text x="32" y="164" class="mono" font-size="11" fill="#4a4a4a">-l app=web,tier=front</text>
+    <!-- pods -->
+    <g>
+      <rect x="320" y="20" width="160" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="332" y="40" font-size="12" fill="#15803d">web-1</text><text x="332" y="58" class="mono" font-size="10" fill="#4a4a4a">app=web tier=front</text>
+      <rect x="320" y="80" width="160" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="332" y="100" font-size="12" fill="#15803d">web-2</text><text x="332" y="118" class="mono" font-size="10" fill="#4a4a4a">app=web tier=front</text>
+      <rect x="320" y="140" width="160" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="332" y="160" font-size="12" fill="#15803d">web-canary</text><text x="332" y="178" class="mono" font-size="10" fill="#4a4a4a">app=web tier=canary</text>
+      <rect x="520" y="20" width="160" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="532" y="40" font-size="12" fill="#15803d">api-1</text><text x="532" y="58" class="mono" font-size="10" fill="#4a4a4a">app=api tier=back</text>
+      <rect x="520" y="80" width="160" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="532" y="100" font-size="12" fill="#15803d">web-typo</text><text x="532" y="118" class="mono" font-size="10" fill="#c2410c">app=wed tier=front</text>
+    </g>
+    <!-- links service -->
+    <line x1="220" y1="60" x2="320" y2="45" stroke="#6d28d9" stroke-width="1.2"/>
+    <line x1="220" y1="60" x2="320" y2="105" stroke="#6d28d9" stroke-width="1.2"/>
+    <line x1="220" y1="60" x2="320" y2="165" stroke="#6d28d9" stroke-width="1.2"/>
+    <!-- links kubectl -->
+    <line x1="220" y1="150" x2="320" y2="48" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="220" y1="150" x2="320" y2="108" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="700" y="45" font-size="11" fill="#4a4a4a">Service: app=web 셋 전부</text>
+    <text x="700" y="63" font-size="11" fill="#4a4a4a">(canary 포함)</text>
+    <text x="700" y="100" font-size="11" fill="#4a4a4a">kubectl: 두 조건 모두 만족하는</text>
+    <text x="700" y="118" font-size="11" fill="#4a4a4a">web-1, web-2만</text>
+    <text x="700" y="160" font-size="11" fill="#c2410c">web-typo는 어디에도 안 잡힌다</text>
+    <text x="700" y="178" font-size="11" fill="#c2410c">오류 없이, 조용히</text>
+  </svg>
+  <figcaption>도판 3. 보라=서비스 셀렉터의 선택, 회색 점선=kubectl 셀렉터의 선택. 라벨 오타는 오류를 내지 않는다.</figcaption>
+  </figure>
+
+  <p><dfn title="annotation">어노테이션(annotation)</dfn>은 같은 자리에 있지만 셀렉터에 쓰이지 않는다. 빌드 번호, 담당자, 도구가 남기는 메모가 들어간다. 1.2절의 <code>last-applied-configuration</code>이 어노테이션이다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · Helm 설치와 작업 디렉터리</h2>
+  <p class="sub">오늘 Headlamp를 Helm으로 설치한다. Helm은 매니페스트 묶음을 패키지로 설치·삭제하는 도구다(자세히는 D13).</p>
+<pre><code><span class="p">$</span> brew install helm
+<span class="p">$</span> helm version --short
+<span class="c">v3.19.0+g3d8990f</span>
+
+<span class="p">$</span> kubectl config current-context
+<span class="c">docker-desktop</span>
+<span class="p">$</span> kubectl get nodes
+<span class="c">NAME                    STATUS   ROLES           AGE   VERSION
+desktop-control-plane   Ready    control-plane   1d    v1.36.4</span>
+
+<span class="p">$</span> mkdir -p ~/k8s-study/day03 && cd ~/k8s-study/day03</code></pre>
+  <p class="expect"><b>확인</b> — Windows(WSL 2)는 <a href="https://helm.sh/docs/intro/install/">helm.sh/docs/intro/install/</a>의 스크립트 설치를 쓴다. 노드가 <code>Ready</code>가 아니면 Docker Desktop을 재시작하고 D2의 2.2절을 다시 확인한다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+  <p class="sub">매니페스트 하나로 시작해, 고장 난 파드 두 종류를 고치고, 네임스페이스·라벨로 정리한 뒤, 같은 것을 Headlamp에서 본다.</p>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>파드 매니페스트: 쓰고, 적용하고, 돌려받는다</h3>
+    <p class="why">D2의 <code>kubectl run web</code>을 파일로 바꾼다. 내가 쓴 것과 클러스터가 채운 것을 비교한다.</p>
+<pre><code><span class="p">$</span> cat &gt; web-pod.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.30
+    ports:
+    - containerPort: 80
+EOF
+
+<span class="p">$</span> kubectl apply -f web-pod.yaml
+<span class="c">pod/web created</span>
+
+<span class="p">$</span> kubectl get pod web -o wide
+<span class="c">NAME   READY   STATUS    RESTARTS   AGE   IP           NODE                    NOMINATED NODE   READINESS GATES
+web    1/1     Running   0          6s    10.244.0.9   desktop-control-plane   &lt;none&gt;           &lt;none&gt;</span>
+
+<span class="p">$</span> kubectl get pod web -o yaml | grep -n -E '^(apiVersion|kind|metadata|spec|status):'
+<span class="c">1:apiVersion: v1
+2:kind: Pod
+3:metadata:
+21:spec:
+68:status:</span>
+
+<span class="p">$</span> kubectl get pod web -o jsonpath='{.spec.restartPolicy} / {.spec.nodeName} / {.status.podIP} / {.status.phase}{"\n"}'
+<span class="c">Always / desktop-control-plane / 10.244.0.9 / Running</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 12줄을 보냈는데 100줄 가까이 돌아왔다. <code>metadata</code>에는 uid·creationTimestamp가, <code>spec</code>에는 내가 안 쓴 기본값(<code>restartPolicy: Always</code>, <code>dnsPolicy</code>, <code>serviceAccountName</code>)과 스케줄러가 쓴 <code>nodeName</code>이, <code>status</code>에는 kubelet이 보고한 IP·phase·컨테이너 상태가 들어 있다. 파일에는 이 중 <code>spec</code>까지만 쓴다.</p>
+<pre><code><span class="p">$</span> kubectl apply -f web-pod.yaml
+<span class="c">pod/web unchanged</span>
+<span class="p">$</span> kubectl create -f web-pod.yaml
+<span class="c">Error from server (AlreadyExists): error when creating "web-pod.yaml": pods "web" already exists</span>
+
+<span class="p">$</span> kubectl port-forward pod/web 8080:80 &amp;
+<span class="p">$</span> sleep 1 &amp;&amp; curl -s localhost:8080 | grep title
+<span class="c">&lt;title&gt;Welcome to nginx!&lt;/title&gt;</span>
+<span class="p">$</span> kill %1</code></pre>
+    <p class="expect"><b>읽을 것</b> — 같은 파일을 두 번 apply하면 <code>unchanged</code>, create는 오류. 이래서 apply만 쓴다. <code>port-forward</code>는 내 터미널과 파드 하나를 잇는 임시 터널이다. 파드 IP <code>10.244.0.9</code>는 클러스터 안 주소라 macOS에서 직접 닿지 않는다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>고장 ①: 이미지를 못 받는 파드</h3>
+    <p class="why">가장 흔한 첫 장애. STATUS만 보지 말고 Events를 읽는 습관을 만든다.</p>
+<pre><code><span class="p">$</span> sed 's/nginx:1.30/nginx:1.30-nonexistent/; s/name: web$/name: web-broken/' web-pod.yaml &gt; web-broken.yaml
+<span class="p">$</span> kubectl apply -f web-broken.yaml
+<span class="p">$</span> sleep 15 &amp;&amp; kubectl get pod web-broken
+<span class="c">NAME         READY   STATUS             RESTARTS   AGE
+web-broken   0/1     ImagePullBackOff   0          15s</span>
+
+<span class="p">$</span> kubectl describe pod web-broken | sed -n '/^Events:/,$p'
+<span class="c">Events:
+  Type     Reason     Age                From               Message
+  ----     ------     ----               ----               -------
+  Normal   Scheduled  20s                default-scheduler  Successfully assigned default/web-broken to desktop-control-plane
+  Normal   Pulling    18s (x2 over 20s)  kubelet            Pulling image "nginx:1.30-nonexistent"
+  Warning  Failed     17s (x2 over 19s)  kubelet            Failed to pull image "nginx:1.30-nonexistent": ... not found
+  Warning  Failed     17s (x2 over 19s)  kubelet            Error: ErrImagePull
+  Normal   BackOff    5s (x3 over 18s)   kubelet            Back-off pulling image "nginx:1.30-nonexistent"
+  Warning  Failed     5s (x3 over 18s)   kubelet            Error: ImagePullBackOff</span>
+
+<span class="p">$</span> kubectl get pod web-broken -o jsonpath='{.status.phase} / {.status.containerStatuses[0].state}{"\n"}'
+<span class="c">Pending / {"waiting":{"message":"Back-off pulling image ...","reason":"ImagePullBackOff"}}</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — phase는 여전히 <code>Pending</code>이다. STATUS 열의 <code>ImagePullBackOff</code>는 컨테이너 Waiting 상태의 reason이다(도판 2). Events의 From 열을 보면 스케줄링은 끝났고(<code>default-scheduler</code>) 그 뒤는 전부 kubelet의 실패다. 즉 문제는 노드에서, 이미지 이름에서 났다.</p>
+<pre><code><span class="p">$</span> sed -i '' 's/nginx:1.30-nonexistent/nginx:1.30/' web-broken.yaml   <span class="c"># Linux/WSL: sed -i 's/.../.../'</span>
+<span class="p">$</span> kubectl apply -f web-broken.yaml
+<span class="c">pod/web-broken configured</span>
+<span class="p">$</span> kubectl get pod web-broken
+<span class="c">NAME         READY   STATUS    RESTARTS   AGE
+web-broken   1/1     Running   0          70s</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>configured</code>는 apply가 기존 오브젝트를 고쳤다는 뜻이다. 파드의 <code>image</code>는 실행 중에도 바꿀 수 있는 몇 안 되는 필드다. 대부분의 <code>spec</code> 필드는 파드 생성 후 바꿀 수 없어 지우고 다시 만들어야 한다(그래서 D4의 디플로이먼트가 필요하다).</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>고장 ②: 계속 죽는 파드</h3>
+    <p class="why">이미지는 받았는데 프로세스가 바로 끝나는 경우. 이때는 Events보다 이전 컨테이너의 로그가 답이다.</p>
+<pre><code><span class="p">$</span> cat &gt; crash.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: crash
+spec:
+  containers:
+  - name: app
+    image: busybox:1.37
+    command: ["sh", "-c", "echo 'config file missing: /etc/app.conf'; exit 1"]
+EOF
+<span class="p">$</span> kubectl apply -f crash.yaml
+<span class="p">$</span> sleep 40 &amp;&amp; kubectl get pod crash
+<span class="c">NAME    READY   STATUS             RESTARTS      AGE
+crash   0/1     CrashLoopBackOff   3 (12s ago)   40s</span>
+
+<span class="p">$</span> kubectl logs crash --previous
+<span class="c">config file missing: /etc/app.conf</span>
+
+<span class="p">$</span> kubectl get pod crash -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode} / {.status.containerStatuses[0].lastState.terminated.reason}{"\n"}'
+<span class="c">1 / Error</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — RESTARTS가 오르고 STATUS가 <code>CrashLoopBackOff</code>다. <code>restartPolicy: Always</code>라서 kubelet이 계속 다시 띄우고, 간격을 늘려 가며 기다리는 중이다. <code>logs --previous</code>는 직전에 죽은 컨테이너의 출력을 보여 준다. 대개 원인은 여기 적혀 있다. exitCode 1 · reason Error가 도판 2의 Terminated 상태다.</p>
+<pre><code><span class="p">$</span> kubectl delete -f crash.yaml -f web-broken.yaml
+<span class="c">pod "crash" deleted
+pod "web-broken" deleted</span></code></pre>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>사이드카: 한 파드, 두 컨테이너, 하나의 localhost</h3>
+    <p class="why">1.1절의 "네트워크 공유"를 본다. 두 번째 컨테이너가 첫 번째를 localhost로 부른다.</p>
+<pre><code><span class="p">$</span> cat &gt; web-sidecar.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-sidecar
+  labels:
+    app: web
+    tier: front
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.30
+    ports:
+    - containerPort: 80
+  - name: probe
+    image: busybox:1.37
+    command: ["sh", "-c", "while true; do wget -qO- -T 2 http://localhost >/dev/null && echo \"$(date +%T) nginx ok\" || echo \"$(date +%T) nginx down\"; sleep 5; done"]
+EOF
+<span class="p">$</span> kubectl apply -f web-sidecar.yaml
+<span class="p">$</span> sleep 12 &amp;&amp; kubectl get pod web-sidecar
+<span class="c">NAME          READY   STATUS    RESTARTS   AGE
+web-sidecar   2/2     Running   0          12s</span>
+
+<span class="p">$</span> kubectl logs web-sidecar -c probe | tail -3
+<span class="c">02:41:07 nginx ok
+02:41:12 nginx ok
+02:41:17 nginx ok</span>
+
+<span class="p">$</span> kubectl exec web-sidecar -c probe -- hostname
+<span class="c">web-sidecar</span>
+<span class="p">$</span> kubectl exec web-sidecar -c nginx -- hostname
+<span class="c">web-sidecar</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — READY가 <code>2/2</code>다. probe 컨테이너는 nginx 컨테이너에 아무 설정 없이 <code>http://localhost</code>로 닿는다. 두 컨테이너의 호스트명이 같다. 같은 네트워크 네임스페이스를 쓰기 때문이다. 컨테이너가 둘 이상이면 <code>logs</code>·<code>exec</code>에 <code>-c</code>로 어느 컨테이너인지 적어야 한다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>네임스페이스: 칸을 나누고 기본 칸을 바꾼다</h3>
+    <p class="why">앞으로 모든 실습 리소스는 <code>study</code> 네임스페이스에 둔다. default를 비워 두면 정리가 쉽다.</p>
+<pre><code><span class="p">$</span> cat &gt; ns-study.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: study
+EOF
+<span class="p">$</span> kubectl apply -f ns-study.yaml
+<span class="c">namespace/study created</span>
+
+<span class="p">$</span> kubectl get namespaces
+<span class="c">NAME                 STATUS   AGE
+default              Active   1d
+kube-node-lease      Active   1d
+kube-public          Active   1d
+kube-system          Active   1d
+local-path-storage   Active   1d
+study                Active   5s</span>
+
+<span class="p">$</span> kubectl apply -f web-pod.yaml -n study
+<span class="c">pod/web created</span>
+<span class="p">$</span> kubectl get pods -n study
+<span class="c">NAME   READY   STATUS    RESTARTS   AGE
+web    1/1     Running   0          4s</span>
+<span class="p">$</span> kubectl get pods -A -l app=web -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,IP:.status.podIP'
+<span class="c">NS        NAME          IP
+default   web           10.244.0.9
+default   web-sidecar   10.244.0.11
+study     web           10.244.0.12</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>web</code>이라는 파드가 default와 study에 하나씩 있다. 이름은 네임스페이스 안에서만 유일하면 된다. 파일에 <code>metadata.namespace</code>를 적지 않았으므로 <code>-n</code>이 결정했다. 파일에 적으면 파일이 이긴다.</p>
+<pre><code><span class="p">$</span> kubectl config set-context --current --namespace=study
+<span class="c">Context "docker-desktop" modified.</span>
+<span class="p">$</span> kubectl get pods
+<span class="c">NAME   READY   STATUS    RESTARTS   AGE
+web    1/1     Running   0          40s</span>
+<span class="p">$</span> kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}{"\n"}'
+<span class="c">study</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 이제 <code>-n</code>을 안 붙이면 study다. 이 설정은 kubeconfig의 컨텍스트에 저장된다. 다른 사람 화면에서 <code>get pods</code> 결과가 다르면 이것부터 확인한다. 남은 14일은 이 상태로 진행한다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>라벨: 붙이고, 고르고, 한 번에 지운다</h3>
+    <p class="why">라벨 셀렉터가 실제로 무엇을 잡고 무엇을 놓치는지 본다. 도판 3을 손으로 재현한다.</p>
+<pre><code><span class="p">$</span> for i in 1 2; do sed "s/name: web$/name: web-$i/" web-pod.yaml | kubectl apply -f -; done
+<span class="c">pod/web-1 created
+pod/web-2 created</span>
+<span class="p">$</span> kubectl label pod web-1 web-2 tier=front
+<span class="p">$</span> kubectl label pod web tier=canary
+<span class="p">$</span> sed 's/name: web$/name: web-typo/; s/app: web/app: wed/' web-pod.yaml | kubectl apply -f -
+
+<span class="p">$</span> kubectl get pods --show-labels
+<span class="c">NAME       READY   STATUS    RESTARTS   AGE   LABELS
+web        1/1     Running   0          3m    app=web,tier=canary
+web-1      1/1     Running   0          30s   app=web,tier=front
+web-2      1/1     Running   0          30s   app=web,tier=front
+web-typo   1/1     Running   0          10s   app=wed</span>
+
+<span class="p">$</span> kubectl get pods -l app=web -L tier
+<span class="c">NAME    READY   STATUS    RESTARTS   AGE   TIER
+web     1/1     Running   0          3m    canary
+web-1   1/1     Running   0          40s   front
+web-2   1/1     Running   0          40s   front</span>
+
+<span class="p">$</span> kubectl get pods -l 'app=web,tier=front' -o name
+<span class="c">pod/web-1
+pod/web-2</span>
+<span class="p">$</span> kubectl get pods -l 'app in (web,wed), tier!=canary' -o name
+<span class="c">pod/web-1
+pod/web-2
+pod/web-typo</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>-l app=web</code>은 오타 난 <code>web-typo</code>를 조용히 뺀다. 오류도 경고도 없다. 셀렉터는 등호(<code>=</code>, <code>!=</code>)와 집합(<code>in</code>, <code>notin</code>, 키 존재)을 지원하고, 쉼표는 AND다. <code>-L tier</code>는 라벨 값을 열로 뽑는다.</p>
+<pre><code><span class="p">$</span> kubectl annotate pod web-1 study.example/owner=villain study.example/note="첫 라벨 실습"
+<span class="p">$</span> kubectl get pod web-1 -o jsonpath='{.metadata.annotations}{"\n"}'
+<span class="c">{"kubectl.kubernetes.io/last-applied-configuration":"{...}","study.example/note":"첫 라벨 실습","study.example/owner":"villain"}</span>
+
+<span class="p">$</span> kubectl delete pods -l tier=front
+<span class="c">pod "web-1" deleted
+pod "web-2" deleted</span>
+<span class="p">$</span> kubectl delete pod web-typo</code></pre>
+    <p class="expect"><b>읽을 것</b> — 어노테이션에는 apply가 남긴 <code>last-applied-configuration</code>이 이미 들어 있다(1.2절). 라벨 셀렉터로 여러 파드를 한 번에 지웠다. 셀렉터가 넓으면 넓은 만큼 지워지므로, 삭제 전에는 같은 셀렉터로 <code>get</code>을 먼저 친다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>Headlamp: 같은 것을 화면으로</h3>
+    <p class="why">Helm으로 웹 UI를 설치하고 ServiceAccount 토큰으로 로그인한다. Helm과 RBAC은 각각 D13·D12에서 제대로 다룬다. 오늘은 절차만 따른다.</p>
+<pre><code><span class="p">$</span> helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+<span class="p">$</span> helm repo update
+<span class="p">$</span> helm install headlamp headlamp/headlamp --namespace kube-system
+<span class="c">NAME: headlamp
+NAMESPACE: kube-system
+STATUS: deployed
+...</span>
+
+<span class="p">$</span> kubectl get pods -n kube-system -l app.kubernetes.io/name=headlamp
+<span class="c">NAME                        READY   STATUS    RESTARTS   AGE
+headlamp-7c9d5b8f6d-x4k2p   1/1     Running   0          30s</span>
+
+<span class="c"># 로그인용 ServiceAccount와 권한 (실습용 cluster-admin)</span>
+<span class="p">$</span> kubectl -n kube-system create serviceaccount headlamp-admin
+<span class="p">$</span> kubectl create clusterrolebinding headlamp-admin \
+    --serviceaccount=kube-system:headlamp-admin \
+    --clusterrole=cluster-admin
+
+<span class="c"># 토큰 발급 (기본 1시간 유효) — 출력을 복사해 둔다</span>
+<span class="p">$</span> kubectl create token headlamp-admin -n kube-system
+
+<span class="p">$</span> kubectl port-forward -n kube-system service/headlamp 8080:80</code></pre>
+    <p>브라우저에서 <code>http://localhost:8080</code>을 열고 토큰을 붙여 넣는다. 로그인 후 확인할 것 세 가지.</p>
+    <ol>
+      <li>왼쪽 <b>Namespace</b> 선택에서 <code>study</code>를 고른다. 파드 목록에 <code>web</code> 하나가 보인다. 5단계의 <code>kubectl get pods</code>와 같다.</li>
+      <li><code>web</code>을 눌러 상세로 들어간다. <b>Labels</b>에 <code>app=web, tier=canary</code>, <b>Events</b>에 Scheduled·Pulled·Created·Started 네 줄. 2단계에서 <code>describe</code>로 본 것이다.</li>
+      <li>상단 <b>YAML</b> 탭. 1단계의 <code>get -o yaml</code>과 같은 내용이며 <code>status</code>까지 보인다.</li>
+    </ol>
+    <p class="expect"><b>읽을 것</b> — Headlamp는 kubectl과 똑같이 API 서버에 요청을 보내는 클라이언트일 뿐이다. 토큰이 곧 신분이고, 그 신분에 <code>cluster-admin</code>을 묶었으니 전부 보인다. 토큰이 만료되면 <code>kubectl create token</code>을 다시 실행한다. port-forward 터미널은 <kbd>Ctrl-C</kbd>로 끝낸다.</p>
+    <div class="note warn">
+      <h5>cluster-admin은 실습용이다</h5>
+      <p>공유 클러스터에서는 필요한 권한만 담은 Role을 묶는다. D12에서 <code>pod-viewer</code> 권한으로 Headlamp에 로그인해 시크릿이 안 보이는 것을 확인한다.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <p class="sub">문서를 덮고 진행한다. 3번은 파일 없이 <code>kubectl run</code>으로 만들어도 된다.</p>
+  <div class="check">
+    <ol>
+      <li>이름 <code>cp-web</code>, 라벨 <code>app=cp</code>, 이미지 <code>nginx:1.30</code>인 파드 매니페스트를 써서 study 네임스페이스에 apply하고 <code>Running</code>을 확인한다.</li>
+      <li><code>get -o yaml</code> 출력에서 스케줄러가 쓴 필드 하나와 kubelet이 쓴 필드 하나를 가리킨다.</li>
+      <li>존재하지 않는 이미지 태그로 파드를 만들고, Events에서 어느 컴포넌트(From 열)가 실패를 보고했는지 말한 뒤 고친다.</li>
+      <li><code>exit 1</code>로 끝나는 파드를 만들고 <code>logs --previous</code>로 마지막 출력을 읽는다.</li>
+      <li>파드 3개에 라벨을 붙여 셀렉터 하나로 2개만 조회하고, 같은 셀렉터로 그 2개만 삭제한다.</li>
+      <li>Headlamp에서 1번 파드의 Events를 찾는다.</li>
+    </ol>
+  </div>
+  <p>6개 중 5개 이상이면 D4로 간다. 2번이 막히면 1단계의 jsonpath 명령을 다시 본다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">default 네임스페이스는 비우고, study 네임스페이스와 Headlamp는 남긴다. 컨텍스트의 기본 네임스페이스는 study 그대로 둔다.</p>
+<pre><code><span class="p">$</span> kubectl delete pod web web-sidecar -n default
+<span class="p">$</span> kubectl delete pod web                       <span class="c"># study (현재 기본 네임스페이스)</span>
+<span class="p">$</span> kubectl get pods -A --field-selector metadata.namespace!=kube-system,metadata.namespace!=local-path-storage
+<span class="c">No resources found</span>
+<span class="p">$</span> kubectl get ns study
+<span class="c">NAME    STATUS   AGE
+study   Active   50m</span></code></pre>
+  <p>Headlamp를 지우려면 <code>helm uninstall headlamp -n kube-system</code>과 <code>kubectl delete clusterrolebinding headlamp-admin</code>, <code>kubectl -n kube-system delete serviceaccount headlamp-admin</code> 세 줄이다. D14까지 두는 편이 편하다.</p>
+
+  <div class="note">
+    <h5>D4 예고</h5>
+    <p>오늘 파드를 지우면 그냥 사라졌다. 내일은 "이 파드를 3개 유지하라"를 선언하는 디플로이먼트를 쓴다. 파드 템플릿이 오늘 매니페스트의 <code>spec</code>이고, 그것을 셀렉터(오늘의 라벨)로 묶는다. Spring Boot 앱을 이미지로 만들어 로컬 레지스트리에 올리고, v1→v2 롤링 업데이트와 롤백까지 간다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>파드 — <a href="https://kubernetes.io/ko/docs/concepts/workloads/pods/">kubernetes.io/ko/docs/concepts/workloads/pods/</a> · 파드 라이프사이클 — <a href="https://kubernetes.io/ko/docs/concepts/workloads/pods/pod-lifecycle/">kubernetes.io/ko/docs/concepts/workloads/pods/pod-lifecycle/</a></li>
+    <li>오브젝트 관리(apply·create) — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/object-management/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/object-management/</a></li>
+    <li>네임스페이스 — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/namespaces/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/namespaces/</a> · 라벨과 셀렉터 — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/labels/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/labels/</a> · 어노테이션 — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/annotations/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/annotations/</a></li>
+    <li>실행 중인 파드 디버깅 — <a href="https://kubernetes.io/ko/docs/tasks/debug/debug-application/debug-running-pod/">kubernetes.io/ko/docs/tasks/debug/debug-application/debug-running-pod/</a></li>
+    <li>Helm 설치 — <a href="https://helm.sh/docs/intro/install/">helm.sh/docs/intro/install/</a></li>
+    <li>Headlamp 클러스터 내 설치 — <a href="https://headlamp.dev/docs/latest/installation/in-cluster/">headlamp.dev/docs/latest/installation/in-cluster/</a> · Dashboard → Headlamp 안내 — <a href="https://kubernetes.io/blog/2026/06/01/dashboard-to-headlamp/">kubernetes.io/blog/2026/06/01/dashboard-to-headlamp/</a></li>
+    <li>이미지 태그 — nginx <a href="https://hub.docker.com/_/nginx">1.30</a> · busybox <a href="https://hub.docker.com/_/busybox">1.37</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day02-cluster-and-control-plane.html">← D2 클러스터와 컨트롤 플레인</a><a href="day04-deployments-rollouts.html">D4 디플로이먼트와 롤링 업데이트 →</a></div>
+</div></footer>
+</body>
+</html>

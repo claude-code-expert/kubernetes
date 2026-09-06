@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kubernetes Volume — 경로에서 스토리지까지</title>
+<style>
+:root{
+  --bg:#07111f;--panel:#0e1b2d;--panel2:#12243a;--text:#edf7ff;--muted:#88a3bc;
+  --blue:#58a6ff;--cyan:#38d9d9;--green:#50e3a4;--yellow:#ffd166;--red:#ff6b7a;
+  --line:#28415d;--mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --sans:Inter,Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#020711;color:var(--text);font-family:var(--sans)}
+button{font:inherit}.stage{position:fixed;inset:0;display:grid;place-items:center}.deck{position:relative;width:1280px;height:720px;background:var(--bg);overflow:hidden;transform-origin:center}
+.deck::before{content:"";position:absolute;inset:-50%;background:radial-gradient(circle at 20% 25%,#1967d226,transparent 26%),radial-gradient(circle at 80% 75%,#19c8a318,transparent 24%);animation:drift 16s ease-in-out infinite alternate;pointer-events:none}
+@keyframes drift{to{transform:translate3d(3%,-2%,0) rotate(2deg)}}
+.slide{position:absolute;inset:0;padding:54px 70px 72px;display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateX(70px) scale(.98);transition:opacity .5s ease,transform .6s cubic-bezier(.2,.8,.2,1),visibility .5s;overflow:hidden}
+.slide.active{opacity:1;visibility:visible;transform:none}.slide.leaving{opacity:0;transform:translateX(-70px) scale(.98)}
+.kicker{font:700 14px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin-bottom:14px}.kicker .n{color:var(--muted);margin-right:12px}
+h1,h2,h3,p{margin:0}h1{font-size:70px;line-height:1.08;letter-spacing:-.055em}h2{font-size:46px;line-height:1.15;letter-spacing:-.04em;margin-bottom:28px}h3{font-size:21px;line-height:1.25}
+.gradient{background:linear-gradient(100deg,var(--text),var(--blue) 50%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}.muted{color:var(--muted)}.accent{color:var(--cyan)}.yellow{color:var(--yellow)}.red{color:var(--red)}
+.lead{font-size:28px;line-height:1.55;color:#d7e7f5;max-width:1040px}.small{font-size:16px;color:var(--muted);line-height:1.55}.center{text-align:center}.spacer{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.split{display:grid;grid-template-columns:.92fr 1.08fr;gap:36px;align-items:center;flex:1}
+.card{position:relative;background:linear-gradient(145deg,#11243aee,#0b1727ee);border:1px solid var(--line);border-radius:18px;padding:22px;overflow:hidden}.card::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,#ffffff08 50%,transparent 65%);transform:translateX(-130%)}.active .card.shine::after{animation:shine 2.2s .5s ease forwards}@keyframes shine{to{transform:translateX(130%)}}
+.card.blue{border-color:#3e80c9}.card.green{border-color:#288966}.card.yellow{border-color:#a07f37}.card.red{border-color:#9b4350}.card h3{margin-bottom:10px}.card p{font-size:18px;line-height:1.5;color:#adc3d5}.tag{display:inline-block;font:700 13px var(--mono);letter-spacing:.04em;padding:6px 9px;border-radius:999px;background:#58a6ff20;color:#9bd0ff;margin-bottom:12px}.tag.green{background:#50e3a420;color:#7cf0bd}.tag.yellow{background:#ffd16620;color:#ffe19a}.tag.red{background:#ff6b7a20;color:#ff9ca6}
+.step{opacity:0;transform:translateY(18px) scale(.98);filter:blur(3px);transition:opacity .5s ease,transform .55s cubic-bezier(.2,.8,.2,1),filter .5s}.step.revealed{opacity:1;transform:none;filter:none}.step[data-from="left"]{transform:translateX(-28px)}.step[data-from="right"]{transform:translateX(28px)}.step.revealed[data-from]{transform:none}
+.foot{position:absolute;left:70px;right:70px;bottom:23px;display:flex;justify-content:space-between;align-items:center;color:#58738c;font:13px var(--mono);z-index:3}.foot strong{color:#7894ad}.progress{position:fixed;z-index:20;left:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .35s ease;box-shadow:0 0 16px #38d9d988}.counter{position:fixed;right:22px;top:18px;color:#7290ab;font:13px var(--mono);z-index:20}
+.title{justify-content:center}.title::after{content:"";position:absolute;width:650px;height:650px;border:1px solid #58a6ff20;border-radius:50%;right:-170px;top:-170px;box-shadow:0 0 0 70px #58a6ff08,0 0 0 140px #38d9d908;animation:orbit 14s linear infinite}@keyframes orbit{to{transform:rotate(360deg)}}.title .sub{font-size:24px;color:var(--muted);margin-top:22px}.title .question{font:16px var(--mono);color:var(--cyan);margin-bottom:20px}.title .mountmark{display:inline-block;animation:blink 1.2s ease-in-out infinite alternate}@keyframes blink{to{filter:drop-shadow(0 0 12px var(--cyan));transform:translateY(-2px)}}
+.bigq{font-size:52px;line-height:1.35;text-align:center;margin:auto}.bigq code{color:var(--cyan);font:inherit}.answer{font-size:24px;color:var(--muted);margin-top:25px}
+.agenda{display:grid;grid-template-columns:70px 1fr;gap:0 22px;align-items:start}.agenda .num{font:700 16px var(--mono);color:var(--cyan);padding-top:17px}.agenda .item{font-size:24px;padding:12px 0 16px;border-bottom:1px solid var(--line)}.agenda .item span{display:block;font-size:16px;color:var(--muted);margin-top:5px}
+.layers{width:470px;margin:auto;display:flex;flex-direction:column;gap:10px}.layer{height:64px;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;font:600 19px var(--mono);background:#0d1d30}.layer.write{border-color:var(--yellow);background:#ffd16617;color:#ffe5a6;position:relative}.layer.write::before{content:"NEW";position:absolute;right:14px;font-size:11px;color:var(--yellow)}.layer.base{color:#9cb2c5}.trash{display:flex;align-items:center;gap:12px;color:var(--red);font-size:18px;margin-top:16px;justify-content:center}.active .trash .icon{animation:shake .6s 1.5s ease}@keyframes shake{25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+.pathmap{display:grid;grid-template-columns:1fr 110px 1fr;align-items:center;margin:auto 0}.nodebox{border:1px solid var(--line);border-radius:20px;padding:18px;background:#0a1727}.pod{border:1px dashed #4b7399;border-radius:15px;padding:16px;position:relative}.pod::before,.nodebox::before{position:absolute;font:12px var(--mono);color:var(--muted);background:var(--bg);padding:0 7px}.pod::before{content:"POD";top:-8px;left:14px}.container{border:1px solid var(--blue);background:#58a6ff13;border-radius:12px;padding:20px;text-align:center}.mount{margin-top:14px;font:600 18px var(--mono);color:var(--cyan);background:#38d9d912;padding:13px;border-radius:9px}.connector{position:relative;height:4px;background:repeating-linear-gradient(90deg,var(--cyan) 0 12px,transparent 12px 22px);animation:flow 1s linear infinite}.connector::after{content:"";position:absolute;right:-2px;top:-6px;border-left:11px solid var(--cyan);border-top:8px solid transparent;border-bottom:8px solid transparent}@keyframes flow{to{background-position:22px 0}}.disk{width:205px;height:132px;margin:auto;border:2px solid var(--green);border-radius:50%;background:linear-gradient(#50e3a424,#112c31);position:relative;display:grid;place-items:center;text-align:center;color:#9bf3cd;font:700 18px var(--mono)}.disk::before{content:"";position:absolute;inset:18px -2px auto;border-top:2px solid var(--green);border-radius:50%;height:32px}
+.share{display:grid;grid-template-columns:1fr 120px 1fr;gap:16px;align-items:center}.mini-container{border:1px solid var(--blue);border-radius:13px;padding:20px;text-align:center;background:#58a6ff12}.volume{border:1px solid var(--green);border-radius:14px;background:#50e3a414;padding:25px 12px;text-align:center;color:#9bf3cd;font:700 17px var(--mono);box-shadow:0 0 24px #50e3a416}.shareline{height:3px;background:var(--cyan);position:relative}.shareline::before,.shareline::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:var(--cyan);top:-4px}.shareline::before{left:0}.shareline::after{right:0}.active .volume{animation:breathe 2s ease-in-out infinite}@keyframes breathe{50%{box-shadow:0 0 35px #50e3a447;transform:scale(1.025)}}
+.pod-share-frame{position:relative;border:2px dashed #456b8d;border-radius:20px;padding:21px 34px 17px;background:#091727;margin-top:2px}.pod-share-frame::before{content:"POD";position:absolute;top:-10px;left:22px;padding:0 9px;background:var(--bg);color:#8ba8c1;font:700 13px var(--mono);letter-spacing:.12em}.share-containers{display:grid;grid-template-columns:1fr 1fr;gap:92px}.share-container{position:relative;border:1px solid var(--blue);border-radius:14px;padding:13px 17px;background:#58a6ff12;text-align:center}.share-container h3{font:700 16px var(--mono);margin-bottom:7px}.share-container .operation{display:inline-block;border-radius:99px;padding:4px 8px;margin-right:6px;background:#ffd1661c;color:var(--yellow);font:700 11px var(--mono)}.share-container.read .operation{background:#50e3a41c;color:var(--green)}.mount-decl{display:block;margin-top:8px;color:var(--cyan);font:700 12px var(--mono)}.share-container code{display:block;margin-top:6px;padding:7px;background:#06101d;color:#b9ddfa;font:13px var(--mono);border-radius:8px}.share-tree{position:relative;height:66px;margin:0 96px}.share-tree .leg{position:absolute;top:0;width:3px;height:34px;background:var(--cyan)}.share-tree .leg.left{left:18%}.share-tree .leg.right{right:18%}.share-tree .bridge{position:absolute;left:18%;right:18%;top:32px;height:3px;background:var(--cyan)}.share-tree .trunk{position:absolute;left:50%;top:32px;width:3px;height:34px;background:var(--cyan)}.share-tree .packet{position:absolute;top:26px;width:14px;height:14px;border-radius:50%;background:white;box-shadow:0 0 16px var(--cyan);animation:sharepacket 2.2s ease-in-out infinite}@keyframes sharepacket{0%{left:18%}45%{left:calc(50% - 7px)}55%{left:calc(50% - 7px)}100%{left:calc(82% - 14px)}}.shared-volume{width:520px;margin:0 auto;border:2px solid var(--green);border-radius:15px;padding:11px 20px;background:#50e3a414;text-align:center;box-shadow:0 0 26px #50e3a41c}.shared-volume strong{display:block;color:#9bf3cd;font:700 15px var(--mono)}.shared-volume .same-file{display:inline-block;margin-top:6px;padding:4px 10px;border-radius:7px;background:#06101d;color:#d9eaf5;font:12px var(--mono)}.active .shared-volume{animation:breathe 2s ease-in-out infinite}
+.storage-schedule{display:grid;grid-template-columns:270px 100px 1fr;gap:20px;align-items:center}.request-pod{border:2px solid var(--blue);border-radius:17px;padding:20px;background:#58a6ff12;text-align:center}.request-pod h3{font:700 18px var(--mono);margin-bottom:14px}.request-badge{display:block;margin-top:9px;padding:8px;border-radius:8px;background:#06101d;color:#a9c3d8;font:13px var(--mono)}.scheduler{display:flex;flex-direction:column;align-items:center;gap:9px;color:var(--cyan);font:700 12px var(--mono);text-align:center}.scheduler .route{width:100%;height:3px;background:repeating-linear-gradient(90deg,var(--cyan) 0 9px,transparent 9px 16px);position:relative;animation:flow .8s linear infinite}.scheduler .route::after{content:"";position:absolute;right:-2px;top:-5px;border-left:9px solid var(--cyan);border-top:6px solid transparent;border-bottom:6px solid transparent}.capacity-nodes{display:grid;grid-template-columns:1fr 1fr;gap:15px}.capacity-node{position:relative;border:1px solid var(--line);border-radius:15px;padding:17px;background:#0a1727;min-height:194px}.capacity-node.chosen{border-color:var(--green);box-shadow:0 0 24px #50e3a41b}.capacity-node h3{font:700 14px var(--mono);color:#9cb7cd}.capacity-node .cap-num{font:700 28px var(--mono);margin:15px 0 5px}.capacity-node .capbar{height:10px;border-radius:8px;background:#22384c;overflow:hidden;margin:10px 0}.capacity-node .capbar i{display:block;height:100%;background:var(--red);width:22%}.capacity-node.chosen .capbar i{background:var(--green);width:82%}.capacity-node .data-pin{font:12px var(--mono);color:var(--yellow);margin-top:13px}.capacity-node .selected{position:absolute;right:10px;top:10px;border-radius:99px;padding:5px 8px;background:#50e3a422;color:var(--green);font:700 10px var(--mono)}.schedule-rules{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}.schedule-rule{border-top:2px solid var(--cyan);padding:12px 10px;background:#38d9d908;font-size:14px;line-height:1.45;color:var(--muted)}.schedule-rule b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+.place{min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.place .ico{font-size:48px;margin-bottom:10px}.place strong{font-size:21px}.place p{font-size:16px;margin-top:10px}.metric{margin-top:17px;display:flex;gap:6px;width:100%}.metric i{height:7px;flex:1;background:#243b53;border-radius:9px}.metric i.on{background:var(--cyan)}
+.nodes{display:grid;grid-template-columns:1fr 1fr;gap:30px;position:relative}.kube-node{height:260px;border:1px solid var(--line);border-radius:18px;padding:23px;position:relative;background:#0a1727}.kube-node h3{color:#8ba8c1;font:15px var(--mono);letter-spacing:.1em}.podchip{margin:16px 0 0;border:1px solid var(--blue);border-radius:11px;padding:15px;background:#58a6ff12}.diskbar{position:absolute;left:23px;right:23px;bottom:20px}.diskbar .bar{height:15px;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:8px}.diskbar .fill{height:100%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));width:0;transition:width 1s ease}.step.revealed .fill{width:87%}.no-route{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);font-size:35px;color:var(--red);z-index:2}
+.migration{display:grid;grid-template-columns:1fr 100px 1.2fr 100px 1fr;align-items:center}.storage-center{border:1px solid var(--green);border-radius:18px;padding:28px 12px;text-align:center;background:#50e3a412}.move-pod{border:1px solid var(--blue);padding:18px;border-radius:12px;text-align:center;background:#58a6ff13}.detach{font:13px var(--mono);color:var(--yellow);text-align:center}.active .move-pod.fly{animation:podfly 3.6s 1s ease-in-out infinite}@keyframes podfly{0%,30%{transform:translateX(0);opacity:1}48%{transform:translateX(110px);opacity:0}55%{transform:translateX(-110px);opacity:0}72%,100%{transform:translateX(0);opacity:1}}
+.life-question{width:520px;margin:0 auto;border:2px solid var(--cyan);border-radius:14px;padding:14px 20px;text-align:center;background:#38d9d912;font-size:20px;font-weight:700}.life-branch{height:68px;position:relative;margin:0 205px}.life-branch i{position:absolute;display:block;background:var(--cyan)}.life-branch .trunk{left:50%;top:0;width:3px;height:25px}.life-branch .rail{left:25%;right:25%;top:23px;height:3px}.life-branch .leg{top:23px;width:3px;height:38px}.life-branch .leg.left{left:25%}.life-branch .leg.right{right:25%}.life-branch .leg::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid var(--cyan)}.life-grid{display:grid;grid-template-columns:1fr 1fr;gap:34px}.life{font-size:18px;color:var(--muted);margin-top:14px}.life span{color:var(--text)}
+.timeline{display:grid;grid-template-columns:1fr 80px 1fr 80px 1fr;align-items:center;margin-top:55px}.event{text-align:center}.event .circle{width:74px;height:74px;margin:auto;border-radius:50%;display:grid;place-items:center;border:2px solid var(--blue);background:#58a6ff13;font-size:28px}.event p{font-size:18px;margin-top:14px}.event.danger .circle{border-color:var(--red);background:#ff6b7a15}.time-line{height:3px;background:var(--line);position:relative}.time-line::after{content:"";position:absolute;right:-1px;top:-6px;border-left:10px solid var(--line);border-top:7px solid transparent;border-bottom:7px solid transparent}.survive{color:var(--green);font:700 13px var(--mono);text-align:center;margin-top:8px}
+.code{background:#06101d;border:1px solid var(--line);border-radius:14px;padding:18px 21px;font:17px/1.48 var(--mono);white-space:pre;color:#c8d9e7;overflow:hidden}.code .k{color:#73b7ff}.code .v{color:#8ff0c6}.code .c{color:#69849c}.code .y{color:#ffe08a}.focusline{display:block;margin:0 -7px;padding:0 7px;background:#38d9d912;border-left:3px solid var(--cyan)}
+.resource{border:1px solid var(--line);border-radius:15px;padding:22px 14px;text-align:center;background:#0d1d30}.resource strong{display:block;font:700 19px var(--mono);color:var(--cyan);margin-bottom:8px}.resource p{font-size:16px;color:var(--muted);line-height:1.45}.arrow{height:3px;background:var(--cyan);position:relative}.arrow::after{content:"";position:absolute;right:-2px;top:-6px;border-left:10px solid var(--cyan);border-top:7px solid transparent;border-bottom:7px solid transparent}.active .arrow.pulse{animation:arrowpulse 1.2s ease-in-out infinite}@keyframes arrowpulse{50%{box-shadow:0 0 15px var(--cyan);opacity:.6}}
+.provision-start{width:360px;margin:0 auto 20px;border:2px solid var(--blue);border-radius:15px;padding:16px;text-align:center;background:#58a6ff12}.provision-start strong{display:block;font:700 18px var(--mono);color:var(--cyan);margin-bottom:5px}.choicegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;position:relative}.choicegrid::before{content:"";position:absolute;left:16%;right:16%;top:-12px;border-top:2px solid var(--line)}.choice{position:relative;border:1px solid var(--line);border-radius:16px;padding:18px;background:#0d1d30;min-height:226px}.choice::before{content:"";position:absolute;left:50%;top:-13px;height:13px;border-left:2px solid var(--line)}.choice .case{font:700 12px var(--mono);letter-spacing:.08em;color:var(--muted)}.choice h3{margin:10px 0 12px}.choice ol{margin:0;padding-left:20px;color:#a9bfd1;font-size:15px;line-height:1.55}.choice .result{position:absolute;left:18px;right:18px;bottom:16px;border-radius:8px;padding:9px;text-align:center;font:700 13px var(--mono)}.choice.static{border-color:#3e80c9}.choice.static .result{background:#58a6ff1c;color:#9bd0ff}.choice.dynamic{border-color:#288966}.choice.dynamic .result{background:#50e3a41c;color:#8ff0c6}.choice.pending{border-color:#9b4350}.choice.pending .result{background:#ff6b7a1c;color:#ff9ca6}
+.compare{width:100%;border-collapse:separate;border-spacing:0;font-size:18px;border:1px solid var(--line);border-radius:15px;overflow:hidden}.compare th,.compare td{padding:15px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left}.compare th{background:#11253c;color:#9ec8ec;font-size:15px}.compare tr:last-child td{border-bottom:0}.compare th:last-child,.compare td:last-child{border-right:0}.compare td:first-child{font:700 16px var(--mono);color:var(--cyan)}
+.bind{display:grid;grid-template-columns:1fr 120px 1fr;align-items:center;margin-top:16px}.claim{border:2px dashed var(--blue);border-radius:18px;padding:30px;text-align:center;background:#58a6ff10}.pv{border:2px solid var(--green);border-radius:18px;padding:30px;text-align:center;background:#50e3a410}.bindlink{height:4px;background:linear-gradient(90deg,var(--blue),var(--green));position:relative}.active .bindlink::before{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:white;top:-6px;box-shadow:0 0 18px white;animation:packet 1.8s ease-in-out infinite}@keyframes packet{from{left:0}to{left:calc(100% - 16px)}}
+.pipeline{display:grid;grid-template-columns:repeat(7,auto);align-items:center;margin:30px 0}.pipeline .resource{padding:19px 10px;min-width:160px}.pipeline .arrow{width:40px}.pipeline .resource strong{font-size:15px}.pipeline .resource p{font-size:13px}.roleline{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}.role{padding:13px;border-top:3px solid var(--blue);background:#58a6ff0d;font-size:15px;color:var(--muted)}.role b{display:block;color:var(--text);margin-bottom:5px}
+.modes{display:grid;grid-template-columns:245px 190px 1fr;align-items:center;border:1px solid var(--line);border-radius:14px;overflow:hidden}.modes>*{padding:12px 16px;border-bottom:1px solid var(--line)}.modes>*:nth-last-child(-n+3){border-bottom:0}.modes .mode{font:700 18px var(--mono);color:var(--cyan);background:#10233a}.modes .mode small{display:block;margin-top:4px;color:#91a9bd;font:12px var(--mono)}.modes .scope{color:#d4e4f1}.modes .desc{color:var(--muted)}
+.stateful{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:12px}.identity{border:1px solid var(--line);border-radius:16px;padding:17px;text-align:center}.identity .podid{background:#58a6ff16;border:1px solid var(--blue);border-radius:10px;padding:13px;font:700 16px var(--mono)}.identity .down{height:28px;width:2px;background:var(--cyan);margin:auto}.identity .pvcid{background:#50e3a414;border:1px solid var(--green);border-radius:10px;padding:13px;font:700 15px var(--mono);color:#9bf3cd}
+.dangerflow{display:grid;grid-template-columns:1fr 55px 1fr 55px 1fr;align-items:center}.dangerflow .arrow{background:var(--red)}.dangerflow .arrow::after{border-left-color:var(--red)}.policy{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}.policy .card{padding:17px}.policy h3{font:700 18px var(--mono)}
+#help{position:fixed;inset:0;background:#020711eF;z-index:50;display:none;place-items:center}#help.on{display:grid}.helpbox{width:560px;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:30px}.helpbox h3{font-size:26px;margin-bottom:17px}.helpgrid{display:grid;grid-template-columns:120px 1fr;gap:11px;font-size:17px}.helpgrid code{color:var(--cyan);font:16px var(--mono)}
+#notes{position:fixed;z-index:40;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;background:#030914f5;border-top:3px solid var(--cyan);padding:22px 60px;display:none;color:#d6e7f4;font-size:17px;line-height:1.7}#notes.on{display:block}#notes b{color:var(--yellow)}aside.notes{display:none}
+@media print{html,body{overflow:visible;background:white}.stage{position:static;display:block}.deck{width:1280px;height:auto;transform:none!important}.deck::before{display:none}.slide{position:relative;width:1280px;height:720px;opacity:1!important;visibility:visible!important;transform:none!important;page-break-after:always}.step{opacity:1!important;transform:none!important;filter:none!important}.progress,.counter,#help,#notes{display:none!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main class="stage"><div class="deck" id="deck">
+
+<section class="slide title active">
+  <div class="question">QUESTION · 컨테이너의 <span class="mountmark">/data</span>는 실제로 어디에 있을까?</div>
+  <h1><span class="gradient">Kubernetes<br>Volume</span></h1>
+  <p class="sub">컨테이너의 경로에서 실제 스토리지까지</p>
+  <div class="foot"><span>KUBERNETES STUDY · WEEK 03</span></div>
+  <aside class="notes"><b>오프닝 질문:</b> 컨테이너 안에서 /data에 파일을 썼을 때 실제 데이터는 어디로 갈까요? 오늘은 이 경로를 끝까지 추적해 보겠습니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">00</span>MENTAL MODEL</div>
+  <h2>Kubernetes <span class="accent">Volume</span>이란?</h2>
+  <div class="card blue step" style="padding:21px 28px;text-align:center">
+    <p style="font-size:25px;line-height:1.55;color:#dcecf8"><b>Pod가 사용할 저장소 Source를 선언하고,</b><br>컨테이너 파일시스템의 특정 경로에 Mount하여 접근하게 만드는 추상화</p>
+  </div>
+  <div class="grid3" style="margin-top:24px">
+    <div class="card step"><span class="tag">SOURCE</span><h3>어디의 데이터인가?</h3><p>메모리 · 노드 디스크<br>외부 스토리지 · PVC</p></div>
+    <div class="card step"><span class="tag green">MOUNT</span><h3>어디에서 보이는가?</h3><p>컨테이너가 선택하여<br><code>mountPath: /data</code></p></div>
+    <div class="card step"><span class="tag yellow">LIFECYCLE</span><h3>언제까지 남는가?</h3><p>컨테이너 · Pod<br>또는 Pod와 독립</p></div>
+  </div>
+  <div class="card yellow step" style="margin-top:20px;padding:14px 20px;text-align:center"><p><b>Volume은 Pod에 정의된다.</b> 각 컨테이너는 필요한 Volume만 자신의 경로에 명시적으로 마운트한다.</p></div>
+  <div class="foot"><span>오늘 가져갈 관점</span><span>경로 ≠ 저장 위치</span></div>
+  <aside class="notes">오늘 사용할 Volume의 정의입니다. Volume은 물리 디스크 하나를 뜻하지 않습니다. Pod가 사용할 저장소 source와 컨테이너에서 보일 경로를 연결하는 Kubernetes의 추상화입니다. Pod의 volumes에 source를 정의하고 각 컨테이너의 volumeMounts가 이름으로 선택해 mountPath에 연결합니다. 같은 Volume을 여러 컨테이너가 마운트할 수도 있고, 아무 Volume도 마운트하지 않는 컨테이너도 있습니다. 데이터의 실제 위치와 생명주기는 emptyDir, PVC 같은 Volume 종류에 따라 달라집니다. 일반적으로 파일시스템 경로로 마운트하지만 raw block을 volumeDevices로 제공하는 방식도 있습니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">00</span>AGENDA</div>
+  <h2>오늘의 흐름</h2>
+  <div class="agenda">
+    <div class="num step">01</div><div class="item step">데이터는 어디에 있는가?<span>컨테이너 · 노드 · 외부 스토리지</span></div>
+    <div class="num step">02</div><div class="item step">얼마나 오래 살아야 하는가?<span>Ephemeral · Persistent</span></div>
+    <div class="num step">03</div><div class="item step">누가 준비하고 연결하는가?<span>PV · PVC · StorageClass · CSI</span></div>
+    <div class="num step">04</div><div class="item step">운영에서 무엇을 결정하는가?<span>Access Mode · StatefulSet · 삭제 정책</span></div>
+  </div>
+  <div class="foot"><span>위치 → 생명주기 → 연결 → 운영</span><span>25–30 min</span></div>
+  <aside class="notes">기능 목록을 외우기보다 네 질문을 순서대로 따라갑니다. 어디 있는가, 얼마나 사는가, 누가 연결하는가, 운영에서 무엇을 확인하는가입니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">01</span>CONTAINER LAYER</div>
+  <h2>이미지 위의 <span class="yellow">얇은 쓰기 레이어</span></h2>
+  <div class="split">
+    <div>
+      <p class="lead">컨테이너마다 이미지 위에<br><b>쓰기 가능한 레이어</b>가 생긴다.</p>
+      <div class="trash step"><span class="icon">⌫</span> 컨테이너 재생성 → 새 writable layer</div>
+    </div>
+    <div class="layers">
+      <div class="layer write step">Container writable layer</div>
+      <div class="layer base step">Application layer</div>
+      <div class="layer base step">Runtime layer</div>
+      <div class="layer base step">Base image · read only</div>
+    </div>
+  </div>
+  <div class="foot"><span>컨테이너 파일시스템</span><span>임시 · 컨테이너별</span></div>
+  <aside class="notes">이미지는 읽기 전용 레이어입니다. 실행할 때 컨테이너 인스턴스마다 쓰기 레이어가 올라갑니다. 기존 컨테이너가 삭제되고 새 컨테이너가 생성되면 새 쓰기 레이어를 사용하므로 이전 레이어의 파일을 이어받지 못합니다. 런타임이 기존 레이어를 즉시 물리적으로 지우지 않더라도 새 컨테이너에서는 접근할 수 없고 나중에 정리됩니다. 같은 프로세스만 컨테이너 내부에서 다시 시작하는 상황과는 구분해야 합니다.</aside>
+</section>
+
+<section class="slide" style="padding-bottom:90px">
+  <div class="kicker"><span class="n">01</span>MOUNT</div>
+  <h2>컨테이너는 <span class="accent">경로만</span> 본다</h2>
+  <div class="pathmap">
+    <div class="nodebox step" data-from="left">
+      <div class="pod">
+        <div class="container">Container<br><div class="mount">/data</div></div>
+      </div>
+    </div>
+    <div class="connector step"></div>
+    <div class="step" data-from="right">
+      <div class="disk">REAL DATA<br><span class="small">node or external</span></div>
+    </div>
+  </div>
+  <p class="center lead step" style="font-size:24px;line-height:1.3">Mount는 컨테이너의 경로와 실제 저장소를 <b class="accent">이어 붙인다.</b></p>
+  <div class="foot"><span>volumeMounts ↔ volumes</span><span>/data는 인터페이스</span></div>
+  <aside class="notes">볼륨이 컨테이너 안에 들어간다기보다, 실제 저장소가 컨테이너의 mount namespace 안 특정 경로에 연결된다고 보는 것이 정확합니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">01</span>SHARING</div>
+  <h2>하나의 Volume, 여러 컨테이너</h2>
+  <div class="pod-share-frame">
+    <div class="share-containers">
+      <div class="share-container step" data-from="left"><h3>CONTAINER A · APP</h3><span class="operation">WRITE</span>컨테이너에서 보이는 위치<span class="mount-decl">mountPath: /var/log/app</span><code>shared-data:/ = /var/log/app</code></div>
+      <div class="share-container read step" data-from="right"><h3>CONTAINER B · SIDECAR</h3><span class="operation">READ</span>컨테이너에서 보이는 위치<span class="mount-decl">mountPath: /logs</span><code>shared-data:/ = /logs</code></div>
+    </div>
+    <div class="share-tree step"><i class="leg left"></i><i class="leg right"></i><i class="bridge"></i><i class="trunk"></i><i class="packet"></i></div>
+    <div class="shared-volume step"><strong>shared-data Volume의 루트 · /</strong><span class="same-file">실제 파일 · /output.log</span></div>
+  </div>
+  <div class="card green step" style="margin-top:12px;padding:11px;text-align:center"><p style="font-family:var(--mono);font-size:15px"><b>A:/var/log/app/output.log</b> = <b>VOLUME:/output.log</b> = <b>B:/logs/output.log</b></p></div>
+  <div class="card yellow step" style="margin-top:9px;padding:10px;text-align:center"><p style="font-size:15px"><b>mountPath는 Volume 안에 만드는 경로가 아니다.</b> Volume의 루트가 컨테이너에서 나타날 위치다.</p></div>
+  <div class="foot"><span>Pod-level resource</span><span>sidecar · init container</span></div>
+  <aside class="notes">mountPath는 Volume 내부에 디렉터리를 만드는 설정이 아닙니다. Volume의 루트 슬래시가 해당 컨테이너에서 어느 경로로 보일지를 정합니다. A에서는 shared-data의 루트가 /var/log/app으로 보이고, B에서는 같은 루트가 /logs로 보입니다. 따라서 Volume 내부의 /output.log 하나가 A에게는 /var/log/app/output.log, B에게는 /logs/output.log입니다. 만약 A가 Volume 안의 /a를, B가 /b를 따로 마운트하는 subPath 설정을 사용한다면 그때는 같은 파일이 아닙니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">01</span>LOCATION</div>
+  <h2>실제 저장 위치 <span class="accent">세 가지</span></h2>
+  <div class="grid3">
+    <div class="card place step shine"><div class="ico">▱</div><strong>Container layer</strong><p>가장 가까움<br>컨테이너 교체에 취약</p><div class="metric"><i class="on"></i><i></i><i></i></div></div>
+    <div class="card place blue step shine"><div class="ico">▰</div><strong>Node local</strong><p>빠른 접근<br>노드에 종속</p><div class="metric"><i class="on"></i><i class="on"></i><i></i></div></div>
+    <div class="card place green step shine"><div class="ico">◉</div><strong>External storage</strong><p>Pod 이동 가능<br>별도 스토리지 시스템</p><div class="metric"><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+  </div>
+  <div class="foot"><span>성능 · 이동성 · 장애 범위</span><span>위치는 설계 선택</span></div>
+  <aside class="notes">세 위치는 단순히 좋고 나쁨이 아닙니다. 가까울수록 빠르고 단순하지만 실행 위치에 묶입니다. 외부 스토리지는 이동성을 주는 대신 연결 과정과 비용이 생깁니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">01</span>NODE LOCAL</div>
+  <h2>로컬 데이터는 Pod의 <span class="yellow">발목을 잡는다</span></h2>
+  <div class="nodes">
+    <div class="kube-node step"><h3>NODE A</h3><div class="podchip">Pod A · cache</div><div class="podchip">Pod B · jobs</div><div class="diskbar"><span class="small">DISK / I/O</span><div class="bar"><div class="fill"></div></div></div></div>
+    <div class="kube-node step"><h3>NODE B</h3><div class="podchip" style="opacity:.35">새로 스케줄된 Pod A?</div><div class="diskbar"><span class="small">LOCAL DATA 없음</span><div class="bar"></div></div></div>
+    <div class="no-route step">×</div>
+  </div>
+  <div class="grid3" style="margin-top:20px">
+    <div class="small step">용량과 I/O가 특정 노드에 집중</div><div class="small step">데이터 위치가 스케줄링 조건</div><div class="small step">노드 장애 시 즉시 이동 어려움</div>
+  </div>
+  <div class="foot"><span>emptyDir · hostPath · Local PV</span><span>노드 종속성</span></div>
+  <aside class="notes">특정 노드에 볼륨이 많다는 것은 디스크 용량만의 문제가 아닙니다. I/O 병목과 Pod 배치 제약이 함께 생깁니다. 로컬 PV는 node affinity로 데이터가 있는 노드를 지정합니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">01</span>STORAGE-AWARE SCHEDULING</div>
+  <h2>그래서, 스토리지를 옮길 수 없다면 <span class="accent">Pod를 보낸다</span></h2>
+  <div class="storage-schedule">
+    <div class="request-pod step" data-from="left">
+      <h3>PENDING POD</h3>
+      <span class="request-badge">ephemeral-storage: 100Gi</span>
+      <span class="request-badge">required storage: local-fast</span>
+    </div>
+    <div class="scheduler step"><span>SCHEDULER</span><div class="route"></div><span>FILTER<br>+ SCORE</span></div>
+    <div class="capacity-nodes">
+      <div class="capacity-node chosen step"><span class="selected">SELECTED</span><h3>NODE A · storage=fast</h3><div class="cap-num">1.6 TiB</div><span class="small">available</span><div class="capbar"><i></i></div><div class="data-pin">● required data: local-fast</div></div>
+      <div class="capacity-node step"><h3>NODE B · standard</h3><div class="cap-num">40 GiB</div><span class="small">available</span><div class="capbar"><i></i></div><div class="data-pin muted">○ required data 없음</div></div>
+    </div>
+  </div>
+  <div class="schedule-rules">
+    <div class="schedule-rule step"><b>용량 요청</b><code>ephemeral-storage</code> request와 노드 가용 자원을 비교</div>
+    <div class="schedule-rule step"><b>데이터 위치</b>스토리지 위치 조건이 가능한 노드를 제한</div>
+    <div class="schedule-rule step"><b>빠른·큰 디스크 선호</b>label과 <code>nodeAffinity</code>로 의도를 명시해야 함</div>
+  </div>
+  <div class="card yellow step" style="margin-top:14px;padding:12px 18px;text-align:center"><p>스케줄러가 디스크 속도를 자동 추측하지는 않는다. <b>요청·Affinity·스토리지 토폴로지</b>로 표현한다.</p></div>
+  <div class="foot"><span>local storage problem → Pod placement</span><span>capacity · affinity · topology</span></div>
+  <aside class="notes">앞 페이지에서 로컬 데이터는 노드에 묶인다는 문제를 봤습니다. 그래서 노드 A에 큰 로컬 디스크와 필요한 데이터가 있다면 노드 B가 그 디스크를 원격으로 가져다 쓰는 것이 아니라 Pod가 A로 갑니다. 여기서는 아직 PV를 배우기 전이므로 스토리지 위치 조건이라는 개념까지만 설명합니다. 뒤에서 Local PV를 배우면 이 조건이 PV의 nodeAffinity로 표현된다는 사실과 연결합니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">01</span>POD MOVEMENT</div>
+  <h2>“다른 노드의 볼륨을 마운트한다”?</h2>
+  <div class="migration">
+    <div class="move-pod step"><b>NODE A</b><br><span class="small">Pod · old</span></div>
+    <div class="detach step">① detach<br>← · →</div>
+    <div class="storage-center step"><b>External Storage</b><br><span class="small">block or network file</span></div>
+    <div class="detach step">② attach<br>← · →</div>
+    <div class="move-pod fly step"><b>NODE B</b><br><span class="small">Pod · new</span></div>
+  </div>
+  <div class="grid2" style="margin-top:24px">
+    <div class="card yellow step" style="padding:18px"><h3>외부 Block Volume</h3><p>노드에 <b>디스크 장치</b>로 attach → 노드가 파일시스템을 mount<br>일반적으로 한 노드에서 쓰기</p></div>
+    <div class="card green step" style="padding:18px"><h3>공유 File System</h3><p>NFS·CephFS 같은 프로토콜로 <b>디렉터리</b>를 mount<br>지원하면 여러 노드가 같은 파일 공유</p></div>
+  </div>
+  <div class="card blue step" style="margin-top:14px;padding:11px 18px;text-align:center"><p><b>둘 다 네트워크 기반일 수 있다.</b> 차이는 Block Device를 받는가, File System 서비스를 받는가.</p></div>
+  <div class="foot"><span>device attach vs filesystem mount</span><span>실제 동시 접근은 드라이버·Access Mode 확인</span></div>
+  <aside class="notes">Block과 File의 차이는 네트워크 사용 여부가 아니라 제공되는 인터페이스입니다. 클라우드 Block Storage도 보통 네트워크를 통해 노드에 연결되지만 운영체제에는 디스크 장치로 보입니다. 노드가 그 장치를 포맷하고 파일시스템을 마운트합니다. NFS나 CephFS는 스토리지 서버가 파일시스템을 관리하고 노드는 원격 디렉터리를 마운트합니다. Block은 보통 한 노드 읽기·쓰기, 공유 File System은 여러 노드 RWX에 적합하지만 실제 가능 여부는 CSI 드라이버와 Access Mode를 확인해야 합니다.</aside>
+</section>
+
+<section class="slide" style="padding-bottom:90px">
+  <div class="kicker"><span class="n">02</span>LIFECYCLE</div>
+  <h2>Volume을 나누는 첫 질문</h2>
+  <div class="life-question step">Pod가 삭제된 뒤에도 데이터가 필요한가?</div>
+  <div class="life-branch step"><i class="trunk"></i><i class="rail"></i><i class="leg left"></i><i class="leg right"></i></div>
+  <div class="life-grid">
+    <div class="card blue step" data-from="left"><span class="tag">NO · POD-SCOPED</span><h3>Ephemeral Volume</h3><p>Pod를 위해 만들어지고<br>대체로 Pod와 함께 사라진다.</p><div class="life">생명주기 · <span>Pod</span></div></div>
+    <div class="card green step" data-from="right"><span class="tag green">YES · SEPARATE LIFECYCLE</span><h3>Persistent Volume</h3><p>Pod와 분리된 저장 자원으로<br>재생성 후에도 다시 연결한다.</p><div class="life">생명주기 · <span>Pod와 분리</span></div></div>
+  </div>
+  <div class="card yellow step" style="text-align:center;padding:12px 22px;margin-top:18px"><p>이름보다 중요한 것: <b>삭제 시점과 정책을 확인한다.</b></p></div>
+  <div class="foot"><span>임시 vs 영구</span><span>수명부터 결정</span></div>
+  <aside class="notes">큰 분류는 생명주기입니다. 다만 이름만 믿지 말고 실제 삭제 정책을 확인해야 합니다. 예를 들어 PV도 reclaim policy가 Delete면 PVC 삭제 후 실제 스토리지가 삭제될 수 있습니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">02</span>EPHEMERAL</div>
+  <h2>컨테이너 재시작 ≠ Pod 재생성</h2>
+  <div class="timeline">
+    <div class="event step"><div class="circle">＋</div><p>Pod 생성<br><span class="small">emptyDir 생성</span></p></div>
+    <div class="time-line step"></div>
+    <div class="event step"><div class="circle">↻</div><p>컨테이너 재시작</p><div class="survive">DATA SURVIVES</div></div>
+    <div class="time-line step"></div>
+    <div class="event danger step"><div class="circle">×</div><p>Pod 삭제<br><span class="small">Volume도 제거</span></p></div>
+  </div>
+  <div class="card red step" style="margin-top:45px;text-align:center"><p><b>재시작(restart)</b>과 <b>재생성(re-create)</b>을 구분해야 한다.</p></div>
+  <div class="foot"><span>Ephemeral lifecycle</span><span>Pod UID가 경계</span></div>
+  <aside class="notes">emptyDir은 컨테이너가 죽었다 살아나도 남아 있습니다. kubelet이 같은 Pod 안에서 컨테이너만 다시 띄우기 때문입니다. Deployment가 새 Pod를 만들면 다른 emptyDir입니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">02</span>EMPTYDIR</div>
+  <h2><code class="accent">emptyDir</code> — Pod의 작업대</h2>
+  <div class="grid2">
+    <pre class="code step"><span class="k">spec:</span>
+  <span class="k">containers:</span>
+  - <span class="k">name:</span> app
+    <span class="k">volumeMounts:</span>
+    - <span class="k">name:</span> workspace
+      <span class="k">mountPath:</span> <span class="v">/work</span>
+  <span class="focusline"><span class="k">volumes:</span>
+  - <span class="k">name:</span> workspace
+    <span class="k">emptyDir:</span> {}</span></pre>
+    <div>
+      <div class="card green step"><span class="tag green">GOOD FIT</span><h3>캐시 · 임시 계산 · 파일 공유</h3><p>같은 Pod 안에서 빠르고 단순한 작업 공간</p></div>
+      <div class="card yellow step" style="margin-top:17px"><h3>옵션</h3><p><code>sizeLimit</code>으로 크기 제한<br><code>medium: Memory</code>로 tmpfs 사용</p></div>
+      <div class="card red step" style="margin-top:17px"><p>중요 데이터와 백업 없는 DB에는 부적합</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>가장 대표적인 Ephemeral Volume</span><span>Pod 삭제 시 제거</span></div>
+  <aside class="notes">emptyDir이라는 이름이 디스크의 빈 디렉터리만 뜻하지는 않습니다. 기본은 노드의 ephemeral storage를 사용하고, Memory를 지정하면 메모리 기반 tmpfs를 사용합니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">03</span>PERSISTENT STORAGE · ENTRY</div>
+  <h2>외부 Block·File Storage는 <span class="accent">어떻게 사용할까?</span></h2>
+  <div class="pipeline" style="margin:18px 0 26px">
+    <div class="resource step"><strong>POD</strong><p>“데이터가 Pod보다<br>오래 남아야 해”</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>PVC · REQUEST</strong><p>10Gi · RWO<br>필요 조건 요청</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>PV · RESOURCE</strong><p>실제 스토리지를<br>클러스터 자원으로 표현</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>EXTERNAL</strong><p>Block Volume<br>또는 File System</p></div>
+  </div>
+  <div class="grid2" style="margin-top:28px">
+    <div class="card blue step"><span class="tag">PVC</span><h3>애플리케이션의 요청서</h3><p>용량·접근 방식·StorageClass를 말하고 실제 제품은 모른다.</p></div>
+    <div class="card green step"><span class="tag green">PV</span><h3>스토리지의 Kubernetes 표현</h3><p>외부 디스크·파일시스템과 연결된 클러스터 자원이다.</p></div>
+  </div>
+  <div class="card yellow step" style="margin-top:18px;padding:13px 18px;text-align:center"><p><b>애플리케이션은 PVC만 사용한다.</b> Kubernetes가 조건에 맞는 PV를 찾아 연결한다.</p></div>
+  <div class="foot"><span>Ephemeral → Persistent 질문으로 전환</span><span>Pod → PVC ↔ PV → External Storage</span></div>
+  <aside class="notes">지금까지 emptyDir처럼 Pod 안에서 시작하고 끝나는 임시 공간을 봤습니다. 그렇다면 외부 Block Volume이나 공유 File System을 Pod가 어떻게 사용할까요? 애플리케이션이 제품 주소나 디스크 ID를 직접 적는 대신 PVC로 필요한 조건을 요청합니다. PV는 실제 외부 스토리지를 Kubernetes 클러스터 자원으로 표현합니다. Pod는 PVC 이름만 알고, Kubernetes가 PVC 조건에 맞는 PV를 연결합니다. 다음 장에서 PV를 미리 만들어야 하는지, 자동으로 만들 수 있는지를 이어서 봅니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">03</span>STATIC vs DYNAMIC</div>
+  <h2>PV는 <span class="accent">먼저</span> 만들어야 할까?</h2>
+  <div class="provision-start step"><strong>PVC CREATED</strong><span class="small">10Gi · RWO · storageClassName: fast</span></div>
+  <div class="choicegrid">
+    <div class="choice static step" data-from="left"><span class="case">CASE 1 · STATIC</span><h3>맞는 PV가 이미 있다</h3><ol><li>관리자가 스토리지 준비</li><li>PV를 미리 생성</li><li>컨트롤러가 조건 비교</li></ol><div class="result">PVC ↔ EXISTING PV · BOUND</div></div>
+    <div class="choice dynamic step"><span class="case">CASE 2 · DYNAMIC</span><h3>PV는 없지만 SC가 있다</h3><ol><li>StorageClass 선택</li><li>CSI가 외부 볼륨 생성</li><li>PV를 자동 생성</li></ol><div class="result">PVC ↔ NEW PV · BOUND</div></div>
+    <div class="choice pending step" data-from="right"><span class="case">CASE 3 · NO SOURCE</span><h3>PV도 SC도 없다</h3><ol><li>맞는 기존 PV 없음</li><li>동적 생성 방법 없음</li><li>볼륨을 준비할 수 없음</li></ol><div class="result">PVC · PENDING</div></div>
+  </div>
+  <div class="card yellow step" style="margin-top:17px;padding:12px 18px;text-align:center"><p>PVC가 직접 만드는 것이 아니라 <b>CSI provisioner가 PVC를 보고 실제 스토리지와 PV를 생성</b>한다.</p></div>
+  <div class="foot"><span>Static = PV first · Dynamic = PVC first</span><span>없고 만들 수도 없으면 Pending</span></div>
+  <aside class="notes">PV가 항상 먼저 필요한 것은 아닙니다. 정적 방식은 관리자가 실제 디스크와 PV를 먼저 준비합니다. 동적 방식은 PVC가 먼저 생기고, StorageClass가 지정한 CSI provisioner가 실제 스토리지와 PV를 만듭니다. 둘 다 없으면 PVC는 Pending에 머물고 이 PVC를 쓰는 Pod도 실행되지 못합니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">03</span>DYNAMIC PROVISIONING</div>
+  <h2>동적 경로 확대: PVC가 실제 디스크가 되기까지</h2>
+  <div class="pipeline">
+    <div class="resource step"><strong>1 · PVC</strong><p>10Gi 요청</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>2 · StorageClass</strong><p>종류·정책 선택</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>3 · Provisioner</strong><p>스토리지 생성</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>4 · PV Bound</strong><p>PVC와 결합</p></div>
+  </div>
+  <div class="roleline">
+    <div class="role step"><b>StorageClass</b>“어떤 스토리지를 어떻게 만들까?”</div>
+    <div class="role step"><b>volumeBindingMode</b>필요하면 Pod의 배치 위치를 확인한 뒤 생성</div>
+    <div class="role step"><b>reclaimPolicy</b>PVC 삭제 후 실제 데이터를 어떻게 할까?</div>
+  </div>
+  <div class="foot"><span>정적 PV를 미리 만들 필요 없음</span><span>StorageClass = 생성 정책</span></div>
+  <aside class="notes">동적 프로비저닝이 일반적인 경로입니다. 토폴로지 제약이 있는 스토리지는 WaitForFirstConsumer를 써서 Pod가 어느 존과 노드에 갈지 정한 뒤 볼륨을 만들 수 있습니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">03</span>EXTERNAL VOLUME · CSI</div>
+  <h2>외부 볼륨을 노드에 <span class="accent">가져다 붙이는 과정</span></h2>
+  <div class="pipeline">
+    <div class="resource step"><strong>PVC ↔ PV</strong><p>사용할 외부 볼륨 결정</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>SCHEDULE</strong><p>Pod가 실행될 노드 선택</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>CSI ATTACH</strong><p>외부 볼륨을 노드에 연결</p></div><div class="arrow pulse step"></div>
+    <div class="resource step"><strong>MOUNT /data</strong><p>컨테이너 경로에 게시</p></div>
+  </div>
+  <div class="grid2" style="margin-top:26px">
+    <div class="card blue step"><span class="tag">BLOCK STORAGE</span><h3>클라우드 디스크 등</h3><p>기존 노드에서 detach한 뒤 대상 노드에 attach하는 경우가 일반적</p></div>
+    <div class="card green step"><span class="tag green">NETWORK FILE</span><h3>NFS · CephFS 등</h3><p>별도 attach 없이 노드에서 네트워크로 mount할 수도 있음</p></div>
+  </div>
+  <div class="card yellow step" style="margin-top:18px;padding:14px 20px;text-align:center"><p><b>PV는 외부 디스크 그 자체가 아니라 연결 정보를 표현하는 Kubernetes 객체</b> · 실제 작업은 CSI 드라이버가 수행</p></div>
+  <div class="foot"><span>PVC = 요청 · SC = 생성 정책 · PV = 연결 정보 · CSI = 실행</span><span>external → node → container</span></div>
+  <aside class="notes">맞습니다. 외부 볼륨을 가져다 붙이는 주체는 CSI 드라이버입니다. PVC가 요구사항을 내고 StorageClass가 생성 방식을 고르며, 만들어진 또는 기존 외부 볼륨은 PV로 표현됩니다. Pod가 노드에 배치되면 CSI가 블록 볼륨을 attach하고 kubelet 쪽 CSI 플러그인이 컨테이너의 /data에 mount합니다. NFS 같은 파일 스토리지는 attach 없이 바로 mount할 수도 있습니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">04</span>ACCESS MODES</div>
+  <h2>누가, 어디서, 어떻게 접근할까?</h2>
+  <div class="modes">
+    <div class="mode step">RWO<small>ReadWriteOnce</small></div><div class="scope step">Single node · RW</div><div class="desc step">한 노드에서 읽기·쓰기 · 같은 노드의 여러 Pod 가능</div>
+    <div class="mode step">ROX<small>ReadOnlyMany</small></div><div class="scope step">Many nodes · RO</div><div class="desc step">여러 노드에서 읽기 전용</div>
+    <div class="mode step">RWX<small>ReadWriteMany</small></div><div class="scope step">Many nodes · RW</div><div class="desc step">여러 노드에서 읽기·쓰기</div>
+    <div class="mode step">RWOP<small>ReadWriteOncePod</small></div><div class="scope step">Single Pod · RW</div><div class="desc step">클러스터에서 단 하나의 Pod만 읽기·쓰기</div>
+  </div>
+  <div class="card red step" style="margin-top:24px;text-align:center"><p><b>Access Mode는 데이터 동시성 보장이나 파일 잠금을 대신하지 않는다.</b></p></div>
+  <div class="foot"><span>드라이버 지원 여부 확인</span><span>RWO ≠ Pod 하나</span></div>
+  <aside class="notes">가장 흔한 오해는 RWO를 Pod 한 개로 읽는 것입니다. 정확히는 단일 노드 접근입니다. 정말 단일 Pod 쓰기가 필요하면 RWOP를 확인합니다. 지원 여부는 CSI 드라이버에 달려 있습니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">04</span>STATEFULSET</div>
+  <h2>Pod마다 <span class="accent">자기 데이터</span>를 갖는다</h2>
+  <div class="stateful">
+    <div class="identity step"><div class="podid">db-0</div><div class="down"></div><div class="pvcid">data-db-0</div></div>
+    <div class="identity step"><div class="podid">db-1</div><div class="down"></div><div class="pvcid">data-db-1</div></div>
+    <div class="identity step"><div class="podid">db-2</div><div class="down"></div><div class="pvcid">data-db-2</div></div>
+  </div>
+  <div class="card green step" style="margin-top:28px;text-align:center"><p>Pod가 다시 만들어져도 <b>같은 이름 + 같은 PVC</b>를 다시 사용</p></div>
+  <p class="small center step" style="margin-top:16px">StatefulSet 삭제가 PVC 자동 삭제를 항상 의미하지는 않는다 · retention policy 확인</p>
+  <div class="foot"><span>volumeClaimTemplates</span><span>stable identity</span></div>
+  <aside class="notes">StatefulSet은 replicas가 공유하는 볼륨 하나가 아니라 Pod마다 고유 PVC를 만듭니다. 데이터베이스 샤드나 복제본마다 디스크가 따로 생기는 구조입니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">04</span>DATA SAFETY</div>
+  <h2><span class="red">PVC 삭제</span> 버튼 뒤에서 일어나는 일</h2>
+  <div class="dangerflow">
+    <div class="resource step"><strong>PVC DELETE</strong><p>사용자의 요청</p></div><div class="arrow step"></div>
+    <div class="resource step"><strong>PV RELEASED</strong><p>claim 연결 해제</p></div><div class="arrow step"></div>
+    <div class="resource step"><strong>STORAGE?</strong><p>정책에 따라 보존·삭제</p></div>
+  </div>
+  <div class="policy">
+    <div class="card green step"><h3 class="accent">Retain</h3><p>PV와 실제 데이터의 수동 복구·정리가 필요</p></div>
+    <div class="card red step"><h3 class="red">Delete</h3><p>PV와 외부 스토리지 자원이 함께 삭제될 수 있음</p></div>
+  </div>
+  <div class="grid3" style="margin-top:18px">
+    <div class="small step">✓ 백업·복구 테스트</div><div class="small step">✓ VolumeSnapshot 지원</div><div class="small step">✓ 온라인 확장 조건</div>
+  </div>
+  <div class="foot"><span>reclaimPolicy · finalizer · backup</span><span>삭제 전 정책 확인</span></div>
+  <aside class="notes">개발 환경의 기본 StorageClass는 Delete인 경우가 많습니다. PVC 삭제가 클라우드 디스크 삭제까지 이어질 수 있습니다. 중요한 데이터는 백업과 복구 테스트가 먼저입니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">05</span>YAML</div>
+  <h2>마운트 방식은 같고, <span class="accent">출처가 다르다</span></h2>
+  <div class="grid2">
+    <div><span class="tag">EPHEMERAL</span><pre class="code step"><span class="k">volumeMounts:</span>
+- <span class="k">name:</span> data
+  <span class="k">mountPath:</span> <span class="v">/data</span>
+
+<span class="k">volumes:</span>
+- <span class="k">name:</span> data
+  <span class="focusline"><span class="k">emptyDir:</span> {}</span></pre></div>
+    <div><span class="tag green">PERSISTENT</span><pre class="code step"><span class="k">volumeMounts:</span>
+- <span class="k">name:</span> data
+  <span class="k">mountPath:</span> <span class="v">/data</span>
+
+<span class="k">volumes:</span>
+- <span class="k">name:</span> data
+  <span class="focusline"><span class="k">persistentVolumeClaim:</span>
+    <span class="k">claimName:</span> <span class="v">app-data</span></span></pre></div>
+  </div>
+  <div class="card step" style="margin-top:24px;text-align:center"><p>컨테이너 코드는 그대로 · Kubernetes가 <b>/data 뒤의 구현</b>을 바꾼다.</p></div>
+  <div class="foot"><span>volumeMounts + volumes</span><span>같은 인터페이스, 다른 수명</span></div>
+  <aside class="notes">애플리케이션은 둘 다 /data만 봅니다. Pod 명세에서 volume source를 emptyDir에서 PVC로 바꾸면 뒤쪽의 생명주기와 구현이 바뀝니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">05</span>CONFIG · DYNAMIC</div>
+  <h2>동적 방식: <span class="accent">StorageClass + PVC</span></h2>
+  <div class="grid2">
+    <div><span class="tag">storage-class.yaml · AWS EBS 예시</span><pre class="code step" style="font-size:14px;line-height:1.4"><span class="k">apiVersion:</span> storage.k8s.io/v1
+<span class="k">kind:</span> StorageClass
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="v">fast-block</span>
+<span class="k">provisioner:</span> ebs.csi.aws.com
+<span class="k">parameters:</span>
+  <span class="k">type:</span> <span class="v">gp3</span>
+<span class="k">reclaimPolicy:</span> Delete
+<span class="k">volumeBindingMode:</span> WaitForFirstConsumer
+<span class="k">allowVolumeExpansion:</span> true</pre></div>
+    <div><span class="tag green">pvc.yaml</span><pre class="code step" style="font-size:14px;line-height:1.4"><span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> PersistentVolumeClaim
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="v">app-data</span>
+<span class="k">spec:</span>
+  <span class="k">storageClassName:</span> <span class="v">fast-block</span>
+  <span class="k">accessModes:</span>
+    - ReadWriteOnce
+  <span class="k">resources:</span>
+    <span class="k">requests:</span>
+      <span class="k">storage:</span> <span class="v">10Gi</span></pre></div>
+  </div>
+  <div class="card green step" style="margin-top:18px;padding:13px 18px;text-align:center"><p><code>PVC.spec.storageClassName: fast-block</code> → 같은 이름의 StorageClass 선택 → <b>PV 자동 생성</b></p></div>
+  <div class="foot"><span>환경에 따라 provisioner·parameters 변경</span><span>작성: SC + PVC · 자동: PV</span></div>
+  <aside class="notes">동적 방식에서는 StorageClass와 PVC를 작성합니다. 이 예시는 AWS EBS CSI의 gp3이므로 다른 환경에서는 provisioner와 parameters를 바꿔야 합니다. PVC가 fast-block을 요청하면 CSI provisioner가 실제 10Gi 디스크와 PV를 만들고 PVC와 바인딩합니다. WaitForFirstConsumer이므로 이 PVC를 쓰는 Pod의 배치 위치가 결정된 뒤 적절한 영역에 디스크를 만듭니다.</aside>
+</section>
+
+<section class="slide">
+  <div class="kicker"><span class="n">05</span>CONFIG · PRE-PROVISIONED PV</div>
+  <h2>정적 방식: <span class="accent">PV를 먼저 프로비저닝</span></h2>
+  <div class="grid2">
+    <div><span class="tag">pv.yaml · 기존 NFS 예시</span><pre class="code step" style="font-size:13px;line-height:1.32"><span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> PersistentVolume
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="v">app-nfs-pv</span>
+<span class="k">spec:</span>
+  <span class="k">capacity:</span>
+    <span class="k">storage:</span> <span class="v">10Gi</span>
+  <span class="k">accessModes:</span>
+    - ReadWriteMany
+  <span class="k">persistentVolumeReclaimPolicy:</span> Retain
+  <span class="k">storageClassName:</span> <span class="v">manual-nfs</span>
+  <span class="k">nfs:</span>
+    <span class="k">server:</span> <span class="v">10.0.0.20</span>
+    <span class="k">path:</span> <span class="v">/exports/app</span></pre></div>
+    <div><span class="tag green">pvc.yaml</span><pre class="code step" style="font-size:13px;line-height:1.32"><span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> PersistentVolumeClaim
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="v">app-data</span>
+<span class="k">spec:</span>
+  <span class="k">storageClassName:</span> <span class="v">manual-nfs</span>
+  <span class="k">accessModes:</span>
+    - ReadWriteMany
+  <span class="k">resources:</span>
+    <span class="k">requests:</span>
+      <span class="k">storage:</span> <span class="v">5Gi</span></pre>
+      <div class="card blue step" style="margin-top:14px;padding:11px 13px"><p style="font-size:14px"><b>Binding 조건</b><br><code>storageClassName</code> 동일<br><code>accessModes</code> 호환<br>PV 용량 ≥ PVC 요청 용량<br><b>app-nfs-pv ↔ app-data · Bound</b></p></div></div>
+  </div>
+  <div class="foot"><span>외부 스토리지 → PV 먼저 → PVC 나중</span><span>END · Q &amp; A</span></div>
+  <aside class="notes">정적 방식에서는 관리자가 기존 NFS와 이를 나타내는 PV를 먼저 정의합니다. 이후 PVC의 storageClassName과 Access Mode가 PV와 같고, 요청 5Gi를 PV의 10Gi가 만족하므로 둘이 Bound 됩니다. 실제 환경에서는 NFS 서버와 export 경로를 바꿔야 합니다. 여기까지 설정한 app-data PVC를 앞 페이지의 Pod volume에서 claimName으로 참조하면 됩니다.</aside>
+</section>
+
+</div></main>
+<div class="progress" id="progress"></div><div class="counter" id="counter"></div>
+<div id="notes"></div>
+<div id="help"><div class="helpbox"><h3>발표 조작</h3><div class="helpgrid"><code>→ Space Click</code><span>다음 요소 또는 슬라이드</span><code>←</code><span>이전 요소 또는 슬라이드</span><code>F</code><span>전체 화면</span><code>N</code><span>발표자 노트</span><code>Home / End</code><span>처음 / 마지막 슬라이드</span><code>H</code><span>이 도움말 닫기</span></div></div></div>
+<script>
+(()=>{
+  const slides=[...document.querySelectorAll('.slide')];
+  const deck=document.getElementById('deck'),progress=document.getElementById('progress'),counter=document.getElementById('counter');
+  const notes=document.getElementById('notes'),help=document.getElementById('help');
+  let index=0,step=0;
+  function fit(){const s=Math.min(innerWidth/1280,innerHeight/720);deck.style.transform=`scale(${s})`}
+  function steps(i=index){return [...slides[i].querySelectorAll('.step')]}
+  function render(animate=true){
+    slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.classList.remove('leaving')});
+    const builds=steps();builds.forEach((el,i)=>el.classList.toggle('revealed',i<step));
+    progress.style.width=`${((index+(builds.length?step/(builds.length+1):0))/(slides.length-1))*100}%`;
+    counter.textContent=`${String(index+1).padStart(2,'0')} / ${String(slides.length).padStart(2,'0')}`;
+    const n=slides[index].querySelector('aside.notes');notes.innerHTML=n?n.innerHTML:'발표자 노트 없음';
+    history.replaceState(null,'',`#${index+1}`);
+  }
+  function next(){const b=steps();if(step<b.length){step++;render();return}if(index<slides.length-1){slides[index].classList.add('leaving');index++;step=0;render()}}
+  function prev(){if(step>0){step--;render();return}if(index>0){index--;step=steps(index).length;render()}}
+  function go(i,end=false){index=Math.max(0,Math.min(slides.length-1,i));step=end?steps(index).length:0;render()}
+  addEventListener('resize',fit);fit();
+  addEventListener('keydown',e=>{
+    if(e.key.toLowerCase()==='h'){help.classList.toggle('on');return}
+    if(e.key==='Escape'){help.classList.remove('on');notes.classList.remove('on');return}
+    if(e.key.toLowerCase()==='n'){notes.classList.toggle('on');return}
+    if(e.key.toLowerCase()==='f'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();return}
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();next()}
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();prev()}
+    if(e.key==='Home'){go(0)}if(e.key==='End'){go(slides.length-1,true)}
+  });
+  addEventListener('click',e=>{if(help.classList.contains('on')){help.classList.remove('on');return}if(e.target.closest('#notes'))return;next()});
+  let sx=0;addEventListener('touchstart',e=>sx=e.changedTouches[0].screenX,{passive:true});addEventListener('touchend',e=>{const dx=e.changedTouches[0].screenX-sx;if(Math.abs(dx)>50)(dx<0?next:prev)()},{passive:true});
+  const hash=parseInt(location.hash.slice(1),10);if(hash)index=Math.max(0,Math.min(slides.length-1,hash-1));render(false);
+})();
+</script>
+</body>
+</html>

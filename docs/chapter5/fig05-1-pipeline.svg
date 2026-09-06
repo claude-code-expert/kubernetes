@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow51" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .t-lane { font-size: 12.5px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-sec { font-size: 11px; fill: #2456c4; font-weight: 600; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- CI 레인 -->
+  <rect class="lane" x="20" y="30" width="500" height="150" rx="6"/>
+  <text class="t-lane" x="36" y="52">CI — 커밋마다 자동 실행</text>
+
+  <rect class="box" x="40" y="66" width="105" height="90" rx="4"/>
+  <text class="t-sec" x="92" y="82" text-anchor="middle">5.1</text>
+  <text class="t-title" x="92" y="102" text-anchor="middle">버전 관리</text>
+  <text class="t-sub" x="92" y="120" text-anchor="middle">main 브랜치</text>
+  <text class="t-sub" x="92" y="134" text-anchor="middle">작게 자주 커밋</text>
+
+  <rect class="box" x="165" y="66" width="105" height="90" rx="4"/>
+  <text class="t-sec" x="217" y="82" text-anchor="middle">5.2 · 5.3</text>
+  <text class="t-title" x="217" y="102" text-anchor="middle">빌드+테스트</text>
+  <text class="t-sub" x="217" y="120" text-anchor="middle">단위·통합 테스트</text>
+  <text class="t-sub" x="217" y="134" text-anchor="middle">실패 시 즉시 피드백</text>
+
+  <rect class="box" x="290" y="66" width="105" height="90" rx="4"/>
+  <text class="t-sec" x="342" y="82" text-anchor="middle">5.4</text>
+  <text class="t-title" x="342" y="102" text-anchor="middle">이미지 빌드</text>
+  <text class="t-sub" x="342" y="120" text-anchor="middle">멀티스테이지</text>
+  <text class="t-sub" x="342" y="134" text-anchor="middle">최소 베이스 이미지</text>
+
+  <rect class="box-accent" x="415" y="66" width="90" height="90" rx="4"/>
+  <text class="t-sec" x="460" y="82" text-anchor="middle">5.5</text>
+  <text class="t-title" x="460" y="102" text-anchor="middle">태깅</text>
+  <text class="t-sub" x="460" y="120" text-anchor="middle">불변 태그</text>
+  <text class="t-sub" x="460" y="134" text-anchor="middle">서명(cosign)</text>
+
+  <line class="line" x1="145" y1="111" x2="161" y2="111" marker-end="url(#arrow51)"/>
+  <line class="line" x1="270" y1="111" x2="286" y2="111" marker-end="url(#arrow51)"/>
+  <line class="line" x1="395" y1="111" x2="411" y2="111" marker-end="url(#arrow51)"/>
+
+  <!-- 레지스트리로 내려가는 화살표 -->
+  <line class="line" x1="460" y1="156" x2="460" y2="196" marker-end="url(#arrow51)"/>
+  <rect class="box" x="380" y="200" width="160" height="46" rx="4"/>
+  <text class="t-title" x="460" y="228" text-anchor="middle">컨테이너 레지스트리</text>
+
+  <!-- CD 레인 -->
+  <rect class="lane" x="20" y="270" width="860" height="150" rx="6"/>
+  <text class="t-lane" x="36" y="292">CD — 검증된 이미지를 사람 개입 없이 승격</text>
+
+  <rect class="box" x="40" y="306" width="150" height="90" rx="4"/>
+  <text class="t-sec" x="115" y="322" text-anchor="middle">5.6</text>
+  <text class="t-title" x="115" y="342" text-anchor="middle">환경 승격</text>
+  <text class="t-sub" x="115" y="360" text-anchor="middle">dev → staging</text>
+  <text class="t-sub" x="115" y="374" text-anchor="middle">→ production</text>
+
+  <rect class="box-accent" x="220" y="306" width="150" height="90" rx="4"/>
+  <text class="t-sec" x="295" y="322" text-anchor="middle">5.7</text>
+  <text class="t-title" x="295" y="342" text-anchor="middle">배포 전략</text>
+  <text class="t-sub" x="295" y="360" text-anchor="middle">롤링·블루/그린</text>
+  <text class="t-sub" x="295" y="374" text-anchor="middle">카나리</text>
+
+  <rect class="box" x="400" y="306" width="150" height="90" rx="4"/>
+  <text class="t-sec" x="475" y="322" text-anchor="middle">5.8</text>
+  <text class="t-title" x="475" y="342" text-anchor="middle">프로덕션 테스팅</text>
+  <text class="t-sub" x="475" y="360" text-anchor="middle">실트래픽 검증</text>
+  <text class="t-sub" x="475" y="374" text-anchor="middle">카오스 실험</text>
+
+  <rect class="box" x="580" y="306" width="270" height="90" rx="4"/>
+  <text class="t-sec" x="715" y="322" text-anchor="middle">18장 예고</text>
+  <text class="t-title" x="715" y="342" text-anchor="middle">깃옵스</text>
+  <text class="t-sub" x="715" y="360" text-anchor="middle">클러스터 상태 = Git 상태</text>
+  <text class="t-sub" x="715" y="374" text-anchor="middle">사람이 kubectl apply 안 함</text>
+
+  <line class="line" x1="190" y1="351" x2="216" y2="351" marker-end="url(#arrow51)"/>
+  <line class="line" x1="370" y1="351" x2="396" y2="351" marker-end="url(#arrow51)"/>
+  <line class="line" x1="550" y1="351" x2="576" y2="351" marker-end="url(#arrow51)"/>
+
+  <!-- 레지스트리 → CD -->
+  <line class="line" x1="460" y1="246" x2="460" y2="266"/>
+  <line class="line" x1="115" y1="266" x2="460" y2="266"/>
+  <line class="line" x1="115" y1="266" x2="115" y2="302" marker-end="url(#arrow51)"/>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="442" text-anchor="middle">5장의 절 번호가 파이프라인의 각 정거장이다 — 왼쪽에서 오른쪽으로 코드가 흐르며 신뢰를 쌓아간다.</text>
+</svg>

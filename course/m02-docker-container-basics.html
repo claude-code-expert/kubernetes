@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 1 · 도커] M02 컨테이너는 프로세스다 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 02 / 38 · PART 1 도커</div>
+  <h1>컨테이너는 프로세스다</h1>
+  <p class="ch-desc">컨테이너를 "가벼운 가상 머신"으로 배우면 나중에 반드시 막힌다. 실제로는 격리된 리눅스 프로세스 하나다. 이 모듈에서 같은 프로세스를 안에서는 PID 1로, 밖에서는 다섯 자리 PID로 확인한다.</p>
+  <div class="meta">
+    <span class="tag">초반</span><span class="tag">50분</span><span class="tag">Docker Engine 29.2.1</span>
+    <br>2026-09-03 macOS(Apple Silicon) · nginx:1.29-alpine · alpine:3.22 에서 전 명령 실행 검증 · 버전은 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m01-setup-environment.html">M01</a> 완료 — 컨테이너 런타임이 실행 중 (<code>docker version</code>에 Server 줄이 나온다)</li>
+    <li>kind 클러스터는 이 모듈에서 쓰지 않는다. 떠 있어도 상관없다</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. <code>docker exec web ps</code>의 PID 1과 <code>docker top web</code>의 호스트 PID를 <code>inspect</code>의 <code>State.Pid</code>로 맞춰 보고, 둘이 <strong>같은 프로세스의 두 이름</strong>임을 확인한다. 격리는 가림막이지 별도의 컴퓨터가 아니다.</p>
+  <p>2. <code>run</code> · <code>ps</code> · <code>logs</code> · <code>exec</code> · <code>stop</code> · <code>rm</code> 여섯 개로 컨테이너 하나의 수명 전체를 다루고, <code>ps -a</code>로 종료된 것까지 찾아 지운다.</p>
+  <p>3. <code>--memory=32m</code>을 걸어 일부러 넘기고, 아무 로그 없이 남은 종료 코드 <code>137</code>과 <code>OOMKilled=true</code>를 읽는다. 이 숫자를 M16에서 쿠버네티스의 <code>OOMKilled</code>로 다시 만난다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">2.1</span>왜 프로세스인지가 중요한가</a>
+  <a href="#s2"><span class="num">2.2</span>이론 — 격리를 만드는 두 기능</a>
+  <a href="#s3"><span class="num">2.3</span>따라하기 ① 실행하고 접속한다</a>
+  <a href="#s4"><span class="num">2.4</span>따라하기 ② 안과 밖에서 같은 프로세스 보기</a>
+  <a href="#s5"><span class="num">2.5</span>따라하기 ③ 자원 제한과 OOM</a>
+  <a href="#s6"><span class="num">2.6</span>수명 주기 정리</a>
+  <a href="#s7"><span class="num">2.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">2.8</span>체크포인트</a>
+  <a href="#s9"><span class="num">2.9</span>정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">2.1</span>왜 프로세스인지가 중요한가</h2>
+  <p class="lead">M01에서 만든 클러스터의 노드 3개는 도커 컨테이너였다. 그 안에서 다시 컨테이너가 돌고, 그것이 파드다. 이 구조가 이상하게 들린다면 컨테이너를 가상 머신으로 이해하고 있기 때문이다.</p>
+  <p>가상 머신은 게스트 운영체제 커널을 따로 부팅한다. 컨테이너는 그러지 않는다. <strong>호스트 커널을 그대로 쓰면서 시야만 가린다.</strong> 그래서 부팅이 없고, 시작이 밀리초 단위이며, 컨테이너 안에서 <code>uname -r</code>을 치면 호스트 커널 버전이 나온다.</p>
+  <p>이 차이는 나중에 실무 판단으로 이어진다. 컨테이너가 메모리를 넘게 쓰면 리눅스 커널의 OOM 킬러가 그 프로세스를 죽인다 — 애플리케이션의 예외 처리가 아니라 커널의 결정이라 로그조차 안 남는 경우가 있다(2.5절에서 재현하고, 쿠버네티스에서는 M16에서 다시 만난다). 컨테이너 안에서 <code>top</code>을 쳐도 호스트 전체 메모리가 보이는 것, 컨테이너를 지워도 볼륨은 남는 것, 파드의 여러 컨테이너가 <code>localhost</code>로 통신하는 것(M09) 전부 같은 원리에서 나온다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">2.2</span>이론 — 격리를 만드는 두 기능</h2>
+  <p>리눅스 커널의 두 기능이 컨테이너의 전부라고 해도 크게 틀리지 않다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .vm { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
+
+      <!-- 왼쪽: 가상 머신과 컨테이너 -->
+      <rect class="outer" x="20" y="20" width="430" height="390" rx="6"/>
+      <text class="t-h" x="40" y="46">가상 머신과 컨테이너 — 커널이 몇 개인가</text>
+
+      <text class="t-sub" x="132" y="72" text-anchor="middle">가상 머신</text>
+      <rect class="box" x="44" y="330" width="176" height="40" rx="3"/>
+      <text class="t-title" x="132" y="355" text-anchor="middle">하드웨어</text>
+      <rect class="box" x="44" y="266" width="176" height="56" rx="3"/>
+      <text class="t-title" x="132" y="289" text-anchor="middle">호스트 OS + 하이퍼바이저</text>
+      <text class="t-sub" x="132" y="307" text-anchor="middle">가상 CPU · 디스크를 흉내낸다</text>
+      <rect class="vm" x="44" y="186" width="176" height="72" rx="3"/>
+      <text class="t-title" x="132" y="212" text-anchor="middle">게스트 OS 커널</text>
+      <text class="t-sub" x="132" y="230" text-anchor="middle">VM마다 하나씩 따로 부팅</text>
+      <text class="t-sub" x="132" y="246" text-anchor="middle">수십 초 · 수백 MB</text>
+      <rect class="box" x="44" y="130" width="176" height="48" rx="3"/>
+      <text class="t-title" x="132" y="150" text-anchor="middle">앱 프로세스</text>
+      <text class="t-mono" x="132" y="168" text-anchor="middle">uname -r → 게스트 커널</text>
+
+      <text class="t-sub" x="336" y="72" text-anchor="middle">컨테이너</text>
+      <rect class="box" x="248" y="330" width="176" height="40" rx="3"/>
+      <text class="t-title" x="336" y="355" text-anchor="middle">하드웨어</text>
+      <rect class="accent" x="248" y="266" width="176" height="56" rx="3"/>
+      <text class="t-title" x="336" y="289" text-anchor="middle">호스트 리눅스 커널 하나</text>
+      <text class="t-sub" x="336" y="307" text-anchor="middle">모든 컨테이너가 공유한다</text>
+      <rect class="vm" x="248" y="212" width="176" height="46" rx="3"/>
+      <text class="t-title" x="336" y="231" text-anchor="middle">네임스페이스 · cgroup</text>
+      <text class="t-sub" x="336" y="248" text-anchor="middle">보이는 범위 · 쓸 수 있는 양</text>
+      <rect class="box" x="248" y="130" width="176" height="74" rx="3"/>
+      <text class="t-title" x="336" y="152" text-anchor="middle">프로세스 (nginx)</text>
+      <text class="t-sub" x="336" y="170" text-anchor="middle">부팅 없음 · 밀리초 · 수 MB</text>
+      <text class="t-mono" x="336" y="190" text-anchor="middle">uname -r → 호스트 커널</text>
+
+      <text class="t-sub" x="235" y="395" text-anchor="middle">맥 · 윈도우에서는 이 "호스트 커널"이 런타임의 리눅스 VM이다 (M01 그림 1.1)</text>
+
+      <!-- 오른쪽: 이미지 → 컨테이너 → 프로세스 -->
+      <rect class="outer" x="470" y="20" width="410" height="390" rx="6"/>
+      <text class="t-h" x="490" y="46">이미지 → 컨테이너 → 프로세스</text>
+
+      <rect class="node" x="494" y="66" width="362" height="92" rx="4"/>
+      <text class="t-title" x="508" y="88">① 이미지 — 읽기 전용 레이어의 묶음</text>
+      <rect class="box" x="508" y="98" width="200" height="14" rx="2"/>
+      <rect class="box" x="508" y="114" width="200" height="14" rx="2"/>
+      <rect class="box" x="508" y="130" width="200" height="14" rx="2"/>
+      <text class="t-mono" x="722" y="109">nginx:1.29-alpine</text>
+      <text class="t-mono" x="722" y="125">sha256:5616…</text>
+      <text class="t-sub" x="722" y="143">디스크에만 있다 · M03</text>
+
+      <path class="line" d="M 675 158 L 675 186" marker-end="url(#ar1)"/>
+      <text class="t-mono" x="686" y="176">docker run -d --name web</text>
+
+      <rect class="node" x="494" y="188" width="362" height="100" rx="4"/>
+      <text class="t-title" x="508" y="210">② 컨테이너 — 이미지 위에 얹은 실행 환경</text>
+      <rect class="accent" x="508" y="220" width="200" height="14" rx="2"/>
+      <text class="t-sub" x="722" y="231">쓰기 가능 레이어 (rm 하면 사라진다)</text>
+      <rect class="box" x="508" y="238" width="200" height="14" rx="2"/>
+      <rect class="box" x="508" y="254" width="200" height="14" rx="2"/>
+      <text class="t-sub" x="722" y="249">읽기 전용 레이어 (①과 공유)</text>
+      <text class="t-mono" x="508" y="282">--name web  -p 8081:80  --memory=32m  → 네임스페이스 · cgroup 설정</text>
+
+      <path class="line" d="M 675 288 L 675 316" marker-end="url(#ar1)"/>
+      <text class="t-mono" x="686" y="306">= 실행 중인 상태</text>
+
+      <rect class="node" x="494" y="318" width="362" height="80" rx="4"/>
+      <text class="t-title" x="508" y="340">③ 프로세스 — 호스트 커널이 스케줄하는 실체</text>
+      <text class="t-mono" x="508" y="360">안에서:  docker exec web ps   →  PID 1   nginx</text>
+      <text class="t-mono" x="508" y="378">밖에서:  docker top web       →  PID 98137  nginx: master</text>
+      <text class="t-sub" x="508" y="394">같은 프로세스에 번호가 둘. 이 프로세스가 끝나면 컨테이너도 Exited</text>
+    </svg>
+    <figcaption>그림 2.1 — 왼쪽: 가상 머신은 게스트 커널을 따로 부팅하고, 컨테이너는 호스트 커널 하나를 나눠 쓰며 네임스페이스 · cgroup으로 시야와 양만 가른다. 오른쪽: 이미지(디스크의 읽기 전용 레이어)에 <code>docker run</code>이 쓰기 레이어와 격리 설정을 얹은 것이 컨테이너이고, 그 실체는 호스트 커널이 스케줄하는 프로세스 하나다. PID 98137은 이 문서를 만든 환경의 값이다.</figcaption>
+  </figure>
+  <table>
+    <tr><th>기능</th><th>하는 일</th><th>이 모듈에서 확인하는 방법</th></tr>
+    <tr><td><dfn class="term">네임스페이스 <span class="en">(Namespace)</span></dfn></td><td>보이는 것을 가른다. PID · 네트워크 · 마운트 · 호스트네임 · 사용자 등 종류별로 따로 있다. 컨테이너 안에서는 자기 프로세스만, 자기 네트워크 인터페이스만 보인다</td><td>안에서 <code>ps</code> → PID 1, 밖에서 <code>docker top</code> → 다섯 자리 PID</td></tr>
+    <tr><td><dfn class="term">cgroup <span class="en">(Control Group)</span></dfn></td><td>쓸 수 있는 양을 가른다. CPU · 메모리 · 디스크 I/O에 상한을 걸고 사용량을 잰다</td><td><code>--memory=32m</code>을 넘겨 OOM으로 죽이기</td></tr>
+  </table>
+  <p>둘의 역할 분담이 명확하다. 네임스페이스는 <strong>보이는 범위</strong>, cgroup은 <strong>쓸 수 있는 양</strong>. 쿠버네티스에서 이 둘은 각각 파드(같은 네트워크 네임스페이스를 공유하는 컨테이너 묶음, M09)와 리소스 requests/limits(cgroup 설정값, M16)로 다시 등장한다. 지금 손으로 확인해 두면 그때 개념을 새로 배울 필요가 없다.</p>
+  <div class="note-2026">
+    <span class="lbl">맥과 윈도우에서는 한 겹이 더 있다</span>
+    네임스페이스와 cgroup은 리눅스 커널 기능이다. 맥에는 없다. 그래서 Docker Desktop · OrbStack · Colima는 전부 안쪽에 리눅스 VM을 하나 띄우고 컨테이너를 그 안에서 돌린다. 이 모듈에서 "호스트에서 본 PID"라고 할 때의 호스트는 맥이 아니라 <strong>그 리눅스 VM</strong>이다. 그래서 맥 터미널의 <code>ps</code>로는 컨테이너 프로세스가 보이지 않고, <code>docker top</code>으로 VM 안을 들여다봐야 한다. 리눅스에서 실습하는 사람은 <code>ps -ef | grep nginx</code>로 바로 보인다.
+  </div>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">2.3</span>따라하기 ① 실행하고 접속한다</h2>
+
+  <div class="step">
+    <h4>1단계. 웹 서버 컨테이너를 띄운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이미지를 받아 실행하고, 호스트 포트로 접속 경로를 낸다.</p>
+<pre><code>docker run -d --name web -p 8081:80 nginx:1.29-alpine</code></pre>
+    <ul class="tight">
+      <li><code>-d</code> — 백그라운드(detached) 실행. 빼면 터미널이 붙잡힌다</li>
+      <li><code>--name web</code> — 이름을 붙인다. 안 붙이면 <code>nostalgic_hopper</code> 같은 임의 이름이 생기고 이후 명령마다 컨테이너 ID를 복사해야 한다</li>
+      <li><code>-p 8081:80</code> — <strong>호스트:컨테이너</strong> 순서다. 맥의 8081로 온 요청을 컨테이너의 80으로 넘긴다. 순서를 뒤집으면 접속이 안 된다</li>
+      <li><code>nginx:1.29-alpine</code> — 이미지 이름과 태그. <strong>태그를 항상 적는다.</strong> 생략하면 <code>latest</code>가 되고, 그것이 어느 버전인지는 시점에 따라 다르다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 (첫 실행은 이미지를 받는다)</span>
+    <div class="out"><code>Unable to find image 'nginx:1.29-alpine' locally
+1.29-alpine: Pulling from library/nginx
+...
+Digest: sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+Status: Downloaded newer image for nginx:1.29-alpine
+aa694ff9927e2aef59be14c72bedf17836b93f56ce0dae8b130a12f63538baf2</code></div>
+    <p>마지막 줄의 64자리 16진수가 컨테이너 ID다. 앞 12자리만 써도 대부분의 명령에서 통한다. <code>Digest:</code> 줄은 M03에서 다룬다.</p>
+    <div class="verdict"><span class="lbl">판정</span>마지막에 긴 ID 한 줄이 출력되면 성공이다. 에러 메시지 없이 ID만 나온다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 상태를 확인하고 접속한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨테이너가 살아 있는지, 포트가 실제로 연결됐는지 확인한다.</p>
+<pre><code>docker ps --filter name=web</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>CONTAINER ID   IMAGE               COMMAND                  CREATED        STATUS                  PORTS                                     NAMES
+aa694ff9927e   nginx:1.29-alpine   "/docker-entrypoint.…"   1 second ago   Up Less than a second   0.0.0.0:8081-&gt;80/tcp, [::]:8081-&gt;80/tcp   web</code></div>
+    <p>읽을 곳은 두 군데다. <code>STATUS</code>가 <code>Up</code>으로 시작하는가(<code>Exited</code>면 죽은 것), <code>PORTS</code>에 <code>8081-&gt;80</code>이 있는가. <code>COMMAND</code>는 이미지에 정의된 시작 명령으로, 이 프로세스가 죽으면 컨테이너도 끝난다.</p>
+<pre><code>curl -s -o /dev/null -w '%{http_code} %{size_download}bytes\n' http://localhost:8081/</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>200 896bytes</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>200</code>. 브라우저로 <code>http://localhost:8081</code>을 열면 nginx 기본 페이지가 나온다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 로그를 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨테이너의 표준 출력이 곧 로그라는 원칙을 확인한다. 이 원칙이 M22 로그 수집의 전제다.</p>
+<pre><code>docker logs web | tail -6</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>2026/09/03 12:40:21 [notice] 1#1: start worker process 41
+2026/09/03 12:40:21 [notice] 1#1: start worker process 42
+2026/09/03 12:40:21 [notice] 1#1: start worker process 43
+192.168.65.1 - - [03/Sep/2026:12:40:21 +0000] "GET / HTTP/1.1" 200 896 "-" "curl/8.7.1" "-"</code></div>
+    <p>방금 보낸 <code>curl</code> 요청이 액세스 로그로 찍혔다. 여기서 눈여겨볼 것은 nginx가 로그 <strong>파일</strong>을 쓰지 않았다는 점이다 — 컨테이너용 이미지들은 로그를 표준 출력으로 보낸다. 파일에 쓰면 컨테이너를 지울 때 함께 사라지고, 밖에서 수집할 방법이 없기 때문이다. 앞의 <code>1#1</code>은 마스터 프로세스의 PID가 1이라는 뜻이다 — 다음 절의 주제다.</p>
+    <p>실시간으로 보려면 <code>-f</code>를 붙인다. <code>docker logs -f web</code>은 <code>Ctrl+C</code>로 빠져나온다(컨테이너는 계속 돈다).</p>
+    <div class="verdict"><span class="lbl">판정</span>마지막 줄에 <code>"GET / HTTP/1.1" 200</code>이 들어 있는 액세스 로그 한 줄이 있다 — 2단계의 <code>curl</code> 한 번이 로그 한 줄이다. 그 줄이 없으면 2단계 요청이 컨테이너까지 오지 않은 것이므로 <code>docker ps</code>의 <code>PORTS</code>를 다시 본다. 앞 줄들의 <code>1#1</code>은 마스터 프로세스의 PID가 1이라는 뜻이다. 앞의 타임스탬프와 클라이언트 IP는 환경마다 다르다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">2.4</span>따라하기 ② 안과 밖에서 같은 프로세스 보기</h2>
+  <p>이 모듈의 핵심 실습이다. 같은 프로세스를 두 시야에서 본다.</p>
+
+  <div class="step">
+    <h4>4단계. 컨테이너 안에서 프로세스 목록을 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>PID 네임스페이스가 시야를 어떻게 가리는지 확인한다.</p>
+<pre><code>docker exec web ps -eo pid,ppid,comm</code></pre>
+    <ul class="tight">
+      <li><code>exec</code> — 이미 돌고 있는 컨테이너 안에서 명령을 하나 더 실행한다. 새 컨테이너를 만드는 <code>run</code>과 다르다</li>
+      <li>셸로 들어가려면 <code>docker exec -it web sh</code> (<code>-i</code> 표준 입력 유지, <code>-t</code> 터미널 할당). 나올 때는 <code>exit</code></li>
+    </ul>
+    <span class="out-lbl">실행 결과 (앞부분)</span>
+    <div class="out"><code>PID   PPID  COMMAND
+    1     0 nginx
+   30     1 nginx
+   31     1 nginx
+   32     1 nginx
+   33     1 nginx</code></div>
+    <p>컨테이너 안에서 nginx 마스터는 <strong>PID 1</strong>이다. 그리고 이 목록에는 맥에서 돌고 있는 수백 개의 프로세스가 하나도 보이지 않는다. 컨테이너가 자기만의 PID 네임스페이스를 갖기 때문이다.</p>
+    <p>PID 1이라는 사실에는 실무적 의미가 있다. 리눅스에서 PID 1은 <code>init</code> 자리이고, 커널은 PID 1에게 시그널을 특별 취급한다 — 핸들러를 등록하지 않은 프로세스는 <code>SIGTERM</code>을 <strong>무시한다</strong>. 종료 신호를 처리하지 않는 애플리케이션을 PID 1로 띄우면 <code>docker stop</code>이 10초를 기다렸다가 <code>SIGKILL</code>로 강제 종료한다. 쿠버네티스에서도 똑같이 일어나며, 그때는 롤아웃마다 커넥션이 끊긴다(M15에서 <code>preStop</code> 훅과 <code>terminationGracePeriodSeconds</code>로 다룬다).</p>
+  </div>
+
+  <div class="step">
+    <h4>5단계. 밖에서 같은 프로세스를 찾는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨테이너가 별도의 컴퓨터가 아니라 <strong>호스트의 프로세스</strong>임을 확인한다.</p>
+<pre><code>docker top web
+docker inspect -f 'Pid={{.State.Pid}} Status={{.State.Status}}' web</code></pre>
+    <span class="out-lbl">실행 결과 (일부)</span>
+    <div class="out"><code>UID     PID     PPID    C   STIME   TTY   TIME       CMD
+root    98137   98115   7   12:40   ?     00:00:00   nginx: master process nginx -g daemon off;
+statd   98181   98137   0   12:40   ?     00:00:00   nginx: worker process
+statd   98182   98137   0   12:40   ?     00:00:00   nginx: worker process
+...(worker 프로세스가 이어진다)
+
+Pid=98137 Status=running</code></div>
+    <p>안에서 PID 1이던 마스터가 밖에서는 <strong>98137</strong>이다. 같은 프로세스이고 번호만 두 개다. 워커들도 안에서는 30번대, 밖에서는 98181 이후로 이어진다. 프로세스가 두 벌 있는 것이 아니라, 네임스페이스가 번호를 다시 매겨 보여줄 뿐이다.</p>
+    <p>사용자 이름이 <code>statd</code>로 나오는 것도 같은 이유다. 컨테이너 안의 <code>nginx</code> 사용자 UID가 호스트에서는 우연히 <code>statd</code>에 해당하는 번호였을 뿐이다. UID는 숫자이고, 이름은 각자의 <code>/etc/passwd</code>가 붙인다. 이 사실은 M24에서 <code>runAsNonRoot</code>와 파일 권한을 다룰 때 다시 쓰인다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>docker top</code>의 마스터 PID(다섯 자리)와 <code>inspect</code>의 <code>Pid=</code> 값이 같다. 그 프로세스가 컨테이너 안에서는 1번이다.</div>
+    <p>리눅스에서 실습 중이라면 여기에 한 단계를 더 할 수 있다. <code>ps -ef | grep 98137</code>로 호스트 프로세스 목록에서 직접 찾아진다. 맥·윈도우는 리눅스 VM 안이라 맥 터미널의 <code>ps</code>로는 보이지 않는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계. 자원 사용량을 실시간으로 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>cgroup이 사용량을 재고 있다는 것을 확인한다.</p>
+<pre><code>docker stats --no-stream web</code></pre>
+    <ul class="tight">
+      <li><code>--no-stream</code> — 한 번만 찍고 끝낸다. 빼면 실시간 갱신 화면이 되고 <code>Ctrl+C</code>로 나온다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>CONTAINER ID   NAME   CPU %   MEM USAGE / LIMIT     MEM %   NET I/O          BLOCK I/O        PIDS
+aa694ff9927e   web    0.00%   11.86MiB / 7.652GiB   0.15%   1.8kB / 1.68kB   520kB / 8.19kB   15</code></div>
+    <p><code>LIMIT</code>가 7.652GiB — 이 컨테이너에는 메모리 제한을 걸지 않았으므로 런타임 VM 전체 메모리가 상한으로 표시된다. 제한 없는 컨테이너 하나가 호스트 메모리를 다 먹고 다른 컨테이너를 굶길 수 있다는 뜻이다. 다음 절에서 상한을 걸어본다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>MEM USAGE</code>가 수 MiB에서 수십 MiB, <code>LIMIT</code>가 1.3절에서 런타임에 준 메모리(GiB 단위)와 같은 자릿수, <code>PIDS</code>가 4단계에서 본 프로세스 수와 비슷하면 정상이다. 수치 자체는 환경마다 다르다. <code>LIMIT</code>가 GiB가 아니라 MiB로 나오면 이 컨테이너에 제한이 걸린 것이므로 <code>docker inspect -f '{{.HostConfig.Memory}}' web</code>을 본다(0이 정상).</div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">2.5</span>따라하기 ③ 자원 제한과 OOM</h2>
+
+  <div class="step">
+    <h4>7단계. 메모리 상한을 걸고 일부러 넘긴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>cgroup의 상한을 넘겼을 때 무슨 일이 일어나는지 직접 본다. 쿠버네티스의 <code>OOMKilled</code>와 같은 사건이다.</p>
+<pre><code>docker run --name oomtest --memory=32m alpine:3.22 \
+  sh -c "dd if=/dev/zero of=/dev/shm/fill bs=1M count=200"
+echo "exit=$?"</code></pre>
+    <ul class="tight">
+      <li><code>--memory=32m</code> — cgroup 메모리 상한 32MiB</li>
+      <li><code>dd ... of=/dev/shm/fill bs=1M count=200</code> — 공유 메모리에 200MiB를 쓴다. 상한의 6배 이상이라 반드시 넘는다</li>
+      <li><code>-d</code>를 붙이지 않았으므로 컨테이너가 끝날 때까지 기다린다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>exit=137</code></div>
+    <p><strong>아무 메시지도 없다.</strong> <code>dd</code>는 에러를 출력하지 못했다 — 프로세스가 커널에 의해 즉시 죽었기 때문이다. 남은 단서는 종료 코드 <code>137</code>뿐이고, 이 숫자는 <code>128 + 9</code>, 즉 <code>SIGKILL</code>로 종료됐다는 뜻이다.</p>
+<pre><code>docker inspect -f 'ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}}' oomtest
+docker ps -a --filter name=oomtest --format 'table {{.Names}}\t{{.Status}}'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>ExitCode=137 OOMKilled=true
+
+NAMES     STATUS
+oomtest   Exited (137) Less than a second ago</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>OOMKilled=true</code>. 애플리케이션이 스스로 종료한 것이 아니라 커널이 죽였다는 기록이다.</div>
+    <p>이 장면을 기억해 둔다. M16(리소스 · QoS · 축출)에서 파드가 같은 방식으로 죽으면 <code>kubectl describe pod</code>의 <code>Last State</code>에 <code>Reason: OOMKilled</code>, <code>Exit Code: 137</code>이 그대로 나온다. 그때 "애플리케이션 로그에 아무것도 없는데 왜 죽었나"라는 질문은 이미 답이 나와 있다 — 로그를 남길 틈 없이 커널이 죽였기 때문이다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">2.6</span>수명 주기 정리</h2>
+  <p>지금까지 쓴 명령을 컨테이너의 상태 전이로 정리한다. 상태를 알면 "왜 <code>docker ps</code>에 안 보이지?" 같은 질문이 사라진다.</p>
+  <table>
+    <tr><th>명령</th><th>상태 변화</th><th>메모</th></tr>
+    <tr><td><code>docker create</code></td><td>없음 → Created</td><td>만들기만 하고 실행하지 않는다. 거의 쓰지 않는다</td></tr>
+    <tr><td><code>docker run</code></td><td>없음 → Running</td><td><code>create</code> + <code>start</code>. 이미지가 없으면 <code>pull</code>도 한다</td></tr>
+    <tr><td><code>docker stop</code></td><td>Running → Exited</td><td>SIGTERM 후 10초 유예, 그다음 SIGKILL</td></tr>
+    <tr><td><code>docker start</code></td><td>Exited → Running</td><td>같은 컨테이너를 다시 켠다. 안에 쓴 파일도 그대로다</td></tr>
+    <tr><td><code>docker restart</code></td><td>Running → Running</td><td><code>stop</code> + <code>start</code></td></tr>
+    <tr><td><code>docker rm</code></td><td>Exited → 없음</td><td>컨테이너 계층 — 컨테이너가 쓴 파일이 쌓이는 쓰기 가능 <em>레이어</em>(파일시스템 변경분 한 뭉치, M03에서 정의) — 가 사라진다. 이미지는 남는다</td></tr>
+  </table>
+  <p>중요한 구분 하나. <code>docker ps</code>는 <strong>Running만</strong> 보여준다. 종료된 컨테이너까지 보려면 <code>docker ps -a</code>다. 실습을 반복하다 보면 <code>Exited</code> 컨테이너가 쌓여 이름 충돌(<code>name is already in use</code>)이 나는데, 이때 <code>docker ps -a</code>로 확인하고 지우면 된다. 애초에 남기지 않으려면 <code>docker run --rm</code>으로 실행한다 — 종료와 동시에 삭제된다.</p>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">2.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 돌고 있는 컨테이너를 지우려 한다</span>
+<pre><code>docker rm web</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Error response from daemon: cannot remove container "web": container is running:
+stop the container before removing or force remove</code></div>
+    <p>도커는 실행 중인 컨테이너를 실수로 지우지 못하게 막는다. 해결은 두 가지이고, 둘의 차이가 중요하다. <strong>단, 여기서는 아직 실행하지 않는다</strong> — <code>web</code>은 바로 아래 실패②와 2.8 체크포인트에서 계속 쓰이므로, 두 명령은 2.9 정리에서 친다.</p>
+<pre><code># 권장 — 정상 종료 후 삭제 (2.9에서 실행)
+docker stop web && docker rm web
+
+# 급할 때 — SIGKILL로 즉시 종료 후 삭제
+docker rm -f web</code></pre>
+    <p><code>docker stop</code>은 먼저 <code>SIGTERM</code>을 보내고 기본 10초를 기다린 뒤에야 <code>SIGKILL</code>한다. 애플리케이션이 처리 중인 요청을 마무리할 기회를 주는 것이다. <code>rm -f</code>는 그 유예가 없다. 실습에서는 어느 쪽이든 상관없지만, 이 <strong>유예 시간(그레이스 피리어드)</strong> 개념은 쿠버네티스에서 <code>terminationGracePeriodSeconds</code>라는 이름으로 그대로 나온다(M15).</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 같은 호스트 포트를 두 번 쓴다</span>
+    <p><code>web</code>이 8081을 쓰는 상태에서 하나를 더 띄운다.</p>
+<pre><code>docker run -d --name web2 -p 8081:80 nginx:1.29-alpine</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>docker: Error response from daemon: failed to set up container networking:
+driver failed programming external connectivity on endpoint web2
+(05fc0bd3354b...): Bind for 0.0.0.0:8081 failed: port is already allocated</code></div>
+    <p>M01에서 kind가 443에 부딪힌 것과 같은 종류의 실패다. 호스트 포트는 하나의 프로세스만 점유한다. 해결은 다른 포트를 쓰는 것(<code>-p 8082:80</code>)뿐이다.</p>
+    <p>여기서 한 가지를 짚고 넘어간다. 컨테이너를 여러 개 띄울 때마다 호스트 포트를 손으로 배정하는 이 방식은 서비스가 열 개, 백 개가 되면 관리가 불가능해진다. 쿠버네티스가 서비스와 인그레스라는 추상을 두는 이유가 이것이다(M11 · M12) — 그때는 포트를 사람이 고르지 않는다.</p>
+    <p>실패한 컨테이너는 <code>Created</code> 상태로 남아 있으므로 지운다: <code>docker rm web2</code>.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">2.8</span>체크포인트</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <p><code>web</code>이 아직 돌고 있는 상태에서 확인한다(실패①의 삭제 명령은 2.9에서 친다).</p>
+    <ul>
+      <li><code>docker ps --filter name=web --format '{{.Status}} {{.Ports}}'</code> → <code>Up</code>으로 시작하고 <code>0.0.0.0:8081-&gt;80/tcp</code>가 있다</li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8081/</code> → <code>200</code></li>
+      <li><code>docker exec web ps -o pid,comm | sed -n 2p</code> → <code>1 nginx</code></li>
+      <li><code>test "$(docker inspect -f '{{.State.Pid}}' web)" = "$(docker top web -o pid | sed -n 2p | tr -d ' ')" &amp;&amp; echo same</code> → <code>same</code> (안의 PID 1이 밖에서는 <code>inspect</code>의 <code>State.Pid</code>다)</li>
+      <li><code>docker inspect -f '{{.State.OOMKilled}} {{.State.ExitCode}}' oomtest</code> → <code>true 137</code></li>
+      <li><code>docker ps -a --filter name=oomtest --format '{{.Status}}'</code> → <code>Exited (137) …</code> — <code>docker ps</code>에는 없고 <code>-a</code>에만 보인다</li>
+      <li><code>docker ps -a --filter name=web2 --format '{{.Names}}'</code> → 빈 출력 (실패②의 <code>web2</code>를 지웠다)</li>
+      <li>(이해 확인) <code>-p 8081:80</code>에서 어느 쪽이 호스트 포트인지, 네임스페이스와 cgroup이 각각 무엇을 가르는지 한 문장씩 말한다</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li>로컬 이미지 캐시에 <code>nginx:1.29-alpine</code>, <code>alpine:3.22</code> — M03에서 레이어를 들여다볼 재료</li>
+      <li>파일 산출물은 없다. 다음 모듈부터 <code>course/labs/apps/</code>에 파일이 쌓인다</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">2.9</span>정리</h2>
+<pre><code># web 은 2.7 실패①에서 미뤄둔 권장 방식으로 — SIGTERM 후 삭제
+docker stop web && docker rm web
+
+# 이미 종료된 oomtest, 실패②에서 지우지 않았다면 web2 까지
+docker rm -f oomtest web2 2>/dev/null
+
+# 남은 것이 없는지 확인
+docker ps -a --filter name=web --filter name=oomtest</code></pre>
+  <p><code>docker stop web</code>이 즉시 끝나면 nginx가 <code>SIGTERM</code>(정확히는 이미지에 지정된 <code>SIGQUIT</code>)을 받아 스스로 종료한 것이고, 10초를 꽉 기다렸다면 시그널을 처리하지 못해 <code>SIGKILL</code>로 넘어간 것이다 — 4단계의 PID 1 이야기가 여기서 눈에 보인다. 마지막 명령은 헤더 줄만 남아야 한다.</p>
+  <p>이미지는 지우지 않는다. M03에서 <code>nginx:1.29-alpine</code>의 레이어 구조를 들여다본다. 디스크가 급하면 <code>docker system df</code>로 사용량을 보고 <code>docker system prune</code>으로 정리할 수 있다 — 다만 <code>prune</code>은 멈춰 있는 컨테이너와 미사용 이미지를 <strong>모두</strong> 지우므로, 다른 작업용 컨테이너가 있는 사람은 목록을 확인하고 실행한다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m01-setup-environment.html">← M01 환경 구축과 버전 고정</a>
+  <a href="m03-docker-images-layers.html">M03 이미지와 레이어 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>컨테이너를 실행했지만 그 재료인 이미지는 아직 상자였다. M03에서 상자를 연다 — 이미지가 왜 레이어의 묶음인지, <code>nginx:1.29-alpine</code>이라는 태그와 방금 본 <code>sha256:5616878…</code> 다이제스트가 어떻게 다른지, 태그만 믿으면 왜 재현이 깨지는지.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
+  <ul>
+    <li>docker run 레퍼런스: https://docs.docker.com/reference/cli/docker/container/run/</li>
+    <li>런타임 자원 제약: https://docs.docker.com/engine/containers/resource_constraints/</li>
+    <li>컨테이너와 이미지 개요: https://docs.docker.com/get-started/docker-overview/</li>
+    <li>cgroups v2 (커널 문서): https://docs.kernel.org/admin-guide/cgroup-v2.html</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · Docker Engine 29.2.1 · nginx:1.29-alpine · alpine:3.22</p>
+</footer>
+</div>
+</body>
+</html>

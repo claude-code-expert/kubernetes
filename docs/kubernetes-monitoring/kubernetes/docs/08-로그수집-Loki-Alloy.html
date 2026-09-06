@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 · 로그 수집 (Loki + Alloy) — 관측성 실습</title>
+<style>
+  :root{
+    --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+    --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.72;letter-spacing:-.005em;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  header{border-bottom:1px solid var(--ink);padding:56px 0 22px;margin-bottom:36px}
+  .docnum{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:34px;line-height:1.28;letter-spacing:-.03em;font-weight:700;margin:10px 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  nav.toc{border:1px solid var(--line);padding:20px 24px;margin:0 0 48px}
+  nav.toc h2{font-size:12px;font-family:var(--mono);letter-spacing:.14em;color:var(--muted);
+             font-weight:500;margin-bottom:12px}
+  nav.toc ol{list-style:none;counter-reset:t;columns:2;column-gap:36px}
+  nav.toc li{counter-increment:t;font-size:14.5px;line-height:2}
+  nav.toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+                     font-size:12px;color:var(--muted);margin-right:10px}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2.sec{font-size:23px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--ac);margin-right:12px;font-weight:500}
+  h3{font-size:17px;font-weight:700;margin:32px 0 10px;letter-spacing:-.02em}
+  h4{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--muted)}
+  p{margin:0 0 14px;max-width:74ch}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700}
+
+  .term{border-bottom:1px dotted var(--muted);cursor:help}
+
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  .fn{font-family:var(--mono);font-size:12px;color:var(--muted);margin:20px 0 -6px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0;font-size:13px}
+  pre .c{color:#6b7280}
+  pre .o{color:#0b4f2f}
+  .cap{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+  .cap b{color:var(--ink);font-weight:600}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td code{font-size:12.5px}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .note{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);padding:16px 20px;margin:20px 0}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+  figcaption b{color:var(--ink);font-weight:600}
+
+  ul.check{list-style:none;padding-left:0}
+  ul.check li{padding-left:30px;position:relative;margin:9px 0;font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:14px;
+                      border:1.5px solid var(--muted);border-radius:2px}
+
+  .src{font-size:13px;color:var(--muted);line-height:1.85}
+  .src ul{list-style:none;padding-left:0;max-width:none}
+  .src li{margin:4px 0;word-break:break-all}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;font-size:13px;
+         color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){.wrap{padding:0 18px 80px}h1{font-size:27px}nav.toc ol{columns:1}}
+  @media print{body{font-size:11pt}figure,table,.box,pre{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div style="max-width:920px;margin:0 auto;padding:22px 28px 0">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#585f6b;text-decoration:none;border-bottom:1px solid #d8dbe0">← 목차로</a>
+</div>
+<div class="wrap">
+
+<header>
+  <div class="docnum">STEP 08 / 11 · 트랙 C — 연동 가이드 · macOS</div>
+  <h1>로그 수집 (Loki + Alloy)</h1>
+  <p class="lede">
+    메트릭은 "무언가 이상하다"까지 알려주고 멈춥니다. 그다음 질문인 "무슨 일이 있었나"는 로그의 몫입니다.
+    로키를 올리고 Alloy로 파드 로그를 모은 뒤, 07단계 대시보드와 <strong>같은 시간축에</strong> 놓습니다.
+    2026년 기준으로 <em>Promtail은 쓰지 않으며</em>, 차트 저장소도 바뀌었습니다.
+  </p>
+  <div class="meta">
+    <span>검증일 2026-08-19</span>
+    <span>소요 60–80분</span>
+    <span>선행: 07단계 완료 · 메모리 여유 2 GiB</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">로키는 어떻게 다른가</a></li>
+    <li><a href="#s2">수집 경로와 구성요소</a></li>
+    <li><a href="#s3">로키 설치</a></li>
+    <li><a href="#s4">Alloy 설치</a></li>
+    <li><a href="#s5">그라파나에 데이터소스 등록</a></li>
+    <li><a href="#s6">LogQL 최소 문법</a></li>
+    <li><a href="#s7">메트릭과 로그를 함께 보기</a></li>
+    <li><a href="#s8">구조화 로그로 한 걸음 더</a></li>
+    <li><a href="#s9">자주 겪는 문제</a></li>
+    <li><a href="#s10">완료 체크리스트</a></li>
+  </ol>
+</nav>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2 class="sec"><span class="n">01</span>로키는 어떻게 다른가</h2>
+
+  <p>
+    엘라스틱서치는 로그 본문 전체를 색인합니다. 검색은 빠르지만 저장 비용이 큽니다.
+    로키는 반대로 <strong>라벨만 색인하고 본문은 압축해 보관</strong>합니다.
+    이 설계 하나가 사용법의 거의 모든 것을 결정합니다.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 960 320" role="img" aria-label="로키가 라벨만 색인하고 로그 본문은 압축 저장하는 구조">
+      <rect width="960" height="320" fill="#ffffff"/>
+
+      <text x="24" y="36" font-size="13.5" fill="#15181d">로그 한 줄이 저장되는 방식</text>
+
+      <!-- 라벨 부분 -->
+      <rect x="24" y="58" width="330" height="112" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="84" font-size="13" fill="#1f4d8f">라벨 — 색인된다</text>
+      <text x="40" y="110" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">namespace="apps"</text>
+      <text x="40" y="130" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">pod="order-api-6b8f..."</text>
+      <text x="40" y="150" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">container="order-api"</text>
+
+      <rect x="374" y="58" width="562" height="112" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="390" y="84" font-size="13" fill="#15181d">로그 본문 — 압축만 된다</text>
+      <text x="390" y="112" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">2026-08-19 14:22:07.113 ERROR 1 --- [nio-8080-exec-3]</text>
+      <text x="390" y="132" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">c.s.o.controller.ChaosController : 의도적 실패 발생</text>
+      <text x="390" y="156" font-size="11.5" fill="#8f4408">색인이 없으므로 본문 검색은 "훑기"다 — 범위를 좁힐수록 빨라진다</text>
+
+      <line x1="24" y1="200" x2="936" y2="200" stroke="#d8dbe0" stroke-width="1"/>
+
+      <text x="24" y="228" font-size="13" fill="#15181d">따라오는 결론 두 가지</text>
+      <text x="40" y="256" font-size="12.5" fill="#15181d">① 라벨은 적게 — 라벨 조합 하나가 곧 하나의 스트림이고, 늘어나면 비용이 폭증한다</text>
+      <text x="40" y="280" font-size="12.5" fill="#15181d">② 질의는 항상 라벨로 시작 — <tspan font-family="ui-monospace,monospace" font-size="11.5">{namespace="apps"}</tspan> 로 좁힌 뒤에 본문을 훑는다</text>
+      <text x="40" y="304" font-size="12" fill="#8f4408">라벨에 요청 ID나 사용자 ID를 넣는 순간 로키는 감당하지 못한다</text>
+    </svg>
+    <figcaption>
+      <b>그림 1.</b> 프로메테우스의 카디널리티 문제와 정확히 같은 구조다.
+      06단계에서 배운 "라벨 값은 유한한 집합이어야 한다"는 원칙이 로그에도 그대로 적용된다.
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2 class="sec"><span class="n">02</span>수집 경로와 구성요소</h2>
+
+  <figure>
+    <svg viewBox="0 0 960 300" role="img" aria-label="애플리케이션 표준 출력에서 Alloy를 거쳐 로키에 저장되고 그라파나가 조회하는 경로">
+      <rect width="960" height="300" fill="#ffffff"/>
+
+      <rect x="24" y="60" width="200" height="90" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="40" y="88" font-size="13.5" fill="#15181d">애플리케이션</text>
+      <text x="40" y="112" font-size="11.5" fill="#585f6b">표준 출력에 로그를 쓴다</text>
+      <text x="40" y="132" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">System.out / Logback</text>
+
+      <path d="M226 105 L286 105" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#k1)"/>
+
+      <rect x="288" y="60" width="200" height="90" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="304" y="88" font-size="13.5" fill="#15181d">컨테이너 런타임</text>
+      <text x="304" y="112" font-size="11.5" fill="#585f6b">노드 디스크에 파일로 보관</text>
+      <text x="304" y="132" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">/var/log/pods/...</text>
+
+      <path d="M490 105 L550 105" fill="none" stroke="#b4621a" stroke-width="1.5" marker-end="url(#k2)"/>
+
+      <rect x="552" y="60" width="200" height="90" fill="#ffffff" stroke="#b4621a" stroke-width="1.5"/>
+      <text x="568" y="88" font-size="13.5" fill="#15181d">Alloy</text>
+      <text x="568" y="112" font-size="11.5" fill="#585f6b">DaemonSet · 노드마다 1개</text>
+      <text x="568" y="132" font-size="11.5" fill="#585f6b">라벨을 붙여 밀어 넣는다</text>
+
+      <path d="M754 105 L814 105" fill="none" stroke="#b4621a" stroke-width="1.5" marker-end="url(#k2)"/>
+
+      <rect x="816" y="60" width="120" height="90" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="876" y="98" text-anchor="middle" font-size="13.5" fill="#15181d">Loki</text>
+      <text x="876" y="120" text-anchor="middle" font-size="11.5" fill="#585f6b">단일 바이너리</text>
+      <text x="876" y="138" text-anchor="middle" font-size="11.5" fill="#585f6b">파일시스템 저장</text>
+
+      <rect x="552" y="196" width="384" height="64" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="568" y="222" font-size="13.5" fill="#15181d">Grafana</text>
+      <text x="568" y="244" font-size="11.5" fill="#585f6b">LogQL로 조회 — 프로메테우스와 같은 화면에서</text>
+
+      <path d="M876 152 L876 194" fill="none" stroke="#1f4d8f" stroke-width="1.5" marker-end="url(#k3)"/>
+
+      <text x="24" y="222" font-size="12.5" fill="#15181d">애플리케이션은 로그를</text>
+      <text x="24" y="244" font-size="12.5" fill="#15181d">어디로도 보내지 않는다</text>
+      <text x="24" y="268" font-size="12" fill="#585f6b">메트릭과 같은 원칙이다</text>
+
+      <defs>
+        <marker id="k1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+        </marker>
+        <marker id="k2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#b4621a"/>
+        </marker>
+        <marker id="k3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1f4d8f"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>
+      <b>그림 2.</b> 애플리케이션 코드는 한 줄도 바뀌지 않는다.
+      표준 출력에만 쓰면 나머지는 플랫폼이 처리한다 —
+      컨테이너 환경에서 로그 파일을 직접 관리하지 말라는 원칙이 여기서 나온다.
+    </figcaption>
+  </figure>
+
+  <div class="box warn">
+    <span class="t">2026년에 바뀐 두 가지</span>
+    <p>
+      ① <strong>Promtail은 2026-03-02로 수명이 끝났습니다.</strong> 검색으로 나오는 대부분의 튜토리얼이
+      Promtail 기준이며, 설정 형식이 Alloy와 완전히 다릅니다. 복사하지 마세요.<br>
+      ② <strong>로키 헬름 차트가 <code>grafana-community</code> 저장소로 이전</strong>했습니다(2026-03-16).
+      <code>grafana/loki</code> 경로로는 원하는 차트를 받지 못합니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2 class="sec"><span class="n">03</span>로키 설치</h2>
+
+<pre data-lang="bash"><code>helm repo update
+helm search repo grafana-community/loki --versions | head -3</code></pre>
+
+  <p>
+    실습에서는 <strong>단일 바이너리 모드 + 파일시스템 저장</strong>을 씁니다.
+    공식 예제는 MinIO를 쓰지만, 파드가 하나 더 늘고
+    <span class="term" title="MinIO 서브차트는 2026-10-31 제거 예정이며, ignoreMinioDeprecation 없이는 차트 렌더링이 실패한다">MinIO 서브차트는 폐기 예정</span>이라
+    로컬 실습에서는 굳이 쓸 이유가 없습니다.
+  </p>
+
+  <p class="fn">monitoring/loki-values.yaml</p>
+<pre data-lang="yaml"><code>deploymentMode: Monolithic
+
+loki:
+  <span class="c"># 멀티테넌시를 끈다. 켜면 모든 요청에 X-Scope-OrgID 헤더가 필요해진다.</span>
+  auth_enabled: false
+
+  commonConfig:
+    path_prefix: /var/loki
+    <span class="c"># 단일 인스턴스이므로 1. 기본값(3)이면 기동하지 못한다.</span>
+    replication_factor: 1
+
+  storage:
+    type: filesystem
+    <span class="c"># 파일시스템을 써도 차트 템플릿이 이 값을 참조한다. 비워두면 렌더링이 깨질 수 있다.</span>
+    bucketNames:
+      chunks: chunks
+      ruler: ruler
+
+  <span class="c"># 최근 차트는 schemaConfig를 명시하지 않으면 설치가 실패한다.</span>
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+  limits_config:
+    <span class="c"># 구조화 메타데이터 — 라벨을 늘리지 않고 필드를 붙이는 방법 (08절 참조)</span>
+    allow_structured_metadata: true
+    volume_enabled: true
+    retention_period: 72h
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      memory: 900Mi
+
+<span class="c"># ── 다른 배포 모드의 파드가 뜨지 않도록 0으로 ──</span>
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomPlanner:
+  replicas: 0
+bloomBuilder:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+
+<span class="c"># ── 노트북을 지키기 위한 설정 ──
+# 캐시는 memcached 파드를 띄우며 기본 요청 메모리가 크다. 실습에서는 끈다.</span>
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+
+<span class="c"># 관측 스택은 obs-worker2에 모은다</span>
+gateway:
+  nodeSelector:
+    workload: observability</code></pre>
+
+<pre data-lang="bash"><code>cd ~/k8s-observability/monitoring
+
+helm upgrade --install loki grafana-community/loki \
+  --namespace logging --create-namespace \
+  -f loki-values.yaml \
+  --wait --timeout 10m
+
+kubectl -n logging get pods</code></pre>
+
+  <p class="cap">
+    <code>loki-0</code>과 <code>loki-gateway-...</code> 두 개면 정상입니다.
+    <code>loki-read</code>·<code>loki-write</code>·<code>loki-backend</code>가 보인다면
+    배포 모드 설정이 먹지 않은 것이니 값 파일을 다시 확인하세요.
+  </p>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2 class="sec"><span class="n">04</span>Alloy 설치</h2>
+
+  <p>
+    Alloy 차트는 <code>grafana</code> 저장소에 있습니다. 로키 차트만 커뮤니티로 옮겨갔습니다.
+    헷갈리기 쉬우니 <code>helm search repo</code>로 한 번 확인하고 진행하세요.
+  </p>
+
+<pre data-lang="bash"><code>helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+helm search repo grafana/alloy --versions | head -3</code></pre>
+
+  <p class="fn">monitoring/alloy-values.yaml</p>
+<pre data-lang="yaml"><code>alloy:
+  configMap:
+    content: |-
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      // 1) 클러스터의 파드를 발견한다
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // 2) 어떤 라벨을 붙일지 고른다. 여기서 고르지 않은 메타데이터는 버려진다.
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+      }
+
+      // 3) 쿠버네티스 API로 로그를 읽는다 (호스트 경로 마운트가 필요 없다)
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // 4) 로키로 밀어 넣는다
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.logging.svc.cluster.local/loki/api/v1/push"
+        }
+      }
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+<span class="c"># 노드마다 하나씩 뜨는 DaemonSet이 기본값이다</span>
+controller:
+  type: daemonset</code></pre>
+
+<pre data-lang="bash"><code>helm upgrade --install alloy grafana/alloy \
+  --namespace logging \
+  -f alloy-values.yaml \
+  --wait --timeout 5m
+
+kubectl -n logging get pods -o wide</code></pre>
+
+  <p class="cap">
+    Alloy 파드가 노드 수만큼(3개) 떠야 합니다.
+    <code>loki.source.kubernetes</code>는 쿠버네티스 API를 통해 로그를 읽으므로
+    <code>/var/log</code> 호스트 마운트가 필요 없습니다 — macOS의 도커 VM 환경에서 문제가 덜 생기는 방식입니다.
+  </p>
+
+<pre data-lang="bash"><code><span class="c"># Alloy가 로그를 밀어 넣고 있는지 자체 로그로 확인</span>
+kubectl -n logging logs -l app.kubernetes.io/name=alloy --tail=20 | head -20
+
+<span class="c"># Alloy UI로 파이프라인 상태를 눈으로 본다 (컴포넌트별 healthy 여부)</span>
+kubectl -n logging port-forward svc/alloy 12345:12345 &gt;/dev/null 2&gt;&amp;1 &amp;
+sleep 2
+open http://localhost:12345</code></pre>
+
+  <div class="box ac">
+    <span class="t">Alloy UI를 꼭 한 번 열어보세요</span>
+    <p>
+      컴포넌트가 그래프로 그려지고 각각의 상태와 처리 건수가 보입니다.
+      "로그가 안 들어온다"는 상황에서 어느 단계가 끊겼는지 즉시 알 수 있어,
+      설정 파일을 노려보는 것보다 훨씬 빠릅니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2 class="sec"><span class="n">05</span>그라파나에 데이터소스 등록</h2>
+
+  <p>
+    05단계에서 정한 원칙대로 UI에서 추가하지 않고 값 파일에 선언합니다.
+  </p>
+
+  <p class="fn">monitoring/kps-values.yaml — grafana 블록에 추가</p>
+<pre data-lang="yaml"><code>grafana:
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      <span class="c"># 그라파나 파드에서 접근하는 주소다. 브라우저 주소가 아니다.</span>
+      url: http://loki-gateway.logging.svc.cluster.local
+      jsonData:
+        <span class="c"># 한 번에 가져올 로그 줄 수 상한</span>
+        maxLines: 1000</code></pre>
+
+<pre data-lang="bash"><code>helm upgrade kps prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --version 88.3.0 \
+  -f kps-values.yaml \
+  --wait --timeout 10m</code></pre>
+
+  <p class="cap">
+    그라파나 <b>Connections → Data sources</b>에 <b>Loki</b>가 보이면 됩니다.
+    <b>Save &amp; test</b>를 누르면 연결 여부를 확인해 줍니다.
+  </p>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2 class="sec"><span class="n">06</span>LogQL 최소 문법</h2>
+
+  <p>
+    그라파나 <b>Explore</b>에서 데이터소스를 Loki로 바꾸고 아래를 차례로 입력하세요.
+    PromQL과 닮았지만 <strong>반드시 라벨 셀렉터로 시작</strong>해야 한다는 점이 다릅니다.
+  </p>
+
+  <h4>1. 스트림 고르기</h4>
+<pre data-lang="logql"><code>{namespace="apps"}</code></pre>
+<pre data-lang="logql"><code>{namespace="apps", app="order-api"}</code></pre>
+
+  <h4>2. 본문 훑기</h4>
+<pre data-lang="logql"><code><span class="c"># 포함</span>
+{namespace="apps"} |= "ERROR"
+
+<span class="c"># 제외</span>
+{namespace="apps"} |= "ERROR" != "ChaosController"
+
+<span class="c"># 정규식 (대소문자 무시)</span>
+{namespace="apps"} |~ "(?i)exception|error"</code></pre>
+
+  <h4>3. 로그를 숫자로 바꾸기</h4>
+<pre data-lang="logql"><code><span class="c"># 5분 동안의 에러 로그 건수 — 파드별</span>
+sum by (pod) (count_over_time({namespace="apps"} |= "ERROR" [5m]))
+
+<span class="c"># 초당 에러 로그 발생률 — 메트릭처럼 그래프로 그려진다</span>
+sum(rate({namespace="apps"} |= "ERROR" [5m]))</code></pre>
+
+  <div class="box">
+    <span class="t">이것이 로그와 메트릭의 다리다</span>
+    <p>
+      <code>rate()</code>를 씌우는 순간 로그가 시계열이 됩니다.
+      즉 <strong>로그 기반으로도 알림을 만들 수 있다</strong>는 뜻입니다.
+      다만 메트릭으로 잡을 수 있는 것을 굳이 로그로 세지는 마세요 —
+      비용도 지연도 로그 쪽이 훨씬 큽니다.
+      "메트릭에 없는 사건"에만 쓰는 것이 원칙입니다.
+    </p>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th style="width:24%">연산자</th><th>의미</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">|=</td><td>문자열 포함</td></tr>
+      <tr><td class="num">!=</td><td>문자열 미포함</td></tr>
+      <tr><td class="num">|~</td><td>정규식 일치</td></tr>
+      <tr><td class="num">!~</td><td>정규식 불일치</td></tr>
+      <tr><td class="num">| json / | logfmt</td><td>본문을 파싱해 필드를 뽑는다 (08절)</td></tr>
+      <tr><td class="num">count_over_time</td><td>구간 내 로그 줄 수</td></tr>
+      <tr><td class="num">rate</td><td>초당 로그 발생률</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2 class="sec"><span class="n">07</span>메트릭과 로그를 함께 보기</h2>
+
+  <p>
+    이 실습의 목적지입니다. 07단계 대시보드에 로그 패널을 붙여
+    <strong>같은 시간축에서</strong> 그래프와 로그를 나란히 놓습니다.
+  </p>
+
+  <h4>1. 상황 만들기</h4>
+<pre data-lang="bash"><code>end=$((SECONDS+120))
+while [ "$SECONDS" -lt "$end" ]; do
+  curl -s -o /dev/null "http://localhost:30080/api/chaos/error?rate=0.7"
+  sleep 0.5
+done
+echo "에러 주입 종료"</code></pre>
+
+  <h4>2. 대시보드에 로그 패널 추가</h4>
+  <p>
+    07단계의 <code>obs-red.json</code> 맨 아래에 패널 하나를 더합니다.
+    <code>gridPos</code>의 <code>y</code>는 마지막 패널(<code>y:13</code>, 높이 8) 다음인 21입니다.
+  </p>
+
+  <p class="fn">monitoring/dashboards/obs-red.json — panels 배열 끝에 추가</p>
+<pre data-lang="json"><code>{
+  "type": "logs",
+  "title": "앱 로그 (에러만)",
+  "gridPos": { "h": 10, "w": 24, "x": 0, "y": 21 },
+  "datasource": { "type": "loki", "uid": "loki" },
+  "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending"
+  },
+  "targets": [
+    {
+      "refId": "A",
+      "expr": "{namespace=\"$namespace\"} |= \"ERROR\""
+    }
+  ]
+}</code></pre>
+
+  <div class="box warn">
+    <span class="t">여기서만 uid를 고정한다</span>
+    <p>
+      로그 패널은 프로메테우스가 아닌 로키를 봐야 하므로 <code>uid: loki</code>를 명시합니다.
+      05단계에서 데이터소스를 지정하지 않는 원칙을 세웠지만,
+      <strong>데이터소스가 둘 이상인 대시보드에서는 예외</strong>입니다.
+      그래서 05절에서 <code>uid: loki</code>를 값 파일에 못 박아 둔 것입니다.
+    </p>
+  </div>
+
+<pre data-lang="bash"><code>cd ~/k8s-observability/monitoring
+
+kubectl -n monitoring create configmap obs-red-dashboard \
+  --from-file=obs-red.json=dashboards/obs-red.json \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n monitoring label configmap obs-red-dashboard grafana_dashboard=1 --overwrite
+kubectl -n monitoring annotate configmap obs-red-dashboard grafana_folder="Obs Study" --overwrite</code></pre>
+
+  <h4>3. 읽는 법</h4>
+  <p>
+    에러율 그래프가 솟은 지점에 마우스를 올리고, 아래 로그 패널에서 같은 시각의 줄을 찾습니다.
+    <strong>"그래프가 언제 튀었나" → "그때 무슨 로그가 찍혔나"</strong>가 한 화면에서 이어지는 것이
+    이 시리즈에서 만들려던 상태입니다.
+  </p>
+
+  <div class="box ac">
+    <span class="t">Explore의 분할 화면</span>
+    <p>
+      그라파나 <b>Explore</b>에서 <b>Split</b> 버튼을 누르면 왼쪽에 프로메테우스,
+      오른쪽에 로키를 놓고 시간 범위를 동기화할 수 있습니다.
+      장애 조사에서는 대시보드보다 이 화면을 더 자주 쓰게 됩니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2 class="sec"><span class="n">08</span>구조화 로그로 한 걸음 더</h2>
+
+  <p>
+    지금 로그는 사람이 읽기 좋은 텍스트입니다. 기계가 읽기에는 불편합니다.
+    <code>| json</code>으로 필드를 뽑으려면 애플리케이션이 JSON으로 찍어야 합니다.
+    Spring Boot는 이를 설정 한 줄로 지원합니다.
+  </p>
+
+  <p class="fn">apps/order-api/src/main/resources/application.yml — 추가</p>
+<pre data-lang="yaml"><code>logging:
+  structured:
+    format:
+      <span class="c"># ecs · logstash · gelf 중 선택. 로키에서는 어느 쪽이든 | json 으로 파싱된다.</span>
+      console: ecs</code></pre>
+
+  <p class="cap">
+    03단계 <code>redeploy.sh</code>로 태그를 올려 재배포한 뒤 로그를 다시 보면
+    한 줄이 JSON 객체로 바뀝니다. 필드 이름은 형식에 따라 다르므로
+    실제 출력 한 줄을 먼저 확인하고 질의를 씁니다.
+  </p>
+
+<pre data-lang="logql"><code><span class="c"># JSON을 파싱하고 레벨로 거른다 (필드명은 실제 출력에 맞춰 조정)</span>
+{namespace="apps"} | json | log_level = "ERROR"
+
+<span class="c"># 레벨별 로그 발생량</span>
+sum by (log_level) (count_over_time({namespace="apps"} | json [5m]))</code></pre>
+
+  <div class="box">
+    <span class="t">구조화 메타데이터 — 라벨을 늘리지 않는 방법</span>
+    <p>
+      "요청 ID로 로그를 찾고 싶다"는 요구는 항상 나옵니다.
+      라벨에 넣으면 스트림이 폭증하고, 본문에만 두면 훑기가 느려집니다.
+      로키 3.x의 <strong>구조화 메타데이터</strong>가 이 사이의 해법입니다 —
+      색인되지 않지만 필드로 다룰 수 있습니다.
+      값 파일에 <code>allow_structured_metadata: true</code>를 넣어둔 이유입니다.
+      본격적인 활용은 09단계 트레이스 연동과 함께 다루는 것이 자연스럽습니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 9 ══════ -->
+<section id="s9">
+  <h2 class="sec"><span class="n">09</span>자주 겪는 문제</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:36%">증상</th><th>원인과 조치</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>차트 렌더링이 <code>minio</code> 관련 오류로 실패</td>
+        <td>MinIO 서브차트는 폐기 예정이라 그냥 켜면 실패한다.
+          이 실습처럼 <code>storage.type: filesystem</code>을 쓰면 해당되지 않는다</td>
+      </tr>
+      <tr>
+        <td>로키 파드가 기동 중 <code>CrashLoopBackOff</code></td>
+        <td><code>replication_factor</code>가 1이 아니거나 <code>schemaConfig</code>가 없다.
+          <code>kubectl -n logging logs loki-0</code>에 이유가 그대로 찍힌다</td>
+      </tr>
+      <tr>
+        <td><code>loki-read</code>·<code>loki-write</code> 파드가 뜬다</td>
+        <td><code>deploymentMode</code>가 적용되지 않았거나 다른 모드의 replicas를 0으로 두지 않았다</td>
+      </tr>
+      <tr>
+        <td>memcached 파드가 메모리를 크게 먹는다</td>
+        <td>캐시가 켜져 있다. <code>chunksCache.enabled: false</code>, <code>resultsCache.enabled: false</code></td>
+      </tr>
+      <tr>
+        <td>Explore에서 <code>No logs found</code></td>
+        <td>라벨 이름을 확인한다. 라벨 브라우저에서 실제 존재하는 라벨만 쓸 수 있다.
+          Alloy의 relabel에서 만들지 않은 라벨은 없다</td>
+      </tr>
+      <tr>
+        <td><code>too many outstanding requests</code></td>
+        <td>시간 범위가 너무 넓거나 라벨 셀렉터가 느슨하다. 범위를 좁힌다</td>
+      </tr>
+      <tr>
+        <td>로그가 몇 분 뒤에야 보인다</td>
+        <td>정상 동작이다. 로키는 청크를 모아서 저장하므로 실시간이 아니다</td>
+      </tr>
+      <tr>
+        <td>Alloy 파드가 2개만 뜬다</td>
+        <td>노드 테인트나 리소스 부족. control-plane 노드에는 기본적으로 뜨지 않을 수 있다</td>
+      </tr>
+      <tr>
+        <td>디스크가 빠르게 찬다</td>
+        <td><code>retention_period</code>를 줄이거나, 실습 후 네임스페이스를 삭제한다</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>실습 후 정리</h3>
+<pre data-lang="bash"><code><span class="c"># 로그 스택만 걷어내기 (메트릭 스택은 유지)</span>
+helm -n logging uninstall alloy
+helm -n logging uninstall loki
+kubectl -n logging delete pvc --all</code></pre>
+</section>
+
+<!-- ══════ 10 ══════ -->
+<section id="s10">
+  <h2 class="sec"><span class="n">10</span>완료 체크리스트</h2>
+
+  <ul class="check">
+    <li><code>kubectl -n logging get pods</code> 에서 <code>loki-0</code>, <code>loki-gateway</code>, Alloy 3개가 Running</li>
+    <li>Alloy UI(12345)에서 컴포넌트 4개가 모두 healthy</li>
+    <li>그라파나 데이터소스 목록에 <b>Loki</b>가 있고 <b>Save &amp; test</b>가 통과</li>
+    <li>Explore에서 <code>{namespace="apps"}</code> 로 로그가 보인다</li>
+    <li><code>sum(rate({namespace="apps"} |= "ERROR" [5m]))</code> 가 그래프로 그려진다</li>
+    <li>RED 대시보드 하단에 로그 패널이 붙어 있고 에러 로그가 보인다</li>
+    <li>에러율 그래프가 튄 시각과 로그 시각이 맞아떨어진다</li>
+    <li>부하 주입 루프와 포트포워드를 종료했다</li>
+  </ul>
+
+  <div class="box ac">
+    <span class="t">다음 문서 — 선택 단계</span>
+    <p>
+      <strong>09 · 트레이싱 (선택)</strong> — 메트릭과 로그로 좁힌 다음, 요청 하나가
+      게이트웨이에서 백엔드까지 거친 경로를 시간 단위로 쪼개 봅니다.
+      Spring Boot 4의 <code>spring-boot-starter-opentelemetry</code>로 OTLP를 내보내고
+      Tempo에 저장하는 구성이며, 일정이 빠듯하면 건너뛰고
+      <strong>10 · 운영 팁</strong>으로 바로 가도 시리즈는 완결됩니다.
+    </p>
+  </div>
+
+  <h3>출처</h3>
+  <div class="src">
+    <ul>
+      <li>로키 모놀리식 헬름 설치 (MinIO 폐기 안내 포함) — https://grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/</li>
+      <li>로키 헬름 차트 (커뮤니티 저장소) — https://github.com/grafana-community/helm-charts/tree/main/charts/loki</li>
+      <li>로키 시작하기 — Alloy 값 파일 예시 — https://grafana.com/docs/loki/latest/get-started/</li>
+      <li>쿠버네티스에서 Alloy 설정 — https://grafana.com/docs/alloy/latest/configure/kubernetes/</li>
+      <li>헬름 차트 값 레퍼런스 — https://grafana.com/docs/loki/latest/setup/install/helm/reference/</li>
+      <li>Promtail EOL과 Alloy 전환 안내 — https://github.com/grafana/loki</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <span>관측성 실습 시리즈 · STEP 08 / 11 · macOS</span>
+  <span>2026-08-19 기준 · 버전은 실습 당일 재확인</span>
+</footer>
+
+</div>
+<div style="max-width:920px;margin:0 auto;padding:0 28px 60px">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#1a4fa0;text-decoration:none;border-bottom:1px solid #b9c9e2">← 시리즈 목차로 돌아가기</a>
+</div>
+</body>
+</html>

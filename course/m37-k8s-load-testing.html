@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 8 · 검증] M37 로드 테스팅 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 37 / 38 · PART 8 검증</div>
+  <h1>로드 테스팅</h1>
+  <p class="ch-desc">M36의 부하 생성기는 <strong>측정 도구지 부하 도구가 아니었다.</strong> 초당 170건을 보내며 응답 코드를 세는 것이 전부다. 이 모듈에서 k6로 램프업·정상·스파이크·회복의 네 구간을 만들고, <strong>cpu limit 하나로 P99를 3.54ms에서 14.74초로 만든 뒤</strong> 그 원인을 PromQL로 찾는다. 그리고 <code>kubectl top</code>이 <strong>한가하다고 말하는데 실제로는 96% 스로틀링</strong>인 상태를 확인한다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">120분</span><span class="tag">k6 v2.2.0</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전은 실습 당일 <code>k6 version</code>으로 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m16-k8s-resources-scheduling.html">M16</a>에서 <strong>cpu limit을 걸지 않기로</strong> 결정했다. 이 모듈이 그 결정을 검증한다</li>
+    <li><a href="m20-k8s-promql-instrumentation.html">M20</a>의 히스토그램이 살아 있다. 37.6에서 k6의 측정과 비교한다</li>
+    <li><a href="m17-k8s-autoscaling.html">M17</a>의 HPA가 동작한다. 부하가 그것을 움직인다</li>
+    <li>k6가 있다: <code>brew install k6</code>. 확인: <code>k6 version</code></li>
+    <li>인그레스가 <code>localhost:18080</code>으로 열려 있다</li>
+    <li>새로 만들 파일: <code>course/labs/scripts/k6-capacity.js</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 엔드포인트 가중치가 있는 네 구간 시나리오를 만들고, <strong>지연을 엔드포인트별로 따로</strong> 잰다.</p>
+  <p>2. <code>cpu limit: 50m</code>을 걸어 P99를 <strong>4000배</strong>로 만들고, <code>kubectl top</code>이 아니라 <strong>스로틀링 비율</strong>로 원인을 찾는다.</p>
+  <p>3. 목표 800 rps에서 <strong>에러율 0%인데 절반이 버려지는</strong> 상태를 만들고, 앱과 k6가 재는 값이 왜 22ms 다른지 확인한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">37.1</span>얼마나 견디는지 모른다</a>
+  <a href="#s2"><span class="num">37.2</span>이론 — 실제와 가까운 부하</a>
+  <a href="#s3"><span class="num">37.3</span>따라하기 ① 시나리오를 쓴다</a>
+  <a href="#s4"><span class="num">37.4</span>따라하기 ② 병목을 만든다</a>
+  <a href="#s5"><span class="num">37.5</span>따라하기 ③ 찾고 고치고 다시 잰다</a>
+  <a href="#s6"><span class="num">37.6</span>따라하기 ④ 한계와 측정 지점</a>
+  <a href="#s7"><span class="num">37.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">37.8</span>운영 관점 — 용량 산정과 튜닝 순서</a>
+  <a href="#s9"><span class="num">37.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">37.1</span>얼마나 견디는지 모른다</h2>
+  <p class="lead">M17에서 HPA를 만들 때 최대 8개로 정했다. M16에서 requests를 <code>50m</code>으로 잡았다. 두 숫자 모두 <strong>근거가 약했다</strong> — 실습에서 관찰한 값에 여유를 얹은 것이고, "이 클러스터가 초당 몇 건을 견디는가"를 물으면 답할 수 없다.</p>
+  <p>이 질문에 답하지 못하면 세 가지를 못 한다. <strong>용량을 계획할 수 없고</strong>(다음 달 트래픽이 두 배가 되면 무엇이 먼저 무너지는가), <strong>튜닝의 효과를 알 수 없고</strong>(리소스를 올렸는데 나아졌는가), <strong>SLO를 약속할 수 없다</strong>(P99 200ms를 지킨다는 말의 근거가 없다).</p>
+  <p>부하 시험이 그 답을 만든다. 다만 <strong>제대로 만들지 않으면 틀린 답을 확신하게 된다</strong> — 한 엔드포인트만 반복해서 때리면 캐시가 다 맞아 실제보다 좋은 수치가 나오고, 에러율만 보면 <strong>보내지도 못한 요청</strong>을 성공으로 센다. 이 모듈은 그 함정들을 하나씩 겪는다.</p>
+  <p>그리고 M16에서 미뤄 둔 숙제를 여기서 한다. <strong>cpu limit을 걸지 않기로 한 결정</strong>이 옳았는지를 숫자로 확인한다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">37.2</span>이론 — 실제와 가까운 부하</h2>
+  <p><span class="lbl">책 매핑</span>20.2.1 목표 · 20.2.2 전제 조건 · 20.2.3 실제와 가까운 트래픽 생성 · 20.2.4~20.2.5 튜닝</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+      <text class="t-h" x="40" y="46">같은 부하, 다른 곳에서 잰 값</text>
+
+      <!-- 측정 경로 -->
+      <rect class="node" x="40" y="70" width="120" height="50" rx="4"/>
+      <text class="t-title" x="100" y="90" text-anchor="middle">k6</text>
+      <text class="t-mono" x="100" y="108" text-anchor="middle">p95 70.49ms</text>
+      <path class="line" d="M 160 95 L 194 95" marker-end="url(#ar1)"/>
+      <rect class="box" x="196" y="70" width="140" height="50" rx="4"/>
+      <text class="t-title" x="266" y="90" text-anchor="middle">인그레스</text>
+      <text class="t-sub" x="266" y="108" text-anchor="middle">여기서 약 22ms</text>
+      <path class="line" d="M 336 95 L 370 95" marker-end="url(#ar1)"/>
+      <rect class="accent" x="372" y="70" width="150" height="50" rx="4"/>
+      <text class="t-title" x="447" y="90" text-anchor="middle">journal-api</text>
+      <text class="t-mono" x="447" y="108" text-anchor="middle">p95 48.42ms</text>
+      <path class="line" d="M 522 95 L 556 95" marker-end="url(#ar1)"/>
+      <rect class="box" x="558" y="70" width="120" height="50" rx="4"/>
+      <text class="t-title" x="618" y="97" text-anchor="middle">redis</text>
+
+      <rect class="box" x="700" y="70" width="160" height="50" rx="4"/>
+      <text class="t-mono" x="710" y="90">k6 300 req/s</text>
+      <text class="t-mono" x="710" y="108">앱  258.7 req/s</text>
+      <text class="t-sub" x="710" y="122">15% 는 정적 파일로 간다</text>
+
+      <!-- 병목 -->
+      <rect class="soft" x="40" y="146" width="820" height="150" rx="4"/>
+      <text class="t-h" x="56" y="170">cpu limit 하나가 만든 차이 (같은 150 rps)</text>
+
+      <rect class="box" x="56" y="182" width="252" height="46" rx="3"/>
+      <text class="t-mono" x="66" y="202">limit 없음</text>
+      <text class="t-acc" x="66" y="220">p99 3.54ms · 150 rps 달성</text>
+
+      <rect class="warnbox" x="322" y="182" width="252" height="46" rx="3"/>
+      <text class="t-mono" x="332" y="202">limit 50m</text>
+      <text class="t-warn" x="332" y="220">p99 14.74s · 121 rps</text>
+
+      <rect class="box" x="588" y="182" width="256" height="46" rx="3"/>
+      <text class="t-mono" x="598" y="202">limit 500m</text>
+      <text class="t-acc" x="598" y="220">p99 7.71ms · 150 rps 달성</text>
+
+      <rect class="warnbox" x="56" y="238" width="788" height="46" rx="3"/>
+      <text class="t-mono" x="66" y="258">kubectl top 은 20~36m — 한가해 보인다. 스로틀링은 top 에 나타나지 않는다</text>
+      <text class="t-warn" x="66" y="275">container_cpu_cfs_throttled_periods_total / _periods_total  =  88~96%</text>
+
+      <!-- 한계 -->
+      <text class="t-h" x="56" y="326">무너지는 지점을 읽는 법</text>
+      <rect class="warnbox" x="56" y="338" width="392" height="86" rx="3"/>
+      <text class="t-mono" x="66" y="358">목표 800 rps</text>
+      <text class="t-mono" x="66" y="376">http_req_failed: 0.00%</text>
+      <text class="t-warn" x="66" y="394">그런데 386 rps 만 나갔다</text>
+      <text class="t-warn" x="66" y="412">dropped_iterations 24,069 — 절반이 발사되지 못했다</text>
+
+      <rect class="box" x="468" y="338" width="376" height="86" rx="3"/>
+      <text class="t-title" x="478" y="358">에러율만 보면 정상으로 읽힌다</text>
+      <text class="t-sub" x="478" y="376">보내지 못한 요청은 실패로 세지 않는다</text>
+      <text class="t-sub" x="478" y="394">실제 사용자에게는 그것도 장애다</text>
+      <text class="t-acc" x="478" y="412">달성 rps 와 dropped 를 항상 함께 본다</text>
+    </svg>
+    <figcaption>그림 37.1 — 위쪽은 같은 부하를 다른 지점에서 잰 값, 아래쪽은 cpu limit이 만든 차이와 한계 지점을 읽는 법.</figcaption>
+  </figure>
+
+  <h3>부하율을 고정한다</h3>
+  <p>k6에는 두 방식이 있다. <strong>VU 기반</strong>(가상 사용자 N명이 쉬지 않고 요청)과 <strong>도착률 기반</strong>(초당 N건을 보낸다). 용량 측정에는 <strong>도착률 기반</strong>을 쓴다.</p>
+  <p>이유가 분명하다. VU 방식은 <strong>앱이 빨라질수록 부하가 커진다</strong> — 응답이 두 배 빨라지면 요청도 두 배가 된다. 그러면 "파드를 늘렸더니 부하도 늘어" 개선을 측정할 수 없다. 도착률을 고정해야 <strong>"같은 부하에 자원이 얼마나 필요한가"</strong>를 잰다.</p>
+  <p>도착률 방식의 대가가 <code>dropped_iterations</code>다. 목표 속도로 발사하지 못하면 <strong>그 요청은 버려지고</strong>, 응답이 없으므로 에러율에도 잡히지 않는다. 37.7에서 이것 때문에 결과를 잘못 읽는 상황을 만든다.</p>
+
+  <h3>한 엔드포인트만 때리면 안 된다</h3>
+  <p>책 20.2.3의 요점이다. 읽기만 반복하면 <strong>캐시가 전부 맞고</strong>, 쓰기만 반복하면 실제와 다른 잠금 경합이 생긴다. 실제 트래픽의 비율을 흉내 내야 <strong>병목이 실제와 같은 자리</strong>에 나타난다.</p>
+  <p>비율은 <strong>접근 로그에서 가져온다</strong>(M22의 파이프라인이 그 데이터를 갖고 있다). 이 모듈에서는 읽기 70%·쓰기 15%·정적 15%를 가정했는데, <strong>자기 서비스의 실제 비율로 바꿔 써야</strong> 의미가 있다.</p>
+  <p>그리고 <strong>엔드포인트별로 따로 잰다.</strong> 전체 P99만 보면 어느 경로가 느린지 모르고, 느린 경로의 비중이 작으면 <strong>전체 분위수에 묻힌다.</strong></p>
+
+  <h3>네 구간</h3>
+  <p>시나리오를 네 구간으로 나눈다. <strong>램프업</strong>은 계단으로 올리며 꺾이는 지점을 찾고, <strong>정상</strong>은 같은 부하를 유지하며 안정 상태를 재고, <strong>스파이크</strong>는 오토스케일링이 따라오지 못하는 구간을 만들고, <strong>회복</strong>은 스파이크 뒤에 원래대로 돌아오는지 본다.</p>
+  <p>네 번째가 자주 빠지는데 중요하다. <strong>회복되지 않으면 무언가 새고 있다</strong> — 커넥션 풀이 고갈됐거나, 큐가 밀렸거나, 메모리가 회수되지 않은 것이다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">37.3</span>따라하기 ① 시나리오를 쓴다</h2>
+
+  <div class="step">
+    <h4>1단계 — 네 구간을 정의한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>한 번 실행으로 램프업부터 회복까지 본다. <code>startTime</code>으로 순서를 만든다.</p>
+<pre><code>const full = {
+  rampup: {
+    executor: 'ramping-arrival-rate',
+    startRate: 20, timeUnit: '1s',
+    preAllocatedVUs: 50, maxVUs: 400,
+    stages: [
+      { target: 50,     duration: '30s' },
+      { target: 100,    duration: '30s' },
+      { target: STEADY, duration: '30s' },
+    ],
+  },
+  steady:  { executor: 'constant-arrival-rate', rate: STEADY, duration: '90s', startTime: '90s',  ... },
+  spike:   { executor: 'constant-arrival-rate', rate: PEAK,   duration: '30s', startTime: '180s', ... },
+  recover: { executor: 'constant-arrival-rate', rate: STEADY, duration: '60s', startTime: '210s', ... },
+};</code></pre>
+    <p><code>preAllocatedVUs</code>와 <code>maxVUs</code>는 <strong>부하를 만들 쪽의 여유</strong>다. 응답이 느려지면 한 요청이 VU를 오래 붙잡으므로, 목표 속도를 유지하려면 VU가 더 필요하다. 부족하면 <code>dropped_iterations</code>가 생긴다 — <strong>앱이 아니라 k6가 부족한 것</strong>일 수 있으니 이 값을 넉넉히 준다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 엔드포인트를 섞고 따로 잰다</h4>
+    <p class="purpose"><span class="lbl">목적</span>실제 트래픽 비율을 흉내 내고, <strong>경로별 지연</strong>을 남긴다.</p>
+<pre><code>const dList = new Trend('lat_list', true);
+const dWrite = new Trend('lat_write', true);
+const dStatic = new Trend('lat_static', true);
+
+export default function () {
+  const r = Math.random();
+  if (r &lt; 0.70) {                       // 70% 목록 읽기
+    const res = http.get(`${BASE}/api/entries`, { headers: { Host: HOST } });
+    dList.add(res.timings.duration);
+  } else if (r &lt; 0.85) {                // 15% 쓰기
+    const res = http.post(`${BASE}/api/entries`, JSON.stringify({ text: `load ${Date.now()}` }), ...);
+    dWrite.add(res.timings.duration);
+  } else {                              // 15% 정적
+    const res = http.get(`${BASE}/`, { headers: { Host: HOST } });
+    dStatic.add(res.timings.duration);
+  }
+}</code></pre>
+<pre><code>export const options = {
+  scenarios: PROFILE === 'full' ? full : single,
+  thresholds: {
+    http_req_failed: ['rate&lt;0.01'],
+    'lat_list': ['p(99)&lt;500'],
+  },
+};</code></pre>
+    <p><code>thresholds</code>가 이 스크립트를 <strong>테스트</strong>로 만든다. 임계값을 넘으면 k6가 종료 코드 <code>99</code>로 끝나므로 <strong>M29의 파이프라인에 그대로 게이트로 넣을 수 있다</strong> — 성능 회귀를 배포 전에 잡는 자리다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 기준을 잰다</h4>
+    <p class="purpose"><span class="lbl">목적</span>비교할 숫자를 먼저 만든다. <strong>기준 없이는 개선도 악화도 말할 수 없다.</strong></p>
+<pre><code>k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>✓ 'rate&lt;0.01'  rate=0.00%
+✓ 'p(99)&lt;500'  p(99)=3.54ms
+
+lat_list  : avg=2.09ms   p(90)=2.76ms  p(95)=2.96ms
+lat_write : avg=1.27ms   p(90)=1.54ms  p(95)=1.66ms
+lat_static: avg=632.17µs p(90)=769µs   p(95)=847.39µs
+http_req_failed: 0.00%  0 out of 13500
+http_reqs      : 13500  149.995377/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>150 rps를 정확히 달성했고 실패가 0이다. 경로별 차이도 보인다 — <strong>정적 파일이 0.6ms, 목록 읽기가 2.1ms</strong>다. 목록 읽기가 세 배 느린 것은 레디스를 두 번 부르기 때문이고, M36의 지연 실험에서 확인한 사실과 일치한다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">37.4</span>따라하기 ② 병목을 만든다</h2>
+  <p>M16에서 <strong>cpu limit을 일부러 걸지 않았다.</strong> "초과하면 죽는 게 아니라 조여진다"는 이유였는데, 그 조여짐이 실제로 어떤 값인지는 재지 않았다. 지금 잰다.</p>
+
+  <div class="step">
+    <h4>1단계 — cpu limit을 건다</h4>
+    <p class="purpose"><span class="lbl">목적</span>흔히 하는 "안전을 위해 limit을 건다"는 선택의 결과를 본다.</p>
+<pre><code>kubectl -n journal patch deploy journal-api --type=json \
+  -p '[{"op":"add","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"50m"}]'
+kubectl -n journal rollout status deploy/journal-api
+
+k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>✗ 'p(99)&lt;500'  p(99)=14.74s
+✗ write 2xx
+  ↳  99% — ✓ 1882 / ✗ 4
+
+lat_list: avg=3.63s  med=3.03s  p(90)=6.62s  p(95)=7.71s  max=16.11s
+http_req_failed: 0.03%  4 out of 12800
+http_reqs      : 12800  121.306328/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>P99가 3.54ms에서 14.74초가 됐다 — 4000배다.</strong> 그리고 150 rps를 채우지 못하고 121로 떨어졌다. 실패율은 <strong>0.03%</strong>에 불과해서, <strong>에러율만 보는 감시로는 이 상태를 잡지 못한다.</strong></div>
+    <p><code>requests: 50m</code>과 <code>limits: 50m</code>을 같게 만든 것이 이 실험의 설정이다. 그러면 QoS가 <code>Guaranteed</code>가 되는데(M16), <strong>Guaranteed가 좋은 것이라고만 알고 있으면</strong> 이 결과가 뜻밖일 수 있다. QoS는 <strong>축출 순서</strong>의 이야기이지 성능의 이야기가 아니다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — <code>kubectl top</code>을 본다 (그리고 속는다)</h4>
+    <p class="purpose"><span class="lbl">목적</span>가장 먼저 치는 명령이 <strong>왜 이 문제를 못 잡는지</strong> 확인한다.</p>
+<pre><code>kubectl top pods -n journal -l app=journal-api --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-6575b5fd6c-5rd75   20m   42Mi
+journal-api-6575b5fd6c-9cv2k   36m   48Mi
+journal-api-6575b5fd6c-9shsx   32m   63Mi
+journal-api-6575b5fd6c-c2lb7    5m   46Mi
+journal-api-6575b5fd6c-jbf4r    4m   42Mi</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>전부 한가해 보인다.</strong> limit이 50m인데 20~36m만 쓰고 있으니 "CPU는 문제가 아니다"라고 읽게 된다. 그런데 P99는 14초다. <code>top</code>이 보여 주는 것은 <strong>실제로 쓴 시간</strong>이고, <strong>쓰고 싶었는데 못 쓴 시간</strong>은 여기 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 스로틀링을 잰다</h4>
+    <p class="purpose"><span class="lbl">목적</span>보이지 않던 것을 보이게 한다. <strong>이 질의가 이 모듈의 핵심 도구</strong>다.</p>
+<pre><code>sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="journal",container="api"}[2m]))
+/
+sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="journal",container="api"}[2m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-6575b5fd6c-c2lb7   96.2 %
+journal-api-6575b5fd6c-sxbvb   87.8 %
+journal-api-6575b5fd6c-9cv2k   92.1 %
+journal-api-6575b5fd6c-9shsx   91.4 %
+journal-api-6575b5fd6c-vfmg9   91.3 %</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>88~96%의 주기가 스로틀됐다.</strong> 리눅스의 CFS는 100ms 단위로 할당량을 주는데, <code>50m</code>은 그 100ms 중 <strong>5ms만 쓸 수 있다</strong>는 뜻이다. 5ms를 다 쓰면 나머지 95ms는 <strong>실행 가능한 상태로 대기</strong>하고, 그 대기가 응답 시간에 그대로 더해진다.</div>
+    <p>왜 <code>top</code>과 어긋나는지 설명된다. 5ms씩 100ms마다 쓰면 평균 사용률은 <strong>50m 근처</strong>로 나오고, 그것이 <code>top</code>이 보여 주는 값이다. <strong>바쁜 것과 조여진 것이 같은 숫자로 보인다.</strong></p>
+    <p><code>container_cpu_cfs_throttled_periods_total</code>은 cAdvisor가 내보내는 지표다 — M19에서 세 출처를 구분할 때 본 그 cAdvisor이고, <strong>노드에서만 알 수 있는 정보</strong>라 앱 지표에는 절대 나타나지 않는다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">37.5</span>따라하기 ③ 찾고 고치고 다시 잰다</h2>
+
+  <div class="step">
+    <h4>1단계 — limit을 올린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>원인이 맞았는지 <strong>같은 측정으로</strong> 확인한다.</p>
+<pre><code>kubectl -n journal patch deploy journal-api --type=json \
+  -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"500m"}]'
+k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>✓ 'p(99)&lt;500'  p(99)=7.71ms
+lat_list: avg=5.05ms  p(95)=6.01ms
+http_req_failed: 0.00%  0 out of 13500
+http_reqs      : 13500  149.99904/s
+
+스로틀링: 전 파드 0.0 %</code></div>
+    <div class="verdict"><span class="lbl">판정</span>스로틀링이 <strong>0%</strong>가 되고 P99가 7.71ms로 돌아왔다. 150 rps도 다시 달성한다. <strong>원인이 맞았다.</strong></div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — limit을 제거한다 (M16의 결정으로)</h4>
+    <p class="purpose"><span class="lbl">목적</span>세 가지 구성을 나란히 비교한다.</p>
+<pre><code>kubectl -n journal patch deploy journal-api --type=json \
+  -p '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/limits/cpu"}]'</code></pre>
+    <table>
+      <thead><tr><th>구성</th><th>avg</th><th>p95</th><th>p99</th><th>달성 rps</th><th>스로틀링</th></tr></thead>
+      <tbody>
+        <tr><td>limit 없음 (기준)</td><td>2.09ms</td><td>2.96ms</td><td>3.54ms</td><td>150</td><td>—</td></tr>
+        <tr><td><strong>limit 50m</strong></td><td><strong>3.63s</strong></td><td><strong>7.71s</strong></td><td><strong>14.74s</strong></td><td><strong>121</strong></td><td><strong>88~96%</strong></td></tr>
+        <tr><td>limit 500m</td><td>5.05ms</td><td>6.01ms</td><td>7.71ms</td><td>150</td><td>0.0%</td></tr>
+        <tr><td>limit 제거 (복귀)</td><td>6.5ms</td><td>7.98ms</td><td>9.45ms</td><td>150</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>가운데 줄만 자릿수가 다르다. 그런데 <strong>마지막 두 줄이 기준(첫 줄)보다 느리다</strong> — 이것을 "limit을 제거해서 느려졌다"고 읽으면 틀린다. 그 사이 HPA가 파드를 8개까지 늘렸고 클러스터가 더 바빠졌다. <strong>같은 조건에서 잰 값이 아니다.</strong></div>
+    <p>부하 시험에서 가장 흔한 오류가 이것이다. <strong>비교하려는 것 말고 다른 것이 바뀌지 않았는지</strong>를 항상 확인한다. 엄밀하게 하려면 각 측정 전에 클러스터를 같은 상태로 되돌려야 한다 — HPA를 고정하고, 파드 수를 맞추고, 몇 분 안정시킨다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 전체 프로파일을 돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>램프업부터 회복까지 한 번에 보며 <strong>구간별 차이</strong>를 잡는다.</p>
+<pre><code>k6 run -e STEADY=150 -e PEAK=400 course/labs/scripts/k6-capacity.js</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>✓ 'rate&lt;0.01'  rate=0.00%
+✓ 'p(99)&lt;500'  p(99)=29.34ms
+
+lat_list  : avg=11.63ms  p(90)=16.52ms  p(95)=20.49ms
+lat_write : avg=2.26ms   p(95)=7.79ms
+lat_static: avg=726.12µs p(95)=1.15ms
+http_req_failed: 0.00%  0 out of 41551
+http_reqs      : 41551  153.889275/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>스파이크 400 rps에서도 실패가 0이다. <strong>다만 그 이유는 HPA가 이미 8개까지 늘어난 상태였기 때문</strong>이고, 파드가 3개인 상태에서 갑자기 400이 왔다면 결과가 달랐을 것이다. <strong>스파이크 시험은 시작 상태를 함께 적어야</strong> 재현된다.</div>
+    <p><code>lat_write</code>가 <code>lat_list</code>보다 <strong>다섯 배 빠른</strong> 것도 눈에 띈다. 쓰기는 레디스에 <code>SET</code> 한 번이고 읽기는 <code>KEYS</code> + <code>MGET</code> 두 번이다 — <strong>읽기가 무거운 앱</strong>이라는 사실이 이 표에 그대로 나온다. 최적화한다면 <code>KEYS</code>를 없애는 것이 첫 번째 후보다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">37.6</span>따라하기 ④ 한계와 측정 지점</h2>
+
+  <div class="step">
+    <h4>1단계 — 무너지는 지점을 찾는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>용량의 상한을 숫자로 만든다.</p>
+<pre><code>k6 run -e PROFILE=steady -e RPS=800 -e DURATION=60s course/labs/scripts/k6-capacity.js</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>lat_list: avg=1.9s  p(90)=2.6s  p(95)=2.77s  max=3.51s
+http_req_failed  : 0.00%  1 out of 23931
+http_reqs        : 23931  386.047245/s
+dropped_iterations: 24069  388.273417/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>에러율 0.00%인데 절반이 버려졌다.</strong> 목표 800 rps 중 386만 실제로 나갔고, 나머지 24,069건은 <strong>발사조차 되지 못했다.</strong> 요약의 <code>http_req_failed</code>만 보면 "800 rps에서도 문제없다"는 정반대 결론이 나온다.</div>
+    <p><code>dropped_iterations</code>가 생기는 이유는 둘이다. <strong>VU가 부족하거나</strong>(<code>maxVUs</code>를 올려 확인한다), <strong>대상이 느려서 VU가 다 붙잡혀 있거나</strong>. 여기서는 후자다 — P95가 2.77초이므로 VU 하나가 요청 하나에 2.8초를 쓰고, 600 VU로는 초당 214건밖에 못 보낸다.</p>
+    <p>이 클러스터의 용량은 <strong>"P95 50ms 이하를 지키며 약 300 rps"</strong> 정도로 정리된다. 그 이상은 지연이 급격히 나빠진다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 앱과 k6가 재는 값을 비교한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M20의 히스토그램과 k6의 숫자가 <strong>왜 다른지</strong> 확인한다. 둘 다 맞다.</p>
+<pre><code># k6 를 300 rps 로 돌리는 동안 프로메테우스에 질의한다
+histogram_quantile(0.95, sum by (le) (rate(
+  http_server_requests_seconds_bucket{namespace="journal",job="journal-api",uri="/api/entries"}[1m])))
+
+sum(rate(http_server_requests_seconds_count{namespace="journal",job="journal-api"}[1m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>앱  P95      : 48.42 ms
+앱  요청률   : 258.7 req/s
+
+k6  lat_list p95 : 70.49 ms
+k6  http_reqs    : 27000  299.824729/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>두 값의 차이가 각각 이유가 있다. <strong>지연 22ms</strong>는 인그레스 컨트롤러 통과 시간과 네트워크, 그리고 k6 쪽의 큐잉이다 — <strong>사용자가 겪는 것은 70ms 쪽</strong>이다. <strong>요청률 41건</strong>은 15%가 정적 파일로 가서 <code>journal-api</code>에 오지 않기 때문이다: <code>300 × 0.85 = 255 ≈ 258.7</code>.</div>
+    <p>여기서 나오는 원칙이 있다. <strong>SLO는 사용자에게 가까운 지점에서 재야 한다.</strong> 앱의 히스토그램은 원인을 찾는 데 좋고(어느 핸들러가 느린가), <strong>약속을 지켰는지 판정하는 데는 클라이언트 쪽 측정이 맞다.</strong> M21에서 만든 알림이 앱 지표를 쓰는 것은 <strong>탐지</strong>가 목적이고, SLO 판정은 별도의 측정이 필요하다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">37.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 에러율만 보고 정상이라고 판정한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>37.6의 800 rps 결과를 <strong>잘못 읽는 방법</strong>을 명시한다.</p>
+    <p>보고서에 이렇게 적었다고 하자.</p>
+    <div class="out"><code>800 rps 부하 시험 결과: 에러율 0.00% (1 / 23,931). 목표 달성.</code></div>
+    <div class="verdict"><span class="lbl">판정</span>모든 숫자가 사실이고 결론이 틀렸다. <strong>23,931건은 실제로 보낸 요청의 수</strong>이지 목표한 48,000건이 아니다. 절반은 발사되지 못했고, 그 요청들은 <strong>실제 사용자였다면 브라우저가 멈춰 있는 상태</strong>다.</div>
+    <p>부하 시험 결과를 읽을 때 <strong>반드시 함께 보는 세 숫자</strong>가 있다. <strong>목표 rps</strong>(설정값), <strong>달성 rps</strong>(<code>http_reqs</code>의 초당 값), <strong><code>dropped_iterations</code></strong>. 셋 중 하나라도 빠지면 결론이 흔들린다.</p>
+    <p>VU 기반 시험에서는 이 함정이 다른 형태로 나타난다 — <code>dropped_iterations</code>가 없는 대신 <strong>부하 자체가 조용히 줄어든다.</strong> 응답이 느려지면 VU가 요청을 덜 보내고, 그러면 "부하를 유지했는데 괜찮았다"는 착각이 생긴다. 도착률 기반이 최소한 <strong>버렸다고 말해 준다</strong>는 점에서 낫다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — <code>kubectl top</code>으로 CPU를 판단한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>37.4의 관찰을 <strong>진단 절차의 문제</strong>로 정리한다.</p>
+    <p>P99가 14초인 상태에서 가장 먼저 치는 명령이 <code>kubectl top</code>이고, 그 결과가 <code>20m / 42Mi</code>다. <strong>CPU도 메모리도 여유가 있다.</strong> 그러면 다음 수순은 대개 이렇다 — 네트워크를 의심하고, 레디스를 의심하고, 애플리케이션 코드를 뒤진다. <strong>전부 헛수고다.</strong></p>
+    <table>
+      <thead><tr><th>보이는 것</th><th>실제</th></tr></thead>
+      <tbody>
+        <tr><td><code>top</code>: 20~36m 사용</td><td>limit 50m 중 대부분을 쓰고 있다</td></tr>
+        <tr><td>CPU 여유 있음</td><td>주기의 88~96%가 <strong>대기</strong></td></tr>
+        <tr><td>에러율 0.03%</td><td>P99 14.74초</td></tr>
+      </tbody>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>세 신호가 모두 "정상"을 가리키는데 서비스는 사실상 죽어 있다. <strong>스로틀링은 사용률로 드러나지 않는다</strong> — 별도의 지표를 봐야 하고, 그 지표를 대시보드에 두지 않았다면 <strong>이 상태를 영원히 진단하지 못한다.</strong></div>
+    <p>대응은 <strong>대시보드에 스로틀링 패널을 두는 것</strong>이다. M21에서 만든 대시보드에 다음 한 줄을 더한다.</p>
+<pre><code>sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="$ns"}[5m]))
+/
+sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="$ns"}[5m]))</code></pre>
+    <p>알림으로도 만들 값이 있다. <strong>스로틀링 25% 이상이 5분 지속</strong>이면 그 파드는 성능 문제를 겪고 있고, <strong>사용자가 알아채기 전에</strong> 대응할 수 있다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">37.8</span>운영 관점 — 용량 산정과 튜닝 순서</h2>
+
+  <h3>cpu limit을 걸 것인가</h3>
+  <p>M16에서 미룬 결정을 이제 숫자로 말할 수 있다. <strong>cpu limit을 걸면 그 값이 성능의 상한이 된다.</strong> 그리고 그 상한에 부딪혔을 때 증상이 <strong>가장 진단하기 어려운 형태</strong>(정상으로 보이는 지표 + 느린 응답)로 나타난다.</p>
+  <p>그럼에도 거는 경우가 있다. <strong>다중 테넌트 클러스터에서 이웃을 보호</strong>해야 할 때, <strong>비용을 예측 가능하게</strong> 만들어야 할 때, <strong>버그로 CPU를 무한히 쓰는 것</strong>을 막아야 할 때다. 이때도 원칙이 있다 — <strong>실측한 최대 사용량의 여러 배로 넉넉히 잡고</strong>, <strong>스로틀링을 반드시 감시한다.</strong> requests와 limits를 같게 만드는 것은 <strong>QoS를 위해서지 성능을 위해서가 아니다.</strong></p>
+  <p>메모리는 반대다. <strong>메모리 limit은 걸어야 한다</strong> — 초과하면 조여지는 것이 아니라 <code>OOMKilled</code>이고, limit이 없으면 한 파드가 노드 전체를 죽인다. M16에서 <strong>메모리는 걸고 CPU는 걸지 않은</strong> 것이 이 비대칭 때문이다.</p>
+
+  <h3>튜닝의 순서</h3>
+  <p>부하 시험에서 병목을 찾았을 때 손대는 순서가 있다. 앞의 것이 싸고 효과가 크다.</p>
+  <p><strong>① 설정</strong> — 스로틀링(이 모듈), 커넥션 풀 크기, 타임아웃. 코드를 고치지 않고 되돌리기도 쉽다. <strong>② 규모</strong> — 파드 수(HPA 상한), 노드 크기. 돈으로 해결하는 자리이고, <strong>수평 확장이 되는 워크로드인지</strong>가 전제다. <strong>③ 코드</strong> — 이 앱이라면 <code>KEYS</code> 제거가 여기 해당한다. 효과가 가장 크지만 가장 비싸고 위험하다.</p>
+  <p>순서를 지키지 않으면 <strong>고치지 않아도 될 것을 고친다.</strong> 이 모듈에서 만든 병목은 ①로 해결됐고, 코드는 한 줄도 건드리지 않았다.</p>
+
+  <h3>용량 산정을 숫자로 쓰는 법</h3>
+  <p>이 모듈의 측정을 정리하면 이 클러스터의 용량은 이렇게 적힌다.</p>
+  <table>
+    <thead><tr><th>항목</th><th>값</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td>안정 처리량</td><td>약 300 rps</td><td>P95 70ms, 실패 0%, dropped 0</td></tr>
+      <tr><td>한계 처리량</td><td>약 386 rps</td><td>800 목표에서 실제 달성치, P95 2.77초</td></tr>
+      <tr><td>파드당 처리량</td><td>약 40 rps</td><td>300 rps ÷ 8 파드</td></tr>
+      <tr><td>스파이크 여력</td><td>400 rps 30초</td><td>파드 8개 상태에서 실패 0</td></tr>
+    </tbody>
+  </table>
+  <p>이 표가 있으면 <strong>계획을 세울 수 있다.</strong> 트래픽이 500 rps가 될 예정이면 파드 상한을 13개로 올리고 노드를 확인한다. 그리고 <strong>측정 조건을 함께 적는 것</strong>이 중요하다 — 파드 수, 데이터 크기, 부하 구성비. 조건이 바뀌면 숫자도 바뀐다.</p>
+
+  <h3>파이프라인에 넣기</h3>
+  <p><code>thresholds</code> 덕분에 이 스크립트는 <strong>테스트</strong>다. M29의 파이프라인에 짧은 버전(예: 60초, 100 rps)을 넣으면 <strong>성능 회귀를 배포 전에</strong> 잡는다.</p>
+  <p>주의할 것은 <strong>일회용 클러스터의 성능이 운영과 다르다</strong>는 점이다. 절대값을 임계값으로 쓰면 CI 환경의 변동 때문에 자주 깨지므로, <strong>같은 CI 환경에서의 이전 측정 대비 비율</strong>로 판정하거나 임계값을 넉넉히 잡는다. <strong>깨지는 것을 무시하기 시작하면 그 게이트는 없는 것과 같다</strong> — M29 8절에서 스캔 임계값에 대해 말한 것과 같은 원칙이다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">37.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>k6 version</code> → <code>v2.</code>로 시작한다</li>
+      <li><code>ls course/labs/scripts/k6-capacity.js</code> → 파일이 있다</li>
+      <li><code>grep -c "ramping-arrival-rate" course/labs/scripts/k6-capacity.js</code> → <code>1</code></li>
+      <li><code>grep -c "lat_list\|lat_write\|lat_static" course/labs/scripts/k6-capacity.js</code> → <code>3</code> 이상 (엔드포인트별 측정)</li>
+      <li><code>grep -c "thresholds" course/labs/scripts/k6-capacity.js</code> → <code>1</code></li>
+      <li><code>k6 run -e PROFILE=steady -e RPS=150 -e DURATION=60s course/labs/scripts/k6-capacity.js</code> → <code>http_req_failed</code>가 <code>1%</code> 미만, 종료 코드 <code>0</code></li>
+      <li>같은 실행에서 <code>http_reqs</code>의 초당 값 → <code>149</code>~<code>150</code> (목표를 달성한다)</li>
+      <li>같은 실행에서 <code>dropped_iterations</code> → 출력에 없거나 0</li>
+      <li><code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].resources.limits}'</code> → <code>cpu</code>가 <strong>없다</strong> (<code>memory</code>만)</li>
+      <li>프로메테우스에서 스로틀링 질의 → <strong>빈 결과</strong>(<code>cpu limit</code>이 없으면 CFS 할당량 자체가 없어 지표가 만들어지지 않는다). 37.4의 <code>limit 50m</code> 상태에서만 값이 나온다</li>
+      <li><code>k6 run -e PROFILE=steady -e RPS=800 -e DURATION=30s ...</code> → <code>dropped_iterations</code>가 0보다 크다</li>
+      <li><code>kubectl -n journal get hpa journal-api --no-headers</code> → <code>REPLICAS</code>가 <code>MAXPODS</code> 이하</li>
+      <li>(이해 확인) <code>kubectl top</code>이 20m을 보여 주는데 P99가 14초일 수 있는 이유를 적는다</li>
+      <li>(이해 확인) 앱의 P95(48ms)와 k6의 P95(70ms) 중 <strong>SLO 판정에 쓸 값</strong>과 그 이유를 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/scripts/k6-capacity.js</code> — 네 구간 시나리오 + 엔드포인트 가중치 + 임계값</li>
+      <li>측정 기록: 37.5의 전후 비교표와 37.8의 용량 표 (M38 캡스톤 보고서에 들어간다)</li>
+      <li>클러스터: 변경 없음 — <code>cpu limit</code>은 실험 후 제거했다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># k6 가 남아 있으면 끈다 (포그라운드로 돌렸으면 이미 끝났다)
+pkill -f k6-capacity 2&gt;/dev/null
+
+# cpu limit 이 제거됐는지 확인한다 — 실험이 남긴 가장 위험한 흔적이다
+kubectl -n journal get deploy journal-api \
+  -o jsonpath='{.spec.template.spec.containers[0].resources}{"\n"}'
+
+# 부하로 만들어진 엔트리를 지운다 (쓰기 15% 가 실제로 저장됐다)
+PW=$(kubectl -n journal get secret journal-secret -o jsonpath='{.data.REDIS_PASSWORD}' | base64 -d)
+kubectl -n journal exec redis-0 -- sh -c \
+  "redis-cli -a '$PW' --scan --pattern 'entry:*' | head -2000 | xargs -r redis-cli -a '$PW' DEL"</code></pre>
+  <p><code>limits</code>에 <code>memory</code>만 있고 <code>cpu</code>가 없어야 한다. <strong>실험이 배포를 바꾼 것은 사람이 되돌린다</strong> — M36에서 배운 규칙이 여기서도 같다.</p>
+  <p>부하 시험은 <strong>데이터를 남긴다.</strong> 쓰기 15%가 전부 레디스에 저장됐고, 그대로 두면 다음 측정의 <code>KEYS</code>가 느려져 <strong>결과가 조금씩 나빠진다.</strong> 측정 환경을 같게 유지하는 것도 시험의 일부다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m36-k8s-chaos-testing.html">← M36 카오스 테스팅</a>
+  <a href="m38-k8s-capstone.html">M38 실험과 최종 캡스톤 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>M01부터 여기까지 서른일곱 개 모듈을 지났다. 컨테이너를 만들고, 클러스터에 올리고, 안정성을 붙이고, 관측을 만들고, 보안을 걸고, 배포를 자동화하고, 확장하고, 망가뜨려 봤다. <strong>각 모듈의 산출물은 있는데 그것들이 하나의 시스템으로 정리돼 있지는 않다.</strong></p>
+  <p>M38에서 처음부터 끝까지 다시 세운다. 빈 클러스터에서 시작해 <strong>문서만 보고</strong> 전체를 복구하고, 그 과정에서 빠진 것과 어긋난 것을 찾는다. 그리고 이 교재가 만든 산출물 전부를 <strong>하나의 점검 목록</strong>으로 묶는다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>k6 문서: https://grafana.com/docs/k6/latest/</li>
+    <li>실행자(executor) 종류: https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/</li>
+    <li>도착률 기반 부하: https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/constant-arrival-rate/</li>
+    <li>임계값(thresholds): https://grafana.com/docs/k6/latest/using-k6/thresholds/</li>
+    <li>CPU CFS 스로틀링: https://kubernetes.io/docs/tasks/configure-pod-container/assign-cpu-resource/#cpu-units</li>
+    <li>cAdvisor 컨테이너 지표: https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 20.2 로드 테스팅</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · k6 v2.2.0</p>
+</footer>
+
+</div>
+</body>
+</html>

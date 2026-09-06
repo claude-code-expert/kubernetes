@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .vm { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:13px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="360" rx="6"/>
+  <text class="t-h" x="40" y="46">macOS — 노트북 한 대</text>
+
+  <rect class="accent" x="46" y="150" width="146" height="76" rx="4"/>
+  <text class="t-title" x="119" y="176" text-anchor="middle">kubectl · helm · kind</text>
+  <text class="t-sub" x="119" y="196" text-anchor="middle">명령을 보내는 쪽</text>
+  <text class="t-mono" x="119" y="213" text-anchor="middle">~/.kube/config</text>
+
+  <rect class="vm" x="250" y="66" width="612" height="292" rx="6"/>
+  <text class="t-h" x="266" y="92">컨테이너 런타임 — Docker Desktop / OrbStack / Colima (리눅스 VM)</text>
+
+  <rect class="node" x="278" y="108" width="556" height="104" rx="4"/>
+  <text class="t-sub" x="292" y="128">kind 노드 ① study-control-plane — 실체는 도커 컨테이너</text>
+  <rect class="box" x="296" y="138" width="120" height="56" rx="3"/>
+  <text class="t-title" x="356" y="162" text-anchor="middle">kube-apiserver</text>
+  <text class="t-sub" x="356" y="180" text-anchor="middle">모든 명령의 입구</text>
+  <rect class="box" x="428" y="138" width="96" height="56" rx="3"/>
+  <text class="t-title" x="476" y="162" text-anchor="middle">etcd</text>
+  <text class="t-sub" x="476" y="180" text-anchor="middle">상태 저장</text>
+  <rect class="box" x="536" y="138" width="120" height="56" rx="3"/>
+  <text class="t-title" x="596" y="162" text-anchor="middle">scheduler</text>
+  <text class="t-sub" x="596" y="180" text-anchor="middle">파드 배치 결정</text>
+  <rect class="box" x="668" y="138" width="150" height="56" rx="3"/>
+  <text class="t-title" x="743" y="162" text-anchor="middle">controller-manager</text>
+  <text class="t-sub" x="743" y="180" text-anchor="middle">의도한 상태로 수렴</text>
+
+  <rect class="node" x="278" y="228" width="270" height="112" rx="4"/>
+  <text class="t-sub" x="292" y="248">kind 노드 ② study-worker</text>
+  <rect class="box" x="296" y="258" width="110" height="30" rx="3"/>
+  <text class="t-title" x="351" y="278" text-anchor="middle">kubelet</text>
+  <rect class="box" x="418" y="258" width="112" height="30" rx="3"/>
+  <text class="t-title" x="474" y="278" text-anchor="middle">kube-proxy</text>
+  <rect class="box" x="296" y="296" width="234" height="30" rx="3"/>
+  <text class="t-title" x="413" y="316" text-anchor="middle">containerd — 파드가 여기서 실행된다</text>
+
+  <rect class="node" x="564" y="228" width="270" height="112" rx="4"/>
+  <text class="t-sub" x="578" y="248">kind 노드 ③ study-worker2</text>
+  <rect class="box" x="582" y="258" width="110" height="30" rx="3"/>
+  <text class="t-title" x="637" y="278" text-anchor="middle">kubelet</text>
+  <rect class="box" x="704" y="258" width="112" height="30" rx="3"/>
+  <text class="t-title" x="760" y="278" text-anchor="middle">kube-proxy</text>
+  <rect class="box" x="582" y="296" width="234" height="30" rx="3"/>
+  <text class="t-title" x="699" y="316" text-anchor="middle">containerd</text>
+
+  <path class="line" d="M 192 188 L 290 188" marker-end="url(#ar1)"/>
+  <text class="t-mono" x="241" y="180" text-anchor="middle">:49433</text>
+</svg>

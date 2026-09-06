@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow83" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-g { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-b { fill: #ffffff; stroke: #b8860b; stroke-width: 1.5; }
+    .box-e { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-q { font-size: 12px; fill: #444444; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 질문 1 -->
+  <rect class="box" x="20" y="20" width="260" height="70" rx="4"/>
+  <text class="t-q" x="150" y="48" text-anchor="middle" font-weight="700">모든 컨테이너에</text>
+  <text class="t-q" x="150" y="66" text-anchor="middle" font-weight="700">requests·limits가 있는가?</text>
+
+  <text class="t-sub" x="130" y="106" text-anchor="middle">아니오 (하나도 없음)</text>
+  <line class="line" x1="150" y1="90" x2="150" y2="130" marker-end="url(#arrow83)"/>
+
+  <rect class="box-e" x="40" y="134" width="220" height="70" rx="4"/>
+  <text class="t-title" x="150" y="160" text-anchor="middle">BestEffort</text>
+  <text class="t-sub" x="150" y="180" text-anchor="middle">자원 부족 시 가장 먼저 축출</text>
+  <text class="t-sub" x="150" y="194" text-anchor="middle">예측 불가능한 성능</text>
+
+  <!-- 질문 1 예 분기 -->
+  <line class="line" x1="280" y1="55" x2="330" y2="55" marker-end="url(#arrow83)"/>
+  <text class="t-sub" x="305" y="42" text-anchor="middle">예</text>
+
+  <rect class="box" x="330" y="20" width="260" height="70" rx="4"/>
+  <text class="t-q" x="460" y="48" text-anchor="middle" font-weight="700">requests == limits인가?</text>
+  <text class="t-q" x="460" y="66" text-anchor="middle" font-weight="700">(모든 리소스에서)</text>
+
+  <line class="line" x1="460" y1="90" x2="460" y2="130" marker-end="url(#arrow83)"/>
+  <text class="t-sub" x="510" y="112" text-anchor="middle">예</text>
+
+  <rect class="box-g" x="350" y="134" width="220" height="70" rx="4"/>
+  <text class="t-title" x="460" y="160" text-anchor="middle">Guaranteed</text>
+  <text class="t-sub" x="460" y="180" text-anchor="middle">가장 마지막에 축출</text>
+  <text class="t-sub" x="460" y="194" text-anchor="middle">예측 가능·안정적</text>
+
+  <line class="line" x1="590" y1="55" x2="650" y2="55" marker-end="url(#arrow83)"/>
+  <text class="t-sub" x="620" y="42" text-anchor="middle">아니오</text>
+
+  <rect class="box-b" x="650" y="20" width="220" height="70" rx="4"/>
+  <text class="t-q" x="760" y="52" text-anchor="middle" font-weight="700">그 외 모든 경우</text>
+  <text class="t-q" x="760" y="70" text-anchor="middle" font-weight="700">(requests &lt; limits 포함)</text>
+
+  <line class="line" x1="760" y1="90" x2="760" y2="130" marker-end="url(#arrow83)"/>
+
+  <rect class="box-b" x="650" y="134" width="220" height="70" rx="4"/>
+  <text class="t-title" x="760" y="160" text-anchor="middle">Burstable</text>
+  <text class="t-sub" x="760" y="180" text-anchor="middle">중간 우선순위 축출</text>
+  <text class="t-sub" x="760" y="194" text-anchor="middle">여유 있으면 limits까지 사용</text>
+
+  <!-- 축출 순서 바 -->
+  <rect class="box" x="40" y="240" width="830" height="90" rx="6"/>
+  <text class="t-title" x="60" y="264">노드 자원 압박 시 축출 순서 (BestEffort가 먼저 죽는다)</text>
+
+  <rect class="box-e" x="60" y="278" width="200" height="36" rx="4"/>
+  <text class="t-sub" x="160" y="300" text-anchor="middle">BestEffort — 1순위 축출</text>
+
+  <line class="line" x1="264" y1="296" x2="300" y2="296" marker-end="url(#arrow83)"/>
+
+  <rect class="box-b" x="304" y="278" width="240" height="36" rx="4"/>
+  <text class="t-sub" x="424" y="300" text-anchor="middle">Burstable (사용량이 요청 초과분) — 2순위</text>
+
+  <line class="line" x1="548" y1="296" x2="584" y2="296" marker-end="url(#arrow83)"/>
+
+  <rect class="box-g" x="588" y="278" width="240" height="36" rx="4"/>
+  <text class="t-sub" x="708" y="300" text-anchor="middle">Guaranteed — 최후순위, 사실상 보호됨</text>
+
+  <text class="t-cap" x="450" y="360" text-anchor="middle">PodDisruptionBudget(8.3.3)은 이 축출 중에서도 "자발적" 축출(노드 드레인 등)에서 최소 가용량을 보장한다.</text>
+  <text class="t-cap" x="450" y="382" text-anchor="middle">ResourceQuota(8.3.5)는 네임스페이스 전체 총량을, LimitRange(8.3.6)는 미지정 파드에 자동으로 값을 채운다.</text>
+</svg>

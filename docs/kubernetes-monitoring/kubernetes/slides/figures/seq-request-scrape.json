@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "주문 요청과 메트릭이 만들어지는 순서",
+    "output": "seq-request-scrape.html",
+    "viewBox": [
+      980,
+      600
+    ],
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "request",
+        "label": "요청 처리",
+        "focus": [
+          "user",
+          "gateway",
+          "orderapi"
+        ],
+        "note": "주문 한 건이 타이머를 갱신하는 구간."
+      },
+      {
+        "id": "pull",
+        "label": "풀 수집",
+        "focus": [
+          "prometheus",
+          "orderapi",
+          "gateway"
+        ],
+        "note": "프로메테우스가 두 앱을 같은 주기로 긁는다."
+      },
+      {
+        "id": "query",
+        "label": "시각화",
+        "focus": [
+          "grafana",
+          "prometheus"
+        ],
+        "note": "저장된 시계열이 PromQL을 거쳐 패널이 된다."
+      }
+    ],
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "부하 루프",
+      "sublabel": "curl 0.3s 간격"
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "gateway",
+      "sublabel": ":30080"
+    },
+    {
+      "id": "orderapi",
+      "type": "backend",
+      "label": "order-api",
+      "sublabel": "타이머 갱신"
+    },
+    {
+      "id": "prometheus",
+      "type": "database",
+      "label": "Prometheus",
+      "sublabel": "시계열 저장"
+    },
+    {
+      "id": "grafana",
+      "type": "frontend",
+      "label": "Grafana",
+      "sublabel": "패널"
+    }
+  ],
+  "segments": [
+    {
+      "from": 140,
+      "to": 280,
+      "label": "요청 처리"
+    },
+    {
+      "from": 300,
+      "to": 440,
+      "label": "풀 수집 (15s 주기)"
+    },
+    {
+      "from": 458,
+      "to": 528,
+      "label": "시각화"
+    }
+  ],
+  "messages": [
+    {
+      "id": "post-order",
+      "from": "user",
+      "to": "gateway",
+      "y": 170,
+      "label": "POST /api/orders",
+      "variant": "emphasis"
+    },
+    {
+      "id": "route",
+      "from": "gateway",
+      "to": "orderapi",
+      "y": 202,
+      "label": "라우팅",
+      "variant": "emphasis"
+    },
+    {
+      "id": "created",
+      "from": "orderapi",
+      "to": "gateway",
+      "y": 234,
+      "label": "201 · 타이머 기록",
+      "variant": "return"
+    },
+    {
+      "id": "reply",
+      "from": "gateway",
+      "to": "user",
+      "y": 266,
+      "label": "201",
+      "variant": "return"
+    },
+    {
+      "id": "scrape-api",
+      "from": "prometheus",
+      "to": "orderapi",
+      "y": 330,
+      "label": "GET /actuator/prometheus",
+      "variant": "default"
+    },
+    {
+      "id": "series-api",
+      "from": "orderapi",
+      "to": "prometheus",
+      "y": 362,
+      "label": "시계열 텍스트",
+      "variant": "return"
+    },
+    {
+      "id": "scrape-gw",
+      "from": "prometheus",
+      "to": "gateway",
+      "y": 394,
+      "label": "동일 주기 scrape",
+      "variant": "dashed"
+    },
+    {
+      "id": "series-gw",
+      "from": "gateway",
+      "to": "prometheus",
+      "y": 426,
+      "label": "시계열 텍스트",
+      "variant": "return"
+    },
+    {
+      "id": "promql",
+      "from": "grafana",
+      "to": "prometheus",
+      "y": 478,
+      "label": "rate · histogram_quantile",
+      "variant": "emphasis"
+    },
+    {
+      "id": "panel-data",
+      "from": "prometheus",
+      "to": "grafana",
+      "y": 510,
+      "label": "패널 데이터",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "gateway",
+      "from": 165,
+      "to": 272,
+      "type": "backend"
+    },
+    {
+      "participant": "orderapi",
+      "from": 197,
+      "to": 240,
+      "type": "backend"
+    },
+    {
+      "participant": "prometheus",
+      "from": 324,
+      "to": 432,
+      "type": "database"
+    },
+    {
+      "participant": "grafana",
+      "from": 472,
+      "to": 516,
+      "type": "frontend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "요청 1건 = 시계열 3종",
+      "items": [
+        "타이머 하나가 _count · _sum · _bucket으로 쪼개져 나온다",
+        "_bucket은 percentiles-histogram을 켜야 생긴다",
+        "공짜가 아니다 — 버킷 수만큼 시계열이 늘어난다"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "풀 모델의 의미",
+      "items": [
+        "앱은 보내지 않는다. 긁힐 준비만 한다",
+        "수집 실패는 up == 0으로 앱 바깥에서 관측된다",
+        "스크레이프 주기 15초가 rate() 창 계산의 바닥이다"
+      ]
+    }
+  ]
+}

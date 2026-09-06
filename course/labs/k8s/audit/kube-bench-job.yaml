@@ -1,0 +1,34 @@
+# M27 — CIS 벤치마크 진단. 컨트롤 플레인 노드에서 파일과 프로세스를 직접 읽는다.
+# 그래서 hostPID 와 호스트 경로 마운트가 필요하다 — 진단 도구가 그만한 권한을 요구한다는 것 자체가
+# 이 도구를 상시로 두지 않고 필요할 때만 돌리는 이유다.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kube-bench
+  namespace: m27
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      hostPID: true
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      restartPolicy: Never
+      containers:
+        - name: kube-bench
+          image: aquasec/kube-bench:v0.12.0
+          command: ["kube-bench", "run", "--targets", "master", "--json"]
+          volumeMounts:
+            - {name: var-lib-etcd,      mountPath: /var/lib/etcd,      readOnly: true}
+            - {name: var-lib-kubelet,   mountPath: /var/lib/kubelet,   readOnly: true}
+            - {name: etc-kubernetes,    mountPath: /etc/kubernetes,    readOnly: true}
+            - {name: usr-bin,           mountPath: /usr/local/mount-from-host/bin, readOnly: true}
+      volumes:
+        - {name: var-lib-etcd,    hostPath: {path: /var/lib/etcd}}
+        - {name: var-lib-kubelet, hostPath: {path: /var/lib/kubelet}}
+        - {name: etc-kubernetes,  hostPath: {path: /etc/kubernetes}}
+        - {name: usr-bin,         hostPath: {path: /usr/bin}}

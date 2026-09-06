@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+  <text class="t-h" x="40" y="46">빈칸을 채우는 방식과 완성본을 덮어쓰는 방식</text>
+
+  <!-- Helm -->
+  <rect class="soft" x="40" y="66" width="400" height="182" rx="4"/>
+  <text class="t-h" x="56" y="90">Helm — 템플릿</text>
+  <rect class="accent" x="56" y="102" width="164" height="46" rx="3"/>
+  <text class="t-mono" x="66" y="122">templates/*.yaml</text>
+  <text class="t-sub" x="66" y="139">빈칸이 있는 YAML</text>
+  <rect class="accent" x="240" y="102" width="184" height="46" rx="3"/>
+  <text class="t-mono" x="250" y="122">values-prod.yaml</text>
+  <text class="t-sub" x="250" y="139">빈칸에 넣을 값</text>
+  <path class="aline" d="M 240 158 L 240 176" marker-end="url(#ar2)"/>
+  <path class="aline" d="M 140 158 L 140 176" marker-end="url(#ar2)"/>
+  <rect class="box" x="56" y="178" width="368" height="56" rx="3"/>
+  <text class="t-mono" x="66" y="198">helm template  ->  완성된 YAML</text>
+  <text class="t-sub" x="66" y="216">노출한 값만 바꿀 수 있다. 없는 빈칸은 못 바꾼다</text>
+
+  <!-- Kustomize -->
+  <rect class="soft" x="456" y="66" width="384" height="182" rx="4"/>
+  <text class="t-h" x="472" y="90">Kustomize — 오버레이</text>
+  <rect class="accent" x="472" y="102" width="164" height="46" rx="3"/>
+  <text class="t-mono" x="482" y="122">k8s/journal/</text>
+  <text class="t-sub" x="482" y="139">그대로 배포되는 YAML</text>
+  <rect class="accent" x="652" y="102" width="172" height="46" rx="3"/>
+  <text class="t-mono" x="662" y="122">overlays/prod/</text>
+  <text class="t-sub" x="662" y="139">덮어쓸 조각</text>
+  <path class="aline" d="M 554 158 L 554 176" marker-end="url(#ar2)"/>
+  <path class="aline" d="M 738 158 L 738 176" marker-end="url(#ar2)"/>
+  <rect class="box" x="472" y="178" width="352" height="56" rx="3"/>
+  <text class="t-mono" x="482" y="198">kustomize build  ->  완성된 YAML</text>
+  <text class="t-sub" x="482" y="216">아무 필드나 바꿀 수 있다. 필드 경로를 알아야 한다</text>
+
+  <!-- 함정 -->
+  <text class="t-h" x="56" y="278">각 방식이 놓치는 자리</text>
+  <rect class="warnbox" x="56" y="290" width="384" height="72" rx="3"/>
+  <text class="t-mono" x="66" y="310">values 에 없는 것은 바꿀 수 없다</text>
+  <text class="t-sub" x="66" y="328">필드를 노출할수록 values 가 커지고 차트가 읽기 어려워진다</text>
+  <text class="t-warn" x="66" y="348">스키마의 additionalProperties: false 가 값 추가를 막는다</text>
+
+  <rect class="warnbox" x="456" y="290" width="384" height="72" rx="3"/>
+  <text class="t-mono" x="466" y="310">이름 참조를 전부 따라가지 못한다</text>
+  <text class="t-sub" x="466" y="328">serviceName 은 고치고 env 문자열은 안 고친다</text>
+  <text class="t-warn" x="466" y="348">전략적 병합 패치는 env 순서를 바꿔 $(VAR) 를 깬다</text>
+
+  <!-- 선택 -->
+  <rect class="soft" x="56" y="376" width="784" height="48" rx="4"/>
+  <text class="t-sub" x="70" y="396">남에게 배포한다 · 값으로 조작할 면을 정하고 싶다 · 롤백 이력이 필요하다  ->  Helm</text>
+  <text class="t-sub" x="70" y="414">우리만 쓴다 · 원본 YAML 을 그대로 읽고 싶다 · 임의 필드를 덮고 싶다  ->  Kustomize</text>
+</svg>

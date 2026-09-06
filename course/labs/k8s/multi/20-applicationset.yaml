@@ -1,0 +1,34 @@
+# M32 — 리전마다 하나씩 Application 을 만든다.
+#
+# 클러스터 생성기가 라벨로 클러스터를 고르고, 각 클러스터마다 템플릿을 채운다.
+# 클러스터를 하나 더 등록하면 배포 정의를 고치지 않아도 그 클러스터가 대상에 들어온다.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: journal-regions
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            # region 라벨이 있는 클러스터만. 라벨 없는 in-cluster 항목은 걸리지 않는다.
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: 'journal-{{.metadata.labels.region}}'
+    spec:
+      project: default
+      source:
+        repoURL: git://gitserver.gitops.svc/repo.git
+        targetRevision: main
+        # 경로가 리전 이름으로 정해진다. 리전이 늘면 디렉터리를 더한다.
+        path: 'regions/{{.metadata.labels.region}}'
+      destination:
+        server: '{{.server}}'
+        namespace: 'journal'
+      syncPolicy:
+        automated: {prune: true, selfHeal: true}
+        syncOptions: ["CreateNamespace=false"]

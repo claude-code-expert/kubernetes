@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 2 · 쿠버네티스 코어] M12 인그레스와 Gateway API — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 12 / 38 · PART 2 쿠버네티스 코어</div>
+  <h1>인그레스와 Gateway API</h1>
+  <p class="ch-desc">M06의 <code>nginx.conf</code>가 하던 경로 라우팅을 클러스터 리소스로 옮긴다. 그리고 같은 라우팅을 Gateway API v1.6으로 다시 쓴다 — 왜 표준이 하나 더 생겼는지는 두 매니페스트를 나란히 놓으면 보인다.</p>
+  <div class="meta">
+    <span class="tag">초반→중반</span><span class="tag">75분</span><span class="tag">ingress-nginx 4.15.1</span><span class="tag">Gateway API v1.6.1</span><span class="tag">NGINX Gateway Fabric 2.7.0</span>
+    <br>2026-09-05 검증 · Kubernetes 1.37.0 · Helm 4.2.4 · 버전은 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m11-k8s-service-network.html">M11</a> 완료 — <code>default</code> 네임스페이스에 <code>journal-api</code> 디플로이먼트(파드 4개)와 서비스 <code>journal-api</code>, <code>curlbox</code> 파드가 있다. 확인: <code>kubectl get endpointslices -l kubernetes.io/service-name=journal-api</code>의 ENDPOINTS가 비어 있지 않다</li>
+    <li>M01의 kind 설정(<code>course/labs/infra/kind-cluster.yaml</code>)에 <code>extraPortMappings</code>(18080 → 80)와 <code>ingress-ready=true</code> 라벨이 있다</li>
+    <li>매니페스트: <code>course/labs/k8s/m12-ingress.yaml</code> · <code>m12-gateway.yaml</code> · 값 파일 <code>course/labs/monitoring/ingress-nginx-values.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 인그레스 컨트롤러를 Helm으로 설치하고, <code>journal.local</code> 하나로 들어온 요청을 <code>/api</code>와 <code>/</code>에서 다른 서비스로 갈라 보낸다.</p>
+  <p>2. <code>describe ingress</code>의 <code>Backends</code>와 HTTP 404/200으로 "컨트롤러까지는 왔는가, 규칙이 잡혔는가"를 갈라 진단한다.</p>
+  <p>3. 같은 라우팅을 Gateway API의 Gateway · HTTPRoute로 다시 쓰고, <code>ResolvedRefs</code> 조건으로 잘못된 참조를 요청을 보내기 전에 잡아낸다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">12.1</span>왜 서비스만으로는 부족한가</a>
+  <a href="#s2"><span class="num">12.2</span>이론 — 인그레스: 규칙과 컨트롤러</a>
+  <a href="#s3"><span class="num">12.3</span>따라하기 ① 라우팅 대상과 컨트롤러 설치</a>
+  <a href="#s4"><span class="num">12.4</span>따라하기 ② 경로 기반 라우팅</a>
+  <a href="#s5"><span class="num">12.5</span>이론 — 인그레스에서 Gateway API로</a>
+  <a href="#s6"><span class="num">12.6</span>따라하기 ③ 같은 라우팅을 Gateway API로</a>
+  <a href="#s7"><span class="num">12.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">12.8</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">12.1</span>왜 서비스만으로는 부족한가</h2>
+  <p class="lead">M11에서 확인한 것 — ClusterIP는 클러스터 안에서만 보이고, NodePort는 포트 번호를 사람이 관리해야 하며, LoadBalancer는 서비스마다 로드밸런서를 하나씩 만든다.</p>
+  <p>그런데 실제 웹 서비스에 필요한 것은 이런 것들이다. <code>journal.example.com</code>이라는 <strong>하나의 주소</strong>로 들어와서, <code>/api</code>는 API 서비스로 <code>/</code>는 정적 파일 서버로 가고, TLS는 진입점에서 종료되고, 호스트 이름에 따라 다른 팀의 서비스로 분기한다. 이것은 전부 <strong>HTTP를 이해해야</strong> 할 수 있는 일 — L7 계층이다.</p>
+  <p>서비스는 L4(TCP/UDP)에서 동작하므로 HTTP 경로를 모른다. 그래서 L7 진입점이 따로 필요하고, 그것이 인그레스와 Gateway API다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">12.2</span>이론 — 인그레스: 규칙과 컨트롤러</h2>
+  <p><dfn class="term">인그레스 <span class="en">(Ingress)</span></dfn>는 "이 호스트의 이 경로로 온 HTTP 요청을 저 서비스의 저 포트로 보내라"는 규칙을 적은 오브젝트다(책 1.4, 9.3.5). 규칙 하나는 호스트 이름, 경로와 매칭 방식(<code>pathType</code>), 백엔드 서비스 이름과 포트 세 조각으로 이루어진다. 인그레스 자체는 <strong>규칙을 적은 종이</strong>에 가깝다. 그 종이를 읽고 실제로 트래픽을 받아 프록시하는 <dfn class="term">인그레스 컨트롤러 <span class="en">(Ingress Controller)</span></dfn>가 없으면 아무 일도 일어나지 않는다. 인그레스를 만들었는데 접속이 안 된다는 신고의 첫 번째 원인이 이것이다 — 컨트롤러는 클러스터에 기본으로 들어 있지 않으며 따로 설치해야 한다.</p>
+  <p>컨트롤러가 여럿일 수 있으므로 인그레스는 <code>ingressClassName</code>으로 "누가 이 규칙을 처리할지"를 지정하고, 컨트롤러는 자기 <code>IngressClass</code>에 해당하는 인그레스만 읽는다. 이 이름이 틀리면 어느 컨트롤러도 규칙을 집어 가지 않고, 그 사실을 알려 주는 이벤트도 없다(12.7 실패 ①).</p>
+  <p>컨트롤러 설치본에는 대개 <dfn class="term">어드미션 웹훅 <span class="en">(Admission Webhook)</span></dfn>이 함께 온다. apiserver가 오브젝트를 저장하기 <strong>직전에</strong> 외부 서비스에 "이 요청을 받아도 되는가"를 묻는 확장 지점이며, ingress-nginx는 이것으로 문법이 틀린 인그레스나 다른 인그레스와 호스트·경로가 겹치는 인그레스를 적용 시점에 거부한다(12.7 실패 ②). 웹훅이라는 확장 지점 자체는 M26에서 제대로 다룬다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">12.3</span>따라하기 ① 라우팅 대상과 컨트롤러 설치</h2>
+
+  <div class="step">
+    <h4>1단계. 라우팅 대상을 하나 더 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>경로로 갈라 보내려면 서비스가 둘 필요하다. <code>journal-api</code>는 M11이 남겼으니 정적 파일 서버를 하나 더 세운다.</p>
+<pre><code>kubectl create deploy web-static --image=nginx:1.29-alpine
+kubectl expose deploy web-static --port=80
+kubectl rollout status deploy/web-static --timeout=120s
+kubectl get deploy,svc web-static</code></pre>
+    <p>M08 8.7에서 선언형으로 넘어온 뒤 처음으로 명령형을 다시 쓴다. 이유는 하나다 — 정적 파일 서버는 이 모듈의 주제가 아니라 <strong>라우팅 대상일 뿐</strong>이고, M14에서 매니페스트(<code>40-web-static.yaml</code>)로 다시 쓸 때까지만 쓰는 일회용이다. 두 줄로 끝나는 것을 파일로 만들 이유가 없다.</p>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/web-static created
+service/web-static exposed
+Waiting for deployment "web-static" rollout to finish: 0 of 1 updated replicas are available...
+deployment "web-static" successfully rolled out
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/web-static   1/1     1            1           0s
+
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/web-static   ClusterIP   10.96.100.195   &lt;none&gt;        80/TCP    0s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>디플로이먼트 <code>READY 1/1</code>, 서비스 <code>web-static</code>이 <code>ClusterIP</code>로 80 포트를 연다. CLUSTER-IP 값은 환경마다 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 값 파일을 읽고 차트 저장소를 등록한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>kind에는 LoadBalancer도, 노드 80 포트를 열어 줄 클라우드도 없다. 그 제약을 값 파일 네 줄로 푼다.</p>
+<pre><code># course/labs/monitoring/ingress-nginx-values.yaml
+controller:
+  hostPort:
+    enabled: true            # 노드의 80/443 을 컨트롤러가 직접 잡는다
+  service:
+    type: NodePort           # kind 에는 LoadBalancer 를 만들어 줄 컨트롤러가 없다
+  nodeSelector:
+    ingress-ready: "true"    # M01 kind 설정에서 붙인 라벨
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Equal
+      effect: NoSchedule
+  watchIngressWithoutClass: true</code></pre>
+    <p><code>hostPort</code>로 노드의 80 포트를 잡고, 그 노드는 <code>nodeSelector</code>로 컨트롤 플레인(M01에서 <code>ingress-ready=true</code> 라벨을 붙인 노드)으로 고정하며, 컨트롤 플레인에 걸린 테인트를 <code>tolerations</code>로 통과한다(M16의 주제). 그 노드의 80은 kind 설정에 의해 맥의 18080으로 연결돼 있다. 마지막 줄 <code>watchIngressWithoutClass</code>는 클래스를 적지 않은 인그레스도 이 컨트롤러가 처리하게 한다 — 편의 옵션이고, 그 대가는 12.7 실패 ①에서 본다.</p>
+<pre><code>helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>"ingress-nginx" has been added to your repositories
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "ingress-nginx" chart repository
+Update Complete. ⎈Happy Helming!⎈</code></div>
+    <div class="verdict"><span class="lbl">판정</span>두 번째 명령이 <code>Update Complete</code>로 끝난다. 저장소가 이미 등록돼 있었다면 첫 줄이 <code>already exists with the same configuration, skipping</code>으로 바뀌는데, 그것도 정상이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 컨트롤러를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>차트 버전을 고정해 설치하고, 파드가 준비될 때까지 기다린다.</p>
+<pre><code>helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --version 4.15.1 -f course/labs/monitoring/ingress-nginx-values.yaml \
+  --wait --timeout 5m</code></pre>
+    <ul class="tight">
+      <li><code>upgrade --install</code> — 없으면 설치, 있으면 갱신. 여러 번 실행해도 안전하다. M14의 <code>rebuild.sh</code>가 같은 명령을 다시 돌린다</li>
+      <li><code>--version</code> — 차트 버전을 고정한다. 안 적으면 그날의 최신이 설치돼 재현이 깨진다</li>
+      <li><code>--wait</code> — 파드가 준비될 때까지 기다린다. 스크립트에서 다음 단계로 넘어가기 전에 필요하다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 — NOTES 는 앞 3줄만 남기고 잘랐다. 시각은 환경마다 다르다</span>
+    <div class="out"><code>Release "ingress-nginx" does not exist. Installing it now.
+NAME: ingress-nginx
+LAST DEPLOYED: Sat Sep  5 17:23:34 2026
+NAMESPACE: ingress-nginx
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+The ingress-nginx controller has been installed.
+Get the application URL by running these commands:
+  export HTTP_NODE_PORT=$(kubectl get service --namespace ingress-nginx ingress-nginx-controller --output jsonpath="{.spec.ports[0].nodePort}")
+...</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>STATUS: deployed</code>, <code>REVISION: 1</code>. 첫 줄 <code>does not exist. Installing it now.</code>는 <code>upgrade --install</code>이 설치 쪽으로 분기했다는 뜻이다. 이미 설치된 상태에서 다시 실행하면 첫 줄이 <code>Release "ingress-nginx" has been upgraded.</code>로 바뀌고 REVISION이 하나 오른다.</div>
+    <div class="note-2026">
+      <span class="lbl">ingress-nginx 는 은퇴한 프로젝트다 — 그런데 왜 계속 쓰나</span>
+      쿠버네티스 공식 블로그가 2025-11-11에 ingress-nginx의 은퇴를 공지했다. <strong>2026년 3월까지만 최선 노력(best-effort)으로 유지</strong>하고, 그 뒤로는 릴리스도, 버그 수정도, <strong>보안 취약점 패치도 없다</strong>. 이미 설치된 것은 계속 동작하고 설치 산출물도 남아 있지만, 새로 도입하는 조직에는 "이미 쓰고 있지 않다면 배포하지 말라"고 저장소 README가 못 박는다. 2026-09-05 확인 기준으로 차트 저장소의 최신은 4.15.1(앱 1.15.1)이고 이 문서도 그 버전을 쓴다 — 그러나 저장소에 새 태그가 있다는 것이 패치 약속을 뜻하지는 않는다.
+      그럼에도 이 교재가 ingress-nginx를 쓰는 이유는 둘이다. 첫째, 인그레스 컨트롤러 중 설치 자료와 트러블슈팅 사례가 가장 많아 "인그레스라는 개념"을 배우는 데 마찰이 가장 적다. 둘째, M14의 저널 애플리케이션과 <code>rebuild.sh</code>가 이미 이 컨트롤러의 어드미션 웹훅과 <code>IngressClass nginx</code>에 묶여 있다. 실습 도구로 쓰는 것과 운영에 새로 들이는 것은 다른 결정이다. <strong>신규 설계라면 Gateway API 구현체</strong>(Envoy Gateway · NGINX Gateway Fabric · Cilium · Istio · 클라우드 사업자의 것)를 고른다 — 공식 공지가 권하는 대체 경로가 그것이고, 이 모듈의 12.6에서 실제로 하나를 설치해 같은 라우팅을 만들어 본다. 인그레스를 반드시 유지해야 한다면 공식 문서의 컨트롤러 목록에서 유지되는 다른 구현체를 고른다.
+      <span class="src">https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/ · https://github.com/kubernetes/ingress-nginx (README) · 2026-09-05 접근 확인</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>4단계. 설치된 것을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨트롤러 파드, 그 앞의 서비스, 그리고 인그레스가 참조할 <code>IngressClass</code> 이름을 확인한다.</p>
+<pre><code>kubectl get pods,svc -n ingress-nginx
+kubectl get ingressclass</code></pre>
+    <span class="out-lbl">실행 결과 — 파드 접미사 · CLUSTER-IP · NodePort 번호는 환경마다 다르다</span>
+    <div class="out"><code>NAME                                            READY   STATUS    RESTARTS   AGE
+pod/ingress-nginx-controller-7c4bf98ddc-zsbkc   1/1     Running   0          16s
+
+NAME                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+service/ingress-nginx-controller             NodePort    10.96.122.148   &lt;none&gt;        80:30992/TCP,443:31576/TCP   16s
+service/ingress-nginx-controller-admission   ClusterIP   10.96.73.195    &lt;none&gt;        443/TCP                      16s
+
+NAME    CONTROLLER             PARAMETERS   AGE
+nginx   k8s.io/ingress-nginx   &lt;none&gt;       16s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>컨트롤러 파드가 <code>Running</code>이고 <code>IngressClass</code>가 <code>nginx</code>라는 이름으로 등록됐다. 이 이름을 인그레스에서 <code>ingressClassName</code>으로 지정한다. NodePort 서비스의 <code>EXTERNAL-IP</code>가 <code>&lt;none&gt;</code>인 것은 정상이다 — 우리는 NodePort가 아니라 <code>hostPort</code>로 노드 80에 붙었고, 그 80이 kind 설정으로 맥의 18080에 매핑돼 있다.</div>
+    <p><code>-admission</code> 서비스가 12.2에서 말한 어드미션 웹훅이다. apiserver가 인그레스를 저장하기 전에 이 서비스에 물어보고, 거부당하면 오브젝트는 만들어지지 않는다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">12.4</span>따라하기 ② 경로 기반 라우팅</h2>
+
+  <div class="step">
+    <h4>5단계. 인그레스를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M06의 <code>nginx.conf</code>가 하던 두 줄짜리 분기를 클러스터 오브젝트로 옮긴다.</p>
+<pre><code># course/labs/k8s/m12-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: journal
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: journal.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: journal-api
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-static
+                port:
+                  number: 80</code></pre>
+    <p>M06의 nginx 설정과 같은 내용이다. 달라진 것은 이 규칙이 <strong>클러스터의 오브젝트</strong>라는 점 — 백엔드 파드가 늘거나 줄어도 자동으로 반영되고, 설정 파일을 컨테이너에 넣거나 리로드할 필요가 없다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/m12-ingress.yaml
+kubectl get ingress
+kubectl describe ingress journal | sed -n '/Rules:/,/Annotations/p'</code></pre>
+    <span class="out-lbl">실행 결과 — 파드 IP 는 환경마다 다르다</span>
+    <div class="out"><code>ingress.networking.k8s.io/journal created
+NAME      CLASS   HOSTS           ADDRESS   PORTS   AGE
+journal   nginx   journal.local             80      8s
+
+Rules:
+  Host           Path  Backends
+  ----           ----  --------
+  journal.local
+                 /api   journal-api:8080 (10.244.1.40:8080,10.244.1.41:8080,10.244.2.40:8080 + 1 more...)
+                 /      web-static:80 (10.244.1.42:80)
+Annotations:     &lt;none&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Backends</code>에 <strong>실제 파드 IP</strong>가 채워져 있다. <code>/api</code> 뒤에 IP 3개와 <code>+ 1 more...</code> — M11이 남긴 파드 4개다. 비어 있다면 서비스의 엔드포인트가 비었다는 뜻이고, M11의 진단 순서로 돌아간다. <code>ADDRESS</code> 열은 컨트롤러가 상태를 써 주기까지 몇십 초 비어 있다가 컨트롤러 서비스의 IP로 채워진다.</div>
+  </div>
+
+  <div class="step">
+    <h4>6단계. 호스트 헤더를 붙여 접속한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 주소로 들어온 요청이 경로에 따라 다른 서비스로 가는 것을 확인한다.</p>
+<pre><code>curl -s -H 'Host: journal.local' http://localhost:18080/ | head -4
+curl -s -H 'Host: journal.local' http://localhost:18080/api/entries</code></pre>
+    <ul class="tight">
+      <li><code>-H 'Host: journal.local'</code> — 인그레스 규칙이 호스트 이름으로 매칭하므로 필요하다. DNS를 건드리지 않고 테스트하는 방법이다. 브라우저로 보려면 <code>/etc/hosts</code>에 <code>127.0.0.1 journal.local</code>을 추가한다</li>
+      <li><code>localhost:18080</code> — 맥 18080 → 컨트롤 플레인 노드 80 → 인그레스 컨트롤러</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+{"entries":[]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>/</code>는 정적 서버의 nginx 기본 페이지, <code>/api/entries</code>는 저널 API의 JSON. 하나의 진입점이 두 서비스로 나눠 보냈다. 인그레스를 만든 직후라면 컨트롤러가 설정을 다시 읽는 몇 초 동안 404가 나올 수 있다 — 한 번 더 시도한다.</div>
+    <p>경로 매칭 규칙 하나를 짚는다. 위 매니페스트에서 <code>/api</code>가 <code>/</code>보다 먼저 쓰여 있지만, 순서가 매칭을 정하는 것은 아니다. 인그레스는 <strong>더 긴 경로가 우선</strong>한다. <code>pathType</code>은 세 가지 — <code>Prefix</code>(경로 세그먼트 단위 접두사), <code>Exact</code>(정확히 일치), <code>ImplementationSpecific</code>(컨트롤러가 정한다. 이식성이 없으므로 피한다).</p>
+  </div>
+
+  <div class="step">
+    <h4>7단계. 등록되지 않은 호스트는 어떻게 되나</h4>
+    <p class="purpose"><span class="lbl">목적</span>"연결이 안 된다"와 "규칙이 안 잡힌다"를 상태 코드로 가르는 기준을 만든다.</p>
+<pre><code>curl -s -o /dev/null -w 'HTTP %{http_code}\n' -H 'Host: wrong.local' http://localhost:18080/
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:18080/</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>HTTP 404
+HTTP 404</code></div>
+    <div class="verdict"><span class="lbl">판정</span>둘 다 <code>404</code>. 규칙에 없는 호스트는 컨트롤러의 기본 백엔드가 받아 404를 돌려주고, 호스트 헤더를 아예 안 보내도 마찬가지다.</div>
+    <p>접속이 안 될 때 <strong>404가 나오면 컨트롤러까지는 도달한 것</strong>이고, 연결 자체가 안 되면 그 앞(포트 매핑, 컨트롤러 파드)의 문제다. 이 구분이 진단 시간을 줄인다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">12.5</span>이론 — 인그레스에서 Gateway API로</h2>
+  <p>인그레스는 오래 쓰였지만 두 가지 한계가 분명했다(책 9.3.6).</p>
+  <p><strong>첫째, 표준이 표현하지 못하는 것이 너무 많았다.</strong> 헤더 기반 라우팅, 트래픽 분할(카나리), 재시도, 타임아웃, 리다이렉트 — 전부 표준 스펙에 없어서 각 컨트롤러의 어노테이션으로 갔다. <code>nginx.ingress.kubernetes.io/canary-weight: "10"</code> 같은 것을 쓰는 순간 그 매니페스트는 다른 컨트롤러로 옮길 수 없다. 12.3의 은퇴 공지가 뼈아픈 이유가 여기 있다 — 어노테이션에 의존한 인그레스는 컨트롤러를 바꾸면 전부 다시 써야 한다.</p>
+  <p><strong>둘째, 역할이 뒤섞였다.</strong> 인그레스 하나에 TLS 인증서(인프라 팀 관심사)와 경로 라우팅(개발 팀 관심사)이 함께 들어 있어, 개발자가 라우팅을 바꾸려면 인프라 설정이 든 파일을 건드려야 했다.</p>
+  <p><dfn class="term">Gateway API</dfn>는 인그레스의 후속으로 만들어진 쿠버네티스 SIG-Network의 L4·L7 라우팅 표준이다. 코어 API가 아니라 CRD로 배포되며, 이 둘을 리소스 분리로 해결한다.</p>
+  <table>
+    <tr><th>리소스</th><th>정의하는 것</th><th>보통 누가 소유하나</th></tr>
+    <tr><td><code>GatewayClass</code></td><td>어떤 구현체(컨트롤러)를 쓸지</td><td>클러스터 운영자. 설치할 때 한 번</td></tr>
+    <tr><td><code>Gateway</code></td><td>리스너 — 포트, 프로토콜, TLS, 어느 네임스페이스의 라우트를 허용할지</td><td>인프라 · 플랫폼 팀</td></tr>
+    <tr><td><code>HTTPRoute</code> (<code>GRPCRoute</code> · <code>TCPRoute</code> · <code>UDPRoute</code>)</td><td>경로 · 헤더 매칭과 백엔드, 트래픽 가중치</td><td><strong>애플리케이션 팀</strong></td></tr>
+  </table>
+  <div class="note-2026">
+    <span class="lbl">2026-09 기준 현황</span>
+    Gateway API <strong>v1.6</strong>에서 TCPRoute와 UDPRoute가 Standard 채널로 승격돼 L4 라우팅까지 GA가 됐다. 실험 기능은 <code>gateway.networking.x-k8s.io</code>라는 별도 API 그룹으로 분리돼, 안정 기능과 실험 기능이 이름만으로 구분된다. 인그레스 API는 없어지지 않지만 <strong>유지보수 모드로 새 기능이 추가되지 않는다</strong> — 신규 설계는 Gateway API로 하고, 기존 인그레스는 컨트롤러가 유지되는 동안만 그대로 두는 것이 현실적인 선택이다.
+    <span class="src">출처: kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/</span>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">12.6</span>따라하기 ③ 같은 라우팅을 Gateway API로</h2>
+
+  <div class="step">
+    <h4>8단계. CRD와 구현체를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Gateway API가 <strong>클러스터에 기본 포함되지 않는다</strong>는 사실을 확인한다. CRD와 컨트롤러를 각각 설치해야 한다.</p>
+<pre><code># ① API 정의(CRD) — Standard 채널 v1.6.1
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml</code></pre>
+    <span class="out-lbl">실행 결과 — 이미 설치된 클러스터에서 다시 적용한 화면. 처음 설치하는 환경에서는 각 줄이 unchanged 대신 created 로 나온다</span>
+    <div class="out"><code>customresourcedefinition.apiextensions.k8s.io/backendtlspolicies.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/gatewayclasses.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/gateways.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/grpcroutes.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/listenersets.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/tcproutes.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/tlsroutes.gateway.networking.k8s.io unchanged
+customresourcedefinition.apiextensions.k8s.io/udproutes.gateway.networking.k8s.io unchanged
+validatingadmissionpolicy.admissionregistration.k8s.io/safe-upgrades.gateway.networking.k8s.io configured
+validatingadmissionpolicybinding.admissionregistration.k8s.io/safe-upgrades.gateway.networking.k8s.io configured</code></div>
+    <div class="verdict"><span class="lbl">판정</span>CRD 10개 — <code>gateways</code>, <code>httproutes</code>, <code>tcproutes</code>, <code>udproutes</code>가 전부 Standard 설치본에 들어 있다. v1.6에서 L4 라우트가 승격됐다는 12.5의 말을 파일 목록이 증명한다.</div>
+<pre><code># ② 구현체 — 여기서는 NGINX Gateway Fabric. 차트 버전을 고정한다 (2026-09-05 확인, 실습 당일 재확인)
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --version 2.7.0 \
+  --create-namespace -n nginx-gateway \
+  --set service.type=NodePort --set nginx.service.type=NodePort \
+  --wait --timeout 5m
+
+kubectl get gatewayclass</code></pre>
+    <ul class="tight">
+      <li><code>oci://</code> — 차트를 <code>helm repo add</code> 없이 OCI 레지스트리에서 직접 당겨온다. M07의 컨테이너 레지스트리와 같은 프로토콜이다</li>
+      <li><code>--version 2.7.0</code> — 3단계와 같은 이유. 이 줄이 없으면 실습 당일의 최신이 설치된다. 이 문서를 검증한 2026-09-05에는 최신도 2.7.0이었다</li>
+      <li><code>nginx.service.type=NodePort</code> — Gateway마다 생기는 데이터 플레인(nginx) 서비스의 타입. kind에는 LoadBalancer가 없다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 — 시각은 환경마다 다르다</span>
+    <div class="out"><code>Pulled: ghcr.io/nginx/charts/nginx-gateway-fabric:2.7.0
+Digest: sha256:1d91e6dcb9bb7a5d69ccfdddcd92f83548f520e82ba4edcdc91efe53d0a42f87
+NAME: ngf
+LAST DEPLOYED: Sat Sep  5 17:25:09 2026
+NAMESPACE: nginx-gateway
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+
+NAME    CONTROLLER                                   ACCEPTED   AGE
+nginx   gateway.nginx.org/nginx-gateway-controller   True       10s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Pulled: ...:2.7.0</code>과 <code>Digest</code>가 먼저 찍힌다 — 어떤 차트를 받았는지 다이제스트까지 확인할 수 있다. <code>GatewayClass nginx</code>가 <code>ACCEPTED True</code>면 구현체가 이 클래스를 맡겠다고 응답한 것이다.</div>
+    <p>구현체는 여러 개다 — Envoy Gateway, Istio, Cilium, NGINX Gateway Fabric, 클라우드 사업자의 것. 매니페스트(Gateway · HTTPRoute)는 같고 <code>gatewayClassName</code>만 바뀐다는 것이 인그레스 어노테이션과의 결정적 차이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>9단계. Gateway와 HTTPRoute를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>5단계의 인그레스와 같은 라우팅을 두 리소스로 나눠 쓴다.</p>
+<pre><code># course/labs/k8s/m12-gateway.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: journal-gateway
+spec:
+  gatewayClassName: nginx        # 어떤 구현체가 이 게이트웨이를 맡을지
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "gw.journal.local"
+      allowedRoutes:
+        namespaces:
+          from: Same             # 같은 네임스페이스의 라우트만 붙을 수 있다
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: journal-route
+spec:
+  parentRefs:
+    - name: journal-gateway      # 이 게이트웨이에 붙는다
+  hostnames:
+    - "gw.journal.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: journal-api
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: web-static
+          port: 80</code></pre>
+    <p><code>allowedRoutes</code>가 인그레스에 없던 개념이다. 게이트웨이 소유자가 <strong>어느 네임스페이스의 라우트를 받아들일지</strong> 정한다 — 다른 팀이 임의로 우리 게이트웨이에 라우트를 붙이는 것을 막는 장치이며, 멀티테넌트 클러스터에서 필요하다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/m12-gateway.yaml
+kubectl get gateway,httproute</code></pre>
+    <span class="out-lbl">실행 결과 — ADDRESS 는 환경마다 다르다. PROGRAMMED 가 True 가 되기까지 10~20초 걸린다</span>
+    <div class="out"><code>gateway.gateway.networking.k8s.io/journal-gateway created
+httproute.gateway.networking.k8s.io/journal-route created
+NAME                                                CLASS   ADDRESS        PROGRAMMED   AGE
+gateway.gateway.networking.k8s.io/journal-gateway   nginx   10.96.149.46   True         20s
+
+NAME                                                HOSTNAMES              AGE
+httproute.gateway.networking.k8s.io/journal-route   ["gw.journal.local"]   20s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>PROGRAMMED: True</code> — 컨트롤러가 이 게이트웨이를 실제 데이터 플레인에 반영했다는 뜻이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>10단계. 상태를 읽는다 — 인그레스와 가장 다른 점</h4>
+    <p class="purpose"><span class="lbl">목적</span>표준화된 조건(<code>Accepted</code> · <code>Programmed</code> · <code>ResolvedRefs</code>)이 어디에 어떻게 기록되는지 본다.</p>
+<pre><code>kubectl describe gateway journal-gateway | sed -n '/Status:/,$p' | head -22</code></pre>
+    <span class="out-lbl">실행 결과 — head -22 로 잘랐다. 시각과 IP 는 환경마다 다르다</span>
+    <div class="out"><code>Status:
+  Addresses:
+    Type:                  IPAddress
+    Value:                 10.96.149.46
+  Attached Listener Sets:  0
+  Conditions:
+    Last Transition Time:  2026-09-05T08:25:45Z
+    Message:               The Gateway is accepted
+    Observed Generation:   1
+    Reason:                Accepted
+    Status:                True
+    Type:                  Accepted
+    Last Transition Time:  2026-09-05T08:25:45Z
+    Message:               The Gateway is programmed
+    Observed Generation:   1
+    Reason:                Programmed
+    Status:                True
+    Type:                  Programmed
+  Listeners:
+    Attached Routes:  1
+    Conditions:
+      Last Transition Time:  2026-09-05T08:25:45Z</code></div>
+    <p><code>Attached Routes: 1</code> — 이 리스너에 라우트가 몇 개 붙었는지 <strong>숫자로</strong> 알려준다. 인그레스에서는 "규칙이 반영됐는지"를 컨트롤러 로그를 뒤져 확인해야 했다. Gateway API는 조건 이름을 표준화해 어느 구현체에서도 같은 방법으로 상태를 읽게 했다.</p>
+<pre><code>kubectl get httproute journal-route -o jsonpath='{.status.parents[0].conditions[*].type}'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Accepted ResolvedRefs</code></div>
+    <div class="verdict"><span class="lbl">판정</span>두 조건이 다 있다. <code>ResolvedRefs</code>가 참이면 <code>backendRefs</code>에 적은 서비스가 실제로 존재하고 참조 가능하다는 뜻이다. 서비스 이름에 오타를 내면 이 조건이 거짓이 되며 <strong>메시지에 이유가 적힌다</strong> — 12.7 실패 ③에서 직접 만든다. M11의 셀렉터 오타가 아무 신호도 주지 않던 것과 대조된다.</div>
+  </div>
+
+  <div class="step">
+    <h4>11단계. 접속해서 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Gateway마다 생기는 데이터 플레인 서비스의 NodePort를 찾아 노드 안에서 호출한다.</p>
+<pre><code>kubectl get svc journal-gateway-nginx</code></pre>
+    <span class="out-lbl">실행 결과 — PORT(S) 의 3xxxx 번호는 환경마다 다르다</span>
+    <div class="out"><code>NAME                    TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+journal-gateway-nginx   NodePort   10.96.149.46   &lt;none&gt;        80:32287/TCP   21s</code></div>
+    <p><code>80:32287</code> — 콜론 뒤가 노드에 열린 포트다. 아래 명령의 포트 번호를 자기 화면의 값으로 바꿔 친다. 이 포트는 kind 설정으로 맥에 매핑돼 있지 않으므로 노드 컨테이너 안에서 호출한다.</p>
+<pre><code>docker exec study-worker curl -s -H 'Host: gw.journal.local' http://localhost:32287/api/entries
+docker exec study-worker curl -s -H 'Host: gw.journal.local' http://localhost:32287/ | head -4</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"entries":[]}
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Welcome to nginx!&lt;/title&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span>인그레스와 동일한 라우팅이 Gateway API로도 동작한다. 눈여겨볼 점은 데이터 플레인 파드(<code>journal-gateway-nginx</code>)가 <strong>Gateway 리소스마다 생긴다</strong>는 것이다 — 게이트웨이 단위로 격리되므로 한 팀의 트래픽이 다른 팀의 프록시에 영향을 주지 않는다.</div>
+  </div>
+
+  <div class="step">
+    <h4>12단계. 인그레스로는 어노테이션이 필요했던 것 — 읽기만 한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>헤더 기반 분기와 트래픽 분할이 표준 필드라는 것을 눈으로 확인한다. <strong>여기서는 적용하지 않는다</strong> — <code>journal-api-v2</code> 서비스가 아직 없다. M30 카나리 배포에서 이 형태를 실제로 쓴다.</p>
+<pre><code>  rules:
+    # 헤더가 있으면 새 버전으로
+    - matches:
+        - path: { type: PathPrefix, value: /api }
+          headers:
+            - name: x-canary
+              value: "true"
+      backendRefs:
+        - name: journal-api-v2
+          port: 8080
+    # 나머지는 90:10 으로 나눈다
+    - matches:
+        - path: { type: PathPrefix, value: /api }
+      backendRefs:
+        - name: journal-api
+          port: 8080
+          weight: 90
+        - name: journal-api-v2
+          port: 8080
+          weight: 10</code></pre>
+    <p>같은 것을 ingress-nginx로 하려면 <code>nginx.ingress.kubernetes.io/canary</code>, <code>canary-weight</code>, <code>canary-by-header</code> 어노테이션을 조합해야 하고, 다른 컨트롤러에서는 통하지 않는다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">12.7</span>일부러 실패시키기</h2>
+  <p>세 실패는 모두 <code>default</code> 네임스페이스에서 재현했고, 각각 고친 뒤 원상태로 돌린다.</p>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — ingressClassName 을 틀리게 적는다 (그리고 아무 신호가 없다)</span>
+    <p>인그레스를 만들었는데 접속이 안 되는 가장 흔한 원인이다. 클래스 이름에 오타를 내면 어느 컨트롤러도 그 규칙을 집어 가지 않는다. 호스트를 하나 더 써서 재현한다.</p>
+<pre><code>kubectl apply -f - &lt;&lt;'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: journal-typo
+spec:
+  ingressClassName: ngnix          # nginx 의 오타
+  rules:
+    - host: typo.journal.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-static
+                port:
+                  number: 80
+EOF
+kubectl get ingress journal-typo
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' -H 'Host: typo.journal.local' http://localhost:18080/
+kubectl describe ingress journal-typo | tail -n 6</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>ingress.networking.k8s.io/journal-typo created
+NAME           CLASS   HOSTS                ADDRESS   PORTS   AGE
+journal-typo   ngnix   typo.journal.local             80      9s
+HTTP 404
+Rules:
+  Host                Path  Backends
+  ----                ----  --------
+  typo.journal.local
+                      /   web-static:80 (10.244.1.42:80)
+Annotations:          &lt;none&gt;
+Events:               &lt;none&gt;</code></div>
+    <p>세 가지가 보인다. 오브젝트는 <strong>정상적으로 만들어졌고</strong>(apiserver는 클래스 이름이 실존하는지 검사하지 않는다), <code>Backends</code>에 파드 IP까지 채워져 있으며, <code>Events</code>가 <code>&lt;none&gt;</code>이다. 그런데 404다 — 컨트롤러까지는 갔지만(7단계의 기준) 이 호스트의 규칙을 아무도 nginx 설정에 쓰지 않았다. <strong>아무 신호가 없다는 것</strong>이 이 실패의 특징이다. 진단은 <code>CLASS</code> 열과 <code>kubectl get ingressclass</code>의 이름을 눈으로 대조하는 것 하나다.</p>
+<pre><code>kubectl get ingressclass
+kubectl patch ingress journal-typo --type merge -p '{"spec":{"ingressClassName":"nginx"}}'
+sleep 10
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' -H 'Host: typo.journal.local' http://localhost:18080/
+kubectl delete ingress journal-typo</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME    CONTROLLER             PARAMETERS   AGE
+nginx   k8s.io/ingress-nginx   &lt;none&gt;       71s
+ingress.networking.k8s.io/journal-typo patched
+HTTP 200
+ingress.networking.k8s.io "journal-typo" deleted from default namespace</code></div>
+    <div class="verdict"><span class="lbl">판정</span>클래스 이름을 고치자 <code>200</code>. 컨트롤러가 설정을 다시 읽는 몇 초를 <code>sleep 10</code>으로 기다렸다.</div>
+    <p>이 실습의 값 파일에는 <code>watchIngressWithoutClass: true</code>가 들어 있어 클래스를 <strong>아예 안 적은</strong> 인그레스는 nginx가 잡는다. 그러나 <strong>틀리게 적은</strong> 것은 잡지 않는다 — "없음"과 "다른 이름"은 다르다. 편의 옵션에 기대지 말고 항상 명시하는 편이 낫다. 컨트롤러가 둘 이상인 환경에서는 이 옵션 자체가 <strong>둘 다 같은 인그레스를 처리하려 드는</strong> 사고의 원인이 된다. 기본 클래스를 정하는 정식 방법은 <code>kubectl annotate ingressclass nginx ingressclass.kubernetes.io/is-default-class=true</code>다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 같은 호스트 · 경로를 두 인그레스가 주장한다</span>
+    <p>팀이 둘이고 각자 인그레스를 만들면 실제로 생기는 일이다. <code>journal.local</code>의 <code>/api</code>를 다른 인그레스에서 한 번 더 선언해 본다.</p>
+<pre><code>kubectl apply -f - &lt;&lt;'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: journal-api-only
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: journal.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: journal-api
+                port:
+                  number: 8080
+EOF</code></pre>
+    <span class="out-lbl">실행 결과 — 원문은 한 줄이다. 읽기 쉽게 줄을 나눴다</span>
+    <div class="out"><code>Error from server (BadRequest): error when creating "STDIN":
+admission webhook "validate.nginx.ingress.kubernetes.io" denied the request:
+host "journal.local" and path "/api" is already defined in ingress default/journal</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>admission webhook ... denied the request</code>. 오브젝트는 만들어지지 않았다 — <code>kubectl get ingress</code>에 <code>journal</code> 하나만 있다. 메시지의 <code>default/journal</code>은 그 호스트·경로를 <strong>먼저 차지한 인그레스</strong>의 네임스페이스와 이름이다.</div>
+    <p>4단계에서 본 <code>-admission</code> 서비스가 한 일이다. 같은 호스트·경로를 두 인그레스가 주장하면 어느 쪽이 이기는지 정의되지 않으므로 컨트롤러가 아예 거부한다. 웹훅이 없었다면 조용히 둘 중 하나가 무시됐을 것이고, 그편이 훨씬 찾기 어렵다. 이 웹훅은 <strong>네임스페이스를 가리지 않는다</strong> — M14에서 <code>journal</code> 네임스페이스에 같은 규칙을 다시 만들 때 이 메시지를 한 번 더 만나게 되고, 그때는 <code>default</code>의 인그레스를 지우는 것이 답이다. 고칠 것은 없다. 만들어진 것이 없으니 되돌릴 것도 없다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ③ — HTTPRoute 의 백엔드 서비스 이름을 틀린다</span>
+    <p>인그레스와 Gateway API의 차이가 가장 잘 드러나는 지점이다. 인그레스에서 백엔드 서비스 이름을 틀리면 매니페스트는 그대로 적용되고, 요청을 보내야 503으로 알게 되며, 원인은 컨트롤러 로그를 봐야 한다. HTTPRoute는 다르다. 9단계의 라우트에서 <code>journal-api</code>를 <code>journal-apo</code>로 바꿔 본다.</p>
+<pre><code>kubectl patch httproute journal-route --type json \
+  -p '[{"op":"replace","path":"/spec/rules/0/backendRefs/0/name","value":"journal-apo"}]'
+sleep 5
+kubectl get httproute journal-route \
+  -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
+docker exec study-worker curl -s -o /dev/null -w 'HTTP %{http_code}\n' -H 'Host: gw.journal.local' http://localhost:32287/api/entries</code></pre>
+    <ul class="tight">
+      <li><code>--type json</code> — JSON Patch. 배열의 특정 원소(<code>rules/0/backendRefs/0</code>) 한 필드만 바꿀 때 merge 패치보다 정확하다</li>
+      <li><code>{range ...}{end}</code> — jsonpath로 조건 배열을 한 줄에 하나씩 찍는다. <code>describe</code>보다 짧고 스크립트에서 판정하기 좋다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 — 포트 번호는 11단계에서 읽은 자기 값으로</span>
+    <div class="out"><code>httproute.gateway.networking.k8s.io/journal-route patched
+Accepted=True Accepted: The Route is accepted
+ResolvedRefs=False BackendNotFound: spec.rules[0].backendRefs[0].name: Not found: "journal-apo"
+HTTP 500</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ResolvedRefs=False</code>, <code>Reason: BackendNotFound</code>, 그리고 메시지에 <strong>어느 규칙의 어느 참조가</strong> 틀렸는지 경로(<code>spec.rules[0].backendRefs[0].name</code>)와 값이 적혀 있다. 요청을 보내면 500이 오지만, 보내지 않았어도 이미 상태에서 알 수 있었다.</div>
+    <p><code>Accepted</code>는 여전히 <code>True</code>다 — 라우트가 게이트웨이에 붙는 것과 백엔드가 존재하는 것은 다른 조건이고, 둘을 따로 알려 준다. 이 덕에 CI에서 매니페스트를 적용한 뒤 <code>ResolvedRefs</code>가 <code>True</code>인지 검사하는 자동화가 가능해진다(M29).</p>
+<pre><code>kubectl patch httproute journal-route --type json \
+  -p '[{"op":"replace","path":"/spec/rules/0/backendRefs/0/name","value":"journal-api"}]'
+sleep 5
+kubectl get httproute journal-route \
+  -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>httproute.gateway.networking.k8s.io/journal-route patched
+Accepted=True Accepted: The Route is accepted
+ResolvedRefs=True ResolvedRefs: All references are resolved</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ResolvedRefs=True</code>, 메시지 <code>All references are resolved</code>. 원상태다.</div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">12.8</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get ingressclass</code> → <code>nginx</code> 행의 CONTROLLER가 <code>k8s.io/ingress-nginx</code></li>
+      <li><code>kubectl get ingress journal -o jsonpath='{.spec.ingressClassName}{"\n"}'</code> → <code>nginx</code></li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: journal.local' http://localhost:18080/api/entries</code> → <code>200</code></li>
+      <li><code>curl -s -H 'Host: journal.local' http://localhost:18080/ | grep -c 'Welcome to nginx'</code> → <code>1</code></li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: wrong.local' http://localhost:18080/</code> → <code>404</code></li>
+      <li><code>kubectl describe ingress journal | grep -E '^ +/'</code> → 두 줄 모두 괄호 안에 파드 IP가 있다</li>
+      <li><code>kubectl get gateway journal-gateway -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}{"\n"}'</code> → <code>True</code></li>
+      <li><code>kubectl get httproute journal-route -o jsonpath='{.status.parents[0].conditions[*].type}{"\n"}'</code> → <code>Accepted ResolvedRefs</code></li>
+      <li>(이해 확인) GatewayClass · Gateway · HTTPRoute가 각각 무엇을 정의하고 누가 소유하는지 한 문장씩 말한다</li>
+      <li>(이해 확인) 신규 설계에서 인그레스 대신 Gateway API를 고르는 근거를 12.3의 은퇴 공지와 12.5의 한계 두 가지로 댄다</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/m12-ingress.yaml</code> · <code>m12-gateway.yaml</code> · <code>course/labs/monitoring/ingress-nginx-values.yaml</code></li>
+      <li>클러스터에 남는 것 — 네임스페이스 <code>ingress-nginx</code>의 컨트롤러: M14의 저널 애플리케이션과 <code>rebuild.sh</code>가 필수로 의존한다</li>
+      <li>클러스터에 남는 것 — 네임스페이스 <code>nginx-gateway</code>의 NGINX Gateway Fabric: M14는 <code>default</code>의 Gateway · HTTPRoute만 지우고 구현체는 남긴다. M30 카나리에서 다시 쓴다</li>
+      <li><code>default</code>에 남는 것 — <code>web-static</code> 디플로이먼트·서비스, 인그레스 <code>journal</code>, Gateway <code>journal-gateway</code>와 HTTPRoute <code>journal-route</code>. 전부 M14 14.3 6단계에서 지운다</li>
+    </ul>
+  </div>
+  <p>정리는 하지 않는다. <code>default</code>에 남긴 것들은 M14가 <code>journal</code> 네임스페이스로 옮기면서 한꺼번에 지우고, 그 과정에서 실패 ②의 웹훅 메시지를 한 번 더 만난다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m11-k8s-service-network.html">← M11 서비스와 클러스터 네트워크</a>
+  <a href="m13-k8s-configmap-secret.html">M13 컨피그맵과 시크릿 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>밖에서 들어오는 길은 정리됐지만, 앱이 안에서 읽는 값은 아직 정리되지 않았다. <code>journal-api</code>의 설정은 M10 매니페스트에 <code>APP_VERSION: "v1"</code> 한 줄로 박혀 있고, M14에서 붙일 레디스 주소와 비밀번호를 그 자리에 적을 수는 없다 — 깃에 올라간다. M13은 설정을 이미지와 매니페스트 밖으로 빼는 두 그릇, 컨피그맵과 시크릿을 다룬다. 같은 값을 환경 변수와 볼륨으로 각각 주입해 갱신이 한쪽에만 반영되는 것을 70초 기다려 확인하고, 시크릿을 <code>base64 -d</code> 한 줄로 열어 <strong>암호화가 아니라 인코딩</strong>임을 확인한다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>인그레스: https://kubernetes.io/docs/concepts/services-networking/ingress/</li>
+    <li>인그레스 컨트롤러 목록: https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/</li>
+    <li>ingress-nginx 은퇴 공지 (2025-11-11): https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/</li>
+    <li>ingress-nginx 차트: https://kubernetes.github.io/ingress-nginx/ · 저장소 README: https://github.com/kubernetes/ingress-nginx</li>
+    <li>Gateway API: https://gateway-api.sigs.k8s.io/</li>
+    <li>Gateway API v1.6 릴리스: https://kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/</li>
+    <li>NGINX Gateway Fabric 차트: https://github.com/nginx/nginx-gateway-fabric/tree/main/charts/nginx-gateway-fabric</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.4 HTTP 트래픽을 처리하는 외부 인그레스 설치, 9.3.5~9.3.6 인그레스와 게이트웨이 API</li>
+  </ul>
+  <p>이 문서의 명령과 출력은 macOS(Apple Silicon) · Docker Engine 29.2.1 · kind v0.33.0 · Kubernetes 1.37.0 · Helm 4.2.4 · ingress-nginx 차트 4.15.1 · Gateway API v1.6.1 · NGINX Gateway Fabric 2.7.0 환경에서 2026-09-05에 실행해 얻은 것이다. 버전은 실습 당일 다시 확인하라.</p>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+    .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+  <text class="t-h" x="40" y="46">한 저장소, 여러 리전 — 순서가 안전장치다</text>
+
+  <!-- 저장소 구조 -->
+  <rect class="soft" x="40" y="66" width="300" height="150" rx="4"/>
+  <text class="t-title" x="56" y="90">저장소</text>
+  <rect class="box" x="56" y="100" width="268" height="34" rx="3"/>
+  <text class="t-mono" x="66" y="122">base/            공통 정의</text>
+  <rect class="accent" x="56" y="140" width="268" height="34" rx="3"/>
+  <text class="t-mono" x="66" y="162">regions/edge/    카나리</text>
+  <rect class="box" x="56" y="180" width="268" height="28" rx="3"/>
+  <text class="t-mono" x="66" y="199">regions/primary/ 주 리전</text>
+
+  <path class="aline" d="M 340 140 L 380 140" marker-end="url(#ar2)"/>
+  <text class="t-acc" x="360" y="132" text-anchor="middle">clusters 생성기</text>
+
+  <!-- 리전들 -->
+  <rect class="soft" x="384" y="66" width="456" height="150" rx="4"/>
+  <text class="t-title" x="400" y="90">ApplicationSet 이 리전 수만큼 만든다</text>
+  <rect class="accent" x="400" y="100" width="200" height="46" rx="3"/>
+  <text class="t-mono" x="410" y="120">journal-edge</text>
+  <text class="t-sub" x="410" y="137">노드 1 · HPA 1~2 · v2</text>
+  <rect class="box" x="616" y="100" width="208" height="46" rx="3"/>
+  <text class="t-mono" x="626" y="120">journal-primary</text>
+  <text class="t-sub" x="626" y="137">노드 3 · HPA 3~8 · v2</text>
+  <text class="t-sub" x="400" y="168">클러스터 시크릿의 라벨(region)이 경로를 정한다</text>
+  <text class="t-sub" x="400" y="188">리전을 더하려면 시크릿 하나와 디렉터리 하나만 있으면 된다</text>
+  <text class="t-acc" x="400" y="208">배포 정의는 고치지 않는다</text>
+
+  <!-- 순서 -->
+  <text class="t-h" x="56" y="250">순서</text>
+  <rect class="accent" x="56" y="262" width="150" height="52" rx="4"/>
+  <text class="t-mono" x="131" y="282" text-anchor="middle">카나리에만 커밋</text>
+  <text class="t-sub" x="131" y="299" text-anchor="middle">8초 뒤 반영</text>
+  <path class="line" d="M 206 288 L 238 288" marker-end="url(#ar1)"/>
+  <rect class="accent" x="240" y="262" width="176" height="52" rx="4"/>
+  <text class="t-mono" x="328" y="282" text-anchor="middle">region-check.sh</text>
+  <text class="t-sub" x="328" y="299" text-anchor="middle">종료 코드가 관문이다</text>
+  <path class="line" d="M 416 276 L 448 264" marker-end="url(#ar1)"/>
+  <path class="wline" d="M 416 300 L 448 314" marker-end="url(#ar3)"/>
+  <rect class="box" x="450" y="240" width="176" height="46" rx="4"/>
+  <text class="t-mono" x="460" y="260">통과 → base 커밋</text>
+  <text class="t-sub" x="460" y="277">나머지 리전으로 확산</text>
+  <rect class="warnbox" x="450" y="292" width="176" height="46" rx="4"/>
+  <text class="t-mono" x="460" y="312">실패 → git revert</text>
+  <text class="t-warn" x="460" y="329">확산하지 않는다</text>
+
+  <rect class="box" x="642" y="262" width="198" height="76" rx="4"/>
+  <text class="t-h" x="654" y="284">검사가 놓친 자리</text>
+  <text class="t-mono" x="654" y="304">준비 개수는 통과했다</text>
+  <text class="t-sub" x="654" y="322">maxUnavailable 0 이면 옛 파드가 남는다</text>
+
+  <!-- 리전 편차 -->
+  <rect class="soft" x="56" y="352" width="784" height="72" rx="4"/>
+  <text class="t-h" x="70" y="376">매니페스트가 같아도 클러스터가 다르면 다르게 동작한다</text>
+  <text class="t-mono" x="70" y="396">edge 에 metrics-server 가 없다  →  HPA cpu:&lt;unknown&gt;  →  앱 전체가 Degraded</text>
+  <text class="t-sub" x="70" y="414">개별 리소스는 전부 Healthy 였다. 리전 편차는 리소스가 아니라 클러스터 수준에서 찾는다</text>
+</svg>

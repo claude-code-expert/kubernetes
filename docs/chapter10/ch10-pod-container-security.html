@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH10 파드와 컨테이너 보안 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .link-back { border: 1px solid var(--line); padding: 12px 18px; margin: 14px 0; font-size: 14px; border-radius: 6px; background: var(--bg-soft); color: var(--sub); }
+  .link-back strong { color: var(--ink); }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 14.5px; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 10</div>
+  <h1>파드와 컨테이너 보안</h1>
+  <p class="ch-desc">4장에서 "누가 클러스터에 무엇을 할 수 있는가"(RBAC)를 다뤘다면, 이 장은 "그 안에서 도는 파드 자체가 얼마나 위험할 수 있는가"다. 위험한 스펙으로 아예 못 뜨게 막고(어드미션), 뜨더라도 커널까지 못 뚫게 격리하고(런타임클래스), 그 안에서 이상한 짓을 하면 잡아낸다(탐지 툴) — 세 절이 배포 전부터 실행 중까지 이어지는 방어선이다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 파드 시큐리티 어드미션은 privileged·baseline·restricted 세 수준과 enforce·warn·audit 세 모드의 조합이다 — 클러스터 기본값은 여전히 아무 제한 없는 privileged다.</p>
+  <p>2. 런타임클래스는 워크로드마다 격리 강도를 고를 수 있게 한다 — runc(기본)부터 gVisor, 카타 컨테이너, 파이어크래커까지 오버헤드와 안전성이 함께 오른다.</p>
+  <p>3. 사전 차단(어드미션)·구조적 격리(런타임클래스)·실시간 탐지(Falco 등)는 서로 대체재가 아니라 겹겹의 방어선이다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s10-1"><span class="num">10.1</span>파드 시큐리티 어드미션 컨트롤러</a>
+  <a href="#s10-2"><span class="num">10.2</span>워크로드 격리와 런타임클래스</a>
+  <a href="#s10-3"><span class="num">10.3</span>파드와 컨테이너 보안 관련 고려 사항</a>
+</nav>
+
+<section id="s10-1">
+  <h2 class="sec"><span class="num">10.1</span>파드 시큐리티 어드미션 컨트롤러</h2>
+  <p class="lead">파드 스펙에는 <code>privileged: true</code>, 호스트 네임스페이스 공유처럼 보안에 민감한 필드가 여럿 있다. <dfn class="term">파드 시큐리티 어드미션 <span class="en">(Pod Security Admission)</span></dfn>은 이런 필드를 클러스터·네임스페이스 수준에서 일괄 통제하는 내장 어드미션 컨트롤러다.</p>
+
+  <h3>10.1.1 파드 시큐리티 어드미션 활성화</h3>
+  <p>이 기능은 <strong>쿠버네티스 1.22에서 베타로 도입되어 이전의 PodSecurityPolicy(PSP)를 대체</strong>했다. PSP는 설정이 난해하고 디버깅이 어렵다는 오랜 악명이 있었다 — 그 이전에는 관리자가 각 워크로드에 SecurityContext를 일일이 따로 정의하거나, 커스텀 어드미션 컨트롤러를 직접 만들어야 했다. 1.22 이상이면 기본 탑재되어 있으므로 별도 설치가 필요 없다.</p>
+
+  <h3>10.1.2 파드 보안 수준</h3>
+  <p>세 <dfn class="term">보안 수준 <span class="en">(Security Level)</span></dfn>과 세 <dfn class="term">활성화 모드 <span class="en">(Mode)</span></dfn>를 조합해 쓴다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .hdr { fill: #f7f7f5; stroke: #c8c8c8; stroke-width: 1; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-hdr { font-size: 12.5px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .t-cell { font-size: 10.5px; fill: #555555; }
+  </style>
+
+  <!-- 축 제목 -->
+  <text class="t-hdr" x="20" y="26">보안 수준 (얼마나 엄격한가)</text>
+  <text class="t-hdr" x="700" y="26" text-anchor="end">활성화 모드 (위반 시 무엇을 하는가)</text>
+
+  <!-- 열 헤더: enforce / warn / audit -->
+  <rect class="hdr" x="220" y="40" width="220" height="40" rx="4"/>
+  <text class="t-title" x="330" y="65" text-anchor="middle">enforce</text>
+  <rect class="hdr" x="450" y="40" width="220" height="40" rx="4"/>
+  <text class="t-title" x="560" y="65" text-anchor="middle">warn</text>
+  <rect class="hdr" x="680" y="40" width="200" height="40" rx="4"/>
+  <text class="t-title" x="780" y="65" text-anchor="middle">audit</text>
+
+  <!-- 행: privileged -->
+  <rect class="hdr" x="20" y="88" width="190" height="90" rx="4"/>
+  <text class="t-title" x="115" y="118" text-anchor="middle">privileged</text>
+  <text class="t-sub" x="115" y="138" text-anchor="middle">제한 없음</text>
+  <text class="t-sub" x="115" y="154" text-anchor="middle">(클러스터 기본값)</text>
+
+  <rect class="box" x="220" y="88" width="220" height="90" rx="4"/>
+  <text class="t-cell" x="330" y="130" text-anchor="middle">위반 파드도</text>
+  <text class="t-cell" x="330" y="146" text-anchor="middle">그냥 생성됨</text>
+  <rect class="box" x="450" y="88" width="220" height="90" rx="4"/>
+  <text class="t-cell" x="560" y="130" text-anchor="middle">경고할 것도</text>
+  <text class="t-cell" x="560" y="146" text-anchor="middle">없음</text>
+  <rect class="box" x="680" y="88" width="200" height="90" rx="4"/>
+  <text class="t-cell" x="780" y="130" text-anchor="middle">기록할 것도</text>
+  <text class="t-cell" x="780" y="146" text-anchor="middle">없음</text>
+
+  <!-- 행: baseline -->
+  <rect class="hdr" x="20" y="182" width="190" height="90" rx="4"/>
+  <text class="t-title" x="115" y="212" text-anchor="middle">baseline</text>
+  <text class="t-sub" x="115" y="232" text-anchor="middle">권한 상승 등</text>
+  <text class="t-sub" x="115" y="248" text-anchor="middle">주요 취약점 차단</text>
+
+  <rect class="box" x="220" y="182" width="220" height="90" rx="4"/>
+  <text class="t-cell" x="330" y="224" text-anchor="middle">위반 파드</text>
+  <text class="t-cell" x="330" y="240" text-anchor="middle">생성 거부</text>
+  <rect class="box" x="450" y="182" width="220" height="90" rx="4"/>
+  <text class="t-cell" x="560" y="224" text-anchor="middle">생성은 되지만</text>
+  <text class="t-cell" x="560" y="240" text-anchor="middle">경고 메시지 표시</text>
+  <rect class="box" x="680" y="182" width="200" height="90" rx="4"/>
+  <text class="t-cell" x="780" y="224" text-anchor="middle">감사 로그에만</text>
+  <text class="t-cell" x="780" y="240" text-anchor="middle">기록</text>
+
+  <!-- 행: restricted -->
+  <rect class="hdr" x="20" y="276" width="190" height="90" rx="4"/>
+  <text class="t-title" x="115" y="306" text-anchor="middle">restricted</text>
+  <text class="t-sub" x="115" y="326" text-anchor="middle">현재 파드 보안</text>
+  <text class="t-sub" x="115" y="342" text-anchor="middle">모범 사례 전체</text>
+
+  <rect class="box-accent" x="220" y="276" width="220" height="90" rx="4"/>
+  <text class="t-cell" x="330" y="312" text-anchor="middle" font-weight="700">신규 네임스페이스에</text>
+  <text class="t-cell" x="330" y="328" text-anchor="middle" font-weight="700">권장하는 조합</text>
+  <text class="t-cell" x="330" y="344" text-anchor="middle">기존 네임스페이스는</text>
+  <text class="t-cell" x="330" y="358" text-anchor="middle">warn·audit로 먼저 검증</text>
+  <rect class="box" x="450" y="276" width="220" height="90" rx="4"/>
+  <text class="t-cell" x="560" y="318" text-anchor="middle">전환 전 점검 단계로</text>
+  <text class="t-cell" x="560" y="334" text-anchor="middle">흔히 사용</text>
+  <rect class="box" x="680" y="276" width="200" height="90" rx="4"/>
+  <text class="t-cell" x="780" y="318" text-anchor="middle">영향 범위 파악</text>
+  <text class="t-cell" x="780" y="334" text-anchor="middle">단계에 유용</text>
+
+  <text class="t-cap" x="450" y="398" text-anchor="middle">세 수준 × 세 모드를 자유롭게 조합한다 — 같은 네임스페이스에 enforce=baseline, warn=restricted처럼 겹쳐 걸 수도 있다.</text>
+</svg>
+    <figcaption>그림 10-1. 보안 수준(엄격함) × 모드(위반 시 행동)의 3×3 조합. restricted+enforce가 목표 상태지만 거기까지 가는 경로가 있다.</figcaption>
+  </figure>
+  <ul class="tight">
+    <li><strong>privileged</strong> — 제한이 사실상 없다. <strong>클러스터의 기본 보안 수준</strong>이라는 점을 놓치기 쉽다 — 아무것도 안 하면 이 상태다.</li>
+    <li><strong>baseline</strong> — 권한 상승 공격 등 잘 알려진 취약점을 막는다.</li>
+    <li><strong>restricted</strong> — 현재 파드 보안의 모범 사례 전체를 강제한다.</li>
+  </ul>
+  <p>처음부터 모든 네임스페이스에 <code>restricted</code>+<code>enforce</code>를 걸고 싶겠지만, 기존 구성이나 서드파티 소프트웨어와 충돌해 파드가 아예 안 뜰 수 있다. <strong>먼저 warn·audit 모드로 시작해 위반 현황을 파악한 뒤 enforce로 올리는 것</strong>이 안전한 순서다.</p>
+
+  <h3>10.1.3 네임스페이스 레이블을 이용한 파드 시큐리티 활성화</h3>
+  <p>적용 단위는 네임스페이스이고, 방법은 레이블 하나를 붙이는 것으로 끝난다 — 별도 컨트롤러 설치가 필요 없다.</p>
+<pre><code>apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted</code></pre>
+  <p>레이블 키의 <code>enforce</code>·<code>warn</code>·<code>audit</code> 각각에 독립적으로 수준을 지정할 수 있다 — 예를 들어 <code>enforce: baseline</code>, <code>warn: restricted</code>로 걸면 "지금 당장 막는 건 baseline까지, restricted 위반은 경고만" 같은 점진적 전환이 가능하다.</p>
+</section>
+
+<section id="s10-2">
+  <h2 class="sec"><span class="num">10.2</span>워크로드 격리와 런타임클래스</h2>
+  <p class="lead">컨테이너는 여전히 커널을 호스트와 공유한다 — VM만큼 격리되어 있지 않다는 뜻이다. "지금 가장 널리 쓰이는 런타임이 안전하다"고 공식적으로 증명할 방법도 마땅치 않다. 신뢰할 수 없는 코드(외부 사용자가 올린 코드, 멀티테넌시 환경의 낯선 워크로드 등)를 돌려야 한다면 격리를 더 강화해야 한다 — 이때 쓰는 것이 <dfn class="term">런타임클래스 <span class="en">(RuntimeClass)</span></dfn>다.</p>
+
+  <h3>10.2.1 런타임클래스 사용하기</h3>
+  <p>클러스터 관리자가 여러 런타임클래스를 미리 등록해 뒀다면, 파드는 그중 하나를 지정하기만 하면 된다.</p>
+<pre><code>apiVersion: v1
+kind: Pod
+metadata:
+  name: untrusted-workload
+spec:
+  runtimeClassName: gvisor
+  containers:
+  - name: app
+    image: myrepo/untrusted:1.0</code></pre>
+
+  <h3>10.2.2 런타임 구현체</h3>
+  <p>격리 강도가 다른 여러 오픈소스 런타임이 있다. 이 목록이 전부는 아니고, 방향을 잡는 참고용이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow102" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-axis { font-size: 12px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.4; fill: none; }
+  </style>
+
+  <!-- 축 -->
+  <line class="line" x1="60" y1="200" x2="840" y2="200" marker-end="url(#arrow102)"/>
+  <text class="t-axis" x="450" y="230" text-anchor="middle">격리 강도 · 오버헤드 증가 →</text>
+
+  <!-- runc -->
+  <rect class="box" x="40" y="90" width="180" height="90" rx="4"/>
+  <text class="t-title" x="130" y="118" text-anchor="middle">runc (기본값)</text>
+  <text class="t-sub" x="130" y="138" text-anchor="middle">네임스페이스 + cgroup</text>
+  <text class="t-sub" x="130" y="154" text-anchor="middle">커널을 호스트와 공유</text>
+  <line class="line" x1="130" y1="180" x2="130" y2="196"/>
+
+  <!-- gVisor -->
+  <rect class="box" x="260" y="90" width="180" height="90" rx="4"/>
+  <text class="t-title" x="350" y="118" text-anchor="middle">gVisor</text>
+  <text class="t-sub" x="350" y="138" text-anchor="middle">유저 공간 커널이</text>
+  <text class="t-sub" x="350" y="154" text-anchor="middle">시스템 콜을 가로챔</text>
+  <line class="line" x1="350" y1="180" x2="350" y2="196"/>
+
+  <!-- Kata -->
+  <rect class="box" x="480" y="90" width="180" height="90" rx="4"/>
+  <text class="t-title" x="570" y="118" text-anchor="middle">카타 컨테이너</text>
+  <text class="t-sub" x="570" y="138" text-anchor="middle">경량 VM — 컨테이너처럼</text>
+  <text class="t-sub" x="570" y="154" text-anchor="middle">쓰지만 커널은 별도</text>
+  <line class="line" x1="570" y1="180" x2="570" y2="196"/>
+
+  <!-- Firecracker -->
+  <rect class="box-accent" x="700" y="90" width="180" height="90" rx="4"/>
+  <text class="t-title" x="790" y="118" text-anchor="middle">파이어크래커</text>
+  <text class="t-sub" x="790" y="138" text-anchor="middle">KVM 기반 마이크로VM</text>
+  <text class="t-sub" x="790" y="154" text-anchor="middle">가장 강한 격리</text>
+  <line class="line" x1="790" y1="180" x2="790" y2="196"/>
+
+  <!-- 지정 방법 -->
+  <rect class="box" x="260" y="250" width="380" height="66" rx="4"/>
+  <text class="t-title" x="450" y="274" text-anchor="middle">파드 스펙에서 지정</text>
+  <text class="t-sub" x="450" y="294" text-anchor="middle">spec.runtimeClassName: gvisor</text>
+  <text class="t-sub" x="450" y="308" text-anchor="middle">클러스터 관리자가 미리 RuntimeClass를 등록해 둬야 함</text>
+
+  <text class="t-cap" x="450" y="336" text-anchor="middle" font-size="12" fill="#444">신뢰할 수 없는 코드를 돌릴수록 오른쪽으로 — 단, 워크로드마다 다른 런타임을 섞으면 운영 복잡도가 커진다(10.2.3).</text>
+</svg>
+    <figcaption>그림 10-2. runc부터 파이어크래커까지, 오른쪽으로 갈수록 격리는 강해지고 오버헤드도 커진다.</figcaption>
+  </figure>
+  <table>
+    <tr><th>런타임</th><th>방식</th><th>한 줄 특징</th></tr>
+    <tr><td>containerd</td><td>CRI 구현체</td><td>단순성·견고성·이식성에 집중한 표준 컨테이너 런타임 API</td></tr>
+    <tr><td>cri-o</td><td>CRI 구현체</td><td>쿠버네티스 전용으로 만든 경량 OCI 기반 런타임</td></tr>
+    <tr><td>gVisor</td><td>유저 공간 커널</td><td>OCI 호환 샌드박스 — 시스템 콜을 가로채 커널 노출을 줄임</td></tr>
+    <tr><td>카타 컨테이너</td><td>경량 VM</td><td>컨테이너처럼 쓰지만 실제로는 별도 커널을 가진 VM</td></tr>
+    <tr><td>파이어크래커</td><td>KVM 마이크로VM</td><td>비가상화 환경에서도 매우 빠르게 격리된 VM을 띄움</td></tr>
+  </table>
+
+  <h3>10.2.3 워크로드 격리와 런타임클래스 모범 사례</h3>
+  <ul class="tight">
+    <li><strong>런타임을 워크로드마다 잘게 쪼개 섞지 않는다</strong> — 런타임 간에는 워크로드가 이식되지 않고, 기능 매트릭스를 다 파악하기도 어려워 운영이 복잡해진다. 가급적 런타임 종류별로 클러스터를 나누는 편이 낫다.</li>
+    <li><strong>워크로드 격리가 곧 멀티테넌시 보안은 아니다</strong> — 런타임을 안전하게 격리해도, 공격자가 쿠버네티스 API 자체를 통해 워크로드를 건드릴 길은 따로 막아야 한다(4장 RBAC, 10.1절).</li>
+    <li><strong>런타임마다 도구 생태계가 다르다</strong> — 런타임이 바뀌면 <code>docker ps</code> 같은 익숙한 명령이 그대로 안 통할 수 있어, 트러블슈팅 난이도가 오른다.</li>
+  </ul>
+</section>
+
+<section id="s10-3">
+  <h2 class="sec"><span class="num">10.3</span>파드와 컨테이너 보안 관련 고려 사항</h2>
+  <p class="lead">어드미션 컨트롤과 런타임 격리로 끝이 아니다. "생성 시점"과 "격리 구조" 다음은 "실행 중 행동"이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow103" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-phase { font-size: 12.5px; font-weight: 700; fill: #2456c4; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .timeline { stroke: #d8d8d8; stroke-width: 2; }
+  </style>
+
+  <line class="timeline" x1="60" y1="180" x2="840" y2="180"/>
+
+  <!-- 시점 1: 생성 전 -->
+  <text class="t-phase" x="150" y="40" text-anchor="middle">배포 시점 — 생성 자체를 막는다</text>
+  <circle cx="150" cy="180" r="6" fill="#2456c4"/>
+  <rect class="box-accent" x="50" y="60" width="200" height="100" rx="4"/>
+  <text class="t-title" x="150" y="88" text-anchor="middle">파드 시큐리티</text>
+  <text class="t-title" x="150" y="106" text-anchor="middle">어드미션 (10.1)</text>
+  <text class="t-sub" x="150" y="128" text-anchor="middle">privileged 필드 등</text>
+  <text class="t-sub" x="150" y="144" text-anchor="middle">위험한 스펙을 원천 차단</text>
+  <line class="line" x1="150" y1="160" x2="150" y2="176"/>
+
+  <!-- 시점 2: 실행 준비 -->
+  <text class="t-phase" x="450" y="40" text-anchor="middle">스케줄 시점 — 격리 강도를 정한다</text>
+  <circle cx="450" cy="180" r="6" fill="#2456c4"/>
+  <rect class="box" x="350" y="60" width="200" height="100" rx="4"/>
+  <text class="t-title" x="450" y="88" text-anchor="middle">런타임클래스 (10.2)</text>
+  <text class="t-sub" x="450" y="110" text-anchor="middle">신뢰 못 할 코드는</text>
+  <text class="t-sub" x="450" y="126" text-anchor="middle">gVisor·Kata 등으로</text>
+  <text class="t-sub" x="450" y="142" text-anchor="middle">커널 자체를 분리</text>
+  <line class="line" x1="450" y1="160" x2="450" y2="176"/>
+
+  <!-- 시점 3: 실행 중 -->
+  <text class="t-phase" x="750" y="40" text-anchor="middle">실행 중 — 이상 행동을 잡아낸다</text>
+  <circle cx="750" cy="180" r="6" fill="#2456c4"/>
+  <rect class="box" x="650" y="60" width="200" height="100" rx="4"/>
+  <text class="t-title" x="750" y="88" text-anchor="middle">Falco / Tetragon (10.3)</text>
+  <text class="t-sub" x="750" y="110" text-anchor="middle">eBPF로 시스템 콜 감시</text>
+  <text class="t-sub" x="750" y="126" text-anchor="middle">비정상 셸 실행·파일</text>
+  <text class="t-sub" x="750" y="142" text-anchor="middle">접근 등을 실시간 탐지</text>
+
+  <!-- 하단 설명 -->
+  <rect class="box" x="50" y="200" width="800" height="90" rx="6"/>
+  <text class="t-title" x="70" y="224">세 계층이 막는 것이 다르다</text>
+  <text class="t-sub" x="70" y="246">① 애초에 위험한 설정으로 파드가 뜨는 것 자체를 막고(사전 차단)</text>
+  <text class="t-sub" x="70" y="264">② 그래도 뜬 워크로드가 커널까지 뚫고 나가지 못하게 격리 두께를 조절하고(구조적 방어)</text>
+  <text class="t-sub" x="70" y="282">③ 그 안에서 일어나는 수상한 행동을 실시간으로 잡아낸다(탐지·대응) — 어느 하나도 나머지를 대체하지 못한다.</text>
+
+  <text class="t-cap" x="450" y="320" text-anchor="middle">10장의 세 절은 시간순으로 이어지는 방어선이다. 하나가 뚫려도 다음 계층이 남는다.</text>
+</svg>
+    <figcaption>그림 10-3. 10장의 세 절은 시간순으로 이어지는 방어선이다 — 하나가 뚫려도 다음 계층이 남는다.</figcaption>
+  </figure>
+
+  <h3>10.3.1 어드미션 컨트롤러</h3>
+  <p>파드 시큐리티 어드미션이 너무 제약적이거나(또는 반대로 너무 느슨하다고) 느껴진다면, 더 정교한 정책을 짤 수 있는 범용 어드미션 컨트롤러(OPA Gatekeeper, Kyverno 등)가 대안이다. 어드미션 컨트롤 자체의 원리와 웹훅 구성은 17장에서 깊이 다룬다.</p>
+
+  <h3>10.3.2 침입 및 이상 징후 탐지 툴</h3>
+  <p>정책은 "무엇을 막을지"를 정하지만, 이미 돌고 있는 컨테이너 <strong>내부에서 실제로 무슨 일이 일어나는지</strong>는 별개의 문제다. 대표 도구가 CNCF 프로젝트인 <dfn class="term">Falco</dfn>다 — 데몬셋으로 설치되어, 리눅스 시스템 콜을 감시(주로 <dfn class="term">eBPF <span class="en">(extended Berkeley Packet Filter)</span></dfn> 방식)하며 셸 실행, 민감 파일 접근 같은 수상한 행동을 규칙 기반으로 탐지한다.</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    Falco는 <strong>CNCF Graduated</strong> 프로젝트로 자리 잡아 컨테이너 런타임 위협 탐지의 사실상 표준이 됐다. 다만 Falco는 <strong>탐지·경고까지만</strong> 한다 — 공격을 막지는 않는다. 여기서 한 걸음 더 나간 것이 Cilium 진영의 <dfn class="term">Tetragon</dfn>(역시 eBPF 기반)이다 — 커널의 LSM 훅을 이용해 위험한 시스템 콜을 <strong>탐지와 동시에 실제로 차단</strong>할 수 있다. 2026년 현재 실무에서 흔한 조합은 "폭넓은 규칙과 알림 생태계는 Falco, 특정 위험 행동에 대한 실제 강제 차단은 Tetragon"을 함께 쓰는 것이다.
+    <span class="src">출처: CNCF 프로젝트 성숙도 분류(Falco Graduated) · Cilium/Isovalent 공식 문서(Tetragon 아키텍처) — 업계 비교 자료 다수 교차 확인</span>
+  </div>
+</section>
+
+<footer>
+  출처: CNCF 프로젝트 카탈로그(Falco Graduated 상태) · Cilium/Isovalent 공식 문서(Tetragon) — 세부 출처는 10.3.2절 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig10-1 ~ fig10-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

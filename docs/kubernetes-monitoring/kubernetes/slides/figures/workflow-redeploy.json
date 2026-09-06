@@ -1,0 +1,199 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "재배포 루틴 — 코드 수정에서 검증까지",
+    "output": "workflow-redeploy.html",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "build-path",
+        "label": "수정과 빌드",
+        "focus": [
+          "edit",
+          "test",
+          "image",
+          "load"
+        ],
+        "note": "테스트를 통과한 코드만 이미지가 된다."
+      },
+      {
+        "id": "deploy-path",
+        "label": "배포와 검증",
+        "focus": [
+          "setimage",
+          "rollout"
+        ],
+        "note": "롤아웃 완료가 아니라 /actuator/prometheus에 orders_가 보여야 배포가 끝난다."
+      },
+      {
+        "id": "fail-path",
+        "label": "실패 경로",
+        "focus": [
+          "test",
+          "edit"
+        ],
+        "note": "테스트 실패 = 빌드 실패. 이미지를 만들지 않고 수정으로 돌아간다."
+      }
+    ],
+    "viewBox": [
+      1200,
+      534
+    ]
+  },
+  "lanes": [
+    {
+      "id": "dev",
+      "label": "개발자"
+    },
+    {
+      "id": "build",
+      "label": "빌드 · 이미지"
+    },
+    {
+      "id": "cluster",
+      "label": "kind 클러스터"
+    }
+  ],
+  "phases": [
+    {
+      "id": "change",
+      "label": "수정",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "bake",
+      "label": "빌드",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "ship",
+      "label": "배포 + 검증",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "edit",
+    "test",
+    "image",
+    "load",
+    "setimage",
+    "rollout"
+  ],
+  "nodes": [
+    {
+      "id": "edit",
+      "lane": "dev",
+      "col": 0,
+      "type": "frontend",
+      "label": "코드 수정",
+      "sublabel": "태그 0.0.N+1"
+    },
+    {
+      "id": "test",
+      "lane": "dev",
+      "col": 1,
+      "type": "security",
+      "label": "gradlew test",
+      "sublabel": "JUnit",
+      "tag": "실패 = 중단"
+    },
+    {
+      "id": "image",
+      "lane": "build",
+      "col": 2,
+      "type": "backend",
+      "label": "bootBuildImage",
+      "sublabel": "빌드팩"
+    },
+    {
+      "id": "load",
+      "lane": "build",
+      "col": 3,
+      "type": "cloud",
+      "label": "kind load",
+      "sublabel": "노드 3개 적재"
+    },
+    {
+      "id": "setimage",
+      "lane": "cluster",
+      "col": 4,
+      "type": "backend",
+      "label": "set image",
+      "sublabel": "새 태그로 교체"
+    },
+    {
+      "id": "rollout",
+      "lane": "cluster",
+      "col": 5,
+      "type": "backend",
+      "label": "rollout status",
+      "sublabel": "레디니스 대기",
+      "tag": "orders_ 확인"
+    }
+  ],
+  "edges": [
+    {
+      "from": "edit",
+      "to": "test"
+    },
+    {
+      "from": "test",
+      "to": "image",
+      "label": "통과",
+      "variant": "emphasis",
+      "route": "drop",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "image",
+      "to": "load"
+    },
+    {
+      "from": "load",
+      "to": "setimage",
+      "variant": "emphasis",
+      "route": "drop",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "setimage",
+      "to": "rollout"
+    },
+    {
+      "from": "test",
+      "to": "edit",
+      "label": "실패 → 수정",
+      "variant": "security",
+      "role": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "태그는 필수 인자",
+      "items": [
+        "같은 태그 + rollout restart는 캐시 복불복이다",
+        "redeploy.sh가 태그를 강제하는 이유",
+        "지금 도는 파드가 어느 코드인지 태그가 말해준다"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "테스트 실패 = 빌드 실패",
+      "items": [
+        "테스트가 깨진 소스는 이미지가 되면 안 된다",
+        "이미지가 되는 순간 언젠가 배포된다",
+        "실패는 왼쪽으로 돌아가는 것 외의 출구가 없다"
+      ]
+    }
+  ]
+}

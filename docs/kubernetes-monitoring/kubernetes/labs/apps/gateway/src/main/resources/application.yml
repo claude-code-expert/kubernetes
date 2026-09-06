@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # 프로퍼티 접두사가 spring.cloud.gateway.routes 에서 여기로 바뀌었다.
+          # 옛 접두사로 쓰면 라우트가 등록되지 않고 404만 돌아온다.
+          routes:
+            - id: order-api
+              uri: ${ORDER_API_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/orders/**,/api/chaos/**
+              filters:
+                - AddRequestHeader=X-Gateway,obs-study
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # gateway 엔드포인트는 절대 열지 않는다. 아래 경고 참조.
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        spring.cloud.gateway.requests: true

@@ -1,0 +1,168 @@
+{
+  "uid": "obs-study-red",
+  "title": "Obs Study — 서비스 RED",
+  "tags": ["obs-study", "red"],
+  "timezone": "Asia/Seoul",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "데이터소스",
+        "query": "prometheus",
+        "current": {}
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "네임스페이스",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(http_server_requests_seconds_count, namespace)",
+        "refresh": 1,
+        "current": { "text": "apps", "value": "apps" }
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "label": "서비스",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(http_server_requests_seconds_count{namespace=\"$namespace\"}, service)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "초당 요청 수",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 1 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[2m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "5xx 에러율",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "text", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\", status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[5m])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "P95 응답 시간",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "분당 주문 수",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 1 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(orders_created_total[5m])) * 60" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "서비스별 처리율",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (service) (rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[2m]))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "서비스별 P95 / P99",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))",
+          "legendFormat": "{{service}} P95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))",
+          "legendFormat": "{{service}} P99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "엔드포인트별 P99 상위 5개",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(5, histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m]))))",
+          "legendFormat": "{{uri}}"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "앱 로그 (에러만)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 21 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{namespace=\"$namespace\"} |= \"ERROR\""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+# M35 — 인덱스 잡. 분산 훈련의 가장 단순한 형태다.
+#
+# 파드마다 JOB_COMPLETION_INDEX 가 다르게 주입되고, 그 번호로 자기 몫을 정한다.
+# 데이터 병렬 훈련에서 워커가 샤드를 나눠 갖는 방식과 같다.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: train-shards
+  namespace: m35
+spec:
+  # completions: 총 몇 조각인가.  parallelism: 동시에 몇 개를 돌릴 것인가.
+  # 둘을 나누는 것이 배치 잡 설계의 핵심이다 — 자원과 시간을 맞바꾼다.
+  completions: 6
+  parallelism: 2
+  completionMode: Indexed
+  # 실패한 파드를 몇 번까지 다시 만들 것인가. 잡 전체 기준이다.
+  backoffLimit: 3
+  # 끝난 잡을 언제 치울 것인가. 없으면 영원히 남아 목록을 어지럽힌다.
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: alpine:3.22
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {memory: 64Mi}
+          command:
+            - sh
+            - -c
+            - |
+              # 인덱스는 환경 변수와 어노테이션 양쪽으로 온다.
+              I="${JOB_COMPLETION_INDEX}"
+              echo "샤드 ${I} 시작 (파드 ${HOSTNAME})"
+              # 샤드마다 다른 일을 한다 — 여기서는 다른 시간을 쓴다
+              sleep $(( 3 + I ))
+              echo "샤드 ${I} 완료: loss=0.$(( 90 - I * 7 ))"

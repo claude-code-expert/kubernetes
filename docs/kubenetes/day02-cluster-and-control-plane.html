@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D2 · 클러스터를 켜고 컨트롤 플레인을 읽는다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){.two{grid-template-columns:1fr}h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 1단계 기초 · Day 2</p>
+  <h1>클러스터를 켜고, 안에서 무엇이 돌고 있는지 이름을 붙인다</h1>
+  <p class="lede">버튼 하나로 클러스터가 생긴다. 그 순간 컨테이너 열몇 개가 뜨는데, 각각이 무슨 일을 하는지 알아야 내일부터 나오는 오류 메시지를 읽을 수 있다. 오늘은 컨트롤 플레인 네 요소와 노드 세 요소에 이름을 붙이고, <code>kubectl apply</code> 한 줄이 그 안에서 어떻게 흘러가는지를 명령으로 확인한다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D1 완료 (Docker Desktop 4.88, CPU 4 · 메모리 8GB 이상)</b></span>
+    <span>버전 <b>Kubernetes v1.36.x · kubectl v1.36.x · kind 프로비저너</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>Docker Desktop에서 kind 프로비저너로 Kubernetes v1.36 클러스터를 만들고, <code>docker ps</code>에서 노드 컨테이너를 찾는다.</li>
+    <li><code>kubectl get pods -n kube-system</code>의 파드 이름을 보고 각각이 컨트롤 플레인의 어느 요소인지 말한다.</li>
+    <li>파드를 하나 띄웠다 지우고, 디플로이먼트로 띄운 파드를 지우면 다시 살아나는 차이를 <code>-w</code>로 관찰한다.</li>
+    <li>컨텍스트가 어긋났을 때 <code>Unable to connect</code> 오류를 스스로 고친다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+  <p class="sub">클러스터는 두 층이다. 결정을 내리는 컨트롤 플레인과, 결정대로 컨테이너를 돌리는 노드. 그 사이를 잇는 것은 API 서버 하나뿐이다.</p>
+
+  <h3>1.1 클러스터의 두 층</h3>
+  <p><dfn title="cluster">클러스터(cluster)</dfn>는 컨테이너를 실행하는 머신(<dfn title="node">노드(node)</dfn>)의 집합이다. 그중 한 대 이상이 <dfn title="control plane">컨트롤 플레인(control plane)</dfn> 역할을 맡아 "무엇을 어디에 몇 개 띄울지"를 결정하고 상태를 저장한다. 나머지는 워커 노드로, 컨트롤 플레인이 배정한 <dfn title="Pod">파드(Pod)</dfn>를 실제로 실행한다. 파드는 컨테이너 하나 이상을 담는 배포 단위이며, D1에서 만든 컨테이너가 파드 안에 들어간다.</p>
+  <p>오늘 만드는 클러스터는 노드 1개다. 그 한 노드가 컨트롤 플레인이면서 워커다. D5에서 3노드로 늘리면 컨트롤 플레인 1 + 워커 2가 된다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 400" width="100%" role="img" aria-label="쿠버네티스 클러스터 구조: 컨트롤 플레인과 노드">
+    <!-- control plane -->
+    <rect x="20" y="20" width="860" height="126" rx="4" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+    <text x="34" y="44" font-size="13" font-weight="600" fill="#1a1a1a">컨트롤 플레인</text>
+    <rect x="34" y="58" width="196" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="46" y="80" font-size="12" font-weight="600" fill="#1d4ed8">kube-apiserver</text>
+    <text x="46" y="98" font-size="11" fill="#4a4a4a">유일한 창구 · 인증·인가·검증</text>
+    <text x="46" y="116" font-size="11" fill="#4a4a4a">모든 요청이 여기를 지난다</text>
+    <rect x="244" y="58" width="196" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="256" y="80" font-size="12" font-weight="600" fill="#1d4ed8">etcd</text>
+    <text x="256" y="98" font-size="11" fill="#4a4a4a">상태 저장소 · 키-값</text>
+    <text x="256" y="116" font-size="11" fill="#4a4a4a">원하는 상태와 현재 상태</text>
+    <rect x="454" y="58" width="196" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="466" y="80" font-size="12" font-weight="600" fill="#1d4ed8">kube-scheduler</text>
+    <text x="466" y="98" font-size="11" fill="#4a4a4a">노드 미배정 파드를 감지</text>
+    <text x="466" y="116" font-size="11" fill="#4a4a4a">어느 노드에 놓을지 결정</text>
+    <rect x="664" y="58" width="202" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="676" y="80" font-size="12" font-weight="600" fill="#1d4ed8">kube-controller-manager</text>
+    <text x="676" y="98" font-size="11" fill="#4a4a4a">컨트롤러 묶음 · 조정 루프</text>
+    <text x="676" y="116" font-size="11" fill="#4a4a4a">원하는 상태로 계속 맞춘다</text>
+    <!-- link -->
+    <line x1="132" y1="146" x2="132" y2="176" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="132" y1="176" x2="770" y2="176" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="132" y1="176" x2="132" y2="196" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="450" y1="176" x2="450" y2="196" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="770" y1="176" x2="770" y2="196" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="460" y="170" font-size="11" fill="#767676">kubelet이 API 서버를 감시(watch)한다 · 노드 → 컨트롤 플레인 방향</text>
+    <!-- nodes -->
+    <g id="nodeA">
+      <rect x="20" y="196" width="270" height="184" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+      <text x="34" y="218" font-size="13" font-weight="600" fill="#1d4ed8">노드 1</text>
+      <rect x="34" y="230" width="242" height="26" rx="3" fill="#fff" stroke="#767676" stroke-width="1.2"/><text x="44" y="248" font-size="11" fill="#4a4a4a">kubelet · kube-proxy · containerd</text>
+      <rect x="34" y="268" width="112" height="98" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="44" y="288" font-size="12" font-weight="600" fill="#15803d">Pod</text>
+      <rect x="44" y="298" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="52" y="315" font-size="11" fill="#c2410c">container: app</text>
+      <rect x="44" y="330" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="52" y="347" font-size="11" fill="#c2410c">container: log</text>
+      <rect x="164" y="268" width="112" height="98" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="174" y="288" font-size="12" font-weight="600" fill="#15803d">Pod</text>
+      <rect x="174" y="298" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="182" y="315" font-size="11" fill="#c2410c">container: app</text>
+    </g>
+    <g id="nodeB">
+      <rect x="315" y="196" width="270" height="184" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+      <text x="329" y="218" font-size="13" font-weight="600" fill="#1d4ed8">노드 2</text>
+      <rect x="329" y="230" width="242" height="26" rx="3" fill="#fff" stroke="#767676" stroke-width="1.2"/><text x="339" y="248" font-size="11" fill="#4a4a4a">kubelet · kube-proxy · containerd</text>
+      <rect x="329" y="268" width="112" height="98" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="339" y="288" font-size="12" font-weight="600" fill="#15803d">Pod</text>
+      <rect x="339" y="298" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="347" y="315" font-size="11" fill="#c2410c">container: app</text>
+      <rect x="459" y="268" width="112" height="98" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="469" y="288" font-size="12" fill="#767676">(빈 자리)</text>
+    </g>
+    <g id="nodeC">
+      <rect x="610" y="196" width="270" height="184" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+      <text x="624" y="218" font-size="13" font-weight="600" fill="#1d4ed8">노드 3</text>
+      <rect x="624" y="230" width="242" height="26" rx="3" fill="#fff" stroke="#767676" stroke-width="1.2"/><text x="634" y="248" font-size="11" fill="#4a4a4a">kubelet · kube-proxy · containerd</text>
+      <rect x="624" y="268" width="112" height="98" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="634" y="288" font-size="12" font-weight="600" fill="#15803d">Pod</text>
+      <rect x="634" y="298" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="642" y="315" font-size="11" fill="#c2410c">container: app</text>
+      <rect x="634" y="330" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="642" y="347" font-size="11" fill="#c2410c">container: sidecar</text>
+      <rect x="754" y="268" width="112" height="98" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="764" y="288" font-size="12" font-weight="600" fill="#15803d">Pod</text>
+      <rect x="764" y="298" width="92" height="24" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/><text x="772" y="315" font-size="11" fill="#c2410c">container: app</text>
+    </g>
+    <text x="20" y="396" font-size="11" fill="#767676">노드 안에 파드가, 파드 안에 컨테이너가 들어간다. 오늘은 노드 1만 있고 컨트롤 플레인도 그 안에서 돈다.</text>
+  </svg>
+  <figcaption>도판 1. 파랑=컨트롤 플레인 요소와 노드, 초록=파드, 주황=컨테이너. 화살표는 kubelet이 API 서버를 감시하는 방향이다.</figcaption>
+  </figure>
+
+  <h3>1.2 컨트롤 플레인 네 요소</h3>
+  <table>
+    <thead><tr><th style="width:200px">요소</th><th>하는 일</th><th style="width:250px">없으면 생기는 일</th></tr></thead>
+    <tbody>
+      <tr><td><code>kube-apiserver</code></td><td>클러스터의 유일한 창구. <code>kubectl</code>, kubelet, 컨트롤러 전부가 이 HTTP API로만 말한다. 인증·인가·어드미션을 거쳐 요청을 검증하고 etcd에 쓴다.</td><td><code>kubectl</code>이 아무것도 못 한다. 단, 이미 돌던 파드는 계속 돈다.</td></tr>
+      <tr><td><code>etcd</code></td><td>클러스터 상태 전체를 담는 키-값 저장소. "원하는 상태"(내가 apply한 것)와 "현재 상태"(kubelet이 보고한 것)가 모두 여기 있다.</td><td>상태를 잃는다. 백업 대상은 etcd 하나다.</td></tr>
+      <tr><td><code>kube-scheduler</code></td><td>노드가 배정되지 않은 파드를 찾아 리소스·제약 조건을 보고 노드를 고른다. 고른 결과를 파드의 <code>spec.nodeName</code>에 쓴다.</td><td>새 파드가 <code>Pending</code>에 머문다.</td></tr>
+      <tr><td><code>kube-controller-manager</code></td><td>수십 개 컨트롤러를 한 프로세스로 묶은 것. 각 컨트롤러는 자기 오브젝트를 감시하다가 원하는 상태와 현재 상태가 다르면 맞춘다(디플로이먼트·레플리카셋·노드·잡·엔드포인트슬라이스 컨트롤러 등).</td><td>파드를 지워도 다시 안 생긴다. 노드가 죽어도 파드를 옮기지 않는다.</td></tr>
+    </tbody>
+  </table>
+  <p>클라우드에서는 <code>cloud-controller-manager</code>가 하나 더 붙어 로드밸런서·노드 정보를 클라우드 API와 맞춘다. 로컬에는 없다. Docker Desktop은 그 빈자리를 <code>desktop-cloud-provider-kind</code> 컨테이너로 메워 LoadBalancer 서비스를 <code>localhost</code>로 열어 준다(D5).</p>
+
+  <h3>1.3 노드 세 요소</h3>
+  <table>
+    <thead><tr><th style="width:200px">요소</th><th>하는 일</th></tr></thead>
+    <tbody>
+      <tr><td><code>kubelet</code></td><td>노드마다 하나. API 서버에서 "이 노드에 배정된 파드" 목록을 감시하고, 컨테이너 런타임에게 만들라고 시킨 뒤 상태를 API 서버로 보고한다. 프로브(D8)를 실행하는 것도 kubelet이다.</td></tr>
+      <tr><td><code>kube-proxy</code></td><td>노드의 네트워크 규칙(iptables/nftables)을 관리해 Service의 가상 IP가 실제 파드 IP로 가도록 한다(D5).</td></tr>
+      <tr><td>컨테이너 런타임</td><td><code>containerd</code>. D1에서 Docker Desktop VM 안에 있던 그 containerd와 같은 프로그램이다. kubelet은 CRI(Container Runtime Interface)로 containerd에 말하고, containerd는 runc로 프로세스를 만든다.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.4 선언형과 조정 루프</h3>
+  <p>쿠버네티스에는 "nginx를 띄워라"는 명령이 없다. "nginx 파드가 3개 있는 상태를 원한다"고 <b>선언</b>하면, 컨트롤러가 현재 상태를 보고 부족한 만큼 만들고 넘치는 만큼 지운다. 이 비교-조치를 끝없이 반복하는 것이 <dfn title="reconciliation loop">조정 루프(reconciliation loop)</dfn>다. 파드 하나가 죽으면 "3개를 원하는데 2개다"가 되어 자동으로 하나가 더 생긴다. 사람이 개입하지 않는다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 250" width="100%" role="img" aria-label="kubectl apply 이후 조정 루프의 흐름">
+    <!-- 1 kubectl -->
+    <rect x="20" y="70" width="150" height="80" rx="3" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+    <text x="32" y="94" font-size="12" font-weight="600" fill="#1a1a1a">kubectl apply</text>
+    <text x="32" y="114" class="mono" font-size="11" fill="#4a4a4a">kind: Deployment</text>
+    <text x="32" y="130" class="mono" font-size="11" fill="#4a4a4a">replicas: 3</text>
+    <circle cx="30" cy="60" r="10" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="26" y="64" font-size="11" fill="#c2410c">1</text>
+    <line x1="170" y1="110" x2="212" y2="110" stroke="#767676" stroke-width="1.2"/><polygon points="212,106 220,110 212,114" fill="#767676"/>
+    <!-- 2 apiserver -->
+    <rect x="222" y="70" width="150" height="80" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="234" y="94" font-size="12" font-weight="600" fill="#1d4ed8">API 서버</text>
+    <text x="234" y="114" font-size="11" fill="#4a4a4a">검증 후 etcd에 저장</text>
+    <text x="234" y="130" font-size="11" fill="#4a4a4a">= 원하는 상태</text>
+    <circle cx="232" cy="60" r="10" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="228" y="64" font-size="11" fill="#c2410c">2</text>
+    <line x1="372" y1="110" x2="414" y2="110" stroke="#767676" stroke-width="1.2"/><polygon points="414,106 422,110 414,114" fill="#767676"/>
+    <!-- 3 controller loop -->
+    <rect x="424" y="30" width="230" height="160" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="436" y="54" font-size="12" font-weight="600" fill="#1d4ed8">컨트롤러 (조정 루프)</text>
+    <rect x="436" y="66" width="96" height="40" rx="3" fill="#fff" stroke="#767676" stroke-width="1.2"/><text x="446" y="84" font-size="11" fill="#4a4a4a">원하는 상태</text><text x="446" y="99" font-size="11" fill="#4a4a4a">파드 3</text>
+    <rect x="546" y="66" width="96" height="40" rx="3" fill="#fff" stroke="#767676" stroke-width="1.2"/><text x="556" y="84" font-size="11" fill="#4a4a4a">현재 상태</text><text x="556" y="99" font-size="11" fill="#4a4a4a">파드 2</text>
+    <text x="436" y="132" font-size="11" fill="#4a4a4a">비교 → 차이 1 → 파드 생성 요청</text>
+    <text x="436" y="156" font-size="11" fill="#767676">다르면 조치, 같으면 대기</text>
+    <text x="436" y="174" font-size="11" fill="#767676">영원히 반복</text>
+    <circle cx="434" cy="20" r="10" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="430" y="24" font-size="11" fill="#c2410c">3</text>
+    <line x1="654" y1="110" x2="696" y2="110" stroke="#767676" stroke-width="1.2"/><polygon points="696,106 704,110 696,114" fill="#767676"/>
+    <!-- 4 scheduler + kubelet -->
+    <rect x="706" y="30" width="174" height="66" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="718" y="52" font-size="12" font-weight="600" fill="#1d4ed8">스케줄러</text>
+    <text x="718" y="70" font-size="11" fill="#4a4a4a">nodeName 비어 있음 →</text>
+    <text x="718" y="86" font-size="11" fill="#4a4a4a">노드 2 배정</text>
+    <circle cx="716" cy="20" r="10" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="712" y="24" font-size="11" fill="#c2410c">4</text>
+    <rect x="706" y="126" width="174" height="70" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="718" y="148" font-size="12" font-weight="600" fill="#15803d">kubelet (노드 2)</text>
+    <text x="718" y="166" font-size="11" fill="#4a4a4a">내 노드 파드다 → containerd</text>
+    <text x="718" y="184" font-size="11" fill="#4a4a4a">→ Running 보고</text>
+    <circle cx="716" cy="111" r="9" fill="#fff" stroke="#c2410c" stroke-width="1.5"/><text x="712" y="115" font-size="11" fill="#c2410c">5</text>
+    <!-- feedback -->
+    <path d="M 793 196 L 793 226 L 300 226 L 300 150" fill="none" stroke="#6d28d9" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <polygon points="296,158 300,150 304,158" fill="#6d28d9"/>
+    <text x="320" y="220" font-size="11" fill="#6d28d9">상태 보고 → etcd의 현재 상태 갱신 → 컨트롤러가 다시 비교</text>
+  </svg>
+  <figcaption>도판 2. 어떤 요소도 다른 요소를 직접 부르지 않는다. 모두 API 서버를 감시하고, 자기 몫만 처리한다. 주황 번호=순서, 보라=상태 보고 경로.</figcaption>
+  </figure>
+
+  <p>이 구조 때문에 장애에 강하다. 컨트롤러가 잠시 죽어도 다시 뜨면 etcd의 원하는 상태와 현재 상태를 비교해 밀린 일을 처리한다. kubelet이 잠시 끊겨도 자기 노드의 컨테이너를 계속 돌리다가 재접속하면 상태를 보고한다. 누가 누구를 호출하는 구조가 아니라 각자 저장소를 보고 움직이는 구조다.</p>
+
+  <h3>1.5 kubectl과 kubeconfig</h3>
+  <p><code>kubectl</code>은 API 서버에 HTTP 요청을 보내는 클라이언트다. 어느 서버에, 어떤 인증서로 접속할지는 <code>~/.kube/config</code>(kubeconfig)에 적혀 있다. 이 파일은 <b>클러스터</b>(서버 주소·CA), <b>사용자</b>(인증서·토큰), 그리고 둘을 짝지은 <b>컨텍스트</b>로 구성된다. Docker Desktop은 클러스터를 만들 때 <code>docker-desktop</code> 컨텍스트를 이 파일에 추가하고 현재 컨텍스트로 잡는다. 다른 클러스터를 쓴 적이 있어 컨텍스트가 어긋나면 <code>Unable to connect to the server</code>가 나온다.</p>
+
+  <h3>1.6 오늘 만나는 오브젝트</h3>
+  <p>API 서버가 다루는 모든 것은 오브젝트다. 오브젝트마다 <code>apiVersion</code>·<code>kind</code>·<code>metadata</code>·<code>spec</code>(원하는 상태)·<code>status</code>(현재 상태)를 가진다. 오늘은 셋만 쓴다.</p>
+  <table>
+    <thead><tr><th style="width:130px">kind</th><th>역할</th><th style="width:170px">자세히</th></tr></thead>
+    <tbody>
+      <tr><td><code>Node</code></td><td>노드 하나. kubelet이 자기 자신을 등록한다.</td><td>오늘</td></tr>
+      <tr><td><code>Pod</code></td><td>컨테이너 묶음. 최소 실행 단위. 직접 만들면 죽어도 되살아나지 않는다.</td><td>D3</td></tr>
+      <tr><td><code>Deployment</code></td><td>"이 파드를 N개 유지하라"는 선언. 컨트롤러가 되살린다.</td><td>D4</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · 클러스터 생성</h2>
+  <p class="sub">Docker Desktop 대시보드의 Kubernetes 화면에서 만든다. 30초 안팎이 걸린다.</p>
+
+  <h3>2.1 클러스터 만들기</h3>
+  <ol>
+    <li>Docker Desktop 대시보드 왼쪽 메뉴에서 <b>Kubernetes</b>를 연다. (메뉴가 안 보이면 Settings → 좌측 내비게이션 커스터마이즈에서 켠다.)</li>
+    <li><b>Create cluster</b>를 누른다.</li>
+    <li>Cluster type에서 <b>kind</b>를 고른다. kubeadm은 단일 노드·버전 고정이라 이 교재에서는 쓰지 않는다.</li>
+    <li>Kubernetes version 드롭다운에서 <b>v1.36.x</b> 중 가장 높은 패치를 고른다. Node count는 <b>1</b>로 둔다(D5에서 3으로 늘린다).</li>
+    <li><b>Show system containers (advanced)</b>를 켠다. 켜야 <code>docker ps</code>에서 노드 컨테이너가 보인다. 오늘의 핵심 관찰이다.</li>
+    <li><b>Create</b>. 대시보드 하단 상태 표시가 초록으로 바뀔 때까지 기다린다.</li>
+  </ol>
+  <p>Docker Desktop이 <code>kindest/node</code> 이미지를 받아 노드 컨테이너를 띄우고, 인증서를 만들고, kubeconfig에 <code>docker-desktop</code> 컨텍스트를 추가한다. macOS라면 <code>/usr/local/bin/kubectl</code>도 이때 설치된다.</p>
+
+  <h3>2.2 kubectl 확인</h3>
+<pre><code><span class="p">$</span> which -a kubectl
+<span class="c">/usr/local/bin/kubectl</span>
+
+<span class="p">$</span> kubectl version
+<span class="c">Client Version: v1.36.4
+Kustomize Version: v5.7.1
+Server Version: v1.36.4</span>
+
+<span class="p">$</span> kubectl config current-context
+<span class="c">docker-desktop</span>
+
+<span class="p">$</span> kubectl get nodes
+<span class="c">NAME                    STATUS   ROLES           AGE   VERSION
+desktop-control-plane   Ready    control-plane   62s   v1.36.4</span></code></pre>
+  <p class="expect"><b>확인</b> — Client와 Server 마이너 버전이 같다(±1까지 허용). 노드 하나가 <code>Ready</code>이고 ROLES가 <code>control-plane</code>이다. 워커 역할 표시는 없지만 노드 1개짜리 클러스터에서는 이 노드가 파드도 실행한다.</p>
+
+  <div class="note warn">
+    <h5>kubectl이 두 개 잡히거나 버전이 어긋날 때</h5>
+    <p><code>which -a kubectl</code>에 <code>/opt/homebrew/bin/kubectl</code>이 함께 나오면 Homebrew 버전이 앞선다. <code>brew uninstall kubectl</code>로 지우거나, 반대로 Homebrew 것을 쓰려면 <code>sudo rm /usr/local/bin/kubectl</code>. 어느 쪽이든 서버(v1.36)와 마이너 버전 차이가 1을 넘지 않게 맞춘다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+  <p class="sub">노드가 컨테이너임을 확인하는 데서 시작해, 시스템 파드에 이름을 붙이고, 파드를 직접 만들었을 때와 디플로이먼트로 만들었을 때의 차이로 끝낸다.</p>
+<pre><code><span class="p">$</span> mkdir -p ~/k8s-study/day02 && cd ~/k8s-study/day02</code></pre>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>노드는 컨테이너다</h3>
+    <p class="why">D1의 <code>docker ps</code>를 다시 친다. 클러스터를 만들었을 뿐인데 컨테이너가 생겼다.</p>
+<pre><code><span class="p">$</span> docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+<span class="c">NAMES                              IMAGE                                          STATUS
+desktop-control-plane              kindest/node:v1.36.4                           Up 3 minutes
+desktop-cloud-provider-kind        docker/desktop-cloud-provider-kind:v0.6.0      Up 3 minutes
+desktop-containerd-registry-mirror docker/desktop-containerd-registry-mirror:...  Up 3 minutes</span>
+
+<span class="p">$</span> kubectl get nodes -o wide
+<span class="c">NAME                    STATUS   ROLES           AGE   VERSION   INTERNAL-IP   OS-IMAGE                         KERNEL-VERSION   CONTAINER-RUNTIME
+desktop-control-plane   Ready    control-plane   4m    v1.36.4   192.168.97.2  Debian GNU/Linux ...   7.0.12-linuxkit   containerd://2.x</span>
+
+<span class="p">$</span> docker exec desktop-control-plane crictl ps --output table | head -12
+<span class="c">CONTAINER      IMAGE          CREATED        STATE    NAME                      ATTEMPT  POD ID    POD
+a1b2c3...      d4e5f6...      4 minutes ago  Running  kube-apiserver            0        ...       kube-apiserver-desktop-control-plane
+...            ...            4 minutes ago  Running  etcd                      0        ...       etcd-desktop-control-plane
+...            ...            4 minutes ago  Running  kube-scheduler            0        ...       kube-scheduler-desktop-control-plane
+...            ...            4 minutes ago  Running  kube-controller-manager   0        ...       kube-controller-manager-desktop-control-plane
+...            ...            4 minutes ago  Running  coredns                   0        ...       coredns-...
+...            ...            4 minutes ago  Running  kube-proxy                0        ...       kube-proxy-...
+...            ...            4 minutes ago  Running  kindnet-cni               0        ...       kindnet-...</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>desktop-control-plane</code>이라는 컨테이너 하나가 곧 노드다. 그 안에서 <code>crictl</code>(containerd용 CLI)로 보면 컨테이너들이 또 있다. 컨테이너 안에 containerd가 돌고 그 위에 컨트롤 플레인이 컨테이너로 떠 있는 구조다. KERNEL-VERSION이 D1에서 본 VM 커널(linuxkit)과 같다는 것도 확인한다. 노드는 별도 커널이 없다.</p>
+    <p>같은 이름의 컨테이너 두 개(cloud-provider-kind, registry-mirror)는 Docker Desktop이 붙여 주는 보조 컨테이너다. 각각 LoadBalancer 노출(D5)과 이미지 pull 캐시를 맡는다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>시스템 파드에 이름 붙이기</h3>
+    <p class="why">컨트롤 플레인 요소가 파드로 보인다. 1.2·1.3절의 표와 하나씩 대응시킨다.</p>
+<pre><code><span class="p">$</span> kubectl get pods -A
+<span class="c">NAMESPACE            NAME                                            READY   STATUS    RESTARTS   AGE
+kube-system          coredns-7d764666f9-4kq2x                        1/1     Running   0          5m
+kube-system          coredns-7d764666f9-p9x7c                        1/1     Running   0          5m
+kube-system          etcd-desktop-control-plane                      1/1     Running   0          5m
+kube-system          kindnet-wz5rp                                   1/1     Running   0          5m
+kube-system          kube-apiserver-desktop-control-plane            1/1     Running   0          5m
+kube-system          kube-controller-manager-desktop-control-plane   1/1     Running   0          5m
+kube-system          kube-proxy-x2m8d                                1/1     Running   0          5m
+kube-system          kube-scheduler-desktop-control-plane            1/1     Running   0          5m
+local-path-storage   local-path-provisioner-...                      1/1     Running   0          5m</span></code></pre>
+    <table>
+      <thead><tr><th style="width:290px">파드</th><th>정체</th><th style="width:120px">이름 규칙</th></tr></thead>
+      <tbody>
+        <tr><td><code>kube-apiserver-desktop-control-plane</code></td><td>1.2 API 서버</td><td>요소-노드명</td></tr>
+        <tr><td><code>etcd-desktop-control-plane</code></td><td>1.2 etcd</td><td>요소-노드명</td></tr>
+        <tr><td><code>kube-scheduler-desktop-control-plane</code></td><td>1.2 스케줄러</td><td>요소-노드명</td></tr>
+        <tr><td><code>kube-controller-manager-desktop-control-plane</code></td><td>1.2 컨트롤러 매니저</td><td>요소-노드명</td></tr>
+        <tr><td><code>kube-proxy-x2m8d</code></td><td>1.3 kube-proxy. 노드마다 하나(DaemonSet)</td><td>요소-랜덤</td></tr>
+        <tr><td><code>kindnet-wz5rp</code></td><td>CNI 플러그인. 파드 네트워크를 만든다(D5). 노드마다 하나</td><td>요소-랜덤</td></tr>
+        <tr><td><code>coredns-7d764666f9-4kq2x</code></td><td>클러스터 DNS. 서비스 이름을 IP로 푼다(D5). 디플로이먼트라 해시가 붙는다</td><td>요소-해시-랜덤</td></tr>
+        <tr><td><code>local-path-provisioner-...</code></td><td>PVC를 노드 디스크에 만들어 주는 스토리지 프로비저너(D9)</td><td>요소-해시-랜덤</td></tr>
+      </tbody>
+    </table>
+    <p class="expect"><b>읽을 것</b> — 이름 끝이 <b>노드명</b>이면 컨트롤 플레인 요소다. kubelet이 노드의 <code>/etc/kubernetes/manifests</code>에 있는 파일을 직접 읽어 띄우는 <dfn title="static pod">스태틱 파드(static Pod)</dfn>라서, API 서버가 죽어 있어도 kubelet이 살려 낸다. kubelet과 containerd는 파드가 아니라 노드의 프로세스이므로 이 목록에 없다.</p>
+<pre><code><span class="p">$</span> docker exec desktop-control-plane ls /etc/kubernetes/manifests
+<span class="c">etcd.yaml  kube-apiserver.yaml  kube-controller-manager.yaml  kube-scheduler.yaml</span>
+
+<span class="p">$</span> docker exec desktop-control-plane pgrep -a kubelet | cut -c1-60
+<span class="c">614 /usr/bin/kubelet --bootstrap-kubeconfig=/etc/kubernetes/</span></code></pre>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>kubectl 읽기 명령 다섯 가지</h3>
+    <p class="why">앞으로 매일 쓰는 조회 명령을 노드 오브젝트로 익힌다. <code>get</code> → <code>describe</code> → <code>-o yaml</code> 순서로 깊어진다.</p>
+<pre><code><span class="p">$</span> kubectl get node desktop-control-plane
+<span class="p">$</span> kubectl describe node desktop-control-plane | sed -n '/^Conditions:/,/^Addresses:/p'
+<span class="c">Conditions:
+  Type             Status  ...  Reason                       Message
+  MemoryPressure   False   ...  KubeletHasSufficientMemory   kubelet has sufficient memory available
+  DiskPressure     False   ...  KubeletHasNoDiskPressure     kubelet has no disk pressure
+  PIDPressure      False   ...  KubeletHasSufficientPID      kubelet has sufficient PID available
+  Ready            True    ...  KubeletReady                 kubelet is posting ready status
+Addresses:</span>
+
+<span class="p">$</span> kubectl get node desktop-control-plane -o jsonpath='{.status.capacity.cpu} cpu / {.status.capacity.memory}{"\n"}'
+<span class="c">4 cpu / 8136148Ki</span>
+
+<span class="p">$</span> kubectl get node desktop-control-plane -o yaml | grep -c ''
+<span class="c">180</span>
+
+<span class="p">$</span> kubectl explain node.status.conditions | head -20
+<span class="p">$</span> kubectl api-resources | head -8
+<span class="c">NAME          SHORTNAMES   APIVERSION   NAMESPACED   KIND
+bindings                   v1           true         Binding
+componentstatuses  cs      v1           false        ComponentStatus
+configmaps    cm           v1           true         ConfigMap
+endpoints     ep           v1           true         Endpoints
+events        ev           v1           true         Event
+limitranges   limits       v1           true         LimitRange
+namespaces    ns           v1           false        Namespace</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>capacity</code>의 CPU 4·메모리 8GB는 D1 Settings에서 정한 VM 크기다. 노드 하나가 VM 전체를 쓴다. <code>explain</code>은 문서 없이 필드 뜻을 알려 주고, <code>api-resources</code>는 쓸 수 있는 kind 목록과 약어(<code>ns</code>, <code>cm</code>)를 보여 준다. 이 다섯 명령이면 모르는 오브젝트를 만나도 읽어 낼 수 있다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>첫 파드: hello-world</h3>
+    <p class="why">D1에서 <code>docker run hello-world</code>로 했던 것을 클러스터에 시킨다. 같은 이미지, 다른 실행 주체.</p>
+<pre><code><span class="p">$</span> kubectl run hello --image=hello-world --restart=Never
+<span class="c">pod/hello created</span>
+
+<span class="p">$</span> kubectl get pod hello
+<span class="c">NAME    READY   STATUS      RESTARTS   AGE
+hello   0/1     Completed   0          8s</span>
+
+<span class="p">$</span> kubectl logs hello | head -3
+<span class="c">
+Hello from Docker!
+This message shows that your installation appears to be working correctly.</span>
+
+<span class="p">$</span> kubectl get pod hello -o jsonpath='{.spec.nodeName}  {.status.phase}{"\n"}'
+<span class="c">desktop-control-plane  Succeeded</span>
+
+<span class="p">$</span> kubectl delete pod hello
+<span class="c">pod "hello" deleted</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 이미지 이름에 레지스트리가 없으면 Docker Hub에서 받는다(D1과 같다). <code>--restart=Never</code>는 "끝나면 끝"이라는 뜻이고, 그래서 STATUS가 <code>Completed</code>, phase가 <code>Succeeded</code>다. <code>nodeName</code>에 노드명이 들어 있다. 스케줄러가 써 넣은 값이다(도판 2의 4번). 노드가 하나뿐이라 고를 것이 없었지만 절차는 같았다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>직접 만든 파드와 디플로이먼트가 만든 파드</h3>
+    <p class="why">1.4절 조정 루프를 눈으로 본다. 파드를 지웠을 때 되살아나는지가 유일한 차이다.</p>
+    <p>터미널을 두 개 연다. 첫 번째에서 파드 변화를 계속 지켜본다.</p>
+<pre><code><span class="c"># 터미널 A</span>
+<span class="p">$</span> kubectl get pods -w</code></pre>
+<pre><code><span class="c"># 터미널 B — (a) 파드를 직접 만든다</span>
+<span class="p">$</span> kubectl run web --image=nginx:1.30
+<span class="p">$</span> kubectl get pod web -o jsonpath='{.metadata.ownerReferences}{"\n"}'
+<span class="c">(빈 줄 — 소유자가 없다)</span>
+<span class="p">$</span> kubectl delete pod web</code></pre>
+    <p class="expect"><b>터미널 A</b> — <code>web  Pending → ContainerCreating → Running</code> 순서로 바뀌고, 삭제 후 <code>Terminating</code>을 거쳐 사라진다. 그것으로 끝이다. 아무도 다시 만들지 않는다.</p>
+<pre><code><span class="c"># 터미널 B — (b) 디플로이먼트로 만든다</span>
+<span class="p">$</span> kubectl create deployment web --image=nginx:1.30
+<span class="c">deployment.apps/web created</span>
+<span class="p">$</span> kubectl get pods
+<span class="c">NAME                   READY   STATUS    RESTARTS   AGE
+web-5c8f6b7d4-t7x2q    1/1     Running   0          6s</span>
+<span class="p">$</span> kubectl get pod -l app=web -o jsonpath='{.items[0].metadata.ownerReferences[0].kind} / {.items[0].metadata.ownerReferences[0].name}{"\n"}'
+<span class="c">ReplicaSet / web-5c8f6b7d4</span>
+<span class="p">$</span> kubectl delete pod -l app=web
+<span class="c">pod "web-5c8f6b7d4-t7x2q" deleted</span>
+<span class="p">$</span> kubectl get pods
+<span class="c">NAME                   READY   STATUS    RESTARTS   AGE
+web-5c8f6b7d4-m4k9z    1/1     Running   0          3s</span></code></pre>
+    <p class="expect"><b>터미널 A</b> — 지운 파드가 <code>Terminating</code>으로 바뀌는 것과 거의 동시에 다른 이름의 파드가 <code>Pending</code>으로 나타나 <code>Running</code>이 된다. 이름 앞부분 <code>web-5c8f6b7d4</code>가 같다. 소유자인 레플리카셋이 "1개를 원하는데 0개다"를 감지해 만든 것이다. 이게 조정 루프다. 터미널 A는 <kbd>Ctrl-C</kbd>로 끝낸다.</p>
+    <div class="note">
+      <h5>오늘은 여기까지</h5>
+      <p>Deployment → ReplicaSet → Pod의 소유 관계, 개수 조절, 롤링 업데이트는 D4에서 다룬다. 오늘 기억할 것은 하나다. <b>파드를 직접 만들면 일회용이고, 디플로이먼트로 만들면 유지된다.</b></p>
+    </div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>컨텍스트를 일부러 어긋내고 고친다</h3>
+    <p class="why">가장 흔한 첫 오류를 안전한 상태에서 한 번 겪어 둔다.</p>
+<pre><code><span class="p">$</span> kubectl config get-contexts
+<span class="c">CURRENT   NAME             CLUSTER          AUTHINFO         NAMESPACE
+*         docker-desktop   docker-desktop   docker-desktop</span>
+
+<span class="p">$</span> kubectl config set-context broken --cluster=nowhere --user=docker-desktop
+<span class="p">$</span> kubectl config use-context broken
+<span class="p">$</span> kubectl get nodes
+<span class="c">error: cluster "nowhere" does not exist</span>
+
+<span class="p">$</span> kubectl config use-context docker-desktop
+<span class="c">Switched to context "docker-desktop".</span>
+<span class="p">$</span> kubectl config delete-context broken
+<span class="p">$</span> kubectl get nodes
+<span class="c">NAME                    STATUS   ROLES           AGE   VERSION
+desktop-control-plane   Ready    control-plane   20m   v1.36.4</span>
+
+<span class="p">$</span> kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
+<span class="c">https://127.0.0.1:6443</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — kubectl 오류의 절반은 "어느 클러스터를 보고 있나"에서 나온다. 순서는 항상 <code>get-contexts</code>로 현재 위치 확인 → <code>use-context</code>로 이동. 마지막 줄의 <code>127.0.0.1:6443</code>이 API 서버 주소다. Docker Desktop이 VM 안 노드 컨테이너의 6443 포트를 macOS로 포워딩해 준 것이고, D1 도판 3의 보라색 경로가 kubectl에도 똑같이 적용된다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>API 서버에 직접 말 걸기</h3>
+    <p class="why">kubectl은 HTTP 클라이언트일 뿐이다. 같은 요청을 URL로 보내 본다.</p>
+<pre><code><span class="p">$</span> kubectl get --raw /version
+<span class="c">{"major":"1","minor":"36","gitVersion":"v1.36.4", ...}</span>
+
+<span class="p">$</span> kubectl get --raw /livez?verbose | tail -3
+<span class="c">[+]shutdown ok
+livez check passed</span>
+
+<span class="p">$</span> kubectl get --raw /api/v1/namespaces/default/pods | python3 -c 'import sys,json; print([p["metadata"]["name"] for p in json.load(sys.stdin)["items"]])'
+<span class="c">['web-5c8f6b7d4-m4k9z']</span>
+
+<span class="p">$</span> kubectl get events --sort-by=.lastTimestamp | tail -5
+<span class="c">LAST SEEN   TYPE     REASON      OBJECT                     MESSAGE
+3m          Normal   Scheduled   pod/web-5c8f6b7d4-m4k9z    Successfully assigned default/web-5c8f6b7d4-m4k9z to desktop-control-plane
+3m          Normal   Pulled      pod/web-5c8f6b7d4-m4k9z    Container image "nginx:1.30" already present on machine
+3m          Normal   Created     pod/web-5c8f6b7d4-m4k9z    Created container nginx
+3m          Normal   Started     pod/web-5c8f6b7d4-m4k9z    Started container nginx</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>kubectl get pods</code>는 <code>GET /api/v1/namespaces/default/pods</code>다. 이벤트 네 줄은 도판 2의 4·5번이 실제로 남긴 기록이다. <code>Scheduled</code>는 스케줄러가, <code>Pulled·Created·Started</code>는 kubelet이 썼다. 내일부터 파드가 안 뜰 때 가장 먼저 볼 것이 이 이벤트다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트 A</h2>
+  <p class="sub">문서를 덮고 진행한다. 1단계(D1~D3)의 첫 관문이다.</p>
+  <div class="check">
+    <ol>
+      <li><code>docker ps</code> 출력에서 노드 컨테이너를 가리키고, <code>kubectl get nodes -o wide</code>의 CONTAINER-RUNTIME이 무엇인지 말한다.</li>
+      <li><code>kube-system</code>의 파드 중 컨트롤 플레인 네 요소를 이름으로 짚고, 왜 그 넷의 이름 끝에 노드명이 붙는지 한 문장으로 설명한다.</li>
+      <li><code>kubectl run</code>으로 만든 파드와 <code>kubectl create deployment</code>로 만든 파드를 각각 지운 뒤, <code>-w</code> 출력의 차이를 보인다.</li>
+      <li>컨텍스트를 잘못된 것으로 바꿔 오류를 낸 뒤, <code>get-contexts</code>·<code>use-context</code> 두 명령으로 복구한다.</li>
+      <li><code>kubectl get events</code>에서 스케줄러가 남긴 줄과 kubelet이 남긴 줄을 구분한다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D3로 간다. 3번이 안 되면 5단계 (a)와 (b)의 <code>ownerReferences</code> 출력을 다시 비교한다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">클러스터는 끄지 않는다. 내일 그대로 쓴다. 오늘 만든 디플로이먼트만 지운다.</p>
+<pre><code><span class="p">$</span> kubectl delete deployment web
+<span class="p">$</span> kubectl get pods
+<span class="c">No resources found in default namespace.</span>
+<span class="p">$</span> kubectl config current-context
+<span class="c">docker-desktop</span></code></pre>
+  <p>노트북을 닫아도 된다. Docker Desktop이 다시 뜨면 노드 컨테이너도 함께 뜬다. 클러스터를 완전히 지우려면 Kubernetes 화면의 <b>Stop</b>(컨테이너 제거)을 쓴다. 이 경우 내일 다시 만들어야 하고 <code>/usr/local/bin/kubectl</code>도 함께 제거된다.</p>
+
+  <div class="note">
+    <h5>D3 예고</h5>
+    <p>오늘 <code>kubectl run</code>으로 만든 파드를 내일은 YAML 파일로 쓴다. <code>apiVersion · kind · metadata · spec</code> 네 줄이 뼈대이고, <code>kubectl get pod -o yaml</code>로 오늘 본 180줄짜리 출력이 그 네 줄에 status가 붙은 것임을 확인한다. 네임스페이스로 칸을 나누고, Headlamp를 설치해 같은 것을 화면으로 본다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>Docker Desktop Kubernetes(kind/kubeadm 프로비저너, 시스템 컨테이너 표시) — <a href="https://docs.docker.com/desktop/use-desktop/kubernetes/">docs.docker.com/desktop/use-desktop/kubernetes/</a></li>
+    <li>쿠버네티스 컴포넌트 — <a href="https://kubernetes.io/ko/docs/concepts/overview/components/">kubernetes.io/ko/docs/concepts/overview/components/</a></li>
+    <li>쿠버네티스 API 개념(오브젝트·spec·status) — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/</a></li>
+    <li>컨트롤러와 조정 루프 — <a href="https://kubernetes.io/ko/docs/concepts/architecture/controller/">kubernetes.io/ko/docs/concepts/architecture/controller/</a></li>
+    <li>kubeconfig와 컨텍스트 — <a href="https://kubernetes.io/ko/docs/concepts/configuration/organize-cluster-access-kubeconfig/">kubernetes.io/ko/docs/concepts/configuration/organize-cluster-access-kubeconfig/</a></li>
+    <li>kubectl 레퍼런스 — <a href="https://kubernetes.io/ko/docs/reference/kubectl/">kubernetes.io/ko/docs/reference/kubectl/</a> · 버전 스큐 정책 — <a href="https://kubernetes.io/releases/version-skew-policy/">kubernetes.io/releases/version-skew-policy/</a></li>
+    <li>Kubernetes 릴리스(v1.36 패치) — <a href="https://kubernetes.io/releases/">kubernetes.io/releases/</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day01-docker-and-containers.html">← D1 컨테이너와 Docker Desktop</a><a href="day03-pods-namespaces-labels.html">D3 파드·네임스페이스·라벨 →</a></div>
+</div></footer>
+</body>
+</html>

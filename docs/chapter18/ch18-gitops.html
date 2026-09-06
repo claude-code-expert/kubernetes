@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH18 깃옵스와 배포 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 14.5px; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 18</div>
+  <h1>깃옵스와 배포</h1>
+  <p class="ch-desc">2장에서 "클러스터 수정은 항상 리포지터리를 거쳐서"라는 원칙을 배웠고, 5장·7장·12장에서 그 원칙이 CI/CD와 멀티클러스터·글로벌 배포로 계속 확장되는 것을 봤다. 이 장은 그 모든 것에 이름을 붙인다 — 깃옵스. 정의부터 리포지터리 구조, 시크릿 관리, 실제 설치까지 한 바퀴 돈다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 깃옵스는 CNCF가 4대 원칙(선언적·버전관리·자동 풀·지속적 조정)으로 공식 정의했다 — 넷 중 하나라도 빠지면 그냥 CI/CD이지 깃옵스가 아니다.</p>
+  <p>2. 리포지터리 구조는 4가지 전략이 있지만, 환경별 브랜치만은 실무에서도 원서에서도 피하라고 입을 모은다 — 대신 브랜치 안에서 환경별 폴더로 나눈다.</p>
+  <p>3. 시크릿 관리 5가지 방법 중 실무 권장은 둘뿐이다 — Sealed Secrets(암호화해 Git에 커밋) 또는 외부 시크릿 프로바이더(Git엔 참조만).</p>
+</div>
+
+<nav class="toc">
+  <a href="#s18-1"><span class="num">18.1</span>깃옵스란?</a>
+  <a href="#s18-2"><span class="num">18.2</span>깃옵스가 필요한 이유</a>
+  <a href="#s18-3"><span class="num">18.3</span>깃옵스 리포지터리 구조</a>
+  <a href="#s18-4"><span class="num">18.4</span>시크릿 관리</a>
+  <a href="#s18-5"><span class="num">18.5</span>플럭스 설치</a>
+  <a href="#s18-6"><span class="num">18.6</span>깃옵스 툴</a>
+  <a href="#s18-7"><span class="num">18.7</span>깃옵스 모범 사례</a>
+</nav>
+
+<section id="s18-1">
+  <h2 class="sec"><span class="num">18.1</span>깃옵스란?</h2>
+  <p class="lead"><dfn class="term">깃옵스 <span class="en">(GitOps)</span></dfn>는 위브웍스(Weaveworks)가 프로덕션에서 쿠버네티스를 운영한 경험에서 만든 용어다 — 소프트웨어 개발 생명주기의 개념(버전 관리, 리뷰, 자동화된 적용)을 <strong>운영 그 자체</strong>에 적용한 것이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow181" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .circle-bg { fill: none; stroke: #e0e0e0; stroke-width: 1; stroke-dasharray: 3 3; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-num { font-size: 11px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #2456c4; stroke-width: 1.4; fill: none; }
+  </style>
+
+  <text class="t-title" x="450" y="26" text-anchor="middle" font-size="14">OpenGitOps 4대 원칙 (CNCF GitOps Working Group)</text>
+
+  <!-- 순환 배치 4박스 -->
+  <rect class="box" x="60" y="50" width="220" height="90" rx="4"/>
+  <text class="t-num" x="170" y="74" text-anchor="middle">① Declarative</text>
+  <text class="t-title" x="170" y="94" text-anchor="middle">선언적</text>
+  <text class="t-sub" x="170" y="114" text-anchor="middle">원하는 상태를 명령이 아니라</text>
+  <text class="t-sub" x="170" y="128" text-anchor="middle">선언으로 기술 (1.2절 원칙)</text>
+
+  <rect class="box" x="620" y="50" width="220" height="90" rx="4"/>
+  <text class="t-num" x="730" y="74" text-anchor="middle">② Versioned &amp; Immutable</text>
+  <text class="t-title" x="730" y="94" text-anchor="middle">버전 관리 · 불변</text>
+  <text class="t-sub" x="730" y="114" text-anchor="middle">Git에 저장 — 이력·롤백이</text>
+  <text class="t-sub" x="730" y="128" text-anchor="middle">자동으로 따라옴</text>
+
+  <rect class="box" x="620" y="230" width="220" height="90" rx="4"/>
+  <text class="t-num" x="730" y="254" text-anchor="middle">③ Pulled Automatically</text>
+  <text class="t-title" x="730" y="274" text-anchor="middle">자동으로 끌어옴</text>
+  <text class="t-sub" x="730" y="294" text-anchor="middle">사람이 kubectl apply 하지 않음</text>
+  <text class="t-sub" x="730" y="308" text-anchor="middle">에이전트가 Git을 감시</text>
+
+  <rect class="box" x="60" y="230" width="220" height="90" rx="4"/>
+  <text class="t-num" x="170" y="254" text-anchor="middle">④ Continuously Reconciled</text>
+  <text class="t-title" x="170" y="274" text-anchor="middle">지속적 조정</text>
+  <text class="t-sub" x="170" y="294" text-anchor="middle">실제 상태가 어긋나면</text>
+  <text class="t-sub" x="170" y="308" text-anchor="middle">스스로 원상 복구</text>
+
+  <!-- 중앙 -->
+  <circle class="circle-bg" cx="450" cy="185" r="70"/>
+  <text class="t-title" x="450" y="180" text-anchor="middle">Git =</text>
+  <text class="t-title" x="450" y="198" text-anchor="middle">단일 진실 공급원</text>
+
+  <!-- 화살표로 순환 표시 -->
+  <path class="line" d="M 280 95 C 400 60, 500 60, 620 95" marker-end="url(#arrow181)"/>
+  <path class="line" d="M 840 140 C 880 180, 880 190, 840 230" marker-end="url(#arrow181)"/>
+  <path class="line" d="M 620 275 C 500 310, 400 310, 280 275" marker-end="url(#arrow181)"/>
+  <path class="line" d="M 60 230 C 20 190, 20 180, 60 140" marker-end="url(#arrow181)"/>
+
+  <text class="t-cap" x="450" y="358" text-anchor="middle">4개 중 하나라도 빠지면 "그냥 CI/CD"이지 깃옵스가 아니다 — 특히 ③④(자동 풀 + 지속 조정)가 흔히 생략된다.</text>
+</svg>
+    <figcaption>그림 18-1. CNCF GitOps Working Group이 정리한 4대 원칙. Git이 단일 진실 공급원이라는 1장의 원칙이 여기서 공식화된다.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석 — 공식 정의 등장</span>
+    원서 집필 시점엔 깃옵스가 위브웍스의 용어로만 설명됐지만, 이후 CNCF 산하 <dfn class="term">GitOps Working Group</dfn>이 벤더 중립적인 공식 정의를 <strong>OpenGitOps</strong> 프로젝트로 문서화했다(Principles v1.0.0). 네 원칙은 ① <strong>선언적</strong>(Declarative) — 원하는 상태를 선언으로 기술, ② <strong>버전 관리·불변</strong>(Versioned and Immutable) — Git에 저장해 이력·롤백이 자동으로 따라옴, ③ <strong>자동으로 끌어옴</strong>(Pulled Automatically) — 사람이 <code>kubectl apply</code>하지 않고 에이전트가 감시, ④ <strong>지속적 조정</strong>(Continuously Reconciled) — 실제 상태가 어긋나면 스스로 되돌림이다. 이 네 가지를 기준으로 보면, "CI가 끝나고 스크립트가 <code>kubectl apply</code>를 한 번 호출하는" 파이프라인은 ③④가 빠져 있어 엄밀히는 깃옵스가 아니다.
+    <span class="src">출처: opengitops.dev(공식 4대 원칙) · github.com/open-gitops/documents(v1.0.0 릴리스) · cncf.io/projects/opengitops(CNCF Sandbox 등재)</span>
+  </div>
+</section>
+
+<section id="s18-2">
+  <h2 class="sec"><span class="num">18.2</span>깃옵스가 필요한 이유</h2>
+  <p>깃옵스는 클러스터에 애플리케이션을 배포하고 클러스터·애플리케이션 구성을 관리하는 데 탁월한 수단이다. 사람이 직접 <code>kubectl</code>로 클러스터를 만지는 방식과 비교하면 이점이 뚜렷하다 — 모든 변경이 <strong>감사 가능</strong>하고(누가, 언제, 왜), <strong>재현 가능</strong>하며(클러스터를 통째로 잃어도 리포지터리만 있으면 복구), 코드 리뷰라는 <strong>기존 프로세스에 자연스럽게 편입</strong>된다.</p>
+</section>
+
+<section id="s18-3">
+  <h2 class="sec"><span class="num">18.3</span>깃옵스 리포지터리 구조</h2>
+  <p class="lead">가장 일반적인 4대 전략이 있고, 각각 장단점이 뚜렷하다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-code { font-size: 9.5px; font-family: monospace; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- ① 단일 리포 -->
+  <rect class="box" x="20" y="20" width="205" height="190" rx="6"/>
+  <text class="t-title" x="40" y="44">① 단일 리포지터리</text>
+  <text class="t-code" x="40" y="66">app-x/</text>
+  <text class="t-code" x="40" y="80">app-y/</text>
+  <text class="t-code" x="40" y="94">ops-team/flux/</text>
+  <text class="t-sub" x="40" y="126">가장 단순, 작은 팀에 적합</text>
+  <text class="t-sub" x="40" y="144">회사가 크면 관심사가</text>
+  <text class="t-sub" x="40" y="160">뒤섞여 한계 도달</text>
+
+  <!-- ② 팀별 리포 -->
+  <rect class="box-accent" x="240" y="20" width="205" height="190" rx="6"/>
+  <text class="t-title" x="260" y="44">② 팀별 리포지터리</text>
+  <text class="t-code" x="260" y="66">ops-team/</text>
+  <text class="t-code" x="260" y="80">team-x/app-x/</text>
+  <text class="t-code" x="260" y="94">team-y/</text>
+  <text class="t-sub" x="260" y="126">관심사 분리 · 정리 용이</text>
+  <text class="t-sub" x="260" y="144">확신 없으면 여기서 시작</text>
+  <text class="t-sub" x="260" y="160">(원서 권장 기본값)</text>
+
+  <!-- ③ 앱별 리포 -->
+  <rect class="box" x="460" y="20" width="205" height="190" rx="6"/>
+  <text class="t-title" x="480" y="44">③ 애플리케이션별 리포</text>
+  <text class="t-code" x="480" y="66">ops-team-repo/</text>
+  <text class="t-code" x="480" y="80">team-x-repo/</text>
+  <text class="t-code" x="480" y="94">  app-x/deploy/</text>
+  <text class="t-sub" x="480" y="126">팀 단위 읽기 권한 세밀 제어</text>
+  <text class="t-sub" x="480" y="144">단점: 전체를 한눈에</text>
+  <text class="t-sub" x="480" y="160">볼 수 없음</text>
+
+  <!-- ④ 환경별 브랜치 -->
+  <rect class="box" x="680" y="20" width="200" height="190" rx="6"/>
+  <text class="t-title" x="700" y="44">④ 환경별 브랜치</text>
+  <text class="t-code" x="700" y="66">main</text>
+  <text class="t-code" x="700" y="80">staging</text>
+  <text class="t-code" x="700" y="94">dev</text>
+  <text class="t-sub" x="700" y="126">머지만으로 환경 갱신</text>
+  <text class="t-sub" x="700" y="144">브랜치 충돌 위험,</text>
+  <text class="t-sub" x="700" y="160">헬름·쿠스토마이즈와 상성 나쁨</text>
+
+  <!-- 권장 표 -->
+  <rect class="box" x="20" y="230" width="860" height="90" rx="6"/>
+  <text class="t-title" x="40" y="256">18.7절 모범 사례가 강하게 권하는 조합</text>
+  <text class="t-sub" x="40" y="280">④ 환경별 브랜치는 쓰지 않는다 — 대신 같은 브랜치 안에서 환경별 폴더를 나눈다.</text>
+  <text class="t-sub" x="40" y="298">폴더 구조는 헬름·쿠스토마이즈 같은 템플릿 툴과 자연스럽게 맞물리고, 브랜치 충돌 위험도 없다.</text>
+
+  <text class="t-cap" x="450" y="358" text-anchor="middle">넷 중 정답은 없다 — 조직 규모와 팀 구성에 달렸다. 다만 ④(브랜치)만은 원서도, 실무도 피하라고 입을 모은다.</text>
+  <text class="t-cap" x="450" y="380" text-anchor="middle">확신이 없다면 ②(팀별 리포지터리)에서 시작해 필요할 때 ③으로 쪼갠다.</text>
+</svg>
+    <figcaption>그림 18-2. 리포지터리 구조 4가지. 확신이 없다면 팀별 리포지터리에서 시작한다.</figcaption>
+  </figure>
+  <ul class="tight">
+    <li><strong>단일 리포지터리</strong> — 모든 매니페스트와 애플리케이션 코드를 한곳에. 가장 단순하지만 회사가 커지면 관심사가 뒤섞인다.</li>
+    <li><strong>팀별 리포지터리</strong> — 팀마다 리포를 나누되 매니페스트는 같은 리포에 둔다. 정리는 되지만 애플리케이션이 늘수록 관리 부담이 는다. <strong>확신이 없다면 여기서 시작</strong>하라는 것이 원서의 권장이다.</li>
+    <li><strong>애플리케이션별 리포지터리</strong> — 앱마다 리포를 나눈다. 팀 단위 읽기 권한을 세밀하게 걸 수 있지만, 전체를 한눈에 보기 어렵다.</li>
+    <li><strong>환경별 브랜치</strong> — 같은 리포 안에서 <code>main</code>·<code>staging</code>·<code>dev</code> 브랜치로 환경을 나눈다. 머지만으로 승격되는 매력이 있지만, 브랜치 충돌 위험이 있고 헬름·쿠스토마이즈 같은 템플릿 툴과 궁합이 나쁘다.</li>
+  </ul>
+</section>
+
+<section id="s18-4">
+  <h2 class="sec"><span class="num">18.4</span>시크릿 관리</h2>
+  <p class="lead">깃옵스 워크플로에서 가장 까다로운 문제다 — 선언한 것을 전부 Git에 두는 게 원칙인데, 시크릿까지 그대로 두면 곤란하다. 다섯 가지 방법이 있다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow183" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box-bad { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.2; }
+    .box-mid { fill: #ffffff; stroke: #b8860b; stroke-width: 1.2; }
+    .box-good { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 12px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 9.5px; fill: #555555; }
+    .t-axis { font-size: 12px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.4; fill: none; }
+  </style>
+
+  <line class="line" x1="40" y1="220" x2="860" y2="220" marker-end="url(#arrow183)"/>
+  <text class="t-axis" x="450" y="248" text-anchor="middle">안전성 · 권장도 증가 →</text>
+
+  <!-- 1 Git 직접 -->
+  <rect class="box-bad" x="20" y="90" width="150" height="110" rx="4"/>
+  <text class="t-title" x="95" y="116" text-anchor="middle">Git에 평문 저장</text>
+  <text class="t-sub" x="95" y="138" text-anchor="middle">가장 단순, 가장 위험</text>
+  <text class="t-sub" x="95" y="154" text-anchor="middle">프라이빗 리포라도</text>
+  <text class="t-sub" x="95" y="168" text-anchor="middle">유출 위험 그대로</text>
+  <line class="line" x1="95" y1="200" x2="95" y2="216"/>
+
+  <!-- 2 이미지에 내장 -->
+  <rect class="box-bad" x="190" y="90" width="150" height="110" rx="4"/>
+  <text class="t-title" x="265" y="116" text-anchor="middle">이미지에 내장</text>
+  <text class="t-sub" x="265" y="138" text-anchor="middle">로테이션마다 재빌드</text>
+  <text class="t-sub" x="265" y="154" text-anchor="middle">이미지 접근권 =</text>
+  <text class="t-sub" x="265" y="168" text-anchor="middle">시크릿 접근권</text>
+  <line class="line" x1="265" y1="200" x2="265" y2="216"/>
+
+  <!-- 3 K8s Secret -->
+  <rect class="box-mid" x="360" y="90" width="150" height="110" rx="4"/>
+  <text class="t-title" x="435" y="116" text-anchor="middle">쿠버네티스 Secret</text>
+  <text class="t-sub" x="435" y="138" text-anchor="middle">가장 쉽게 시작</text>
+  <text class="t-sub" x="435" y="154" text-anchor="middle">base64는 암호화가</text>
+  <text class="t-sub" x="435" y="168" text-anchor="middle">아님 (1·4장 복습)</text>
+  <line class="line" x1="435" y1="200" x2="435" y2="216"/>
+
+  <!-- 4 Sealed Secrets -->
+  <rect class="box-good" x="530" y="90" width="150" height="110" rx="4"/>
+  <text class="t-title" x="605" y="116" text-anchor="middle">Sealed Secrets</text>
+  <text class="t-sub" x="605" y="138" text-anchor="middle">클러스터 공개키로</text>
+  <text class="t-sub" x="605" y="154" text-anchor="middle">암호화해 Git에 커밋</text>
+  <text class="t-sub" x="605" y="168" text-anchor="middle">그 클러스터만 복호화</text>
+  <line class="line" x1="605" y1="200" x2="605" y2="216"/>
+
+  <!-- 5 외부 시크릿 -->
+  <rect class="box-good" x="700" y="90" width="160" height="110" rx="4"/>
+  <text class="t-title" x="780" y="116" text-anchor="middle">외부 시크릿 프로바이더</text>
+  <text class="t-sub" x="780" y="138" text-anchor="middle">Vault·클라우드 매니저가</text>
+  <text class="t-sub" x="780" y="154" text-anchor="middle">원본 보관, Git엔 참조만</text>
+  <text class="t-sub" x="780" y="168" text-anchor="middle">4장 ESO와 직결</text>
+
+  <text class="t-cap" x="450" y="300" text-anchor="middle">18.7절 모범 사례: Sealed Secrets 또는 외부 시크릿 프로바이더 중 하나를 쓴다.</text>
+  <text class="t-cap" x="450" y="322" text-anchor="middle">넷째·다섯째 방법의 공통점 — Git에는 "암호화된 값" 또는 "참조"만 남고, 진짜 비밀은 다른 곳에 있다.</text>
+</svg>
+    <figcaption>그림 18-3. 다섯 방법을 안전성 순으로 배치했다. 실무 권장은 오른쪽 둘뿐이다.</figcaption>
+  </figure>
+  <ol class="tight">
+    <li><strong>Git에 직접 저장</strong> — 가장 간단하지만 절대 권장하지 않는다. 프라이빗 리포라도 여러 사용자가 접근하면 결국 시크릿도 건드리게 된다.</li>
+    <li><strong>컨테이너 이미지에 내장</strong> — 조금 낫지만, 로테이션마다 재빌드해야 하고 이미지를 가져오는 모두가 시크릿에 접근하게 된다.</li>
+    <li><strong>쿠버네티스 Secret 그대로 사용</strong> — 가장 쉽게 시작할 수 있다. 다만 1장·4장에서 이미 확인했듯 <strong>base64는 암호화가 아니다.</strong></li>
+    <li><strong>Sealed Secrets</strong> — 클러스터의 공개키로 암호화한 값을 Git에 커밋한다. 그 클러스터의 개인키로만 복호화되므로, 리포지터리가 유출돼도 안전하다.</li>
+    <li><strong>외부 시크릿 프로바이더</strong> — Vault나 클라우드 시크릿 매니저가 원본을 갖고, Git에는 참조만 남는다. 4장에서 다룬 External Secrets Operator가 정확히 이 방식을 구현한다.</li>
+  </ol>
+</section>
+
+<section id="s18-5">
+  <h2 class="sec"><span class="num">18.5</span>플럭스 설치</h2>
+  <p><dfn class="term">플럭스 <span class="en">(Flux)</span></dfn>는 Git 리포지터리의 변경을 감지해 자동으로 클러스터에 반영하는 쿠버네티스 오퍼레이터다 — CNCF Graduated 등급의 성숙한 깃옵스 툴이다.</p>
+  <div class="note-2026">
+    <span class="lbl">실습 환경 안내</span>
+    원서는 이 실습에도(3장과 마찬가지로) <code>brew install minikube</code>로 전용 클러스터를 새로 만든다. 이 노트에서는 0장에서 이미 띄워 둔 <strong>kind 클러스터를 그대로 사용</strong>한다 — 이유는 3장 갱신 노트와 동일하다(도구 통일). 플럭스 CLI 설치와 이후 명령은 클러스터 종류와 무관하게 동일하게 동작한다.
+  </div>
+<pre><code># 플럭스 CLI 설치 (macOS)
+brew install fluxcd/tap/flux
+
+# 0장 kind 클러스터에 플럭스 요구사항 충족 여부 확인
+flux check --pre
+
+# 클러스터에 플럭스 컴포넌트 배포 (GitHub 예시)
+flux bootstrap github \
+  --owner=<GitHub 사용자명> \
+  --repository=<리포지터리명> \
+  --branch=main \
+  --path=clusters/study \
+  --personal</code></pre>
+  <p><code>flux bootstrap</code> 한 번이면 컨트롤러 설치부터, 그 컨트롤러가 감시할 리포지터리·경로 등록까지 한 번에 끝난다 — 이후로는 <code>clusters/study</code> 경로에 매니페스트를 커밋하는 것이 곧 배포다.</p>
+</section>
+
+<section id="s18-6">
+  <h2 class="sec"><span class="num">18.6</span>깃옵스 툴</h2>
+  <p>선정 기준은 사용 편의성, 엔터프라이즈 기능, 확장성이다. 가장 많이 쓰는 툴 넷.</p>
+  <ul class="tight">
+    <li><strong>플럭스</strong> — CNCF Graduated. 위브웍스가 호스티드 서비스도 제공한다.</li>
+    <li><strong>아르고CD</strong> — 역시 CNCF Graduated. 선언형 인프라를 계속 모니터링하며 실제 상태와의 차이를 리졸빙한다. 5장·7장·11장에서 이미 여러 번 등장했다 — 카나리 배포(Argo Rollouts), 멀티리전 웨이브 롤아웃(ApplicationSet RollingSync) 모두 아르고 생태계다.</li>
+    <li><strong>코드프레시</strong> — 깃옵스를 구축하는 CI/CD 플랫폼. 아르고CD 호스티드 버전도 제공.</li>
+    <li><strong>하네스</strong> — 엔터프라이즈 대상의 성숙한 CD 툴셋.</li>
+  </ul>
+  <div class="check"><span class="lbl">스터디 참고</span>플럭스와 아르고CD는 철학이 다르다 — 플럭스는 여러 개의 작은 컨트롤러 조합, 아르고CD는 웹 UI를 포함한 통합 플랫폼에 가깝다. 5·7·11장에서 아르고 생태계 예제를 이미 다뤘으므로, 이 장의 실습은 플럭스로 균형을 맞췄다.</div>
+</section>
+
+<section id="s18-7">
+  <h2 class="sec"><span class="num">18.7</span>깃옵스 모범 사례</h2>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>작은 애플리케이션부터 시작해 범위를 넓힌다</td><td>처음부터 전체 클러스터를 깃옵스로 돌리려다 막히진 않았는가?</td></tr>
+    <tr><td>확신이 없으면 검증된 OSS(플럭스·아르고CD)로</td><td>자체 개발 도구를 굳이 새로 만들 이유가 있는가?</td></tr>
+    <tr><td>리포지터리 레이아웃에 브랜치를 쓰지 않는다</td><td>환경별 브랜치 대신 폴더 구조를 쓰고 있는가?</td></tr>
+    <tr><td>환경별 폴더 + 템플릿 툴(헬름·쿠스토마이즈)</td><td>환경 간 차이가 diff 하나로 설명되는가? (1·7장 원칙과 동일)</td></tr>
+    <tr><td>시크릿은 Sealed Secrets 또는 외부 프로바이더로</td><td>쿠버네티스 Secret을 그대로 Git에 커밋하고 있진 않은가?</td></tr>
+    <tr><td>깃옵스는 툴이 아니라 프로세스임을 기억한다</td><td>지금 겪는 문제가 정말 깃옵스로 풀리는 문제인가, 기존 툴셋이 더 맞진 않는가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: opengitops.dev · github.com/open-gitops/documents · cncf.io/projects/opengitops — 세부 출처는 18.1절 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig18-1 ~ fig18-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 366" role="img" aria-label="HTTP 요청 하나가 count, sum, bucket 세 종류의 시계열로 노출되는 구조">
+      <rect width="960" height="366" fill="#ffffff"/>
+
+      <rect x="24" y="30" width="250" height="66" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="40" y="56" font-family="ui-monospace,monospace" font-size="12" fill="#15181d">GET /api/orders/{id}</text>
+      <text x="40" y="78" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">200 OK · 143ms</text>
+
+      <path d="M276 63 L336 63" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#n1)"/>
+
+      <rect x="338" y="30" width="250" height="66" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="354" y="56" font-size="13" fill="#15181d">Timer 갱신</text>
+      <text x="354" y="78" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">http.server.requests</text>
+
+      <path d="M463 98 L463 124" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#n1)"/>
+      <text x="475" y="118" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">프로메테우스 포맷으로 변환</text>
+
+      <!-- 세 갈래 -->
+      <rect x="24" y="140" width="292" height="106" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="164" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">_count</text>
+      <text x="40" y="188" font-size="12.5" fill="#15181d">요청 건수 누적</text>
+      <text x="40" y="212" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">rate()로 초당 처리율(R) 계산</text>
+      <text x="40" y="232" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">status 태그로 에러율(E) 계산</text>
+
+      <rect x="334" y="140" width="292" height="106" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="350" y="164" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">_sum</text>
+      <text x="350" y="188" font-size="12.5" fill="#15181d">소요 시간 총합(초)</text>
+      <text x="350" y="212" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">_sum / _count = 평균 응답 시간</text>
+      <text x="350" y="232" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">평균은 이상치를 숨긴다</text>
+
+      <rect x="644" y="140" width="292" height="106" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="660" y="164" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">_bucket{le="..."}</text>
+      <text x="660" y="188" font-size="12.5" fill="#15181d">구간별 누적 건수</text>
+      <text x="660" y="212" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">histogram_quantile()로 P95·P99</text>
+      <text x="660" y="232" font-family="ui-monospace,monospace" font-size="10.5" fill="#8f4408">설정을 켜야만 생성된다</text>
+
+      <line x1="24" y1="272" x2="936" y2="272" stroke="#d8dbe0" stroke-width="1"/>
+
+      <text x="24" y="300" font-size="13" fill="#15181d">세 종류 모두 같은 태그를 공유한다</text>
+      <text x="24" y="326" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">uri="/api/orders/{id}"  method="GET"  status="200"  outcome="SUCCESS"  exception="none"</text>
+      <text x="24" y="350" font-size="12" fill="#8f4408">uri 태그가 실제 ID 값으로 찍히면 시계열이 무한히 늘어난다 — 10단계 카디널리티 주제의 출발점</text>
+
+      <defs>
+        <marker id="n1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+        </marker>
+      </defs>
+    </svg>

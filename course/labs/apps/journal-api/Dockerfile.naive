@@ -1,0 +1,7 @@
+# Dockerfile.naive — 흔히 처음 쓰는 형태. M04에서 이것을 개선한다.
+FROM node:22
+WORKDIR /app
+COPY . .
+RUN npm install && npm run build
+EXPOSE 8080
+CMD ["node", "dist/server.js"]

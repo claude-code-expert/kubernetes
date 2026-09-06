@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow143" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-center { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-ref { font-size: 10.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #999999; stroke-width: 1.1; fill: none; }
+  </style>
+
+  <!-- 중심 -->
+  <rect class="box-center" x="350" y="190" width="200" height="80" rx="6"/>
+  <text class="t-title" x="450" y="222" text-anchor="middle" font-size="14">분산 훈련 잡</text>
+  <text class="t-sub" x="450" y="244" text-anchor="middle">(14.3.2)</text>
+  <text class="t-sub" x="450" y="258" text-anchor="middle">GPU 8개, 며칠간 실행</text>
+
+  <!-- 스케줄링 -->
+  <rect class="box" x="60" y="30" width="220" height="90" rx="4"/>
+  <text class="t-title" x="170" y="56" text-anchor="middle">스케줄링·리소스 제약</text>
+  <text class="t-sub" x="170" y="76" text-anchor="middle">배치 워크로드 · 리소스 집중</text>
+  <text class="t-ref" x="170" y="96" text-anchor="middle">8장 스케줄러·QoS와 동일 원리</text>
+  <line class="line" x1="230" y1="120" x2="370" y2="196" marker-end="url(#arrow143)"/>
+
+  <!-- 특수 하드웨어 -->
+  <rect class="box" x="620" y="30" width="220" height="90" rx="4"/>
+  <text class="t-title" x="730" y="56" text-anchor="middle">특수 하드웨어</text>
+  <text class="t-sub" x="730" y="76" text-anchor="middle">GPU·드라이버·커널 모듈</text>
+  <text class="t-ref" x="730" y="96" text-anchor="middle">그림 14-2의 DRA</text>
+  <line class="line" x1="670" y1="120" x2="530" y2="196" marker-end="url(#arrow143)"/>
+
+  <!-- 스토리지 -->
+  <rect class="box" x="60" y="340" width="220" height="90" rx="4"/>
+  <text class="t-title" x="170" y="366" text-anchor="middle">스토리지</text>
+  <text class="t-sub" x="170" y="386" text-anchor="middle">데이터셋 배포 · 체크포인트</text>
+  <text class="t-ref" x="170" y="406" text-anchor="middle">16장 PV·PVC와 동일 원리</text>
+  <line class="line" x1="230" y1="340" x2="370" y2="264" marker-end="url(#arrow143)"/>
+
+  <!-- 네트워킹 -->
+  <rect class="box" x="620" y="340" width="220" height="90" rx="4"/>
+  <text class="t-title" x="730" y="366" text-anchor="middle">네트워킹 · 전용 프로토콜</text>
+  <text class="t-sub" x="730" y="386" text-anchor="middle">파라미터 서버 간 가변 분산</text>
+  <text class="t-ref" x="730" y="406" text-anchor="middle">9장 CNI · NCCL/RDMA</text>
+  <line class="line" x1="670" y1="340" x2="530" y2="264" marker-end="url(#arrow143)"/>
+
+  <text class="t-cap" x="450" y="450" text-anchor="middle">분산 훈련 하나가 8장(스케줄링)·9장(네트워킹)·16장(스토리지)의 개념을 동시에, 그것도 극단적인 강도로 요구한다 — 이것이 14.3절이 8개 하위 절로 나뉜 이유다.</text>
+</svg>

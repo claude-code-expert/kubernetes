@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-eg { font-size: 10.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- ① 표준 -->
+  <rect class="box" x="20" y="30" width="270" height="230" rx="6"/>
+  <text class="t-title" x="155" y="58" text-anchor="middle">① 표준(Standard)</text>
+  <text class="t-sub" x="155" y="80" text-anchor="middle">API 서버 코드에 컴파일됨</text>
+  <text class="t-sub" x="155" y="98" text-anchor="middle">쿠버네티스 릴리스와 함께 배포</text>
+  <text class="t-sub" x="155" y="116" text-anchor="middle">--enable-admission-plugins로 활성화</text>
+  <text class="t-eg" x="155" y="150" text-anchor="middle">예: LimitRanger, ResourceQuota,</text>
+  <text class="t-eg" x="155" y="168" text-anchor="middle">PodSecurity, DefaultStorageClass</text>
+  <text class="t-sub" x="155" y="200" text-anchor="middle">가장 빠르고 안정적</text>
+  <text class="t-sub" x="155" y="218" text-anchor="middle">하지만 로직을 바꾸려면</text>
+  <text class="t-sub" x="155" y="234" text-anchor="middle">쿠버네티스 자체를 고쳐야 함</text>
+
+  <!-- ② 다이내믹(웹훅) -->
+  <rect class="box" x="315" y="30" width="270" height="230" rx="6"/>
+  <text class="t-title" x="450" y="58" text-anchor="middle">② 다이내믹 — 웹훅</text>
+  <text class="t-sub" x="450" y="80" text-anchor="middle">런타임에 등록·변경 가능</text>
+  <text class="t-sub" x="450" y="98" text-anchor="middle">클러스터 밖 HTTP 엔드포인트로</text>
+  <text class="t-sub" x="450" y="116" text-anchor="middle">요청을 전달해 판단을 위임</text>
+  <text class="t-eg" x="450" y="150" text-anchor="middle">ValidatingWebhookConfiguration</text>
+  <text class="t-eg" x="450" y="168" text-anchor="middle">MutatingWebhookConfiguration</text>
+  <text class="t-sub" x="450" y="200" text-anchor="middle">가장 유연 (11장 게이트키퍼·Kyverno)</text>
+  <text class="t-sub" x="450" y="218" text-anchor="middle">네트워크 왕복 지연·실패 모드를</text>
+  <text class="t-sub" x="450" y="234" text-anchor="middle">직접 설계해야 함</text>
+
+  <!-- ③ 정책 API -->
+  <rect class="box-accent" x="610" y="30" width="270" height="230" rx="6"/>
+  <text class="t-title" x="745" y="58" text-anchor="middle">③ 정책 API (2026 기준 추가)</text>
+  <text class="t-sub" x="745" y="80" text-anchor="middle">CEL 표현식을 API 서버가</text>
+  <text class="t-sub" x="745" y="98" text-anchor="middle">직접 평가 — 별도 프로세스 없음</text>
+  <text class="t-eg" x="745" y="132" text-anchor="middle">ValidatingAdmissionPolicy (GA)</text>
+  <text class="t-eg" x="745" y="150" text-anchor="middle">MutatingAdmissionPolicy (GA, 1.36)</text>
+  <text class="t-sub" x="745" y="182" text-anchor="middle">웹훅만큼 유연하면서</text>
+  <text class="t-sub" x="745" y="200" text-anchor="middle">네트워크 지연·장애점이 없음</text>
+  <text class="t-sub" x="745" y="220" text-anchor="middle">단순 검증·변형에는</text>
+  <text class="t-sub" x="745" y="236" text-anchor="middle">이쪽이 새 기본값 (11장 참고)</text>
+
+  <!-- 하단 -->
+  <rect class="box" x="20" y="284" width="860" height="100" rx="6"/>
+  <text class="t-title" x="40" y="310" font-size="13">원서 시점과 달라진 것</text>
+  <text class="t-sub" x="40" y="332">원서는 "표준 vs 다이내믹(웹훅)"이라는 두 가지 분류만 설명한다 — 당시엔 그게 전부였다.</text>
+  <text class="t-sub" x="40" y="350">지금은 여기에 세 번째 갈래(CEL 기반 정책 API)가 추가돼, 웹훅 없이도 상당수 요구를 처리할 수 있게 됐다.</text>
+  <text class="t-sub" x="40" y="368">11장에서 다룬 정책 엔진 선택 기준(VAP vs Kyverno vs Gatekeeper)이 바로 이 표의 ②③ 갈림길과 같은 질문이다.</text>
+
+  <text class="t-cap" x="450" y="404" text-anchor="middle">셋 다 API 서버 요청 파이프라인의 같은 단계(③ 어드미션)에서 동작한다 — 다른 건 "어디서, 어떻게" 판단이 내려지는가다.</text>
+</svg>

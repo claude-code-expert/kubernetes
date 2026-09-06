@@ -1,0 +1,45 @@
+# M35 — 실패를 구분한다.
+#
+# backoffLimit 만 있으면 모든 실패가 같다 — 재시도해도 소용없는 실패(잘못된 입력)와
+# 재시도하면 되는 실패(일시적 자원 부족)를 같은 횟수만큼 반복한다.
+# podFailurePolicy 가 그 둘을 나눈다.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fail-fast
+  namespace: m35
+spec:
+  completions: 1
+  parallelism: 1
+  backoffLimit: 6            # 원래대로면 6번 재시도한다
+  ttlSecondsAfterFinished: 600
+  podFailurePolicy:
+    rules:
+      # 종료 코드 42 = "입력이 잘못됐다". 다시 해도 같으니 즉시 포기한다.
+      - action: FailJob
+        onExitCodes:
+          containerName: worker
+          operator: In
+          values: [42]
+      # 노드가 빠져서 죽은 것은 재시도 횟수에 세지 않는다.
+      - action: Ignore
+        onPodConditions:
+          - type: DisruptionTarget
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: alpine:3.22
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {memory: 64Mi}
+          command: ["sh","-c","echo '입력 형식이 잘못됐다'; exit 42"]

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 1 · 도커] M04 Dockerfile 빌드와 최적화 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 04 / 38 · PART 1 도커</div>
+  <h1>Dockerfile — 빌드와 최적화</h1>
+  <p class="ch-desc">같은 애플리케이션을 두 가지 Dockerfile로 빌드한다. 하나는 1.68GB, 하나는 246MB. 배포할 때 받는 양은 413MB와 59MB. 차이를 만든 것은 세 줄의 순서와 스테이지 분리다.</p>
+  <div class="meta">
+    <span class="tag">초반</span><span class="tag">65분</span><span class="tag">Docker Engine 29.2.1</span><span class="tag">BuildKit</span>
+    <br>2026-09-05 검증 · node:22-alpine · 여기 적힌 버전 숫자는 실습 당일 <code>docker version</code>으로 다시 확인한다 · 이 모듈에서 만든 이미지를 M07에서 클러스터로 올린다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m03-docker-images-layers.html">M03</a> 완료 — 레이어와 <code>docker history</code> 읽는 법</li>
+    <li>작업 디렉터리: <code>course/labs/apps/journal-api/</code>. 소스와 Dockerfile은 저장소에 들어 있다 — 이 모듈은 그 Dockerfile을 처음부터 다시 써 보는 과정이다. <code>node_modules/</code>가 없는 상태에서 시작한다(로컬에 Node.js를 설치할 필요도 없다)</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. <strong>자주 바뀌는 것을 뒤에 둔다.</strong> 의존성 파일을 먼저 복사하고 소스를 나중에 복사하면 소스만 고쳤을 때 <code>npm ci</code>가 캐시로 넘어간다.</p>
+  <p>2. 멀티스테이지로 <strong>빌드 도구를 최종 이미지에서 뺀다.</strong> 컴파일러와 개발 의존성은 실행에 필요 없다.</p>
+  <p>3. 이미지 크기는 두 숫자다 — 디스크 사용량과 <strong>내려받는 크기</strong>. 파드가 뜰 때마다 네트워크로 오는 것은 후자다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">4.1</span>왜 이미지 크기가 운영 문제인가</a>
+  <a href="#s2"><span class="num">4.2</span>실습 대상과 기준선 — 저널 API를 순진하게 빌드한다</a>
+  <a href="#s3"><span class="num">4.3</span>이론 — 빌드 캐시가 깨지는 지점</a>
+  <a href="#s4"><span class="num">4.4</span>따라하기 ① 멀티스테이지로 다시 쓴다</a>
+  <a href="#s5"><span class="num">4.5</span>따라하기 ② 캐시 동작 비교</a>
+  <a href="#s6"><span class="num">4.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">4.7</span>운영 관점 — 멀티 아키텍처 빌드</a>
+  <a href="#s8"><span class="num">4.8</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">4.1</span>왜 이미지 크기가 운영 문제인가</h2>
+  <p class="lead">M03까지는 남이 만든 이미지만 다뤘다. 레이어를 읽는 법은 배웠지만 만드는 법은 아니었고, 유일하게 직접 만든 <code>docker commit</code> 이미지는 무엇이 들었는지 아무도 재현할 수 없었다. 이제 Dockerfile로 직접 만든다 — 그리고 처음 쓰는 Dockerfile이 왜 1.68GB짜리 이미지를 내놓는지부터 본다.</p>
+  <p>노트북에서는 이미지가 1.6GB든 200MB든 체감 차이가 없다. 한 번 받으면 캐시에 남기 때문이다. 문제는 클러스터에서 시작된다. 파드가 새 노드에 스케줄되면 그 노드는 이미지를 처음부터 받는다. 오토스케일링으로 노드가 늘어날 때, 롤아웃으로 파드가 전 노드에 재배치될 때, 노드가 죽어 파드가 옮겨갈 때마다 반복된다. 이미지가 400MB면 노드 10개에 배포할 때 4GB가 레지스트리에서 나가고, 그동안 파드는 <code>ContainerCreating</code>에 머문다. 장애 대응 중 롤백이 3분 걸리는 이유가 대개 이것이다.</p>
+  <p>크기는 보안 문제이기도 하다. 최종 이미지에 컴파일러 · 패키지 관리자 · 셸이 남아 있으면 공격자가 컨테이너에 침입했을 때 쓸 도구가 그만큼 많다. M24에서 <code>readOnlyRootFilesystem</code>과 넌루트를 다룰 때, 그리고 M07에서 취약점을 스캔할 때 이 선택의 결과를 숫자로 보게 된다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">4.2</span>실습 대상과 기준선 — 저널 API를 순진하게 빌드한다</h2>
+  <p>이 과정 전체에서 배포할 애플리케이션이다. 책 1장의 저널 서비스를 최소 형태로 옮긴 것으로, 엔트리를 추가·조회하는 REST API다. 레디스가 있으면 레디스에, 없으면 메모리에 저장한다 — M14에서 레디스와 함께 배포한다.</p>
+  <p>소스는 <code>course/labs/apps/journal-api/</code>에 있다. 여기서는 이미지 빌드와 관련된 부분만 본다.</p>
+<pre><code>course/labs/apps/journal-api/
+  package.json          의존성: express, redis / 개발 의존성: typescript, 타입 정의
+  package-lock.json     의존성 트리 고정
+  tsconfig.json         타입스크립트 컴파일 설정 (src → dist)
+  src/server.ts         애플리케이션
+  Dockerfile.naive      4.2절 — 처음 쓰는 형태
+  Dockerfile            4.4절 — 개선된 형태
+  .dockerignore         빌드 컨텍스트에서 뺄 것 (4.6절)</code></pre>
+  <p>애플리케이션에는 이 과정 뒤쪽에서 쓸 엔드포인트가 미리 들어 있다.</p>
+  <table>
+    <tr><th>엔드포인트</th><th>용도</th><th>쓰이는 곳</th></tr>
+    <tr><td><code>GET /healthz</code></td><td>프로세스가 살아 있는지. 버전과 응답한 인스턴스 이름을 함께 돌려준다</td><td>M15 라이브니스 프로브, M10 롤아웃 관찰</td></tr>
+    <tr><td><code>GET /readyz</code></td><td>레디스 연결이 끝나 트래픽을 받을 준비가 됐는지</td><td>M15 레디니스 프로브</td></tr>
+    <tr><td><code>GET · POST /api/entries</code></td><td>저널 엔트리 조회 · 추가</td><td>M14 배포, M37 부하 테스트</td></tr>
+  </table>
+  <p>소스에 한 가지를 미리 넣어 두었다. M02에서 본 PID 1 문제 때문이다.</p>
+<pre><code>// 서버를 먼저 띄우고 레디스 연결은 뒤에서 시도한다.
+// 저장소가 죽어 있어도 프로세스는 살아 있고, 준비 상태만 /readyz 로 알린다.
+const server = app.listen(PORT, () =&gt; {
+  log('info', 'listening', { port: PORT, version: VERSION });
+});
+
+connectRedis().catch((e) =&gt; log('error', 'redis connect failed', { detail: String(e) }));
+
+// SIGTERM 을 처리하지 않으면 PID 1 은 종료 신호를 무시한다 (M02 · M15).
+process.on('SIGTERM', () =&gt; {
+  log('info', 'SIGTERM received, draining');
+  server.close(() =&gt; process.exit(0));
+});</code></pre>
+  <p>마지막 다섯 줄이 없으면 <code>docker stop</code>과 쿠버네티스 롤아웃이 매번 10초를 기다렸다가 강제 종료한다. M15에서 이 핸들러를 지우고 차이를 측정한다.</p>
+
+  <div class="step">
+    <h4>1단계. 가장 흔한 형태로 써서 기준선을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>개선 전의 기준선을 만든다. 이 형태가 왜 문제인지는 숫자로 확인한다.</p>
+<pre><code># Dockerfile.naive — 흔히 처음 쓰는 형태
+FROM node:22
+WORKDIR /app
+COPY . .
+RUN npm install &amp;&amp; npm run build
+EXPOSE 8080
+CMD ["node", "dist/server.js"]</code></pre>
+    <table>
+      <tr><th>지시어</th><th>하는 일</th></tr>
+      <tr><td><code>FROM</code></td><td>베이스 이미지. 여기서 시작해 레이어를 쌓는다</td></tr>
+      <tr><td><code>WORKDIR</code></td><td>이후 명령의 작업 디렉터리. 없으면 만든다. <code>RUN cd /app</code>과 달리 다음 지시어까지 유지된다</td></tr>
+      <tr><td><code>COPY</code></td><td>빌드 컨텍스트의 파일을 이미지로 복사한다</td></tr>
+      <tr><td><code>RUN</code></td><td>빌드 중에 실행할 명령. 결과가 레이어로 굳는다</td></tr>
+      <tr><td><code>EXPOSE</code></td><td>문서용 표시. 포트를 실제로 여는 것은 <code>-p</code>다</td></tr>
+      <tr><td><code>CMD</code></td><td>컨테이너가 시작될 때 실행할 명령. 이 프로세스가 PID 1이 된다</td></tr>
+    </table>
+<pre><code>cd course/labs/apps/journal-api
+docker build -f Dockerfile.naive -t journal-api:naive .</code></pre>
+    <ul class="tight">
+      <li><code>-f</code> — Dockerfile 경로. 기본값은 <code>./Dockerfile</code></li>
+      <li><code>-t</code> — 붙일 태그</li>
+      <li>마지막 <code>.</code> — <dfn class="term">빌드 컨텍스트 <span class="en">(Build Context)</span></dfn>. 빌드 엔진이 <code>COPY</code>할 파일을 찾는 디렉터리이며, 여기 있는 것만 이미지에 넣을 수 있다. 4.6절에서 이것 때문에 사고가 난다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 (마지막 세 줄)</span>
+    <div class="out"><code>#9 naming to docker.io/library/journal-api:naive done
+#9 unpacking to docker.io/library/journal-api:naive done
+#9 DONE 0.0s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>naming to docker.io/library/journal-api:naive done</code>이 보이고 <code>ERROR</code> 줄이 없다. 첫 빌드는 <code>node:22</code> 베이스 이미지(1GB가 넘는다)를 받느라 시간이 걸린다 — 2026-09-03 검증 환경에서 14초. 위 출력은 두 번째 빌드라 시간이 0.0s로 찍혔다. 단계 번호(<code>#9</code>)와 시간은 환경마다 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 크기를 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>개선 전 숫자를 적어 둔다. 4.4절의 결과와 비교할 기준이다.</p>
+<pre><code>docker images journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+journal-api:naive    e8278a4826ef       1.68GB          413MB</code></div>
+    <p>두 숫자를 구분해서 읽는다. <strong><code>DISK USAGE</code></strong>는 로컬 디스크에 풀어놓은 크기, <strong><code>CONTENT SIZE</code></strong>는 레지스트리에서 압축된 상태로 오가는 크기다. 노드가 이미지를 받을 때 네트워크로 흐르는 양은 413MB 쪽이다. <code>ID</code>는 빌드마다 다르다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>DISK USAGE</code> 1.68GB, <code>CONTENT SIZE</code> 413MB. 애플리케이션 소스는 3KB도 안 된다. 나머지가 전부 베이스 이미지와 의존성이다.</div>
+  </div>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">4.3</span>이론 — 빌드 캐시가 깨지는 지점</h2>
+  <p>책 5.4가 컨테이너 빌드에서 요구하는 것은 두 가지다 — 빌드가 빠르게 반복되어야 하고, 최종 이미지에는 실행에 필요한 것만 남아야 한다. 앞의 것은 캐시, 뒤의 것은 멀티스테이지의 문제다.</p>
+  <p>BuildKit(도커의 빌드 엔진)은 지시어마다 캐시를 확인한다. <code>RUN</code>은 명령 문자열이 같으면 캐시를 쓴다. 명령이 실제로 무엇을 하는지는 보지 않기 때문에 <code>RUN apt-get update</code>는 몇 달 전 캐시를 그대로 쓸 수 있다. <code>COPY</code>와 <code>ADD</code>는 반대로 복사할 <strong>파일 내용</strong>을 본다 — 한 글자라도 바뀌면 캐시가 깨진다. 그리고 한 지시어의 캐시가 깨지면 <strong>그 아래 전부</strong>가 다시 실행된다. 이 마지막 규칙이 핵심이다.</p>
+  <p><code>Dockerfile.naive</code>는 <code>COPY . .</code>가 <code>RUN npm install</code>보다 위에 있다. 소스 파일을 한 글자 고치면 <code>COPY</code> 캐시가 깨지고, 그 아래 <code>npm install</code>이 통째로 다시 돈다. 의존성은 하나도 안 바뀌었는데도 그렇다. 고치는 방법은 <strong>변경 빈도 순으로 정렬</strong>하는 것이다. 거의 안 바뀌는 것(베이스 이미지, 의존성 목록)을 위에, 매번 바뀌는 것(소스)을 아래에 둔다.</p>
+  <p>한 가지 예외를 미리 알아둔다. <code>ARG</code> · <code>ENV</code> · <code>EXPOSE</code> · <code>CMD</code> 같은 지시어는 파일시스템 레이어를 만들지 않고 이미지 설정(config)에만 기록된다. 그래서 환경 변수 값을 바꿔도 그 아래 <code>COPY</code>의 캐시는 깨지지 않는다 — 4.5절에서 직접 본다.</p>
+  <h3>멀티스테이지 빌드</h3>
+  <p><dfn class="term">멀티스테이지 <span class="en">(Multi-stage)</span></dfn>는 한 Dockerfile에 <code>FROM</code>을 여러 개 쓰는 방식이다. 앞 스테이지에서 컴파일하고, 마지막 스테이지에서 <strong>결과물만</strong> 가져온다. 앞 스테이지의 컴파일러 · 소스 · 개발 의존성은 최종 이미지에 남지 않는다.</p>
+  <table>
+    <tr><th>베이스 선택</th><th>크기</th><th>대가</th></tr>
+    <tr><td><code>node:22</code> (데비안 풀)</td><td>가장 크다</td><td>없음. 디버깅 도구가 다 있다</td></tr>
+    <tr><td><code>node:22-alpine</code></td><td>훨씬 작다</td><td>musl libc — 네이티브 모듈이 드물게 깨진다. 검증 필요</td></tr>
+    <tr><td><code>node:22-slim</code></td><td>중간</td><td>데비안 기반이라 호환성 문제가 적다</td></tr>
+    <tr><td>distroless</td><td>가장 작다</td><td><strong>셸이 없다.</strong> <code>kubectl exec</code>로 들어가 <code>ls</code>도 못 친다. 디버깅은 에페메랄 컨테이너로만(M24)</td></tr>
+  </table>
+  <p>이 과정은 알파인을 쓴다. 셸이 남아 있어 실습 중 컨테이너 안을 들여다볼 수 있고, 크기도 충분히 작다. 프로덕션에서 distroless를 쓸지는 팀의 디버깅 관행에 달린 문제이지 크기만으로 정할 일이 아니다.</p>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">4.4</span>따라하기 ① 멀티스테이지로 다시 쓴다</h2>
+
+  <div class="step">
+    <h4>3단계. 스테이지를 셋으로 나눈다</h4>
+    <p class="purpose"><span class="lbl">목적</span>빌드 도구와 개발 의존성을 최종 이미지에서 제거한다.</p>
+<pre><code># Dockerfile — 멀티스테이지 빌드
+# 1단계: 의존성 설치와 타입스크립트 컴파일
+FROM node:22-alpine AS build
+WORKDIR /app
+# 의존성 파일만 먼저 복사한다. 소스가 바뀌어도 이 레이어의 캐시는 살아남는다.
+COPY package.json package-lock.json* ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# 2단계: 런타임 의존성만 다시 설치 (devDependencies 제외)
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
+# 3단계: 실행 이미지 — 소스도 빌드 도구도 없다
+FROM node:22-alpine
+# 빌드할 때 버전을 새긴다: docker build --build-arg APP_VERSION=v2 ...
+ARG APP_VERSION=v1
+ENV NODE_ENV=production APP_VERSION=${APP_VERSION}
+WORKDIR /app
+# 넌루트로 실행한다 (M24 파드 시큐리티의 전제).
+USER node
+COPY --from=deps  --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --chown=node:node package.json ./
+EXPOSE 8080
+CMD ["node", "dist/server.js"]</code></pre>
+    <p>순진한 쪽과 다른 점을 짚는다. <code>package.json</code>과 락 파일을 먼저 복사하고 <code>npm ci</code>를 돌린 뒤에야 소스를 복사한다 — 소스만 고치면 <code>npm ci</code>는 캐시된다. <code>npm install</code> 대신 <code>npm ci</code>를 쓰는 것은 락 파일을 그대로 따르고 락과 <code>package.json</code>이 어긋나면 실패하기 때문이다. 빌드마다 같은 의존성 트리가 나온다. 스테이지는 셋이다. <code>build</code>는 컴파일용(타입스크립트 포함), <code>deps</code>는 런타임 의존성만(<code>--omit=dev</code>), 마지막 스테이지는 두 곳에서 결과물만 가져온다. <code>USER node</code>로 루트 실행을 피한다 — 노드 공식 이미지에 이미 있는 계정이다.</p>
+    <p><code>ARG APP_VERSION</code>과 <code>ENV APP_VERSION</code> 두 줄은 이 과정의 뒤쪽을 위한 장치다. <code>server.ts</code>는 <code>process.env.APP_VERSION ?? 'v1'</code>로 버전을 읽으므로, 소스를 고치지 않고 <code>--build-arg APP_VERSION=v2</code>만 붙이면 <code>v2</code>라고 응답하는 이미지가 나온다. M10 롤아웃과 M15 프로브 실습이 이 v2를 쓰고, <code>course/labs/scripts/rebuild.sh</code>도 같은 플래그로 두 이미지를 만든다.</p>
+<pre><code>docker build -t journal-api:v1 .
+docker images journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+journal-api:naive    e8278a4826ef       1.68GB          413MB
+journal-api:v1       a23856a8fe78        246MB         59.3MB</code></div>
+    <div class="verdict"><span class="lbl">판정</span>디스크 1.68GB → 246MB, 내려받는 크기 413MB → 59.3MB. <strong>배포할 때 오가는 양이 7분의 1</strong>이 됐다.</div>
+    <p>레이어 수도 줄었다. <code>docker image inspect journal-api:v1 -f '{{len .RootFS.Layers}}'</code>는 8, naive는 11이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>4단계. 실제로 도는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>작게 만드는 데 성공했지만 동작이 깨졌을 수 있다. 크기를 줄인 뒤에는 반드시 실행해 본다.</p>
+<pre><code>docker run -d --name jtest -p 8082:8080 journal-api:v1
+sleep 2
+curl -s localhost:8082/healthz; echo
+curl -s -X POST localhost:8082/api/entries -H 'content-type: application/json' -d '{"text":"first entry"}'; echo
+curl -s localhost:8082/api/entries; echo</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"ok","version":"v1","pod":"3c5ec542e9a0"}
+{"id":"1788596147604"}
+{"entries":["{\"text\":\"first entry\"}"]}</code></div>
+    <p><code>pod</code> 필드는 프로세스의 <code>HOSTNAME</code> 환경 변수다. 도커는 컨테이너 ID 앞 12자리를 호스트명으로 주므로 이 값은 실행할 때마다 다르다. 쿠버네티스는 여기에 파드 이름을 넣어 주기 때문에, M10에서 요청이 어느 파드로 갔는지 이 필드로 본다. <code>id</code>는 타임스탬프라 역시 매번 다르다.</p>
+<pre><code>docker logs jtest | head -3
+docker exec jtest id</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"level":"info","msg":"no REDIS_URL, using in-memory store"}
+{"level":"info","msg":"listening","port":8080,"version":"v1"}
+uid=1000(node) gid=1000(node) groups=1000(node)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>API가 응답하고, 로그가 JSON 한 줄로 표준 출력에 나가며, 프로세스가 <code>uid=1000(node)</code> — 루트가 아니다. 세 가지가 M22 로그 수집과 M24 보안 정책의 전제 조건이다.</div>
+<pre><code>docker rm -f jtest</code></pre>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">4.5</span>따라하기 ② 캐시 동작 비교</h2>
+
+  <div class="step">
+    <h4>5단계. 소스를 한 줄 고치고 두 방식을 다시 빌드한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>레이어 순서가 실제로 무엇을 건너뛰게 하는지 눈으로 본다. 소스는 실험이 끝나면 원래대로 되돌린다.</p>
+<pre><code>cp src/server.ts /tmp/server.ts.bak            # 되돌릴 사본
+echo '// cache test' &gt;&gt; src/server.ts          # 소스 한 줄 변경
+docker build --progress=plain -t journal-api:cache-test .</code></pre>
+    <ul class="tight">
+      <li><code>--progress=plain</code> — 단계별 로그를 접지 않고 전부 출력한다. <code>CACHED</code> 표시를 보려면 필요하다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 (멀티스테이지 — 스테이지 단계 줄만 남겼다)</span>
+    <div class="out"><code>#7 [build 3/7] COPY package.json package-lock.json* ./
+#7 CACHED
+#8 [build 4/7] RUN npm ci
+#8 CACHED
+#9 [build 5/7] COPY tsconfig.json ./
+#9 CACHED
+#10 [build 6/7] COPY src ./src
+#10 DONE 0.0s
+#11 [build 7/7] RUN npm run build
+#11 DONE 1.5s
+#12 [deps 4/4] RUN npm ci --omit=dev
+#12 CACHED
+#13 [stage-2 3/5] COPY --from=deps  --chown=node:node /app/node_modules ./node_modules
+#13 CACHED
+#14 [stage-2 4/5] COPY --from=build --chown=node:node /app/dist ./dist
+#14 DONE 0.0s</code></div>
+    <p><code>npm ci</code> 두 개가 모두 <code>CACHED</code>다. 다시 실행된 것은 소스 복사와 컴파일, 그리고 컴파일 결과를 가져오는 <code>COPY</code>뿐이다.</p>
+<pre><code>docker build --progress=plain -f Dockerfile.naive -t journal-api:naive2 .</code></pre>
+    <span class="out-lbl">실행 결과 (순진한 쪽)</span>
+    <div class="out"><code>#6 [2/4] WORKDIR /app
+#6 CACHED
+#7 [3/4] COPY . .
+#7 DONE 0.0s
+#8 [4/4] RUN npm install &amp;&amp; npm run build
+#8 DONE 2.4s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>순진한 쪽은 <code>npm install</code>이 <strong>다시 돌았다</strong>. 의존성은 하나도 바뀌지 않았는데도 그렇다.</div>
+<pre><code>mv /tmp/server.ts.bak src/server.ts             # 소스 되돌리기
+tail -n 2 src/server.ts                         # 마지막 줄이 }); 이면 원래대로다</code></pre>
+    <p>이 예제는 의존성이 두 개뿐이라 2.4초에 끝났다. 실제 프로젝트에서 이 자리는 <code>npm ci</code>, <code>./gradlew build</code>, <code>go mod download</code>, <code>pip install -r requirements.txt</code>이며 1~5분이 걸린다. 하루에 스무 번 빌드하면 순서 하나 때문에 한 시간이 날아간다. CI에서는 이 비용이 그대로 요금이 된다(M29).</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계. 소스를 건드리지 않고 v2 이미지를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>3단계에 넣은 <code>ARG APP_VERSION</code>으로 버전만 다른 이미지를 만들고, 이때 캐시가 어디까지 살아남는지 본다. 이 v2가 M07에서 클러스터에 올라가 M10 롤아웃의 대상이 된다.</p>
+<pre><code>docker build --progress=plain --build-arg APP_VERSION=v2 -t journal-api:v2 .</code></pre>
+    <ul class="tight">
+      <li><code>--build-arg 이름=값</code> — Dockerfile의 <code>ARG</code> 기본값을 덮어쓴다. 소스는 그대로다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 (스테이지 단계 줄만 남겼다)</span>
+    <div class="out"><code>#9 [build 4/7] RUN npm ci
+#9 CACHED
+#10 [build 7/7] RUN npm run build
+#10 CACHED
+#11 [stage-2 3/5] COPY --from=deps  --chown=node:node /app/node_modules ./node_modules
+#11 CACHED
+#13 [deps 4/4] RUN npm ci --omit=dev
+#13 CACHED
+#14 [build 6/7] COPY src ./src
+#14 CACHED
+#15 [stage-2 5/5] COPY --chown=node:node package.json ./
+#15 CACHED</code></div>
+    <p>전부 <code>CACHED</code>다. <code>ARG</code>와 <code>ENV</code>는 레이어가 아니라 이미지 설정에 기록되므로(4.3절) 파일시스템 레이어는 v1과 완전히 같고, 두 이미지는 설정 한 줄만 다르다. 디스크에서도 레이어를 공유한다.</p>
+<pre><code>docker run -d --name jtest2 -p 8082:8080 journal-api:v2
+sleep 2
+curl -s localhost:8082/healthz; echo
+docker rm -f jtest2</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"ok","version":"v2","pod":"d319e38b3e2b"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>"version":"v2"</code>. 소스 파일은 한 글자도 바뀌지 않았다. 이 방식이 실제 CI에서 깃 SHA나 릴리스 번호를 이미지에 새기는 방법이다(M29).</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">4.6</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — .dockerignore 없이 빌드 컨텍스트를 통째로 보낸다</span>
+    <p><code>COPY . .</code>의 <code>.</code>은 빌드 컨텍스트 전체다. 로컬에서 <code>npm install</code>을 한 번이라도 돌렸다면 <code>node_modules/</code>가 거기 있고, 그것이 통째로 이미지로 들어간다. 로컬에서 만들어진 <code>node_modules</code>는 <strong>맥용으로 컴파일된 네이티브 모듈</strong>을 포함할 수 있어서, 리눅스 컨테이너 안에서 실행하면 알 수 없는 에러가 난다. <code>.git/</code>이 함께 들어가면 삭제한 파일의 이력과 커밋에 섞여 들어간 자격 증명까지 이미지에 실린다.</p>
+    <p>막는 방법은 <code>.dockerignore</code>다.</p>
+<pre><code># course/labs/apps/journal-api/.dockerignore
+node_modules
+dist
+npm-debug.log
+.git
+.gitignore
+Dockerfile*
+.dockerignore
+*.md</code></pre>
+    <p>확인은 빌드 로그의 <code>[internal] load build context</code> 단계에 찍히는 전송량으로 한다. 지금 작업 디렉터리에는 <code>node_modules</code>가 없으므로 먼저 컨테이너 안에서 하나 만든다(로컬에 Node.js가 없어도 된다). 그 뒤 <code>.dockerignore</code>를 잠깐 다른 이름으로 바꾸고 <code>Dockerfile.naive</code>로 빌드한다 — <code>COPY . .</code>를 쓰는 쪽이라야 컨텍스트 전체가 전송된다.</p>
+<pre><code>docker run --rm -v "$PWD":/app -w /app node:22-alpine npm ci
+du -sh node_modules
+
+mv .dockerignore .dockerignore.off
+docker build --progress=plain -f Dockerfile.naive -t journal-api:fat . 2&gt;&amp;1 | grep -A2 'load build context'
+mv .dockerignore.off .dockerignore</code></pre>
+    <span class="out-lbl">실행 결과 (.dockerignore 없음)</span>
+    <div class="out"><code> 41M	node_modules
+
+#5 [internal] load build context
+#5 transferring context: 33.05MB 0.3s done
+#5 DONE 0.3s</code></div>
+<pre><code>docker build --progress=plain -f Dockerfile.naive -t journal-api:naive . 2&gt;&amp;1 | grep -A2 'load build context'</code></pre>
+    <span class="out-lbl">실행 결과 (.dockerignore 있음)</span>
+    <div class="out"><code>#5 [internal] load build context
+#5 transferring context: 161B 0.0s done
+#5 DONE 0.0s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>33.05MB 대 161B. 같은 디렉터리, 같은 Dockerfile인데 <code>.dockerignore</code> 한 파일이 전송량을 20만 배 갈랐다. <code>journal-api:fat</code> 안에는 맥에서 만든 <code>node_modules</code>가 그대로 들어가 있다.</div>
+    <p>한 가지 더 확인할 것이 있다. 같은 실험을 멀티스테이지 <code>Dockerfile</code>로 하면 <code>.dockerignore</code>가 있든 없든 161B가 나온다. BuildKit은 Dockerfile의 <code>COPY</code>가 실제로 가리키는 경로만 전송하기 때문이다. 그래서 <code>COPY . .</code>를 안 쓰면 안전하다고 생각하기 쉬운데, <code>.dockerignore</code>는 그래도 둔다 — Dockerfile은 바뀌고, 누군가 편의로 <code>COPY . .</code>를 넣는 날 이 파일이 사고를 막는다. 실험이 끝났으면 <code>rm -rf node_modules</code>로 지워도 된다. 이미지 빌드에는 필요 없다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 락 파일 없이 npm ci를 쓴다</span>
+    <p><code>npm ci</code>는 락 파일을 요구한다. 락 파일을 잠깐 치우고 빌드해 본다.</p>
+<pre><code>mv package-lock.json /tmp/package-lock.json.bak
+docker build -t journal-api:nolock .
+mv /tmp/package-lock.json.bak package-lock.json</code></pre>
+    <span class="out-lbl">실행 결과 (핵심 줄만)</span>
+    <div class="out"><code>#8 0.297 npm error code EUSAGE
+#8 0.297 npm error
+#8 0.297 npm error The `npm ci` command can only install with an existing package-lock.json or
+#8 0.297 npm error npm-shrinkwrap.json with lockfileVersion &gt;= 1. Run an install with npm@5 or
+#8 0.297 npm error later to generate a package-lock.json file, then try again.
+...
+#8 ERROR: process "/bin/sh -c npm ci --omit=dev" did not complete successfully: exit code: 1
+------
+Dockerfile:16
+--------------------
+  16 | &gt;&gt;&gt; RUN npm ci --omit=dev
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm ci --omit=dev" did not complete successfully: exit code: 1</code></div>
+    <p><code>COPY package.json package-lock.json* ./</code>의 <code>*</code> 덕에 복사 단계는 통과하고, <code>npm ci</code>에서 멈춘다. <code>build</code>와 <code>deps</code> 두 스테이지가 병렬로 돌기 때문에 어느 쪽의 <code>npm ci</code>가 먼저 에러를 내는지는 실행마다 다르다 — 위에서는 <code>deps</code>(<code>Dockerfile:16</code>)였다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>npm error The `npm ci` command can only install with an existing package-lock.json</code>이 보이고 이미지가 만들어지지 않는다. 락 파일을 되돌린 뒤 <code>docker build -t journal-api:v1 .</code>이 다시 전부 <code>CACHED</code>로 끝나면 복구된 것이다.</div>
+    <p>고치는 방법은 락 파일을 만들어 <strong>저장소에 커밋</strong>하는 것이다. 로컬 노드 버전이 프로젝트와 다르거나 아예 설치돼 있지 않다면 컨테이너 안에서 만들면 된다 — 이 저장소의 락 파일도 그렇게 만들었다.</p>
+<pre><code>docker run --rm -v "$PWD":/app -w /app node:22-alpine npm install --package-lock-only</code></pre>
+    <p>여기서 <code>npm install</code>을 쓰면 락 파일이 없어도 빌드는 되지만, 그날그날 다른 버전이 설치돼 <strong>어제 통과한 테스트가 오늘 실패하는</strong> 상황이 생긴다. 재현 가능한 빌드는 락 파일에서 시작한다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">4.7</span>운영 관점 — 멀티 아키텍처 빌드</h2>
+  <p>애플 실리콘 맥에서 빌드한 이미지는 <code>arm64</code>다. 클러스터 노드가 <code>amd64</code>면 파드가 뜨지 않는다.</p>
+  <span class="out-lbl">이 상황에서 나오는 메시지</span>
+  <div class="out"><code>exec /app/entrypoint: exec format error</code></div>
+  <p>M01의 kind 노드는 맥과 같은 아키텍처라 이 문제가 드러나지 않는다. 사내 클러스터나 클라우드에 올릴 때 처음 만난다. 지금 만든 이미지가 어느 아키텍처인지는 바로 확인할 수 있다.</p>
+<pre><code>docker image inspect journal-api:v1 -f '{{.Os}}/{{.Architecture}}'</code></pre>
+  <span class="out-lbl">실행 결과</span>
+  <div class="out"><code>linux/arm64</code></div>
+  <p>인텔 맥이나 리눅스라면 <code>linux/amd64</code>다. 한 이미지 이름으로 두 아키텍처를 담으려면 <code>buildx</code>로 두 플랫폼을 동시에 빌드해 레지스트리로 푸시한다. <strong>이 절의 명령은 여기서 실행하지 않는다</strong> — 푸시할 레지스트리가 아직 없다. M07에서 로컬 레지스트리 <code>localhost:5001</code>을 세운 뒤에 돌아와서 해 볼 수 있고, 그때의 명령은 이 모양이다.</p>
+<pre><code># M07 이후에 실행한다. 빌더를 하나 만들고 사용 (최초 1회)
+docker buildx create --name multi --use
+
+# 두 아키텍처를 동시에 빌드해 로컬 레지스트리로 푸시
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t localhost:5001/journal-api:v1-multi --push .</code></pre>
+  <p><code>--push</code>가 필요한 이유가 있다. 여러 아키텍처를 묶은 <dfn class="term">매니페스트 리스트 <span class="en">(Manifest List)</span></dfn>는 로컬 이미지 저장소에 그대로 담기 어려워, 레지스트리로 바로 올리는 것이 표준 흐름이다. 다른 아키텍처 쪽은 QEMU 에뮬레이션으로 빌드되므로 네이티브보다 몇 배 느리다 — CI에서 멀티 아키텍처 빌드가 유독 오래 걸리는 이유다.</p>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">4.8</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>docker images journal-api --format '{{.Repository}}:{{.Tag}} {{.Size}}'</code> → <code>journal-api:v1 246MB</code>와 <code>journal-api:v2 246MB</code> 두 줄이 있다</li>
+      <li><code>docker run -d --name jcheck -p 8082:8080 journal-api:v1 &amp;&amp; sleep 2 &amp;&amp; curl -s -o /dev/null -w '%{http_code}\n' localhost:8082/healthz</code> → <code>200</code></li>
+      <li><code>docker exec jcheck id -u</code> → <code>1000</code> (확인 뒤 <code>docker rm -f jcheck</code>)</li>
+      <li><code>docker run --rm journal-api:v2 node -e 'console.log(process.env.APP_VERSION)'</code> → <code>v2</code></li>
+      <li><code>docker build --progress=plain -t journal-api:v1 . 2&gt;&amp;1 | grep -A1 'RUN npm ci$'</code> → 다음 줄이 <code>CACHED</code></li>
+      <li><code>ls package-lock.json src/server.ts</code> → 두 파일 모두 있고, <code>tail -n 1 src/server.ts</code>가 <code>});</code> — 4.5절의 사본 되돌리기가 끝났다</li>
+      <li>(이해 확인) <code>DISK USAGE</code>와 <code>CONTENT SIZE</code> 중 노드가 이미지를 받을 때 네트워크로 흐르는 쪽은 어느 것인가</li>
+      <li>(이해 확인) <code>.dockerignore</code>가 막는 사고 두 가지 — 맥용 <code>node_modules</code>와 <code>.git</code>의 이력</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/apps/journal-api/</code> — 소스 · <code>Dockerfile</code>(ARG APP_VERSION 포함) · <code>Dockerfile.naive</code> · <code>.dockerignore</code> · 락 파일. 소스는 4.5절 실험 전과 같다</li>
+      <li>로컬 이미지 <code>journal-api:v1</code> — M05 · M06 · M07에서 계속 쓴다. M07에서 레지스트리로 올리고 kind 클러스터에 적재한다</li>
+      <li>로컬 이미지 <code>journal-api:v2</code> — <code>--build-arg APP_VERSION=v2</code>로 만든 것. M07에서 함께 적재하고 M10 롤아웃 · M15 프로브 실습의 입력이 된다</li>
+    </ul>
+  </div>
+  <p>v1과 v2는 지우지 않는다. 다음 모듈이 v1을 그대로 쓴다. 실험용으로 만든 이미지는 지운다.</p>
+<pre><code>docker rmi journal-api:naive journal-api:naive2 journal-api:cache-test journal-api:fat</code></pre>
+  <p><code>journal-api:nolock</code>은 빌드가 실패했으므로 만들어지지 않았다. 4.6절에서 만든 <code>node_modules/</code>를 지우지 않았다면 <code>rm -rf node_modules</code>.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m03-docker-images-layers.html">← M03 이미지와 레이어</a>
+  <a href="m05-docker-data-network.html">M05 데이터와 네트워크 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>이미지는 만들었지만 이 API는 아직 데이터를 메모리에만 담는다. 컨테이너를 지우면 사라진다. M05에서 볼륨으로 데이터를 살리고, 컨테이너끼리 IP가 아니라 이름으로 부르게 만든다 — 쿠버네티스의 퍼시스턴트 볼륨(M18)과 서비스 디스커버리(M11)의 원형이다. <code>journal-api:v1</code>이 그 실습의 애플리케이션 컨테이너다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>Dockerfile 레퍼런스: https://docs.docker.com/reference/dockerfile/ (ARG · ENV · 캐시 규칙)</li>
+    <li>멀티스테이지 빌드: https://docs.docker.com/build/building/multi-stage/</li>
+    <li>빌드 캐시 최적화: https://docs.docker.com/build/cache/optimize/</li>
+    <li>빌드 컨텍스트와 .dockerignore: https://docs.docker.com/build/concepts/context/</li>
+    <li>멀티 플랫폼 빌드: https://docs.docker.com/build/building/multi-platform/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5.4 컨테이너 빌드 (멀티스테이지 · 무배포 이미지), 5.5 컨테이너 이미지 태깅</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · Docker Engine 29.2.1 · node:22-alpine · 2026-09-05. 출력의 이미지 ID · 컨테이너 ID · 소요 시간은 환경마다 다르다.</p>
+</footer>
+</div>
+</body>
+</html>

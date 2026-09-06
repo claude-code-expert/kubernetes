@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow23" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow23b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .t-title { font-size: 15px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-kpi { font-size: 11.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-loop { stroke: #2456c4; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 1 온보딩 -->
+  <rect class="box" x="40" y="70" width="240" height="118" rx="4"/>
+  <text class="t-title" x="160" y="100" text-anchor="middle">① 온보딩</text>
+  <text class="t-sub" x="160" y="124" text-anchor="middle">계정 · 네임스페이스 · kubeconfig</text>
+  <text class="t-kpi" x="160" y="146" text-anchor="middle">KPI 예: 30분 내 첫 배포</text>
+
+  <line class="line" x1="280" y1="129" x2="336" y2="129" marker-end="url(#arrow23)"/>
+
+  <!-- 2 개발 -->
+  <rect class="box" x="340" y="70" width="240" height="118" rx="4"/>
+  <text class="t-title" x="460" y="100" text-anchor="middle">② 개발</text>
+  <text class="t-sub" x="460" y="124" text-anchor="middle">코드 → 이미지 빌드·푸시 → 롤아웃</text>
+  <text class="t-kpi" x="460" y="146" text-anchor="middle">KPI 예: 수정 반영까지 수 분 이내</text>
+
+  <line class="line" x1="580" y1="129" x2="636" y2="129" marker-end="url(#arrow23)"/>
+
+  <!-- 3 테스팅·디버깅 -->
+  <rect class="box" x="640" y="70" width="240" height="118" rx="4"/>
+  <text class="t-title" x="760" y="100" text-anchor="middle">③ 테스팅 · 디버깅</text>
+  <text class="t-sub" x="760" y="124" text-anchor="middle">logs · exec · port-forward · debug</text>
+  <text class="t-kpi" x="760" y="146" text-anchor="middle">KPI 예: 결함 원인 파악 소요 시간</text>
+
+  <!-- 이터레이션 루프: ③ → ② -->
+  <polyline class="line-loop" points="760,188 760,226 460,226 460,192" marker-end="url(#arrow23b)"/>
+  <text class="t-kpi" x="610" y="248" text-anchor="middle">이터레이션 루프 — 개발자는 하루 종일 ②↔③을 돈다</text>
+
+  <text class="t-cap" x="450" y="284" text-anchor="middle">개발 환경 설계는 이 세 단계 각각에 KPI를 정하고 측정하는 일이다. 느린 곳이 곧 개선 대상이다.</text>
+</svg>

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow72" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-wave { font-size: 12px; font-weight: 700; fill: #2456c4; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-wait { font-size: 11px; fill: #777777; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-wait { stroke: #999999; stroke-width: 1; stroke-dasharray: 3 3; }
+  </style>
+
+  <text class="t-wave" x="130" y="34" text-anchor="middle">WAVE 0 · 카나리</text>
+  <rect class="box-accent" x="30" y="46" width="200" height="90" rx="4"/>
+  <text class="t-title" x="130" y="76" text-anchor="middle">카나리 리전</text>
+  <text class="t-sub" x="130" y="96" text-anchor="middle">내부 팀 · 소수 실사용자</text>
+  <text class="t-sub" x="130" y="114" text-anchor="middle">트래픽 극소량</text>
+
+  <line class="line-wait" x1="230" y1="91" x2="290" y2="91"/>
+  <text class="t-wait" x="260" y="79" text-anchor="middle">대기</text>
+  <line class="line" x1="290" y1="91" x2="316" y2="91" marker-end="url(#arrow72)"/>
+
+  <text class="t-wave" x="440" y="34" text-anchor="middle">WAVE 1 · 최저 위험 프로덕션</text>
+  <rect class="box" x="320" y="46" width="240" height="90" rx="4"/>
+  <text class="t-title" x="440" y="76" text-anchor="middle">카나리와 가장 유사한 리전</text>
+  <text class="t-sub" x="440" y="96" text-anchor="middle">또는 트래픽이 가장 적은 리전</text>
+  <text class="t-sub" x="440" y="114" text-anchor="middle">문제 시 영향 범위 최소</text>
+
+  <line class="line-wait" x1="560" y1="91" x2="620" y2="91"/>
+  <text class="t-wait" x="590" y="79" text-anchor="middle">대기</text>
+  <line class="line" x1="620" y1="91" x2="646" y2="91" marker-end="url(#arrow72)"/>
+
+  <text class="t-wave" x="765" y="34" text-anchor="middle">WAVE 2..N · 나머지 리전</text>
+  <rect class="box" x="650" y="46" width="220" height="90" rx="4"/>
+  <text class="t-title" x="760" y="76" text-anchor="middle">순차 확대</text>
+  <text class="t-sub" x="760" y="96" text-anchor="middle">트래픽 큰 리전은 뒤로</text>
+  <text class="t-sub" x="760" y="114" text-anchor="middle">전 세계 100%</text>
+
+  <!-- time-to-smoke 설명 인셋 -->
+  <rect class="box" x="30" y="166" width="840" height="130" rx="6"/>
+  <text class="t-title" x="50" y="192">웨이브 사이 대기 시간 — "연기를 내기까지의 시간(time-to-smoke)"</text>
+
+  <line class="line" x1="60" y1="230" x2="820" y2="230"/>
+  <circle cx="60" cy="230" r="4" fill="#2456c4"/>
+  <text class="t-sub" x="60" y="250" text-anchor="middle">배포 완료</text>
+
+  <circle cx="280" cy="230" r="4" fill="#b23b3b"/>
+  <line class="line-wait" x1="280" y1="230" x2="280" y2="212"/>
+  <text class="t-sub" x="280" y="204" text-anchor="middle">과거 평균: 문제 발생 후 1시간 만에 감지</text>
+
+  <circle cx="500" cy="230" r="6" fill="#2456c4"/>
+  <line class="line" x1="500" y1="230" x2="500" y2="212"/>
+  <text class="t-title" x="500" y="204" text-anchor="middle">권장 대기: 평균의 2배 = 2시간</text>
+
+  <text class="t-sub" x="60" y="270">배포 직후 문제가 바로 터지는 경우도 있지만, 메모리 누수처럼 겉으로</text>
+  <text class="t-sub" x="60" y="286">드러나기까지 시간이 걸리는 문제도 있다 — 그래서 평균의 2배를 권장한다.</text>
+
+  <text class="t-cap" x="450" y="330" text-anchor="middle">이 절차를 손으로 하면 실수하기 쉽다. 2026년 현재는 ArgoCD ApplicationSet의 RollingSync 전략이</text>
+  <text class="t-cap" x="450" y="352" text-anchor="middle">이 웨이브·대기·헬스 게이트 구조를 코드로 그대로 구현한다 (아래 갱신 주석 참고).</text>
+</svg>

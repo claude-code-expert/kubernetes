@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D6 · 외부에서 들어오는 길 — Gateway API</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D5와 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 2단계 배포와 노출 · Day 6</p>
+  <h1>외부에서 들어오는 길 — Gateway API</h1>
+  <p class="lede">어제 서비스 두 개가 <code>localhost:8080</code>과 <code>8081</code>을 하나씩 차지했다. 서비스가 열 개면 포트 열 개다. 오늘은 진입점 하나(80번)를 세우고 경로와 호스트로 나눈다. 서비스는 L4(포트)까지, 그 위 L7(URL·헤더) 라우팅은 Gateway API가 맡는다. 표준(Gateway API)과 구현체(Envoy Gateway)를 구분해서 보고, 서비스는 전부 ClusterIP로 되돌려 Gateway 뒤로 숨긴다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D5 완료 · order-api·gateway 서비스가 LoadBalancer로 떠 있음</b></span>
+    <span>버전 <b>Gateway API v1 · Envoy Gateway v1.9.1 · Kubernetes v1.36</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트 B</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>GatewayClass·Gateway·HTTPRoute 세 오브젝트가 각각 누구의 것이고 무엇을 정하는지 말한다.</li>
+    <li>Envoy Gateway를 설치하고 <code>curl localhost/orders</code>가 ClusterIP 서비스까지 도달하게 한다.</li>
+    <li>HTTPRoute의 status 조건(<code>Accepted</code>, <code>ResolvedRefs</code>)으로 잘못된 backendRef를 진단한다.</li>
+    <li>경로 재작성(URLRewrite)과 가중치 분배(weight)를 HTTPRoute 한 파일로 설정한다.</li>
+    <li>빈 클러스터에서 D4~D6 매니페스트만으로 전체를 재구축한다(체크포인트 B).</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+  <p class="sub">서비스와 무엇이 다른지, 세 오브젝트의 역할 분리, 구현체가 실제로 만드는 것, 그리고 Ingress 리소스의 현재 위치.</p>
+
+  <h3>1.1 L4와 L7</h3>
+  <p>D5의 서비스는 "이 IP의 이 포트로 온 것은 저 파드들 중 하나로"까지만 안다. 패킷의 목적지 주소·포트만 보고 결정하는 <dfn title="Layer 4">L4</dfn>다. HTTP 요청 안의 URL 경로, 호스트 헤더, 메서드는 보지 않는다. 그래서 <code>/orders</code>는 order-api로, <code>/users</code>는 user-api로 나누려면 요청을 열어 읽는 <dfn title="Layer 7">L7</dfn> 프록시가 필요하다. 그 프록시를 어떻게 선언할지 정한 표준이 <dfn title="Gateway API">Gateway API</dfn>다.</p>
+
+  <h3>1.2 세 오브젝트, 세 역할</h3>
+  <table>
+    <thead><tr><th style="width:140px">오브젝트</th><th style="width:130px">누가 관리하나</th><th>무엇을 정하나</th></tr></thead>
+    <tbody>
+      <tr><td><code>GatewayClass</code></td><td>인프라 제공자</td><td>"어떤 구현체가 처리하나". 컨트롤러 이름 하나를 가리킨다. 클러스터 범위, 보통 하나.</td></tr>
+      <tr><td><code>Gateway</code></td><td>클러스터·플랫폼 운영자</td><td>"어디로 들어오나". 리스너(포트·프로토콜·호스트명·TLS)를 나열한다. 만들면 구현체가 실제 프록시 파드와 LoadBalancer 서비스를 띄운다.</td></tr>
+      <tr><td><code>HTTPRoute</code></td><td>애플리케이션 개발자</td><td>"어떤 요청을 어느 서비스로". Gateway에 붙어(<code>parentRefs</code>) 경로·헤더 매칭과 backendRefs를 정한다. 네임스페이스 범위.</td></tr>
+    </tbody>
+  </table>
+  <p>이 분리가 핵심이다. 개발자는 자기 네임스페이스에서 HTTPRoute만 만지고, 포트 80을 여는 결정과 TLS 인증서는 Gateway를 가진 쪽이 한다. 기본적으로 HTTPRoute는 같은 네임스페이스의 Gateway에만 붙을 수 있고, 다른 네임스페이스의 Gateway나 서비스를 참조하려면 상대편이 <code>ReferenceGrant</code>로 허락해야 한다. 오늘은 셋 다 <code>study</code>에 두어 그 문제를 피한다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 330" width="100%" role="img" aria-label="Gateway API 세 오브젝트와 구현체의 컨트롤·데이터 플레인">
+    <!-- API objects column -->
+    <text x="20" y="24" font-size="12" font-weight="600" fill="#1a1a1a">선언 (Gateway API 오브젝트)</text>
+    <rect x="20" y="36" width="250" height="60" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="56" font-size="12" font-weight="600" fill="#1d4ed8">GatewayClass eg</text>
+    <text x="32" y="74" class="mono" font-size="11" fill="#4a4a4a">controllerName:</text>
+    <text x="32" y="88" class="mono" font-size="11" fill="#4a4a4a">gateway.envoyproxy.io/…</text>
+    <rect x="20" y="112" width="250" height="76" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="32" y="132" font-size="12" font-weight="600" fill="#6d28d9">Gateway web-gateway (study)</text>
+    <text x="32" y="150" class="mono" font-size="11" fill="#4a4a4a">gatewayClassName: eg</text>
+    <text x="32" y="166" class="mono" font-size="11" fill="#4a4a4a">listeners: [http :80]</text>
+    <text x="32" y="182" font-size="11" fill="#767676">운영자</text>
+    <rect x="20" y="204" width="250" height="100" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="32" y="224" font-size="12" font-weight="600" fill="#15803d">HTTPRoute order-api-route</text>
+    <text x="32" y="242" class="mono" font-size="11" fill="#4a4a4a">parentRefs: web-gateway</text>
+    <text x="32" y="258" class="mono" font-size="11" fill="#4a4a4a">/orders → order-api:8080</text>
+    <text x="32" y="274" class="mono" font-size="11" fill="#4a4a4a">/gw/* → gateway:8081</text>
+    <text x="32" y="294" font-size="11" fill="#767676">개발자</text>
+    <line x1="145" y1="96" x2="145" y2="112" stroke="#767676" stroke-width="1.2"/>
+    <line x1="145" y1="188" x2="145" y2="204" stroke="#767676" stroke-width="1.2"/>
+    <!-- implementation column -->
+    <text x="330" y="24" font-size="12" font-weight="600" fill="#1a1a1a">구현 (Envoy Gateway가 만드는 것)</text>
+    <rect x="330" y="36" width="260" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="342" y="56" font-size="12" font-weight="600" fill="#1d4ed8">envoy-gateway (컨트롤 플레인)</text>
+    <text x="342" y="74" font-size="11" fill="#4a4a4a">세 오브젝트를 감시해</text>
+    <text x="342" y="90" font-size="11" fill="#4a4a4a">Envoy 설정(xDS)으로 변환</text>
+    <line x1="270" y1="66" x2="330" y2="66" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="270" y1="150" x2="330" y2="80" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="270" y1="254" x2="330" y2="90" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="278" y="120" font-size="10" fill="#767676">watch</text>
+    <line x1="460" y1="106" x2="460" y2="140" stroke="#1d4ed8" stroke-width="1.2"/><polygon points="456,134 460,142 464,134" fill="#1d4ed8"/>
+    <text x="468" y="128" font-size="10" fill="#1d4ed8">xDS</text>
+    <rect x="330" y="144" width="260" height="130" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="342" y="164" font-size="12" font-weight="600" fill="#6d28d9">Gateway마다 하나씩 (데이터 플레인)</text>
+    <rect x="342" y="176" width="236" height="40" rx="2" fill="#fff" stroke="#15803d" stroke-width="1.2"/>
+    <text x="352" y="193" font-size="11" fill="#15803d">Deployment envoy-study-web-gateway-…</text>
+    <text x="352" y="209" font-size="11" fill="#4a4a4a">Envoy 프록시 파드 · 실제로 요청을 받는 곳</text>
+    <rect x="342" y="224" width="236" height="40" rx="2" fill="#fff" stroke="#6d28d9" stroke-width="1.2"/>
+    <text x="352" y="241" font-size="11" fill="#6d28d9">Service (LoadBalancer) :80</text>
+    <text x="352" y="257" font-size="11" fill="#4a4a4a">Docker Desktop → localhost:80</text>
+    <text x="330" y="300" font-size="11" fill="#767676">둘 다 envoy-gateway-system 네임스페이스에 생긴다</text>
+    <!-- backends -->
+    <text x="650" y="24" font-size="12" font-weight="600" fill="#1a1a1a">뒤 (D5의 서비스)</text>
+    <rect x="650" y="176" width="230" height="40" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="662" y="200" font-size="12" fill="#6d28d9">Service order-api (ClusterIP :8080)</text>
+    <rect x="650" y="224" width="230" height="40" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="662" y="248" font-size="12" fill="#6d28d9">Service gateway (ClusterIP :8081)</text>
+    <line x1="590" y1="196" x2="650" y2="196" stroke="#767676" stroke-width="1.2"/><polygon points="644,192 652,196 644,200" fill="#767676"/>
+    <line x1="590" y1="196" x2="650" y2="244" stroke="#767676" stroke-width="1.2"/><polygon points="643,241 652,244 645,249" fill="#767676"/>
+    <text x="650" y="290" font-size="11" fill="#767676">Envoy는 서비스 IP가 아니라 엔드포인트슬라이스의</text>
+    <text x="650" y="306" font-size="11" fill="#767676">파드 IP로 직접 보낸다</text>
+  </svg>
+  <figcaption>도판 1. 왼쪽은 내가 쓰는 세 파일, 가운데는 그 결과로 생기는 파드·서비스, 오른쪽은 어제 만든 서비스. 파랑=클래스·컨트롤 플레인, 보라=진입점·네트워크, 초록=라우트·프록시 파드.</figcaption>
+  </figure>
+
+  <h3>1.3 구현체가 하는 일</h3>
+  <p>Gateway API는 CRD(사용자 정의 리소스)로 이루어진 <b>명세</b>일 뿐이다. 오브젝트를 만들어도 그것을 읽어 프록시를 띄우는 컨트롤러가 없으면 아무 일도 안 생긴다. 오늘 쓰는 <dfn title="Envoy Gateway">Envoy Gateway</dfn>는 CNCF의 Envoy 프록시를 데이터 플레인으로 쓰는 구현체다. Helm 차트 하나가 CRD와 컨트롤러(<code>envoy-gateway</code> 디플로이먼트)를 설치하고, 이후 Gateway를 만들 때마다 Envoy 파드 + LoadBalancer 서비스를 <code>envoy-gateway-system</code>에 생성한다. Docker Desktop이 그 LoadBalancer를 <code>localhost</code>로 열어 주는 것은 D5와 같은 원리다.</p>
+  <p>구현체는 여럿이다(Envoy Gateway, Cilium, Istio, NGINX Gateway Fabric, 클라우드 LB 컨트롤러). HTTPRoute 파일은 어느 구현체에서도 같다. 그래서 표준을 배우는 것이 구현체 하나의 설정 문법을 배우는 것보다 오래 간다.</p>
+
+  <h3>1.4 HTTPRoute가 할 수 있는 것</h3>
+  <table>
+    <thead><tr><th style="width:170px">기능</th><th>필드</th><th style="width:160px">오늘</th></tr></thead>
+    <tbody>
+      <tr><td>경로 매칭</td><td><code>matches.path</code> — <code>PathPrefix</code> / <code>Exact</code> / <code>RegularExpression</code></td><td>3단계</td></tr>
+      <tr><td>호스트 매칭</td><td><code>hostnames</code> — 리스너 hostname과 교집합</td><td>3단계</td></tr>
+      <tr><td>헤더·쿼리·메서드 매칭</td><td><code>matches.headers / queryParams / method</code></td><td>6단계 (헤더)</td></tr>
+      <tr><td>경로 재작성</td><td><code>filters[type=URLRewrite]</code></td><td>5단계</td></tr>
+      <tr><td>헤더 추가·제거</td><td><code>filters[type=RequestHeaderModifier]</code></td><td>5단계</td></tr>
+      <tr><td>리다이렉트</td><td><code>filters[type=RequestRedirect]</code></td><td>8단계 (HTTP→HTTPS)</td></tr>
+      <tr><td>가중치 분배</td><td><code>backendRefs[].weight</code></td><td>6단계</td></tr>
+      <tr><td>TLS 종료</td><td>Gateway 리스너 <code>tls.certificateRefs</code></td><td>8단계</td></tr>
+    </tbody>
+  </table>
+  <p>Envoy Gateway는 이 밖에 인증·속도 제한·타임아웃을 자체 CRD(<code>SecurityPolicy</code>, <code>BackendTrafficPolicy</code>)로 붙인다. 표준을 넘는 기능은 구현체마다 다르므로 오늘은 표준 필드만 쓴다.</p>
+
+  <h3>1.5 Ingress 리소스의 위치</h3>
+  <p><code>networking.k8s.io/v1</code>의 <dfn title="Ingress">Ingress</dfn>는 지금도 API에 있고 제거 계획이 없다. 다만 기능이 동결됐고(feature-frozen) 새 기능은 Gateway API에만 들어간다. Ingress도 컨트롤러가 있어야 동작하는데, 널리 쓰이던 커뮤니티 ingress-nginx 컨트롤러는 2026년 3월 은퇴해 보안 패치가 없다. 신규 구성은 Gateway API로 만들고, 기존 Ingress 파일이 있으면 <code>ingress2gateway</code>로 변환한다. 7단계에서 같은 라우팅을 Ingress로 적어 두 문법을 비교하고 변환 도구를 돌려 본다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · Envoy Gateway 설치</h2>
+<pre><code><span class="p">$</span> cd ~/k8s-study &amp;&amp; mkdir -p day06 &amp;&amp; cd day06
+<span class="p">$</span> kubectl get svc
+<span class="c">NAME        TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+gateway     LoadBalancer   10.96.201.44   localhost     8081:30213/TCP   1d
+order-api   LoadBalancer   10.96.34.18    localhost     8080:31742/TCP   1d</span>
+
+<span class="p">$</span> helm install eg oci://docker.io/envoyproxy/gateway-helm \
+    --version v1.9.1 -n envoy-gateway-system --create-namespace
+<span class="c">Pulled: docker.io/envoyproxy/gateway-helm:v1.9.1
+NAME: eg
+NAMESPACE: envoy-gateway-system
+STATUS: deployed</span>
+
+<span class="p">$</span> kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+<span class="c">deployment.apps/envoy-gateway condition met</span>
+
+<span class="p">$</span> kubectl get crd | grep -E 'gateway.networking.k8s.io' | cut -d. -f1
+<span class="c">backendtlspolicies
+gatewayclasses
+gateways
+grpcroutes
+httproutes
+referencegrants
+...</span>
+
+<span class="p">$</span> kubectl api-resources --api-group=gateway.networking.k8s.io -o name
+<span class="c">gatewayclasses.gateway.networking.k8s.io
+gateways.gateway.networking.k8s.io
+grpcroutes.gateway.networking.k8s.io
+httproutes.gateway.networking.k8s.io
+referencegrants.gateway.networking.k8s.io</span></code></pre>
+  <p class="expect"><b>확인</b> — 차트가 Gateway API CRD를 함께 설치했다. <code>kubectl api-resources</code>에 <code>httproutes</code>가 보이면 이제 API 서버가 <code>kind: HTTPRoute</code>를 받아 준다. 컨트롤러 파드는 <code>envoy-gateway-system</code>에 하나뿐이다(데이터 플레인은 아직 없다). 어제 서비스 둘이 아직 LoadBalancer인 것을 확인해 두고, 3단계 뒤에 되돌린다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>GatewayClass와 Gateway: 진입점을 세운다</h3>
+    <p class="why">파일 하나에 둘을 적는다. Gateway를 만들면 Envoy 파드가 생기는 것을 본다.</p>
+<pre><code><span class="p">$</span> cat &gt; gateway-api.yaml &lt;&lt;'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: web-gateway
+  namespace: study
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: Same
+EOF
+<span class="p">$</span> kubectl apply -f gateway-api.yaml
+<span class="c">gatewayclass.gateway.networking.k8s.io/eg created
+gateway.gateway.networking.k8s.io/web-gateway created</span>
+
+<span class="p">$</span> sleep 15 &amp;&amp; kubectl get gatewayclass,gateway
+<span class="c">NAME                                        CONTROLLER                                      ACCEPTED   AGE
+gatewayclass.gateway.networking.k8s.io/eg   gateway.envoyproxy.io/gatewayclass-controller   True       15s
+
+NAME                                             CLASS   ADDRESS     PROGRAMMED   AGE
+gateway.gateway.networking.k8s.io/web-gateway    eg      localhost   True         15s</span>
+
+<span class="p">$</span> kubectl get pods,svc -n envoy-gateway-system
+<span class="c">NAME                                                 READY   STATUS    RESTARTS   AGE
+pod/envoy-gateway-6f8c9d7b5-x2m4k                    1/1     Running   0          5m
+pod/envoy-study-web-gateway-3a1f2c9e-7b8d9c6f5-q4w2e  2/2     Running   0          15s
+
+NAME                                        TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/envoy-gateway                       ClusterIP      10.96.77.12    &lt;none&gt;        18000/TCP,...  5m
+service/envoy-study-web-gateway-3a1f2c9e    LoadBalancer   10.96.150.3    localhost     80:31009/TCP   15s</span>
+
+<span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' localhost/
+<span class="c">404</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — Gateway가 <code>PROGRAMMED True</code>, ADDRESS <code>localhost</code>. 그 순간 <code>envoy-gateway-system</code>에 <code>envoy-study-web-gateway-…</code> 파드(Envoy 프록시)와 LoadBalancer 서비스가 생겼다. 이름에 네임스페이스와 Gateway 이름이 박혀 있다. <code>localhost/</code>는 404다. 문은 열렸는데 아직 아무 데도 연결하지 않았기 때문이다. 404를 Envoy가 돌려줬다는 것 자체가 경로가 열렸다는 증거다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>서비스를 ClusterIP로 되돌린다</h3>
+    <p class="why">진입점이 생겼으니 서비스가 직접 밖으로 나갈 이유가 없다. 파일을 원본으로 되돌린다.</p>
+<pre><code><span class="p">$</span> kubectl apply -f ../day05/order-api-svc.yaml
+<span class="c">service/order-api configured</span>
+<span class="p">$</span> sed -i.bak 's/  type: LoadBalancer/  type: ClusterIP/' ../day05/gateway.yaml &amp;&amp; rm ../day05/gateway.yaml.bak
+<span class="p">$</span> kubectl apply -f ../day05/gateway.yaml
+<span class="p">$</span> kubectl get svc
+<span class="c">NAME        TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+gateway     ClusterIP   10.96.201.44   &lt;none&gt;        8081/TCP   1d
+order-api   ClusterIP   10.96.34.18    &lt;none&gt;        8080/TCP   1d</span>
+<span class="p">$</span> curl -s -m 2 localhost:8080/ ; echo "exit=$?"
+<span class="c">exit=7</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>localhost:8080</code>이 닫혔다(exit 7 = 연결 실패). 이제 밖에서 앱에 닿는 길은 <code>localhost:80</code> 하나뿐이고, 그 문 뒤에서 어디로 보낼지는 다음 단계의 HTTPRoute가 정한다. ClusterIP 두 개는 그대로 살아 있다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>HTTPRoute: 경로를 서비스에 잇는다</h3>
+    <p class="why">개발자 몫의 파일. <code>/orders</code>는 order-api로.</p>
+<pre><code><span class="p">$</span> cat &gt; order-api-route.yaml &lt;&lt;'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: order-api-route
+  namespace: study
+spec:
+  parentRefs:
+  - name: web-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /orders
+    backendRefs:
+    - name: order-api
+      port: 8080
+EOF
+<span class="p">$</span> kubectl apply -f order-api-route.yaml
+<span class="p">$</span> kubectl get httproute order-api-route
+<span class="c">NAME              HOSTNAMES   AGE
+order-api-route               5s</span>
+
+<span class="p">$</span> kubectl get httproute order-api-route -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} ({.reason}){"\n"}{end}'
+<span class="c">Accepted=True (Accepted)
+ResolvedRefs=True (ResolvedRefs)</span>
+
+<span class="p">$</span> for i in 1 2 3 4; do curl -s localhost/orders | cut -c1-58; echo; done
+<span class="c">{"version":"v2","host":"order-api-5b8d7c9f2-n8v3x","orde
+{"version":"v2","host":"order-api-5b8d7c9f2-p4r7t","orde
+{"version":"v2","host":"order-api-5b8d7c9f2-w2e5r","orde
+{"version":"v2","host":"order-api-5b8d7c9f2-n8v3x","orde</span>
+<span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' localhost/
+<span class="c">404</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>localhost/orders</code>가 여러 파드로 분산돼 응답한다. <code>localhost/</code>는 여전히 404다. HTTPRoute가 <code>/orders</code>만 알기 때문이다. status의 두 조건이 진단의 전부다. <code>Accepted</code>는 "Gateway가 이 라우트를 받아 줬나", <code>ResolvedRefs</code>는 "backendRefs가 실제 서비스를 가리키나". 서비스 셀렉터 오류(D5 4단계)와 달리 이쪽은 상태 필드에 이유가 적힌다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>고장: 없는 서비스를 가리키면</h3>
+    <p class="why">backendRef 오타. status 조건이 어떻게 바뀌고 클라이언트는 무엇을 받는지.</p>
+<pre><code><span class="p">$</span> sed 's/name: order-api$/name: order-apu/' order-api-route.yaml | kubectl apply -f -
+<span class="p">$</span> kubectl get httproute order-api-route -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} ({.reason}){"\n"}{end}'
+<span class="c">Accepted=True (Accepted)
+ResolvedRefs=False (BackendNotFound)</span>
+<span class="p">$</span> kubectl get httproute order-api-route -o jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].message}{"\n"}'
+<span class="c">Service study/order-apu not found</span>
+<span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' localhost/orders
+<span class="c">500</span>
+
+<span class="p">$</span> kubectl apply -f order-api-route.yaml
+<span class="p">$</span> sleep 2 &amp;&amp; curl -s -o /dev/null -w '%{http_code}\n' localhost/orders
+<span class="c">200</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 라우트는 받아들여졌지만(<code>Accepted=True</code>) 참조가 안 풀렸다(<code>BackendNotFound</code>, 메시지에 이름까지). 클라이언트는 500을 받는다. 404가 아니라 500인 이유는 "경로는 매칭됐는데 보낼 곳이 없다"이기 때문이다. 404=경로 없음, 500=경로는 있는데 백엔드 없음, 503=백엔드는 있는데 파드가 준비 안 됨. 이 셋을 구분하면 어느 층이 고장인지 바로 안다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>두 번째 경로와 재작성: <code>/gw/orders</code> → gateway → order-api</h3>
+    <p class="why">D5의 gateway 앱은 <code>/orders</code>만 안다. 밖에서 <code>/gw/…</code>로 받아 접두사를 떼고 넘긴다. 요청 헤더도 하나 얹어 어느 경로로 들어왔는지 앱이 알게 한다.</p>
+<pre><code><span class="p">$</span> cat &gt; gateway-route.yaml &lt;&lt;'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gateway-route
+  namespace: study
+spec:
+  parentRefs:
+  - name: web-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /gw
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: X-Entry
+          value: web-gateway
+    backendRefs:
+    - name: gateway
+      port: 8081
+EOF
+<span class="p">$</span> kubectl apply -f gateway-route.yaml
+<span class="p">$</span> sleep 2 &amp;&amp; curl -s localhost/gw/orders | cut -c1-58; echo
+<span class="c">{"version":"v2","host":"order-api-5b8d7c9f2-w2e5r","orde</span>
+<span class="p">$</span> kubectl get httproute
+<span class="c">NAME              HOSTNAMES   AGE
+gateway-route                 20s
+order-api-route               12m</span>
+<span class="p">$</span> kubectl logs deployment/gateway --tail=3 | grep -i orders || echo "(gateway 앱은 기본 로그를 남기지 않는다)"</code></pre>
+    <p class="expect"><b>읽을 것</b> — 요청이 두 번 라우팅됐다. Envoy가 <code>/gw/orders</code>를 <code>/orders</code>로 바꿔 gateway 서비스로, gateway 앱이 다시 order-api로. 응답은 같은 order-api 파드들에서 온다. HTTPRoute 두 개가 같은 Gateway에 붙어 있고 경로 접두사로 갈린다. 더 긴 접두사가 우선하므로 <code>/gw</code>와 <code>/</code>가 함께 있어도 충돌하지 않는다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>가중치와 헤더 매칭: v1을 10%만 섞는다</h3>
+    <p class="why">D4의 v1 이미지로 두 번째 디플로이먼트를 띄우고, 한 경로에서 90:10으로 나눈다. 특정 헤더가 있으면 100% v1으로.</p>
+<pre><code><span class="p">$</span> cat &gt; order-api-canary.yaml &lt;&lt;'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-api-canary
+  template:
+    metadata:
+      labels:
+        app: order-api-canary
+    spec:
+      containers:
+      - name: app
+        image: order-api:v1
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api-canary
+spec:
+  selector:
+    app: order-api-canary
+  ports:
+  - port: 8080
+    targetPort: 8080
+EOF
+<span class="p">$</span> kubectl apply -f order-api-canary.yaml &amp;&amp; kubectl rollout status deployment/order-api-canary
+
+<span class="p">$</span> cat &gt; order-api-route.yaml &lt;&lt;'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: order-api-route
+  namespace: study
+spec:
+  parentRefs:
+  - name: web-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /orders
+      headers:
+      - name: X-Canary
+        value: "true"
+    backendRefs:
+    - name: order-api-canary
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /orders
+    backendRefs:
+    - name: order-api
+      port: 8080
+      weight: 90
+    - name: order-api-canary
+      port: 8080
+      weight: 10
+EOF
+<span class="p">$</span> kubectl apply -f order-api-route.yaml
+<span class="p">$</span> sleep 2 &amp;&amp; for i in $(seq 1 30); do curl -s localhost/orders | cut -d'"' -f4; done | sort | uniq -c
+<span class="c">  27 v2
+   3 v1</span>
+<span class="p">$</span> for i in 1 2 3; do curl -s -H 'X-Canary: true' localhost/orders | cut -d'"' -f4; done
+<span class="c">v1
+v1
+v1</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 규칙은 위에서부터 평가되고, 더 구체적인 매칭(경로+헤더)이 경로만 있는 것보다 우선한다. 헤더가 있으면 첫 규칙으로 100% v1, 없으면 둘째 규칙으로 90:10. 30번 중 v1이 정확히 3번은 아닐 수 있다(확률). 이 파일 한 장이 카나리 배포의 전부이고, D13에서 가중치를 단계적으로 옮기며 D11의 대시보드로 오류율을 비교한다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>같은 라우팅을 Ingress로 적어 보고 변환한다</h3>
+    <p class="why">기존 매니페스트를 만났을 때 읽을 수 있어야 한다. Ingress에는 컨트롤러가 없으므로 이 클러스터에서는 아무 일도 안 생긴다.</p>
+<pre><code><span class="p">$</span> cat &gt; legacy-ingress.yaml &lt;&lt;'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: order-api-ingress
+  namespace: study
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /orders
+        pathType: Prefix
+        backend:
+          service:
+            name: order-api
+            port:
+              number: 8080
+EOF
+<span class="p">$</span> kubectl apply -f legacy-ingress.yaml
+<span class="p">$</span> kubectl get ingress
+<span class="c">NAME                CLASS   HOSTS   ADDRESS   PORTS   AGE
+order-api-ingress   nginx   *                 80      5s</span>
+<span class="p">$</span> kubectl get ingressclass
+<span class="c">No resources found</span>
+<span class="p">$</span> kubectl delete -f legacy-ingress.yaml</code></pre>
+    <p class="expect"><b>읽을 것</b> — ADDRESS가 비어 있다. <code>nginx</code>라는 IngressClass도, 그것을 처리할 컨트롤러도 없어서 오브젝트만 저장됐다. Ingress는 경로·백엔드까지는 같지만 재작성·헤더·가중치는 표준 필드가 없어 컨트롤러별 어노테이션으로 해 왔다. 그 어노테이션을 HTTPRoute 필드로 옮겨 주는 것이 <code>ingress2gateway</code>다.</p>
+<pre><code><span class="c"># 변환 도구 (선택) — GitHub 릴리스에서 macOS arm64 바이너리를 받아 실행</span>
+<span class="p">$</span> I2G=https://github.com/kubernetes-sigs/ingress2gateway/releases/download/v1.1.0
+<span class="p">$</span> curl -sSL "$I2G/ingress2gateway_Darwin_arm64.tar.gz" | tar xz ingress2gateway
+<span class="p">$</span> ./ingress2gateway print --providers=ingress-nginx --input-file=legacy-ingress.yaml
+<span class="c">apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: nginx
+  namespace: study
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: order-api-ingress-all-hosts
+  namespace: study
+spec:
+  parentRefs:
+  - name: nginx
+  rules:
+  - backendRefs:
+    - name: order-api
+      port: 8080
+    matches:
+    - path:
+        type: PathPrefix
+        value: /orders</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 3단계에서 손으로 쓴 HTTPRoute와 같은 구조가 나온다. Gateway 이름과 클래스는 Ingress의 클래스명을 따라 <code>nginx</code>로 생성되므로 실제로 쓰려면 <code>eg</code>·<code>web-gateway</code>로 바꾼다. 릴리스 파일명·플래그는 <code>./ingress2gateway print --help</code>로 한 번 확인한다. Intel Mac은 <code>Darwin_x86_64</code>, Linux는 <code>Linux_x86_64</code>.</p>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step" id="s8">
+    <h3><span class="sn">8</span>TLS 리스너 (선택): 443을 열고 80은 리다이렉트</h3>
+    <p class="why">자체 서명 인증서로 TLS 종료를 Gateway에 맡긴다. 앱은 여전히 평문 8080만 안다.</p>
+<pre><code><span class="p">$</span> openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
+    -keyout tls.key -out tls.crt -subj "/CN=study.local" \
+    -addext "subjectAltName=DNS:study.local" 2&gt;/dev/null
+<span class="p">$</span> kubectl create secret tls study-local-tls --cert=tls.crt --key=tls.key
+<span class="p">$</span> rm tls.key tls.crt
+
+<span class="p">$</span> cat &gt; gateway-api.yaml &lt;&lt;'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: web-gateway
+  namespace: study
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: Same
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: study.local
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: study-local-tls
+    allowedRoutes:
+      namespaces:
+        from: Same
+EOF
+<span class="p">$</span> kubectl apply -f gateway-api.yaml
+<span class="p">$</span> sleep 5 &amp;&amp; kubectl get gateway web-gateway -o jsonpath='{range .status.listeners[*]}{.name}: {range .conditions[?(@.type=="Programmed")]}{.status}{end}{"\n"}{end}'
+<span class="c">http: True
+https: True</span>
+
+<span class="p">$</span> curl -sk --resolve study.local:443:127.0.0.1 https://study.local/orders | cut -c1-40; echo
+<span class="c">{"version":"v2","host":"order-api-5b8d7</span>
+<span class="p">$</span> curl -sk --resolve study.local:443:127.0.0.1 -o /dev/null -w '%{ssl_verify_result} %{http_code}\n' https://study.local/orders
+<span class="c">18 200</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 리스너 둘 다 <code>Programmed</code>. HTTPRoute는 <code>parentRefs</code>에 리스너 이름을 안 적었으므로 두 리스너에 다 붙는다. <code>--resolve</code>는 DNS 없이 <code>study.local</code>을 127.0.0.1로 보내는 curl 옵션이고, <code>-k</code>는 자체 서명 인증서를 허용한다(<code>ssl_verify_result 18</code> = 자체 서명). 인증서는 Secret에, 종료는 Envoy에, 앱은 모른다. 80을 443으로 보내려면 http 리스너에 붙는 HTTPRoute에 <code>RequestRedirect</code>(scheme https, statusCode 301) 필터를 두면 된다. 오늘은 80을 열어 둔 채로 간다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트 B · 빈 클러스터에서 재구축</h2>
+  <p class="sub">2단계(D4~D6)의 관문. 파일만으로 전부 다시 올린다. 클러스터를 지우지는 않고, study 네임스페이스만 지운다.</p>
+  <div class="check">
+    <ol>
+      <li><code>kubectl delete ns study</code>로 실습 리소스를 전부 지운다(Gateway·HTTPRoute 포함. envoy-gateway-system은 남는다).</li>
+      <li><code>~/k8s-study</code>의 파일만 사용해 네임스페이스 → order-api 디플로이먼트·서비스 → gateway 디플로이먼트·서비스 → GatewayClass·Gateway → HTTPRoute 순서로 apply한다. 문서를 보지 않는다.</li>
+      <li><code>curl http://localhost/orders</code>가 200과 v2 응답을 돌려주고, <code>curl http://localhost/gw/orders</code>도 200이다.</li>
+      <li>HTTPRoute 하나의 backendRef를 틀리게 고쳐 <code>ResolvedRefs=False</code>를 만들고, message를 읽은 뒤 되돌린다.</li>
+      <li>목표 시간 10분. 넘기면 어느 파일이 어디에 있는지 몰라서였는지, 순서를 몰라서였는지 적어 둔다. 그 답이 D13(Helm)의 동기다.</li>
+    </ol>
+  </div>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">Gateway·HTTPRoute·서비스·디플로이먼트 전부 남긴다. 카나리 디플로이먼트도 D13까지 둔다.</p>
+<pre><code><span class="p">$</span> kubectl get gateway,httproute,svc,deploy
+<span class="c">NAME                                            CLASS   ADDRESS     PROGRAMMED   AGE
+gateway.gateway.networking.k8s.io/web-gateway   eg      localhost   True         1h
+
+NAME                                                  HOSTNAMES   AGE
+httproute.gateway.networking.k8s.io/gateway-route                 40m
+httproute.gateway.networking.k8s.io/order-api-route               1h
+
+NAME                       TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/gateway            ClusterIP   10.96.201.44   &lt;none&gt;        8081/TCP   1d
+service/order-api          ClusterIP   10.96.34.18    &lt;none&gt;        8080/TCP   1d
+service/order-api-canary   ClusterIP   10.96.88.201   &lt;none&gt;        8080/TCP   30m
+
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gateway            2/2     2            2           1d
+deployment.apps/order-api          4/4     4            4           2d
+deployment.apps/order-api-canary   1/1     1            1           30m</span>
+
+<span class="p">$</span> ls ~/k8s-study/day06
+<span class="c">gateway-api.yaml  gateway-route.yaml  order-api-canary.yaml  order-api-route.yaml  legacy-ingress.yaml</span></code></pre>
+  <p>밖에서 닿는 포트는 이제 <code>localhost:80</code>(과 선택 실습의 443)뿐이다. 앱 서비스는 전부 ClusterIP다. 이 상태가 D14까지의 기본 배치다.</p>
+
+  <div class="note">
+    <h5>D7 예고</h5>
+    <p>order-api의 설정값(포트, 주문 목록 크기, 로그 레벨)이 지금은 이미지 안에 있다. 내일은 그것을 ConfigMap과 Secret으로 빼내 환경 변수·볼륨으로 주입하고, 값을 고쳤을 때 앱이 언제부터 새 값을 쓰는지를 주입 방식별로 확인한다. 그리고 1주차 종합: D3~D7 파일을 디렉터리 하나로 정리한다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>Gateway API 공식 문서 — <a href="https://gateway-api.sigs.k8s.io/">gateway-api.sigs.k8s.io</a> · HTTPRoute 레퍼런스 — <a href="https://gateway-api.sigs.k8s.io/api-types/httproute/">gateway-api.sigs.k8s.io/api-types/httproute/</a> · Gateway — <a href="https://gateway-api.sigs.k8s.io/api-types/gateway/">gateway-api.sigs.k8s.io/api-types/gateway/</a></li>
+    <li>Envoy Gateway 퀵스타트 — <a href="https://gateway.envoyproxy.io/docs/tasks/quickstart/">gateway.envoyproxy.io/docs/tasks/quickstart/</a> · v1.9.1 릴리스 — <a href="https://github.com/envoyproxy/gateway/releases">github.com/envoyproxy/gateway/releases</a> · 호환성 매트릭스 — <a href="https://gateway.envoyproxy.io/news/releases/matrix/">gateway.envoyproxy.io/news/releases/matrix/</a></li>
+    <li>쿠버네티스 Gateway API 개념 — <a href="https://kubernetes.io/docs/concepts/services-networking/gateway/">kubernetes.io/docs/concepts/services-networking/gateway/</a> · Ingress — <a href="https://kubernetes.io/ko/docs/concepts/services-networking/ingress/">kubernetes.io/ko/docs/concepts/services-networking/ingress/</a></li>
+    <li>ingress-nginx 은퇴 성명 — <a href="https://kubernetes.io/blog/2026/01/29/ingress-nginx-statement/">kubernetes.io/blog/2026/01/29/ingress-nginx-statement/</a> · ingress2gateway 릴리스(v1.1.0) — <a href="https://github.com/kubernetes-sigs/ingress2gateway/releases">github.com/kubernetes-sigs/ingress2gateway/releases</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day05-services-networking.html">← D5 서비스와 네트워킹</a><a href="day07-configmap-secret-week1-review.html">D7 컨피그맵·시크릿·1주차 종합 →</a></div>
+</div></footer>
+</body>
+</html>

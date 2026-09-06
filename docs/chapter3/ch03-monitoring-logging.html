@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH03 모니터링과 로깅 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 14.5px; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 03</div>
+  <h1>모니터링과 로깅</h1>
+  <p class="ch-desc">파드는 계속 생겼다 사라지고 IP는 매번 바뀐다 — 서버에 SSH로 들어가 로그를 보던 방식은 여기서 무너진다. 이 장은 그 대안이다: 메트릭과 로그를 중앙에서 수집하고(프로메테우스·로키), 시각화하고(그라파나), 사람이 움직여야 할 때만 알린다(얼럿매니저). 각 툴의 특징·설치·사용법을 0장 kind 클러스터에서 바로 따라 할 수 있는 튜토리얼로 정리했다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함 · 실습 명령은 0장 kind 클러스터 기준 검증</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 메트릭 파이프라인은 두 갈래다 — 메트릭 서버(최신값, kubectl top·HPA용)와 프로메테우스(시계열 저장, 분석·알림용). 역할이 달라 둘 다 필요하다.</p>
+  <p>2. 설치는 헬름 두 방이면 끝난다 — kube-prometheus-stack(프로메테우스+그라파나+얼럿매니저 일괄), 로키+Alloy(로그). 수집기는 Promtail이 아니라 Alloy다(2026-03 Promtail EOL).</p>
+  <p>3. 모니터링은 USE/RED 패턴으로 "무엇을 볼지"를 먼저 정하고, 알림은 "사람이 지금 행동할 일"만 보낸다 — 나머지는 대시보드와 티켓으로.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s3-1"><span class="num">3.1</span>메트릭 vs 로그</a>
+  <a href="#s3-2"><span class="num">3.2</span>모니터링 기법</a>
+  <a href="#s3-3"><span class="num">3.3</span>모니터링 패턴</a>
+  <a href="#s3-4"><span class="num">3.4</span>쿠버네티스 메트릭 개요</a>
+  <a href="#s3-5"><span class="num">3.5</span>어떤 메트릭을 모니터링하나?</a>
+  <a href="#s3-6"><span class="num">3.6</span>모니터링 툴</a>
+  <a href="#s3-7"><span class="num">3.7</span>프로메테우스를 이용한 쿠버네티스 모니터링</a>
+  <a href="#s3-8"><span class="num">3.8</span>로깅 개요</a>
+  <a href="#s3-9"><span class="num">3.9</span>로깅 툴</a>
+  <a href="#s3-10"><span class="num">3.10</span>로키 스택을 사용한 로깅</a>
+  <a href="#s3-11"><span class="num">3.11</span>알림</a>
+  <a href="#s3-12"><span class="num">3.12</span>모니터링, 로깅, 알림 모범 사례</a>
+</nav>
+
+<section id="s3-1">
+  <h2 class="sec"><span class="num">3.1</span>메트릭 vs 로그</h2>
+  <p class="lead">둘은 대체재가 아니라 짝이다. <dfn class="term">메트릭 <span class="en">(Metric)</span></dfn>은 일정 주기로 측정한 숫자의 <dfn class="term">시계열 <span class="en">(Time Series)</span></dfn> — 시간 축 위에 찍힌 값의 나열 — 이고, 로그는 특정 순간에 일어난 사건의 기록이다.</p>
+  <table>
+    <tr><th></th><th>메트릭</th><th>로그</th></tr>
+    <tr><td>답하는 질문</td><td>"무엇이, 얼마나, 언제부터 이상한가"</td><td>"왜 그런 일이 일어났는가"</td></tr>
+    <tr><td>형태</td><td>숫자 + 레이블 (CPU 사용률 = 0.82)</td><td>텍스트 이벤트 (요청 처리 중 예외 발생 …)</td></tr>
+    <tr><td>비용</td><td>싸다 — 오래 보관 가능</td><td>비싸다 — 보존 기간을 짧게</td></tr>
+    <tr><td>쓰임</td><td>대시보드 · 알림 · 오토스케일링</td><td>원인 분석 · 감사 추적</td></tr>
+  </table>
+  <p>실전 순서는 대개 이렇다: 메트릭 알림으로 이상을 <strong>감지</strong>하고 → 대시보드로 범위를 <strong>좁힌</strong> 뒤 → 그 시간대 로그로 원인을 <strong>확정</strong>한다.</p>
+</section>
+
+<section id="s3-2">
+  <h2 class="sec"><span class="num">3.2</span>모니터링 기법</h2>
+  <p>관찰 위치에 따라 두 기법으로 나뉜다. <dfn class="term">블랙박스 모니터링 <span class="en">(Black-box Monitoring)</span></dfn>은 시스템 바깥에서 사용자처럼 두드려 보는 방식이다 — "HTTP 200이 오는가", "응답이 3초 안에 오는가". 내부를 몰라도 되고, 사용자가 겪는 증상을 그대로 본다. <dfn class="term">화이트박스 모니터링 <span class="en">(White-box Monitoring)</span></dfn>은 시스템 내부가 스스로 드러내는 지표를 보는 방식이다 — 큐 길이, 캐시 적중률, GC 시간. 원인 단서를 준다.</p>
+  <p>쿠버네티스처럼 구성 요소가 수시로 나타났다 사라지는 동적 환경에서는 "서버 A가 죽었는가"식 정적 점검이 무의미해진다. 그래서 이 장의 도구들은 화이트박스 중심으로, 대상을 <strong>자동 발견</strong>해 지표를 긁어오는 구조를 갖는다.</p>
+</section>
+
+<section id="s3-3">
+  <h2 class="sec"><span class="num">3.3</span>모니터링 패턴</h2>
+  <p>"무엇을 볼 것인가"에는 검증된 두 공식이 있다. 자원에는 USE, 서비스에는 RED.</p>
+  <table>
+    <tr><th>패턴</th><th>풀네임</th><th>대상</th><th>보는 것</th></tr>
+    <tr><td><dfn class="term">USE</dfn></td><td>Utilization · Saturation · Errors</td><td>자원 (노드 CPU, 메모리, 디스크, 네트워크)</td><td>사용률 / 포화도(대기 큐) / 에러 수</td></tr>
+    <tr><td><dfn class="term">RED</dfn></td><td>Rate · Errors · Duration</td><td>서비스 (API, 마이크로서비스)</td><td>초당 요청 수 / 실패율 / 응답 시간</td></tr>
+  </table>
+  <p>이 여섯 지표만 갖춰도 "느려요"라는 신고에 대해 자원 문제인지(USE) 서비스 문제인지(RED)를 몇 분 안에 갈라낼 수 있다. 이후 절의 대시보드·알림 예시도 전부 이 틀 위에 세운다.</p>
+</section>
+
+<section id="s3-4">
+  <h2 class="sec"><span class="num">3.4</span>쿠버네티스 메트릭 개요</h2>
+  <p>쿠버네티스 메트릭의 뼈대는 세 컴포넌트다. 이름이 비슷해 헷갈리지만 역할이 정확히 갈린다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow31" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .divider { stroke: #e0e0e0; stroke-width: 1; }
+  </style>
+
+  <!-- 상단 레인: 리소스 메트릭 파이프라인 -->
+  <text class="t-lane" x="20" y="34">① 리소스 메트릭 파이프라인 — 최신값만, 오토스케일링·kubectl top 용</text>
+
+  <rect class="box" x="20" y="54" width="190" height="70" rx="4"/>
+  <text class="t-title" x="115" y="82" text-anchor="middle">kubelet + cAdvisor</text>
+  <text class="t-sub" x="115" y="102" text-anchor="middle">노드마다 · 컨테이너 사용량 측정</text>
+
+  <line class="line" x1="210" y1="89" x2="266" y2="89" marker-end="url(#arrow31)"/>
+
+  <rect class="box" x="270" y="54" width="190" height="70" rx="4"/>
+  <text class="t-title" x="365" y="82" text-anchor="middle">메트릭 서버</text>
+  <text class="t-sub" x="365" y="102" text-anchor="middle">메모리 집계 · 이력 없음</text>
+
+  <line class="line" x1="460" y1="89" x2="516" y2="89" marker-end="url(#arrow31)"/>
+
+  <rect class="box" x="520" y="54" width="190" height="70" rx="4"/>
+  <text class="t-title" x="615" y="82" text-anchor="middle">kubectl top · HPA</text>
+  <text class="t-sub" x="615" y="102" text-anchor="middle">현재 사용량 조회 · 스케일 판단</text>
+
+  <line class="divider" x1="20" y1="158" x2="880" y2="158"/>
+
+  <!-- 하단 레인: 모니터링 파이프라인 -->
+  <text class="t-lane" x="20" y="186">② 모니터링 파이프라인 — 시계열로 저장, 분석·대시보드·알림용</text>
+
+  <rect class="box" x="20" y="206" width="190" height="54" rx="4"/>
+  <text class="t-title" x="115" y="228" text-anchor="middle">cAdvisor</text>
+  <text class="t-sub" x="115" y="246" text-anchor="middle">컨테이너 리소스 사용량</text>
+
+  <rect class="box" x="20" y="272" width="190" height="54" rx="4"/>
+  <text class="t-title" x="115" y="294" text-anchor="middle">kube-state-metrics</text>
+  <text class="t-sub" x="115" y="312" text-anchor="middle">오브젝트 상태(레플리카 수 등)</text>
+
+  <rect class="box" x="20" y="338" width="190" height="54" rx="4"/>
+  <text class="t-title" x="115" y="360" text-anchor="middle">node-exporter 등</text>
+  <text class="t-sub" x="115" y="378" text-anchor="middle">노드 OS · 앱의 /metrics 지표</text>
+
+  <!-- 소스 → 프로메테우스 버스 -->
+  <line class="line" x1="210" y1="233" x2="260" y2="233"/>
+  <line class="line" x1="210" y1="299" x2="260" y2="299"/>
+  <line class="line" x1="210" y1="365" x2="260" y2="365"/>
+  <line class="line" x1="260" y1="233" x2="260" y2="365"/>
+  <line class="line" x1="260" y1="299" x2="306" y2="299" marker-end="url(#arrow31)"/>
+
+  <rect class="box-accent" x="310" y="259" width="190" height="80" rx="4"/>
+  <text class="t-title" x="405" y="292" text-anchor="middle">프로메테우스</text>
+  <text class="t-sub" x="405" y="312" text-anchor="middle">주기적 풀 수집 · 시계열 DB</text>
+
+  <!-- 프로메테우스 → 그라파나 / 얼럿매니저 -->
+  <polyline class="line" points="500,279 550,279 550,239 596,239" marker-end="url(#arrow31)"/>
+  <polyline class="line" points="500,319 550,319 550,359 596,359" marker-end="url(#arrow31)"/>
+
+  <rect class="box" x="600" y="207" width="190" height="64" rx="4"/>
+  <text class="t-title" x="695" y="233" text-anchor="middle">그라파나</text>
+  <text class="t-sub" x="695" y="253" text-anchor="middle">대시보드 · PromQL 시각화</text>
+
+  <rect class="box" x="600" y="327" width="190" height="64" rx="4"/>
+  <text class="t-title" x="695" y="353" text-anchor="middle">얼럿매니저</text>
+  <text class="t-sub" x="695" y="373" text-anchor="middle">알림 그룹핑 · 라우팅</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="430" text-anchor="middle">같은 cAdvisor 데이터라도 쓰임이 다르다. ①은 "지금 얼마나 쓰나"(이력 없음), ②는 "언제부터 어떻게 변했나"(시계열).</text>
+  <text class="t-cap" x="450" y="452" text-anchor="middle">①이 없으면 kubectl top과 HPA가 동작하지 않고, ②가 없으면 장애 분석과 알림이 불가능하다. 둘 다 필요하다.</text>
+</svg>
+    <figcaption>그림 3-1. 두 갈래 메트릭 파이프라인. 3.4절의 세 컴포넌트가 각각 어디에 서 있는지가 이 그림 한 장이다.</figcaption>
+  </figure>
+
+  <h3>3.4.1 cAdvisor</h3>
+  <p><dfn class="term">cAdvisor <span class="en">(Container Advisor)</span></dfn>는 노드에서 도는 모든 컨테이너의 CPU·메모리·네트워크·파일시스템 사용량을 측정하는 오픈소스 에이전트다. <strong>특징</strong>: 따로 설치하지 않는다 — 각 노드의 kubelet(노드 에이전트) 안에 내장되어 항상 돌고 있다. <strong>사용법</strong>: 직접 쓰기보다는, 뒤에 나올 메트릭 서버와 프로메테우스가 이것을 데이터 원천으로 삼는다. 모든 컨테이너 사용량 지표의 뿌리라고 기억하면 된다.</p>
+
+  <h3>3.4.2 메트릭 서버</h3>
+  <p><dfn class="term">메트릭 서버 <span class="en">(Metrics Server)</span></dfn>는 각 노드의 kubelet에서 사용량을 모아 리소스 메트릭 API로 노출하는 클러스터 애드온이다(과거 이 역할을 하던 힙스터(Heapster)는 사용 중단됐다). <strong>특징</strong>: 최신값만 메모리에 유지하고 이력을 저장하지 않는다 — 용도는 오직 <code>kubectl top</code>과 오토스케일러(HPA·VPA, 8장)의 판단 재료다. 모니터링 백엔드로 쓰라고 만든 물건이 아니다.</p>
+  <p><strong>설치 튜토리얼 (0장 kind 클러스터 기준)</strong> — 관리형 클러스터(EKS·GKE·AKS)에는 대개 기본 탑재되어 있지만, kind에는 직접 깐다. kind의 kubelet 인증서는 자체 서명이라 TLS 검증 예외 플래그를 패치해야 동작한다(실습 전용 — 프로덕션 금지).</p>
+<pre><code># 1) 설치
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# 2) kind용 패치: kubelet 자체 서명 인증서 허용 (실습 전용)
+kubectl patch deployment metrics-server -n kube-system --type='json' \
+  -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+
+# 3) 1~2분 뒤 사용
+kubectl top nodes
+kubectl top pods -A</code></pre>
+  <div class="check"><span class="lbl">체크포인트</span><code>kubectl top nodes</code>가 노드별 CPU(m)·메모리(Mi)를 출력하면 성공. "Metrics API not available"이 나오면 아직 파드가 뜨는 중이다.</div>
+
+  <h3>3.4.3 kube-state-metrics</h3>
+  <p><dfn class="term">kube-state-metrics</dfn>는 사용량이 아니라 <strong>오브젝트 상태</strong>를 메트릭으로 바꿔주는 애드온이다 — "디플로이먼트 frontend의 가용 레플리카가 몇 개인가", "CrashLoopBackOff인 파드가 몇 개인가" 같은 것. cAdvisor가 "얼마나 쓰나"라면 이쪽은 "쿠버네티스가 보기에 지금 상태가 어떤가"다. <strong>설치</strong>: 단독으로도 깔 수 있지만, 3.7절의 kube-prometheus-stack에 포함되어 함께 설치되므로 보통 따로 만질 일이 없다. 대표 메트릭: <code>kube_deployment_status_replicas_available</code>, <code>kube_pod_status_phase</code>, <code>kube_pod_container_status_restarts_total</code>.</p>
+</section>
+
+<section id="s3-5">
+  <h2 class="sec"><span class="num">3.5</span>어떤 메트릭을 모니터링하나?</h2>
+  <p>"전부 다"는 답이 아니다 — 잡음이 신호를 묻는다. 계층별로 필수만 고르면 다음과 같다.</p>
+  <table>
+    <tr><th>계층</th><th>반드시 볼 것</th></tr>
+    <tr><td>컨트롤 플레인</td><td>API 서버 요청 지연·에러율, etcd 지연, 스케줄러 동작</td></tr>
+    <tr><td>노드</td><td>CPU·메모리·디스크·네트워크의 USE, 노드 Ready 상태</td></tr>
+    <tr><td>파드 / 쿠버네티스 상태</td><td>재시작 횟수, 원하는 레플리카 vs 가용 레플리카 격차, Pending 파드</td></tr>
+    <tr><td>애플리케이션</td><td>RED — 요청률, 실패율, 응답 시간(p95·p99)</td></tr>
+  </table>
+</section>
+
+<section id="s3-6">
+  <h2 class="sec"><span class="num">3.6</span>모니터링 툴</h2>
+  <p>선택지는 크게 "직접 운영하는 오픈소스"와 "돈 내고 맡기는 SaaS"로 갈린다.</p>
+  <table>
+    <tr><th>툴</th><th>유형</th><th>한 줄 특징</th></tr>
+    <tr><td>프로메테우스</td><td>오픈소스 (CNCF 졸업)</td><td>쿠버네티스 모니터링의 사실상 표준. 레이블·서비스 디스커버리와 궁합이 좋다 → 3.7절에서 실습</td></tr>
+    <tr><td>그라파나</td><td>오픈소스</td><td>시각화 표준. 프로메테우스·로키를 한 화면에서 조회</td></tr>
+    <tr><td>InfluxDB</td><td>오픈소스/상용</td><td>범용 시계열 DB. 쿠버네티스 특화는 아님</td></tr>
+    <tr><td>Datadog · New Relic</td><td>상용 SaaS</td><td>에이전트만 깔면 수집·저장·알림을 통째로 대행. 편하지만 데이터량 과금이 커질 수 있음</td></tr>
+    <tr><td>클라우드 내장 (CloudWatch Container Insights, Azure Monitor, Google Cloud Monitoring)</td><td>상용</td><td>해당 클라우드 관리형 클러스터와 통합이 쉬움. 멀티클라우드에선 파편화</td></tr>
+  </table>
+  <p>스터디와 소규모 팀의 기본값은 프로메테우스 + 그라파나다. 개념(시계열, 레이블, 쿼리)이 다른 모든 도구로 이식되기 때문에 학습 투자 가치도 가장 크다.</p>
+</section>
+
+<section id="s3-7">
+  <h2 class="sec"><span class="num">3.7</span>프로메테우스를 이용한 쿠버네티스 모니터링</h2>
+  <p><dfn class="term">프로메테우스 <span class="en">(Prometheus)</span></dfn>는 사운드클라우드에서 시작해 CNCF에서 두 번째로 졸업한 오픈소스 모니터링 시스템이다. <strong>특징 세 가지</strong>가 쿠버네티스와의 궁합을 만든다.</p>
+  <ul class="tight">
+    <li><strong>풀(pull) 모델</strong> — 앱이 지표를 보내는 게 아니라, 프로메테우스가 각 대상의 <code>/metrics</code> HTTP 엔드포인트를 주기적으로 긁어간다(스크레이프). 대상이 죽으면 긁기가 실패하므로 "죽었다는 사실" 자체가 감지된다.</li>
+    <li><strong>서비스 디스커버리</strong> — 쿠버네티스 API를 보고 파드·서비스가 생기고 사라지는 것을 자동 추적한다. 동적 환경에서 수집 대상 목록을 손으로 관리하지 않는다.</li>
+    <li><strong>레이블 기반 시계열 + <dfn class="term">PromQL <span class="en">(Prometheus Query Language)</span></dfn></strong> — 모든 지표가 <code>이름{레이블=값}</code> 형태로 저장되고, 전용 질의 언어로 자르고 집계한다.</li>
+  </ul>
+
+  <h3>설치 튜토리얼 — kube-prometheus-stack</h3>
+  <div class="note-2026">
+    <span class="lbl">실습 환경 안내</span>
+    이 실습에는 진짜로 동작하는 쿠버네티스 클러스터가 필요하다 — 그 클러스터를 무엇으로 준비하느냐는 도구 선택의 문제일 뿐 실습 내용에는 영향이 없다. 원서는 이 시점에 <code>brew install minikube</code>로 <dfn class="term">미니큐브 <span class="en">(minikube)</span></dfn>(로컬에 단일 노드 쿠버네티스 클러스터를 띄워 주는 도구)를 새로 설치해 전용 클러스터를 만든다. 이 노트에서는 별도 설치 없이 <strong>0장에서 이미 띄워 둔 kind 클러스터를 그대로 사용</strong>한다 — kind와 minikube는 "로컬에 진짜 클러스터를 만든다"는 점에서 같은 역할이며(0장 0.1절 비교), 이 스터디는 8장(리소스 관리) 이후의 멀티 노드 실습과 도구를 통일하기 위해 처음부터 kind로 고정했다. minikube로 이미 익숙하다면 <code>brew install minikube && minikube start</code>로 대체해도 아래 helm 명령은 동일하게 동작한다.
+  </div>
+  <p>프로메테우스·그라파나·얼럿매니저·kube-state-metrics·node-exporter·수백 개의 기본 대시보드와 알림 룰을 헬름 차트 하나로 설치한다. 커뮤니티 표준 방식이다.</p>
+<pre><code># 1) 차트 저장소 등록
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# 2) 설치 (릴리스 이름: mon, 네임스페이스: monitoring)
+helm install mon prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace
+
+# 3) 전부 뜰 때까지 확인 (2~3분)
+kubectl get pods -n monitoring</code></pre>
+
+  <h3>사용법 ① — 그라파나 대시보드</h3>
+<pre><code># 그라파나 접속 터널 (서비스 이름은 <릴리스명>-grafana)
+kubectl port-forward svc/mon-grafana 3000:80 -n monitoring</code></pre>
+  <p>브라우저에서 <code>http://localhost:3000</code> — 기본 계정은 <code>admin</code>, 비밀번호는 차트 기본값 <code>prom-operator</code>다(values로 변경 가능). Dashboards 메뉴에 노드·파드·네임스페이스별 대시보드가 이미 수십 개 들어 있다 — USE 지표는 "Node Exporter / Nodes", 쿠버네티스 상태는 "Kubernetes / Compute Resources" 계열을 먼저 보라.</p>
+
+  <h3>사용법 ② — PromQL 첫 세 문장</h3>
+<pre><code># 네임스페이스 default의 파드별 CPU 사용량 (최근 5분 평균, 코어 단위)
+sum(rate(container_cpu_usage_seconds_total{namespace="default"}[5m])) by (pod)
+
+# frontend 디플로이먼트의 가용 레플리카 수 (kube-state-metrics 제공)
+kube_deployment_status_replicas_available{deployment="frontend"}
+
+# 최근 1시간 컨테이너 재시작 증가량 — 조용한 크래시 루프 탐지
+increase(kube_pod_container_status_restarts_total[1h]) > 0</code></pre>
+  <p>패턴만 기억하면 된다: <code>rate(카운터[구간])</code>으로 증가율을 만들고, <code>sum(...) by (레이블)</code>로 원하는 축으로 접는다. 프로메테우스 UI에서 직접 실험하려면 <code>kubectl port-forward svc/mon-kube-prometheus-stack-prometheus 9090:9090 -n monitoring</code> 후 <code>localhost:9090</code>.</p>
+
+  <h3>사용법 ③ — 내 앱을 수집 대상에 넣기</h3>
+  <p>스택은 <dfn class="term">서비스모니터 <span class="en">(ServiceMonitor)</span></dfn>라는 커스텀 리소스를 쓴다 — "이 레이블을 가진 서비스의 이 포트를 긁어라"를 선언하면 프로메테우스 설정이 자동 갱신된다. 앱이 <code>/metrics</code>를 노출하고 있다면 아래 선언 하나로 수집이 시작된다.</p>
+<pre><code>apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: frontend
+  namespace: monitoring
+  labels:
+    release: mon        # 스택이 이 레이블로 대상을 선별한다
+spec:
+  namespaceSelector:
+    matchNames: ["default"]
+  selector:
+    matchLabels:
+      app: frontend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s</code></pre>
+</section>
+
+<section id="s3-8">
+  <h2 class="sec"><span class="num">3.8</span>로깅 개요</h2>
+  <p>메트릭이 전체 흐름을 보여준다면, 로그는 사건의 현장이다. 쿠버네티스에서 로깅의 제1원칙: <strong>앱은 파일이 아니라 표준 출력(STDOUT)에 쓴다.</strong> 컨테이너 런타임이 그것을 노드의 파일로 받아 적고, 수집기가 노드 단위로 걷어 중앙 저장소로 보낸다. 파드가 죽어도 로그는 남는다.</p>
+  <p>"전부 다 로깅"도 함정이다 — 저장 비용이 폭증하고 정작 필요한 줄을 못 찾는다. 수집 대상은 앱 로그 + 노드/컨트롤 플레인 로그 + 감사(audit) 로그 정도로 정하고, 보존은 짧게(모범 사례는 30~45일), 그 이상은 저렴한 장기 보관소로 넘긴다.</p>
+</section>
+
+<section id="s3-9">
+  <h2 class="sec"><span class="num">3.9</span>로깅 툴</h2>
+  <p>수집기는 대부분 <dfn class="term">데몬셋 <span class="en">(DaemonSet)</span></dfn> — 모든 노드에 파드를 정확히 하나씩 깔아주는 워크로드 컨트롤러 — 형태로 돈다. 노드마다 한 명씩 배치된 로그 배달부라고 보면 된다.</p>
+  <table>
+    <tr><th>스택</th><th>구성</th><th>한 줄 특징</th></tr>
+    <tr><td>로키 스택</td><td>Alloy(수집) + Loki(저장) + 그라파나(조회)</td><td>레이블만 인덱싱해 가볍고 저렴. 프로메테우스와 같은 레이블 체계 → 3.10절에서 실습</td></tr>
+    <tr><td>EFK / ELK</td><td>Fluentd·Fluent Bit(수집) + Elasticsearch(저장) + Kibana(조회)</td><td>전문(full-text) 인덱싱으로 검색이 강력하지만 자원·운영 비용이 크다</td></tr>
+    <tr><td>상용 SaaS (Datadog Logs, Sumo Logic 등)</td><td>에이전트 + 클라우드 저장</td><td>운영 부담 제로, 데이터량 과금 주의</td></tr>
+  </table>
+</section>
+
+<section id="s3-10">
+  <h2 class="sec"><span class="num">3.10</span>로키 스택을 사용한 로깅</h2>
+  <p><dfn class="term">로키 <span class="en">(Loki)</span></dfn>는 그라파나 랩스가 만든 로그 저장소다. <strong>특징</strong>: 로그 본문을 통째로 인덱싱하지 않고 <strong>레이블만 인덱싱</strong>한다 — 그래서 일래스틱서치보다 훨씬 가볍고 싸며, 프로메테우스와 동일한 레이블 체계를 써서 "이 파드의 메트릭"과 "이 파드의 로그"를 같은 그라파나 화면에서 오간다. 스스로 "로그계의 프로메테우스"를 표방한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 310" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow32" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-lbl { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="90" width="170" height="76" rx="4"/>
+  <text class="t-title" x="105" y="120" text-anchor="middle">앱 파드</text>
+  <text class="t-sub" x="105" y="140" text-anchor="middle">STDOUT으로 로그 출력</text>
+
+  <line class="line" x1="190" y1="128" x2="246" y2="128" marker-end="url(#arrow32)"/>
+
+  <rect class="box" x="250" y="90" width="180" height="76" rx="4"/>
+  <text class="t-title" x="340" y="120" text-anchor="middle">노드 로그 파일</text>
+  <text class="t-sub" x="340" y="140" text-anchor="middle">/var/log/pods/…</text>
+
+  <line class="line" x1="430" y1="128" x2="486" y2="128" marker-end="url(#arrow32)"/>
+
+  <rect class="box-accent" x="490" y="90" width="180" height="76" rx="4"/>
+  <text class="t-title" x="580" y="114" text-anchor="middle">Alloy (수집기)</text>
+  <text class="t-sub" x="580" y="133" text-anchor="middle">데몬셋 — 노드마다 1개</text>
+  <text class="t-sub" x="580" y="150" text-anchor="middle">레이블 부착 후 전송</text>
+
+  <line class="line" x1="670" y1="128" x2="726" y2="128" marker-end="url(#arrow32)"/>
+
+  <rect class="box" x="730" y="90" width="150" height="76" rx="4"/>
+  <text class="t-title" x="805" y="120" text-anchor="middle">Loki</text>
+  <text class="t-sub" x="805" y="140" text-anchor="middle">레이블만 인덱싱 · 저장</text>
+
+  <!-- Loki → Grafana (LogQL) -->
+  <polyline class="line" points="805,166 805,246 676,246" marker-end="url(#arrow32)"/>
+  <text class="t-lbl" x="745" y="234" text-anchor="middle">LogQL 조회</text>
+
+  <rect class="box" x="500" y="216" width="172" height="60" rx="4"/>
+  <text class="t-title" x="586" y="240" text-anchor="middle">그라파나</text>
+  <text class="t-sub" x="586" y="259" text-anchor="middle">메트릭과 같은 화면에서 로그 탐색</text>
+
+  <text class="t-cap" x="450" y="300" text-anchor="middle">전문(full-text)을 통째로 인덱싱하는 일래스틱서치와 달리, Loki는 레이블만 인덱싱해 가볍고 싸다 — 프로메테우스의 로그 버전.</text>
+</svg>
+    <figcaption>그림 3-2. 로키 스택의 로그 흐름. 수집기 Alloy가 데몬셋으로 노드마다 서고, 로키는 레이블 인덱스만 유지한다.</figcaption>
+  </figure>
+
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    로키의 수집기로 오랫동안 쓰인 <strong>Promtail은 은퇴했다</strong> — 2025-02 LTS 전환, <strong>2026-03-02 EOL</strong>(업데이트 전면 중단). 후속은 <dfn class="term">Alloy <span class="en">(Grafana Alloy)</span></dfn> — OpenTelemetry Collector 기반으로 로그·메트릭·트레이스를 하나로 수집하는 그라파나의 통합 에이전트다. 기존 Promtail 설정은 <code>alloy convert</code> 명령으로 변환할 수 있다. 검색 상위에 아직 Promtail 튜토리얼이 많으니 따라 하지 말 것.
+    <span class="src">출처: grafana.com/docs/alloy (공식 문서) · Grafana Labs Promtail LTS/EOL 공지(2025-02-13 LTS, 2026-03-02 EOL) — SUSE·Big Bang 등 벤더 마이그레이션 공지에서 교차 확인</span>
+  </div>
+
+  <h3>설치 튜토리얼 — Loki + Alloy</h3>
+<pre><code># 1) 그라파나 차트 저장소
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# 2) Loki 설치 — 실습용 최소 구성(단일 바이너리 모드, 파일 저장)
+#    loki-values.yaml 내용은 아래 참고
+helm install loki grafana/loki -n logging --create-namespace -f loki-values.yaml
+
+# 3) Alloy 설치 — 데몬셋으로 노드 로그 수집
+helm install alloy grafana/alloy -n logging -f alloy-values.yaml</code></pre>
+<pre><code># loki-values.yaml — 실습용 최소 구성 (프로덕션은 오브젝트 스토리지 권장)
+deploymentMode: SingleBinary
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+singleBinary:
+  replicas: 1</code></pre>
+  <p>Alloy의 수집 파이프라인은 "발견 → 수집 → 전송" 컴포넌트를 배선하는 자체 설정 언어로 기술한다. 쿠버네티스 파드 로그를 로키로 보내는 최소 골격은 다음과 같다(values의 <code>alloy.configMap.content</code>에 넣는다).</p>
+<pre><code>// alloy 설정 — 파드 발견 → 로그 수집 → 로키 전송
+discovery.kubernetes "pods" {
+  role = "pod"
+}
+
+loki.source.kubernetes "pods" {
+  targets    = discovery.kubernetes.pods.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}</code></pre>
+
+  <h3>사용법 — 그라파나에서 LogQL</h3>
+  <p>3.7절 그라파나에 데이터 소스로 Loki(<code>http://loki.logging:3100</code>)를 추가하면 Explore 화면에서 바로 조회할 수 있다. 질의 언어 <dfn class="term">LogQL <span class="en">(Log Query Language)</span></dfn>은 PromQL과 닮았다 — 레이블로 스트림을 고르고, 파이프로 거른다.</p>
+<pre><code># frontend 파드들의 로그 중 "error" 포함 줄만
+{namespace="default", pod=~"frontend.*"} |= "error"
+
+# 네임스페이스별 에러 로그 발생률 — 로그를 메트릭처럼 집계
+sum(rate({namespace="default"} |= "error" [5m]))</code></pre>
+  <div class="check"><span class="lbl">체크포인트</span>0장의 hello 디플로이먼트에 curl을 몇 번 날린 뒤, Explore에서 <code>{namespace="default"}</code>로 nginx 액세스 로그가 보이면 파이프라인 완성.</div>
+</section>
+
+<section id="s3-11">
+  <h2 class="sec"><span class="num">3.11</span>알림</h2>
+  <p>알림은 양날의 검이다 — 부족하면 장애를 놓치고, 과하면 <strong>알림 피로</strong>로 사람이 알림 자체를 무시하게 된다. 기준은 하나다: <strong>사람이 지금 즉시 행동해야 하는 것만 호출한다.</strong> 스스로 회복되는 일시적 문제(파드 재시작 한 번 등)는 알리지 않거나 티켓으로만 남긴다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow33" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="82" width="210" height="76" rx="4"/>
+  <text class="t-title" x="125" y="108" text-anchor="middle">프로메테우스 알림 룰</text>
+  <text class="t-sub" x="125" y="128" text-anchor="middle">PromQL 조건이 일정 시간</text>
+  <text class="t-sub" x="125" y="144" text-anchor="middle">지속되면 알림 발화</text>
+
+  <line class="line" x1="230" y1="120" x2="296" y2="120" marker-end="url(#arrow33)"/>
+
+  <rect class="box-accent" x="300" y="82" width="260" height="76" rx="4"/>
+  <text class="t-title" x="430" y="108" text-anchor="middle">얼럿매니저</text>
+  <text class="t-sub" x="430" y="128" text-anchor="middle">그룹핑 · 중복 제거 · 억제(inhibit)</text>
+  <text class="t-sub" x="430" y="144" text-anchor="middle">심각도별 라우팅 · 무음(silence)</text>
+
+  <!-- 라우팅 버스 -->
+  <line class="line" x1="560" y1="120" x2="610" y2="120"/>
+  <line class="line" x1="610" y1="67" x2="610" y2="207"/>
+  <line class="line" x1="610" y1="67" x2="656" y2="67" marker-end="url(#arrow33)"/>
+  <line class="line" x1="610" y1="137" x2="656" y2="137" marker-end="url(#arrow33)"/>
+  <line class="line" x1="610" y1="207" x2="656" y2="207" marker-end="url(#arrow33)"/>
+
+  <rect class="box" x="660" y="42" width="220" height="50" rx="4"/>
+  <text class="t-title" x="770" y="63" text-anchor="middle">critical → 온콜 호출</text>
+  <text class="t-sub" x="770" y="81" text-anchor="middle">사람이 지금 일어나야 하는 것만</text>
+
+  <rect class="box" x="660" y="112" width="220" height="50" rx="4"/>
+  <text class="t-title" x="770" y="133" text-anchor="middle">warning → 채팅 채널</text>
+  <text class="t-sub" x="770" y="151" text-anchor="middle">업무 시간에 확인하면 되는 것</text>
+
+  <rect class="box" x="660" y="182" width="220" height="50" rx="4"/>
+  <text class="t-title" x="770" y="203" text-anchor="middle">info → 티켓 · 대시보드</text>
+  <text class="t-sub" x="770" y="221" text-anchor="middle">기록만 남기면 되는 것</text>
+
+  <text class="t-cap" x="450" y="266" text-anchor="middle">알림 설계의 핵심은 "무엇을 보낼까"가 아니라 "무엇을 보내지 않을까"다.</text>
+  <text class="t-cap" x="450" y="288" text-anchor="middle">사람이 즉시 행동할 수 없는 알림은 소음이고, 소음은 진짜 알림을 죽인다(알림 피로).</text>
+</svg>
+    <figcaption>그림 3-3. 알림 파이프라인. 발화는 프로메테우스가, 사람에게 닿는 방식은 얼럿매니저가 책임진다.</figcaption>
+  </figure>
+  <p><dfn class="term">얼럿매니저 <span class="en">(Alertmanager)</span></dfn>는 프로메테우스가 발화한 알림을 받아 그룹핑(같은 원인 100건을 1건으로), 중복 제거, 억제(상위 장애가 뜨면 하위 알림 침묵), 심각도별 라우팅을 수행하는 컴포넌트다 — kube-prometheus-stack에 이미 포함되어 있다. 설계 요령:</p>
+  <ul class="tight">
+    <li><strong>지속 시간 조건</strong>을 걸어 순간 스파이크에 발화하지 않게 한다 — "5분간 지속되면"이 기본기.</li>
+    <li>알림에는 <dfn class="term">런북 <span class="en">(Runbook)</span></dfn> — 이 알림을 받았을 때 확인·조치 절차를 적은 문서 — 링크를 반드시 붙인다. 새벽 3시의 나는 아무것도 기억하지 못한다.</li>
+    <li>완벽한 알림 세트는 없다 — 오탐이 잦은 룰은 회고 때마다 조이거나 지운다.</li>
+  </ul>
+<pre><code># 알림 룰 예시 — frontend 가용 레플리카가 원하는 수보다 5분 이상 부족
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: frontend-alerts
+  namespace: monitoring
+  labels:
+    release: mon
+spec:
+  groups:
+  - name: frontend
+    rules:
+    - alert: FrontendReplicasMismatch
+      expr: kube_deployment_spec_replicas{deployment="frontend"} != kube_deployment_status_replicas_available{deployment="frontend"}
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "frontend 가용 레플리카 부족"
+        runbook_url: "https://wiki.example.com/runbooks/frontend-replicas"</code></pre>
+</section>
+
+<section id="s3-12">
+  <h2 class="sec"><span class="num">3.12</span>모니터링, 로깅, 알림 모범 사례</h2>
+  <p>이 장을 한 표로 접으면 다음과 같다. 오른쪽 열이 스터디에서 서로 물어볼 질문이다.</p>
+  <h3>3.12.1 모니터링</h3>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>노드·컴포넌트는 USE, 앱은 RED로 계측</td><td>여섯 지표 각각을 어느 대시보드에서 보는지 즉답할 수 있는가?</td></tr>
+    <tr><td>메트릭 서버와 프로메테우스의 역할 구분</td><td>메트릭 서버를 모니터링 저장소로 쓰고 있진 않은가? (이력이 없다)</td></tr>
+    <tr><td>수집은 자동 발견으로</td><td>새 서비스를 배포할 때 모니터링 설정을 손으로 고치고 있진 않은가?</td></tr>
+  </table>
+  <h3>3.12.2 로깅</h3>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>앱은 STDOUT으로, 수집은 데몬셋으로</td><td>파일에 로그를 쓰는 앱이 남아 있진 않은가?</td></tr>
+    <tr><td>메트릭과 로그를 함께 써서 파악</td><td>알림 → 대시보드 → 로그로 이어지는 동선이 한 화면(그라파나)에서 되는가?</td></tr>
+    <tr><td>보존은 30~45일, 이상은 장기 보관소로</td><td>로그 스토리지 비용이 어디서 새는지 아는가?</td></tr>
+  </table>
+  <h3>3.12.3 알림</h3>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>즉시 행동할 일만 사람을 호출</td><td>지난달 온콜 호출 중 실제 조치가 필요했던 비율은?</td></tr>
+    <tr><td>지속 시간 조건 + 심각도 라우팅</td><td>순간 스파이크에 새벽 호출이 울린 적 있는가?</td></tr>
+    <tr><td>모든 알림에 런북 링크</td><td>알림만 보고 첫 조치를 시작할 수 있는가?</td></tr>
+    <tr><td>완벽한 알림은 없다 — 점진 개선</td><td>오탐 알림을 정리하는 주기적 회고가 있는가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: prometheus-community 공식 헬름 차트(github.com/prometheus-community/helm-charts — kube-prometheus-stack 설치·기본 계정) · kubernetes-sigs/metrics-server 공식 README(설치·--kubelet-insecure-tls) · grafana.com/docs/loki, grafana.com/docs/alloy(로키·Alloy 설치, Promtail EOL 2026-03-02) · kubernetes.io/docs — 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig03-1 ~ fig03-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

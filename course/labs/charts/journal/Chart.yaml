@@ -1,0 +1,11 @@
+apiVersion: v2                 # Helm 3 부터의 차트 형식. Helm 4 도 이 형식을 읽는다
+name: journal
+description: 저널 애플리케이션 — API · 정적 파일 서버 · 레디스
+type: application
+
+# 차트 자체의 버전. 템플릿이나 기본값을 고치면 올린다.
+version: 0.2.0
+
+# 이 차트가 기본으로 배포하는 애플리케이션의 버전. 둘은 서로 다른 축이다.
+# 값만 바꿔 배포할 때는 version 만 오르고 appVersion 은 그대로인 경우가 많다.
+appVersion: "v1"

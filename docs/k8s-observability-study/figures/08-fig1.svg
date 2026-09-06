@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img" aria-label="로키가 라벨만 색인하고 로그 본문은 압축 저장하는 구조">
+      <rect width="960" height="320" fill="#ffffff"/>
+
+      <text x="24" y="36" font-size="13.5" fill="#15181d">로그 한 줄이 저장되는 방식</text>
+
+      <!-- 라벨 부분 -->
+      <rect x="24" y="58" width="330" height="112" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="84" font-size="13" fill="#1f4d8f">라벨 — 색인된다</text>
+      <text x="40" y="110" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">namespace="apps"</text>
+      <text x="40" y="130" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">pod="order-api-6b8f..."</text>
+      <text x="40" y="150" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">container="order-api"</text>
+
+      <rect x="374" y="58" width="562" height="112" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="390" y="84" font-size="13" fill="#15181d">로그 본문 — 압축만 된다</text>
+      <text x="390" y="112" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">2026-08-19 14:22:07.113 ERROR 1 --- [nio-8080-exec-3]</text>
+      <text x="390" y="132" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">c.s.o.controller.ChaosController : 의도적 실패 발생</text>
+      <text x="390" y="156" font-size="11.5" fill="#8f4408">색인이 없으므로 본문 검색은 "훑기"다 — 범위를 좁힐수록 빨라진다</text>
+
+      <line x1="24" y1="200" x2="936" y2="200" stroke="#d8dbe0" stroke-width="1"/>
+
+      <text x="24" y="228" font-size="13" fill="#15181d">따라오는 결론 두 가지</text>
+      <text x="40" y="256" font-size="12.5" fill="#15181d">① 라벨은 적게 — 라벨 조합 하나가 곧 하나의 스트림이고, 늘어나면 비용이 폭증한다</text>
+      <text x="40" y="280" font-size="12.5" fill="#15181d">② 질의는 항상 라벨로 시작 — <tspan font-family="ui-monospace,monospace" font-size="11.5">{namespace="apps"}</tspan> 로 좁힌 뒤에 본문을 훑는다</text>
+      <text x="40" y="304" font-size="12" fill="#8f4408">라벨에 요청 ID나 사용자 ID를 넣는 순간 로키는 감당하지 못한다</text>
+    </svg>

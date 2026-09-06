@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH17 어드미션 컨트롤과 인가 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .link-back { border: 1px solid var(--line); padding: 12px 18px; margin: 14px 0; font-size: 14px; border-radius: 6px; background: var(--bg-soft); color: var(--sub); }
+  .link-back strong { color: var(--ink); }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 14.5px; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 17</div>
+  <h1>어드미션 컨트롤과 인가</h1>
+  <p class="ch-desc">4장에서 RBAC(인가)을, 10·11장에서 어드미션의 실제 활용(파드 보안, 정책 엔진)을 이미 다뤘다. 이 장은 그 둘을 API 요청 파이프라인이라는 하나의 그림 위에 올려놓고, "인증 → 인가 → 어드미션"이 정확히 어떤 순서로, 무엇을 묻는지 짚는다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함 · 11장 정책 엔진 논의와 직결됩니다</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 모든 API 요청은 인증("누구냐") → 인가("뭘 해도 되냐") → 어드미션("이 내용 그대로 저장해도 되냐") 순서를 반드시 통과한다.</p>
+  <p>2. 어드미션 컨트롤러는 표준(코드에 내장)과 다이내믹(웹훅)로 나뉜다 — 2026년 현재는 웹훅 없이 CEL로 직접 평가하는 정책 API가 세 번째 선택지로 추가됐다(11장).</p>
+  <p>3. 인가 모듈은 RBAC이 사실상 표준이다 — ABAC·웹훅·Node는 특수한 상황에만 쓴다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s17-1"><span class="num">17.1</span>어드미션 컨트롤</a>
+  <a href="#s17-2"><span class="num">17.2</span>인가</a>
+</nav>
+
+<section id="s17-1">
+  <h2 class="sec"><span class="num">17.1</span>어드미션 컨트롤</h2>
+
+  <h3>17.1.1 어드미션 컨트롤러란?</h3>
+  <p class="lead"><dfn class="term">어드미션 컨트롤러 <span class="en">(Admission Controller)</span></dfn>는 API 서버가 요청을 처리하는 파이프라인의 한 단계다 — <strong>인증과 인가 이후, 오브젝트가 실제로 저장되기 전</strong>에 요청을 가로채 유효성을 검사하거나 변형(또는 둘 다)한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow171" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-q { font-size: 12px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="110" width="140" height="80" rx="4"/>
+  <text class="t-title" x="90" y="144" text-anchor="middle">kubectl 요청</text>
+  <text class="t-sub" x="90" y="164" text-anchor="middle">API 서버로</text>
+
+  <line class="line" x1="160" y1="150" x2="206" y2="150" marker-end="url(#arrow171)"/>
+
+  <rect class="box" x="210" y="110" width="160" height="80" rx="4"/>
+  <text class="t-title" x="290" y="138" text-anchor="middle">① 인증</text>
+  <text class="t-q" x="290" y="160" text-anchor="middle">"너는 누구인가?"</text>
+  <text class="t-sub" x="290" y="178" text-anchor="middle">2장 · OIDC 등</text>
+
+  <line class="line" x1="370" y1="150" x2="416" y2="150" marker-end="url(#arrow171)"/>
+
+  <rect class="box" x="420" y="110" width="160" height="80" rx="4"/>
+  <text class="t-title" x="500" y="138" text-anchor="middle">② 인가</text>
+  <text class="t-q" x="500" y="160" text-anchor="middle">"무엇을 해도 되는가?"</text>
+  <text class="t-sub" x="500" y="178" text-anchor="middle">4장 RBAC · 17.2절</text>
+
+  <line class="line" x1="580" y1="150" x2="626" y2="150" marker-end="url(#arrow171)"/>
+
+  <rect class="box-accent" x="630" y="110" width="180" height="80" rx="4"/>
+  <text class="t-title" x="720" y="138" text-anchor="middle">③ 어드미션</text>
+  <text class="t-q" x="720" y="160" text-anchor="middle">"이 내용 그대로 저장해도 되는가?"</text>
+  <text class="t-sub" x="720" y="178" text-anchor="middle">17.1절 · 10장·11장</text>
+
+  <line class="line" x1="720" y1="190" x2="720" y2="226" marker-end="url(#arrow171)"/>
+
+  <rect class="box" x="630" y="230" width="180" height="60" rx="4"/>
+  <text class="t-title" x="720" y="266" text-anchor="middle">etcd에 저장</text>
+
+  <!-- 하단 설명 -->
+  <text class="t-cap" x="450" y="290" text-anchor="middle">세 관문은 순서가 고정이다 — 인증 없이 인가를 논할 수 없고, 인가를 통과하지 못하면 어드미션 단계에 아예 도달하지 못한다.</text>
+</svg>
+    <figcaption>그림 17-1. API 요청이 통과하는 세 관문. 순서가 고정이라는 점이 중요하다.</figcaption>
+  </figure>
+
+  <h3>17.1.2 어드미션 컨트롤의 중요성</h3>
+  <p>모든 요청이 지나는 길목이라는 위치 덕분에 쓰임이 다양하다. 가장 흔한 세 가지는 <strong>정책·거버넌스</strong>(11장의 정책 엔진), <strong>보안 강화</strong>(10장의 파드 시큐리티 어드미션), 그리고 <strong>기본값 주입</strong>(예: 지정 안 된 StorageClass를 자동으로 채움)이다.</p>
+
+  <h3>17.1.3 어드미션 컨트롤러 타입</h3>
+  <p>크게 두 계급이 있다 — <dfn class="term">표준 <span class="en">(Standard)</span></dfn>은 API 서버 코드에 컴파일되어 릴리스와 함께 배포되고, <code>--enable-admission-plugins</code> 플래그로 켠다. <dfn class="term">다이내믹 <span class="en">(Dynamic)</span></dfn>은 런타임에 구성 가능하며 코어 코드베이스 밖에서 개발된다 — 그 유일한 형태가 HTTP 콜백으로 요청을 받는 <strong>어드미션 웹훅</strong>이다.</p>
+  <p>현재 기본 활성화된 표준 어드미션 컨트롤러에는 <code>LimitRanger</code>, <code>ResourceQuota</code>, <code>PodSecurity</code>, <code>DefaultStorageClass</code>, <code>ServiceAccount</code> 등이 있고, 여기에 <code>MutatingAdmissionWebhook</code>·<code>ValidatingAdmissionWebhook</code>이라는 특수한 표준 컨트롤러가 포함된다 — 이 둘은 자체 로직이 없고, 그저 요청을 웹훅 엔드포인트로 전달하는 "배달부" 역할만 한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-eg { font-size: 10.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- ① 표준 -->
+  <rect class="box" x="20" y="30" width="270" height="230" rx="6"/>
+  <text class="t-title" x="155" y="58" text-anchor="middle">① 표준(Standard)</text>
+  <text class="t-sub" x="155" y="80" text-anchor="middle">API 서버 코드에 컴파일됨</text>
+  <text class="t-sub" x="155" y="98" text-anchor="middle">쿠버네티스 릴리스와 함께 배포</text>
+  <text class="t-sub" x="155" y="116" text-anchor="middle">--enable-admission-plugins로 활성화</text>
+  <text class="t-eg" x="155" y="150" text-anchor="middle">예: LimitRanger, ResourceQuota,</text>
+  <text class="t-eg" x="155" y="168" text-anchor="middle">PodSecurity, DefaultStorageClass</text>
+  <text class="t-sub" x="155" y="200" text-anchor="middle">가장 빠르고 안정적</text>
+  <text class="t-sub" x="155" y="218" text-anchor="middle">하지만 로직을 바꾸려면</text>
+  <text class="t-sub" x="155" y="234" text-anchor="middle">쿠버네티스 자체를 고쳐야 함</text>
+
+  <!-- ② 다이내믹(웹훅) -->
+  <rect class="box" x="315" y="30" width="270" height="230" rx="6"/>
+  <text class="t-title" x="450" y="58" text-anchor="middle">② 다이내믹 — 웹훅</text>
+  <text class="t-sub" x="450" y="80" text-anchor="middle">런타임에 등록·변경 가능</text>
+  <text class="t-sub" x="450" y="98" text-anchor="middle">클러스터 밖 HTTP 엔드포인트로</text>
+  <text class="t-sub" x="450" y="116" text-anchor="middle">요청을 전달해 판단을 위임</text>
+  <text class="t-eg" x="450" y="150" text-anchor="middle">ValidatingWebhookConfiguration</text>
+  <text class="t-eg" x="450" y="168" text-anchor="middle">MutatingWebhookConfiguration</text>
+  <text class="t-sub" x="450" y="200" text-anchor="middle">가장 유연 (11장 게이트키퍼·Kyverno)</text>
+  <text class="t-sub" x="450" y="218" text-anchor="middle">네트워크 왕복 지연·실패 모드를</text>
+  <text class="t-sub" x="450" y="234" text-anchor="middle">직접 설계해야 함</text>
+
+  <!-- ③ 정책 API -->
+  <rect class="box-accent" x="610" y="30" width="270" height="230" rx="6"/>
+  <text class="t-title" x="745" y="58" text-anchor="middle">③ 정책 API (2026 기준 추가)</text>
+  <text class="t-sub" x="745" y="80" text-anchor="middle">CEL 표현식을 API 서버가</text>
+  <text class="t-sub" x="745" y="98" text-anchor="middle">직접 평가 — 별도 프로세스 없음</text>
+  <text class="t-eg" x="745" y="132" text-anchor="middle">ValidatingAdmissionPolicy (GA)</text>
+  <text class="t-eg" x="745" y="150" text-anchor="middle">MutatingAdmissionPolicy (GA, 1.36)</text>
+  <text class="t-sub" x="745" y="182" text-anchor="middle">웹훅만큼 유연하면서</text>
+  <text class="t-sub" x="745" y="200" text-anchor="middle">네트워크 지연·장애점이 없음</text>
+  <text class="t-sub" x="745" y="220" text-anchor="middle">단순 검증·변형에는</text>
+  <text class="t-sub" x="745" y="236" text-anchor="middle">이쪽이 새 기본값 (11장 참고)</text>
+
+  <!-- 하단 -->
+  <rect class="box" x="20" y="284" width="860" height="100" rx="6"/>
+  <text class="t-title" x="40" y="310" font-size="13">원서 시점과 달라진 것</text>
+  <text class="t-sub" x="40" y="332">원서는 "표준 vs 다이내믹(웹훅)"이라는 두 가지 분류만 설명한다 — 당시엔 그게 전부였다.</text>
+  <text class="t-sub" x="40" y="350">지금은 여기에 세 번째 갈래(CEL 기반 정책 API)가 추가돼, 웹훅 없이도 상당수 요구를 처리할 수 있게 됐다.</text>
+  <text class="t-sub" x="40" y="368">11장에서 다룬 정책 엔진 선택 기준(VAP vs Kyverno vs Gatekeeper)이 바로 이 표의 ②③ 갈림길과 같은 질문이다.</text>
+
+  <text class="t-cap" x="450" y="404" text-anchor="middle">셋 다 API 서버 요청 파이프라인의 같은 단계(③ 어드미션)에서 동작한다 — 다른 건 "어디서, 어떻게" 판단이 내려지는가다.</text>
+</svg>
+    <figcaption>그림 17-2. 원서의 2분류(표준·웹훅)에, 2026년 현재는 세 번째 갈래(정책 API)가 더해졌다.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    원서는 어드미션 컨트롤러를 "표준 vs 웹훅" 두 갈래로만 설명하지만, 11장에서 이미 다룬 <dfn class="term">ValidatingAdmissionPolicy</dfn>·<dfn class="term">MutatingAdmissionPolicy</dfn>가 사실상 <strong>세 번째 갈래</strong>다 — CEL 표현식을 API 서버 프로세스 안에서 직접 평가해, 웹훅처럼 클러스터 밖(또는 별도 파드)으로 네트워크 왕복을 하지 않는다. 다음 절의 웹훅 구성 트레이드오프(지연·실패 모드)가 애초에 발생하지 않는다는 뜻이다. 단순 검증·변형 규칙이라면 이쪽이 새 기본값이다.
+    <span class="src">출처: 11장 갱신 주석(kubernetes.io 공식 문서, VAP/MAP GA 현황) 참고</span>
+  </div>
+
+  <h3>17.1.4 어드미션 웹훅 구성</h3>
+  <p>웹훅의 장점은 다이내믹한 구성이지만, 대가로 일관성·실패 모드를 직접 신경 써야 한다. 핵심 필드 몇 가지만 짚는다.</p>
+<pre><code>apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: pod-policy.example.com
+webhooks:
+- name: pod-policy.example.com
+  clientConfig:
+    service:
+      name: webhook-server
+      namespace: webhook-ns
+      path: "/validate"
+    caBundle: <CA_BUNDLE>
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    operations: ["CREATE"]
+    resources: ["pods"]
+  failurePolicy: Fail
+  sideEffects: None
+  timeoutSeconds: 5</code></pre>
+  <p><code>failurePolicy</code>가 특히 중요하다 — <code>Fail</code>은 웹훅이 응답하지 못하면 <strong>요청 자체를 거부</strong>한다(안전하지만, 웹훅이 죽으면 클러스터 전체의 해당 리소스 생성이 멎을 수 있다). <code>Ignore</code>는 웹훅이 응답하지 못해도 <strong>요청을 통과</strong>시킨다(가용성은 높지만 정책이 조용히 우회될 수 있다). <code>timeoutSeconds</code>를 짧게 잡아 웹훅 장애가 API 서버 전체를 느리게 만들지 않게 하는 것도 중요하다.</p>
+
+  <h3>17.1.5 어드미션 컨트롤 모범 사례</h3>
+  <ul class="tight">
+    <li><strong>어드미션 플러그인 순서는 신경 쓸 필요 없다</strong> — 초기 버전엔 순서가 중요했지만, 지금은 뮤테이팅이 전부 실행된 뒤 밸리데이팅이 실행되는 구조로 고정되어 있다.</li>
+    <li><strong>웹훅은 빠르고 가용성 높게</strong> — <code>timeoutSeconds</code>를 짧게, 웹훅 서버 자체의 가용성을 클러스터 핵심 인프라 수준으로 관리한다.</li>
+    <li><strong>변형은 예측 가능하게</strong> — 15장에서 다룬 사이드카 자동 주입처럼, 사용자가 몰라도 되지만 <strong>디버깅할 땐 반드시 추적 가능해야</strong> 한다.</li>
+  </ul>
+</section>
+
+<section id="s17-2">
+  <h2 class="sec"><span class="num">17.2</span>인가</h2>
+  <p class="lead"><dfn class="term">인가 <span class="en">(Authorization)</span></dfn>는 "이 유저가 어느 리소스에 무슨 일을 할 수 있는가?"에 대한 답이다. 인증 이후, 어드미션 이전에 처리된다.</p>
+
+  <h3>17.2.1 인가 모듈</h3>
+  <p>액세스는 <strong>명시적으로 허용된 것만 허용</strong>되고, 나머지는 전부 암묵적으로 거부된다. 기본 제공 모듈은 넷이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow173" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-dead { fill: #fafaf8; stroke: #b8860b; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-warn { font-size: 10px; font-weight: 600; fill: #b8860b; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-h" x="20" y="26">인가 모듈 4종 — --authorization-mode로 순서대로 구성, 하나라도 승인하면 통과</text>
+
+  <rect class="box-dead" x="20" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="120" y="64" text-anchor="middle">ABAC</text>
+  <text class="t-sub" x="120" y="84" text-anchor="middle">각 노드의 로컬 파일에</text>
+  <text class="t-sub" x="120" y="100" text-anchor="middle">정책을 둠</text>
+  <text class="t-warn" x="120" y="120" text-anchor="middle">멀티 컨트롤 플레인엔 비권장</text>
+
+  <rect class="box-accent" x="240" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="340" y="64" text-anchor="middle">RBAC</text>
+  <text class="t-sub" x="340" y="84" text-anchor="middle">쿠버네티스 API로</text>
+  <text class="t-sub" x="340" y="100" text-anchor="middle">정책을 선언 (4장)</text>
+  <text class="t-sub" x="340" y="120" text-anchor="middle">사실상 표준</text>
+
+  <rect class="box" x="460" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="560" y="64" text-anchor="middle">Webhook</text>
+  <text class="t-sub" x="560" y="84" text-anchor="middle">원격 REST 엔드포인트가</text>
+  <text class="t-sub" x="560" y="100" text-anchor="middle">승인 여부를 판단</text>
+  <text class="t-sub" x="560" y="120" text-anchor="middle">외부 시스템과 연동 시</text>
+
+  <rect class="box" x="680" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="780" y="64" text-anchor="middle">Node</text>
+  <text class="t-sub" x="780" y="84" text-anchor="middle">kubelet 전용</text>
+  <text class="t-sub" x="780" y="104" text-anchor="middle">자기 노드 관련 요청만</text>
+  <text class="t-sub" x="780" y="120" text-anchor="middle">인가하는 전용 모듈</text>
+
+  <!-- SubjectAccessReview 흐름 -->
+  <text class="t-h" x="20" y="176">디버깅 도구 — SubjectAccessReview 계열 API</text>
+
+  <rect class="box" x="20" y="192" width="270" height="70" rx="4"/>
+  <text class="t-title" x="155" y="216" text-anchor="middle">SelfSubjectAccessReview</text>
+  <text class="t-sub" x="155" y="236" text-anchor="middle">"나는 이걸 할 수 있나?"</text>
+  <text class="t-sub" x="155" y="250" text-anchor="middle">(kubectl auth can-i가 바로 이것)</text>
+
+  <rect class="box" x="315" y="192" width="270" height="70" rx="4"/>
+  <text class="t-title" x="450" y="216" text-anchor="middle">SubjectAccessReview</text>
+  <text class="t-sub" x="450" y="236" text-anchor="middle">"이 유저는 이걸 할 수 있나?"</text>
+  <text class="t-sub" x="450" y="250" text-anchor="middle">관리자가 남을 대신 확인</text>
+
+  <rect class="box" x="610" y="192" width="270" height="70" rx="4"/>
+  <text class="t-title" x="745" y="216" text-anchor="middle">SelfSubjectRulesReview</text>
+  <text class="t-sub" x="745" y="236" text-anchor="middle">"나는 이 네임스페이스에서</text>
+  <text class="t-sub" x="745" y="250" text-anchor="middle">뭘 할 수 있나?" 전체 목록</text>
+
+  <line class="line" x1="450" y1="262" x2="450" y2="288" marker-end="url(#arrow173)"/>
+
+  <rect class="box" x="270" y="292" width="360" height="66" rx="4"/>
+  <text class="t-sub" x="450" y="316" text-anchor="middle">보통의 리소스처럼 kubectl로 생성해 결과를 바로 조회</text>
+  <text class="t-sub" x="450" y="334" text-anchor="middle">API 서버에 실제로 등록된 리소스가 아니라 "질의 전용" 오브젝트</text>
+
+  <text class="t-cap" x="450" y="384" text-anchor="middle">권한 문제로 막혔을 때 "왜"를 묻는 도구가 이미 API 안에 있다 — 로그를 뒤지기 전에 이걸 먼저 쓴다.</text>
+</svg>
+    <figcaption>그림 17-3. 인가 모듈 4종과, 권한 문제를 스스로 디버깅하는 SubjectAccessReview 계열 API.</figcaption>
+  </figure>
+  <ul class="tight">
+    <li><strong>ABAC</strong> — 각 컨트롤 플레인 노드의 로컬 파일에 정책을 둔다.</li>
+    <li><strong>RBAC</strong> — 쿠버네티스 API로 정책을 선언한다(4장에서 이미 깊이 다뤘다). 사실상 표준.</li>
+    <li><strong>Webhook</strong> — 원격 REST 엔드포인트가 승인 여부를 판단한다.</li>
+    <li><strong>Node</strong> — kubelet의 요청만 전담하는 특수 목적 모듈.</li>
+  </ul>
+  <p>여러 모듈을 <code>--authorization-mode</code>에 순서대로 지정할 수 있다. <strong>어드미션과 다르게</strong> 인가는 하나의 모듈만 승인해도 요청이 통과한다 — 전부 거부해야만 에러가 난다.</p>
+  <p>권한 문제를 디버깅할 때 유용한 전용 API도 있다 — <code>authorization.k8s.io</code> 그룹의 <code>SelfSubjectAccessReview</code>(내가 이걸 할 수 있나), <code>SubjectAccessReview</code>(다른 유저가 할 수 있나), <code>SelfSubjectRulesReview</code>(내가 이 네임스페이스에서 할 수 있는 것 전체)다. 4장에서 쓴 <code>kubectl auth can-i</code> 명령이 내부적으로 <code>SelfSubjectAccessReview</code>를 호출하는 것이다.</p>
+  <div class="check"><span class="lbl">체크포인트</span>권한이 막혔을 때 로그부터 뒤지지 말고 <code>kubectl auth can-i &lt;verb&gt; &lt;resource&gt; --as=&lt;user&gt;</code>로 먼저 확인한다 — 위 API를 그대로 감싼 명령이라 훨씬 빠르다.</div>
+
+  <h3>17.2.2 인가 모범 사례</h3>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>여러 컨트롤 플레인 클러스터엔 ABAC를 삼간다</td><td>ABAC 정책 파일을 모든 노드에 계속 동기화하고 있진 않은가? RBAC이면 API 하나로 끝난다.</td></tr>
+    <tr><td>RBAC을 기본으로, 특수한 경우만 다른 모듈 추가</td><td>Webhook·Node 인가는 정말 RBAC으로 안 되는 요건 때문에 추가했는가?</td></tr>
+    <tr><td>SubjectAccessReview API로 정기 점검</td><td>권한 구성이 의도대로인지 사람이 추측 대신 API로 확인하는가?</td></tr>
+    <tr><td>어드미션과 인가의 역할을 혼동하지 않는다</td><td>"이 요청을 누가 할 수 있나"(인가)와 "이 내용이 유효한가"(어드미션)를 같은 장치로 풀려 하고 있진 않은가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: 11장 갱신 주석(ValidatingAdmissionPolicy/MutatingAdmissionPolicy GA 현황, kubernetes.io 공식 문서) — 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig17-1 ~ fig17-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

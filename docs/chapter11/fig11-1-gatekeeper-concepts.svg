@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow111" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-lbl { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- ConstraintTemplate -->
+  <rect class="box-accent" x="40" y="60" width="260" height="120" rx="4"/>
+  <text class="t-title" x="170" y="90" text-anchor="middle">ConstraintTemplate</text>
+  <text class="t-sub" x="170" y="112" text-anchor="middle">재사용 가능한 정책 "설계도"</text>
+  <text class="t-sub" x="170" y="130" text-anchor="middle">Rego 쿼리 + 파라미터 스키마</text>
+  <text class="t-sub" x="170" y="150" text-anchor="middle">kind: K8sAllowedRepos</text>
+  <text class="t-sub" x="170" y="166" text-anchor="middle">(CRD로 새 리소스 타입을 만듦)</text>
+
+  <line class="line" x1="300" y1="120" x2="356" y2="120" marker-end="url(#arrow111)"/>
+  <text class="t-lbl" x="328" y="106" text-anchor="middle">인스턴스화</text>
+
+  <!-- Constraint -->
+  <rect class="box-accent" x="360" y="60" width="260" height="120" rx="4"/>
+  <text class="t-title" x="490" y="90" text-anchor="middle">Constraint</text>
+  <text class="t-sub" x="490" y="112" text-anchor="middle">실제 적용 — 어디에, 무엇을</text>
+  <text class="t-sub" x="490" y="130" text-anchor="middle">match: production 네임스페이스</text>
+  <text class="t-sub" x="490" y="146" text-anchor="middle">parameters: repos=[openpolicyagent/]</text>
+  <text class="t-sub" x="490" y="166" text-anchor="middle">enforcementAction: deny</text>
+
+  <line class="line" x1="620" y1="120" x2="676" y2="120" marker-end="url(#arrow111)"/>
+
+  <!-- 어드미션 웹훅 -->
+  <rect class="box" x="680" y="60" width="180" height="120" rx="4"/>
+  <text class="t-title" x="770" y="96" text-anchor="middle">어드미션 웹훅</text>
+  <text class="t-sub" x="770" y="118" text-anchor="middle">새 리소스 요청마다</text>
+  <text class="t-sub" x="770" y="134" text-anchor="middle">Constraint 평가</text>
+  <text class="t-sub" x="770" y="156" text-anchor="middle">위반 시 즉시 거부</text>
+
+  <!-- 흐름 예시 -->
+  <rect class="box" x="40" y="220" width="820" height="120" rx="6"/>
+  <text class="t-title" x="60" y="246">예시 흐름</text>
+  <text class="t-sub" x="60" y="270">1. 관리자가 ConstraintTemplate으로 "허용 레지스트리만" 규칙을 한 번 작성해 라이브러리에 등록</text>
+  <text class="t-sub" x="60" y="292">2. 각 팀·네임스페이스는 Constraint로 그 템플릿을 가져다 "어떤 리포지터리를, 어느 네임스페이스에" 적용할지만 채움</text>
+  <text class="t-sub" x="60" y="314">3. production 네임스페이스에 openpolicyagent/ 밖의 이미지로 파드를 만들려 하면 → 어드미션 단계에서 즉시 거부</text>
+
+  <text class="t-cap" x="450" y="368" text-anchor="middle">템플릿(로직)과 제약조건(적용 범위·파라미터)을 분리해, 같은 정책을 여러 팀이 값만 바꿔 재사용한다.</text>
+</svg>

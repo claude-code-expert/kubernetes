@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.study.obs'
+version = '0.0.1'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories { mavenCentral() }
+
+ext {
+    // Spring Boot 4.x와 짝을 이루는 릴리스 트레인은 2025.1.x(Oakwood)다.
+    // 3.5용인 2025.0.x를 쓰면 의존성 해석 단계에서 깨진다.
+    set('springCloudVersion', '2025.1.2')
+}
+
+dependencies {
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('bootBuildImage') {
+    imageName = "obs/gateway:0.0.1"
+    // 최신 우분투 LTS 기반, 자바 관련 버트팩만 담은 빌더
+    builder = "paketobuildpacks/builder-noble-java-tiny:latest"
+    environment = [
+        "BP_JVM_VERSION": "21",
+        "BP_JVM_TYPE": "JRE",
+        // 서비스 바인딩을 쓰지 않으므로 불필요한 jar 주입을 끈다
+        "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true"
+    ]
+}

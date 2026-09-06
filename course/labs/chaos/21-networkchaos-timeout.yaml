@@ -1,0 +1,24 @@
+# M36 실험 ②-b — 지연이 타임아웃을 넘으면.
+#
+# 가설: 지연이 클라이언트 타임아웃(2초)을 넘으면 실패가 나타난다.
+#       느림과 죽음의 경계는 **클라이언트가 정한다.**
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: redis-delay-heavy
+  namespace: journal
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces: [journal]
+      labelSelectors: {app: redis}
+  delay:
+    latency: "1500ms"
+  duration: "45s"

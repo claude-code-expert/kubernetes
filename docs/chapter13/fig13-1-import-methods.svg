@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow131" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .row { fill: none; stroke: #d8d8d8; stroke-width: 1; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-row { font-size: 13.5px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- Row 1: 셀렉터리스 -->
+  <rect class="row" x="20" y="20" width="860" height="110" rx="6"/>
+  <text class="t-row" x="36" y="44">13.1.1 셀렉터리스 서비스 — 외부 IP가 고정일 때</text>
+  <rect class="box" x="36" y="58" width="180" height="58" rx="4"/>
+  <text class="t-title" x="126" y="82" text-anchor="middle">Service (셀렉터 없음)</text>
+  <text class="t-sub" x="126" y="100" text-anchor="middle">+ 수동 EndpointSlice</text>
+  <line class="line" x1="216" y1="87" x2="256" y2="87" marker-end="url(#arrow131)"/>
+  <rect class="box-accent" x="260" y="58" width="160" height="58" rx="4"/>
+  <text class="t-title" x="340" y="82" text-anchor="middle">고정 IP</text>
+  <text class="t-sub" x="340" y="100" text-anchor="middle">24.1.2.3</text>
+  <text class="t-sub" x="600" y="90">가장 단순 · IP가 바뀌면 수동 갱신 필요</text>
+
+  <!-- Row 2: CNAME -->
+  <rect class="row" x="20" y="146" width="860" height="110" rx="6"/>
+  <text class="t-row" x="36" y="170">13.1.2 CNAME 기반 서비스 — 외부가 DNS 이름을 쓸 때</text>
+  <rect class="box" x="36" y="184" width="180" height="58" rx="4"/>
+  <text class="t-title" x="126" y="212" text-anchor="middle">Service</text>
+  <text class="t-sub" x="126" y="230" text-anchor="middle">type: ExternalName</text>
+  <line class="line" x1="216" y1="213" x2="256" y2="213" marker-end="url(#arrow131)"/>
+  <rect class="box-accent" x="260" y="184" width="160" height="58" rx="4"/>
+  <text class="t-title" x="340" y="208" text-anchor="middle">외부 DNS</text>
+  <text class="t-sub" x="340" y="226" text-anchor="middle">db.vendor.com</text>
+  <text class="t-sub" x="600" y="216">IP가 바뀌어도 자동 추적 · 클라우드 관리형 DB에 흔함</text>
+
+  <!-- Row 3: 액티브 컨트롤러 -->
+  <rect class="row" x="20" y="272" width="860" height="128" rx="6"/>
+  <text class="t-row" x="36" y="296">13.1.3 액티브 컨트롤러 — 안정적인 IP도 이름도 없을 때</text>
+  <rect class="box" x="36" y="310" width="160" height="72" rx="4"/>
+  <text class="t-title" x="116" y="336" text-anchor="middle">외부 서비스</text>
+  <text class="t-title" x="116" y="352" text-anchor="middle">컨트롤러</text>
+  <text class="t-sub" x="116" y="370" text-anchor="middle">제어 루프</text>
+  <line class="line" x1="196" y1="346" x2="236" y2="346" marker-end="url(#arrow131)"/>
+  <rect class="box" x="240" y="310" width="180" height="72" rx="4"/>
+  <text class="t-title" x="330" y="340" text-anchor="middle">인프라를 동적으로 쿼리</text>
+  <text class="t-sub" x="330" y="360" text-anchor="middle">최신 IP를 알아냄</text>
+  <line class="line" x1="420" y1="346" x2="460" y2="346" marker-end="url(#arrow131)"/>
+  <rect class="box-accent" x="464" y="310" width="200" height="72" rx="4"/>
+  <text class="t-title" x="564" y="336" text-anchor="middle">EndpointSlice 자동 갱신</text>
+  <text class="t-sub" x="564" y="356" text-anchor="middle">kube-proxy가 새 IP로</text>
+  <text class="t-sub" x="564" y="372" text-anchor="middle">트래픽 라우팅</text>
+  <text class="t-sub" x="750" y="346">가장 유연 · 직접 구현 필요</text>
+
+  <text class="t-cap" x="450" y="412" text-anchor="middle">위로 갈수록 단순, 아래로 갈수록 자동화됨 — 외부 리소스가 얼마나 안정적인지가 선택 기준이다.</text>
+</svg>

@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1주차: 쿠버네티스 기초 — 원준</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#161b22; --fg:#e6edf3; --dim:#8b949e;
+    --line:#30363d; --accent:#58a6ff; --warn:#f0883e; --ok:#3fb950; --bad:#f85149;
+    --mono:"SF Mono",'JetBrains Mono',Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo','Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#000;color:var(--fg);font-family:var(--sans);overflow:hidden}
+  #stage{position:fixed;inset:0;display:grid;place-items:center}
+  #deck{position:relative;width:1280px;height:720px;transform-origin:center center;background:var(--bg)}
+  .slide{position:absolute;inset:0;padding:48px 66px 80px;display:none;flex-direction:column;overflow:hidden}
+  .slide.on{display:flex}
+  .sc{display:none}
+
+  .kicker{font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:.14em;margin-bottom:9px}
+  h1{font-size:66px;line-height:1.15;letter-spacing:-.03em}
+  h2{font-size:42px;line-height:1.24;letter-spacing:-.025em;margin-bottom:14px}
+  h3{font-size:21px;color:var(--accent);margin:6px 0 10px;font-weight:600}
+
+  ul{list-style:none}
+  li{position:relative;padding-left:26px;margin:19px 0;font-size:24px;line-height:1.5;color:#e6edf3}
+  li::before{content:"";position:absolute;left:4px;top:.55em;width:9px;height:9px;border-radius:50%;
+             background:var(--accent);opacity:.8}
+  li .d{display:block;font-size:19px;color:var(--dim);margin-top:6px;line-height:1.5}
+  li b{color:#fff}
+
+  code{font-family:var(--mono);font-size:.88em;background:#ffffff12;padding:2px 8px;border-radius:5px;color:#a5d6ff}
+  pre{font-family:var(--mono);font-size:20px;line-height:1.6;background:var(--bg2);border:1px solid var(--line);
+      border-radius:10px;padding:18px 22px;color:#a5d6ff;overflow:hidden;white-space:pre;margin:10px 0}
+
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:21px}
+  th,td{border:1px solid var(--line);padding:14px 18px;text-align:left;vertical-align:top;line-height:1.45}
+  th{background:#ffffff08;color:var(--accent);font-weight:600;font-size:18px;letter-spacing:.02em}
+  td code{font-size:19px}
+  td .d{display:block;font-size:17px;color:var(--dim);margin-top:5px}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-content:start}
+  .cols.a{grid-template-columns:1.2fr 1fr}
+  .cols.b{grid-template-columns:1fr 1.2fr}
+
+  .key{border-left:5px solid var(--warn);background:#f0883e14;padding:18px 22px;margin:16px 0;
+       font-size:23px;line-height:1.5;border-radius:0 8px 8px 0}
+  .key b{color:var(--warn)}
+  .key .d{display:block;font-size:19px;color:var(--dim);margin-top:9px;line-height:1.5}
+  .cap{font-size:18px;color:var(--dim);line-height:1.5;margin-top:12px}
+
+  .big{font-size:38px;line-height:1.45;text-align:center;margin:auto 0;letter-spacing:-.025em}
+  .big b{color:var(--accent)}
+  .big .sub{display:block;font-size:22px;color:var(--dim);margin-top:26px;letter-spacing:0;line-height:1.6}
+
+  .dg{display:flex;flex-direction:column;align-items:center;margin:8px 0}
+  .row{display:flex;gap:16px;justify-content:center;align-items:stretch}
+  .stk{display:flex;flex-direction:column;gap:8px}
+  .box{border:1px solid var(--line);background:var(--bg2);border-radius:9px;padding:12px 16px;
+       text-align:center;font-size:20px;line-height:1.3;color:var(--fg)}
+  .box .s{display:block;font-size:15px;color:var(--dim);margin-top:5px}
+  .box.k{border-color:var(--accent);background:#58a6ff18;color:#cfe6ff}
+  .box.w{border-color:var(--warn);background:#f0883e16}
+  .box.g{border-color:var(--ok);background:#3fb95016}
+  .box.d{border-style:dashed;background:transparent;color:var(--dim)}
+  .box.sm{font-size:17px;padding:9px 12px}
+  .box.sm .s{font-size:13.5px;margin-top:3px}
+
+  .arw{width:2px;background:var(--line);position:relative;margin:0 auto;height:28px;flex:none}
+  .arw::after{content:"";position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);
+              border:6px solid transparent;border-top-color:var(--line);border-bottom:0}
+  .arw.s{height:20px}
+  .arh{height:2px;width:38px;background:var(--line);position:relative;align-self:center;flex:none}
+  .arh::after{content:"";position:absolute;top:50%;right:-1px;transform:translateY(-50%);
+              border:6px solid transparent;border-left-color:var(--line);border-right:0}
+  .arh.two::before{content:"";position:absolute;top:50%;left:-1px;transform:translateY(-50%);
+              border:6px solid transparent;border-right-color:var(--line);border-left:0}
+  .stem{width:2px;background:var(--line);justify-self:center}
+  .join{width:322px;height:28px;margin:0 auto;position:relative;
+        border-left:2px solid var(--line);border-right:2px solid var(--line);
+        border-bottom:2px solid var(--line)}
+  .join::after{content:"";position:absolute;left:50%;bottom:-26px;transform:translateX(-50%);
+               width:2px;height:26px;background:var(--line)}
+  .join::before{content:"";position:absolute;left:50%;bottom:-32px;transform:translateX(-50%);
+                border:6px solid transparent;border-top-color:var(--line);border-bottom:0;z-index:1}
+  .alab{font-size:17px;color:var(--dim);text-align:center;margin:4px 0}
+
+  .frame{border:1px dashed var(--line);border-radius:12px;padding:20px 18px 16px;position:relative;margin:14px 0 0}
+  .frame > .ft{position:absolute;top:-9px;left:18px;background:var(--bg);padding:0 10px;
+               font-size:14px;color:var(--dim);letter-spacing:.06em;font-family:var(--mono)}
+  .frame.k{border-color:#58a6ff66} .frame.g{border-color:#3fb95055}
+
+  .bar{display:flex;gap:6px;align-items:center;font-size:18px;color:var(--dim)}
+  .cell{width:26px;height:26px;border-radius:5px;background:var(--ok)}
+  .cell.off{background:#21262d;border:1px solid var(--line)}
+  .cell.new{background:var(--accent)}
+
+  .zoomwrap{display:grid;grid-template-columns:238px 54px 1fr;align-items:start;flex:1;min-height:0}
+  .map{border:1px solid var(--line);border-radius:11px;padding:11px;background:#0b0f14}
+  .map .mt{font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.1em;
+           margin-bottom:9px;text-align:center}
+  .map .mfr{border:1px dashed #2b3441;border-radius:9px;padding:13px 8px 8px;position:relative;margin-bottom:8px}
+  .map .mfr > i{position:absolute;top:-8px;left:10px;background:#0b0f14;padding:0 6px;
+                font-size:11px;color:#6e7681;font-style:normal;font-family:var(--mono)}
+  .map .mrow{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
+  .map .mrow:last-child{margin-bottom:0}
+  .map .b{flex:1;border:1px solid var(--line);border-radius:6px;background:var(--bg2);
+          font-size:11.5px;line-height:1.3;padding:7px 2px;text-align:center;color:var(--dim);
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .map .b.dim{opacity:.28}
+  .map .b.hl{border-color:var(--accent);background:#58a6ff26;color:#cfe6ff;font-weight:600;
+             box-shadow:0 0 0 3px #58a6ff1f}
+  .map .mconn{width:2px;height:15px;background:var(--line);margin:4px auto 7px;position:relative}
+  .map .mconn::after{content:"";position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);
+                     border:5px solid transparent;border-top-color:var(--line);border-bottom:0}
+  .zarrow{display:flex;flex-direction:column;align-items:center;padding-top:62px}
+  .zarrow .zt{font-size:12.5px;color:var(--accent);font-family:var(--mono);margin-bottom:8px;letter-spacing:.1em}
+  .zarrow .zl{width:100%;height:2px;background:linear-gradient(90deg,#58a6ff22,var(--accent));position:relative}
+  .zarrow .zl::after{content:"";position:absolute;top:50%;right:-1px;transform:translateY(-50%);
+                     border:7px solid transparent;border-left-color:var(--accent);border-right:0}
+  .zpanel{padding-left:22px;min-width:0}
+
+  .foot{position:absolute;left:66px;right:66px;bottom:22px;display:flex;justify-content:space-between;
+        font-family:var(--mono);font-size:13px;color:#484f58;border-top:1px solid var(--line);padding-top:11px}
+  #prog{position:absolute;left:0;bottom:0;height:4px;background:var(--accent);transition:width .18s ease}
+
+  .title{justify-content:center;align-items:center;text-align:center;
+         background:radial-gradient(ellipse at 50% 40%,#1f6feb22,transparent 65%)}
+  .title .sub{font-size:23px;color:var(--dim);margin-top:20px;letter-spacing:.02em}
+  .agenda div{font-size:24px;padding:16px 0;border-bottom:1px solid #21262d;color:#e6edf3}
+  .agenda span{font-family:var(--mono);color:var(--accent);margin-right:18px;font-size:17px}
+  .agenda i{color:var(--dim);font-style:normal;font-size:19px}
+
+  #notes{position:fixed;left:0;right:0;bottom:0;max-height:46vh;overflow:auto;z-index:20;
+         background:#010409f7;border-top:3px solid var(--accent);padding:18px 34px 22px;display:none}
+  #notes.on{display:block}
+  #notes h4{font-family:var(--mono);font-size:12px;color:var(--warn);letter-spacing:.1em;margin-bottom:9px}
+  #notes .body{font-size:17px;line-height:1.85;color:#d5dde5;max-width:1180px}
+  #notes .body em{color:var(--warn);font-style:normal;font-weight:600}
+  #notes .body p{margin-bottom:8px}
+  #notes .body code{font-size:15px}
+
+  @media print{
+    html,body{overflow:visible;background:#fff}
+    #stage{position:static;display:block} #deck{transform:none!important}
+    .slide{display:flex!important;position:relative;page-break-after:always}
+    #hud,#notes{display:none!important}
+  }
+  #hud{position:fixed;right:14px;bottom:12px;font-family:var(--mono);font-size:12px;color:#6e7681;
+       user-select:none;z-index:21}
+</style>
+</head>
+<body>
+<div id="stage"><div id="deck">
+
+<!-- 1 표지 -->
+<section class="slide title">
+  <div class="kicker">KUBERNETES STUDY · WEEK 01</div>
+  <h1>쿠버네티스 기초</h1>
+  <div class="sub">컨테이너 · 클러스터 구조 · 주요 자원</div>
+  <div class="foot"><span>발표 : 원준</span><span>60분</span></div>
+  <aside class="sc"><p>안녕하세요, 1주차 발표를 맡은 원준입니다. 오늘 주제는 쿠버네티스 기초입니다.</p>
+    <p><em>발표 방향을 먼저 말씀드리면</em>, 기능을 하나씩 나열하지 않겠습니다.
+      <code>kubectl apply</code> 한 줄을 실행했을 때 서버에서 무슨 일이 벌어지는지,
+      그 하나를 따라가면서 필요한 개념을 꺼내 쓰겠습니다.</p>
+    <p>쿠버네티스를 이해하려면 컨테이너를 먼저 알아야 해서, 앞에서 짧게 배경을 짚고 시작하겠습니다.</p></aside>
+</section>
+
+<!-- 2 목차 -->
+<section class="slide">
+  <div class="kicker">AGENDA</div>
+  <h2>목차</h2>
+  <div class="agenda">
+    <div><span>배경</span>컨테이너 <i>— 리눅스 · 도커 · CRI</i></div>
+    <div><span>1부</span>클러스터 구조 <i>— 컨트롤 플레인 · 조정 루프 · 워커 노드</i></div>
+    <div><span>2부</span>주요 자원 <i>— 파드 · 레플리카셋 · 디플로이먼트 · 서비스 · 인그레스</i></div>
+    <div><span>정리</span>요약과 토론</div>
+  </div>
+  <div class="foot"><span>목차</span><span>—</span></div>
+  <aside class="sc"><p>구성은 셋입니다.</p>
+    <p>배경에서 컨테이너가 뭔지 짚습니다. 리눅스랑 도커 얘기인데 길게 안 갑니다.</p>
+    <p>1부가 쿠버네티스 구조입니다. 전체 지도를 펼치고 부분별로 확대해 갑니다.</p>
+    <p>2부는 실제로 매일 쓰게 될 자원들입니다.</p>
+    <p><em>순서가 중요합니다.</em> 자원부터 배우면 왜 그렇게 생겼는지 모른 채 외우게 됩니다.</p>
+    <p>1부부터는 화면 왼쪽에 클러스터 지도를 띄워 두고 설명하는 부분을 파랗게 표시하겠습니다.</p></aside>
+</section>
+
+<!-- 3 배경1 정체 -->
+<section class="slide">
+  <div class="kicker">배경 · 1장</div>
+  <h2>컨테이너의 정체</h2>
+  <div class="big">리눅스 커널에 <b>컨테이너라는 기능은 없음</b>
+    <span class="sub"><b>namespace</b>로 시야를 가리고 <b>cgroup</b>으로 사용량을 제한한 프로세스</span></div>
+  <div class="foot"><span>배경 · 컨테이너</span><span>1장</span></div>
+  <aside class="sc"><p>첫 장부터 김빠지는 얘기를 하나 하겠습니다.</p>
+    <p><em>리눅스 커널에는 컨테이너라는 기능이 없습니다.</em> 그런 시스템 콜도, 그런 자료구조도 없습니다.</p>
+    <p>우리가 컨테이너라고 부르는 건 평범한 프로세스 하나에 두 가지 처리를 한 것뿐입니다.
+      하나는 시야를 가리는 것, 다른 하나는 사용량을 제한하는 것.</p>
+    <p>앞의 것을 namespace, 뒤의 것을 cgroup이라고 부릅니다. 다음 두 장에서 하나씩 보겠습니다.</p></aside>
+</section>
+
+<!-- 4 배경1 namespace -->
+<section class="slide">
+  <div class="kicker">배경 · 1장</div>
+  <h2>namespace — 격리</h2>
+  <table>
+    <tr><th style="width:170px">종류</th><th>가려지는 것</th></tr>
+    <tr><td><code>mnt</code></td><td>파일 시스템<span class="d">자기만의 루트 디렉터리</span></td></tr>
+    <tr><td><code>pid</code></td><td>프로세스 목록<span class="d">자기가 1번 프로세스</span></td></tr>
+    <tr><td><code>net</code></td><td>네트워크 카드 · 포트 · 방화벽 규칙</td></tr>
+    <tr><td><code>user</code></td><td>사용자 번호<span class="d">안에서만 관리자</span></td></tr>
+  </table>
+  <div class="key">호스트에서는 <b>평범한 프로세스 하나</b> · 안에서 1번, 밖에서 48213번</div>
+  <div class="foot"><span>배경 · 컨테이너</span><span>1장</span></div>
+  <aside class="sc"><p>namespace는 종류별로 무엇을 가릴지가 정해져 있습니다. 네 개만 보겠습니다.</p>
+    <p><code>mnt</code>는 파일 시스템을 가립니다. 안에서 <code>ls /</code>를 하면 이미지 안의 루트가 보입니다.</p>
+    <p><code>pid</code>는 프로세스 목록을 가립니다. 안에서 <code>ps</code>를 치면 자기만 1번으로 보입니다.</p>
+    <p><code>net</code>은 네트워크를 가립니다. 그래서 컨테이너마다 자기 IP를 가질 수 있습니다.</p>
+    <p><em>여기가 핵심입니다.</em> 안에서만 1번이지, 호스트에서 <code>ps</code>를 치면
+      48213번 같은 평범한 프로세스로 보입니다. 숨어 있는 게 아니라 자기만 못 보는 겁니다.
+      다음 장 가상 머신 비교에서 이게 결정적인 차이가 됩니다.</p>
+    <p>종류는 이 넷 말고도 더 있습니다. README 부록에 정리해 뒀습니다.</p></aside>
+</section>
+
+<!-- 5 배경1 cgroup -->
+<section class="slide">
+  <div class="kicker">배경 · 1장</div>
+  <h2>cgroup — 제한</h2>
+  <ul>
+    <li>CPU · 메모리 · 디스크 입출력의 <b>상한 설정</b></li>
+    <li>메모리 상한 초과 시 <b>커널이 프로세스 강제 종료</b></li>
+  </ul>
+  <div class="key"><b>제한만 하고 숨기지는 않음</b>
+    <span class="d">512MB를 할당해도 컨테이너 안에서 <code>free</code>는 호스트 전체 64GB를 보고함</span></div>
+  <div class="foot"><span>배경 · 컨테이너</span><span>1장</span></div>
+  <aside class="sc"><p>cgroup은 훨씬 단순합니다. 그냥 상한을 정하는 기능입니다.
+      메모리 512메가까지, CPU 0.5개까지. 상한을 넘으면 커널이 죽입니다.</p>
+    <p><em>여기서 하나 짚고 가겠습니다.</em> cgroup은 제한만 하고 숨기지는 않습니다.
+      512메가만 줬는데 안에서 <code>free</code>를 쳐 보면 호스트 전체인 64기가가 보입니다.</p>
+    <p>자바 앱이 컨테이너에서 힙을 과하게 잡고 죽는 사고가 여기서 나왔습니다.
+      JVM이 64기가짜리 서버인 줄 알고 힙을 크게 잡고, 512메가에서 죽는 거죠.</p>
+    <p>참고로 이 상한값이 3주차에 <code>requests</code>와 <code>limits</code>라는 이름으로 다시 나옵니다.
+      쿠버네티스에서 리소스를 제한한다는 건 결국 이 cgroup 값을 쓰는 겁니다.</p></aside>
+</section>
+
+<!-- 6 배경2 도커 -->
+<section class="slide">
+  <div class="kicker">배경 · 2장</div>
+  <h2>도커가 한 일</h2>
+  <ul>
+    <li>namespace · cgroup은 <b>2000년대부터 존재</b><span class="d">직접 다루기가 어려웠을 뿐</span></li>
+    <li>당시의 문제는 격리가 아니라 <b>배포</b><span class="d">"제 컴퓨터에서는 되는데요"</span></li>
+    <li>도커의 답 = <b>이미지</b><span class="d">앱과 필요한 파일을 하나로 묶어 어디서든 동일하게 실행</span></li>
+    <li>이미지 형식은 <b>OCI 공개 표준</b><span class="d">런타임이 달라도 같은 이미지를 그대로 사용</span></li>
+  </ul>
+  <div class="foot"><span>배경 · 컨테이너</span><span>2장</span></div>
+  <aside class="sc"><p>그럼 도커는 뭘 한 걸까요.</p>
+    <p><em>도커는 namespace도 cgroup도 만들지 않았습니다.</em> 둘 다 훨씬 전부터 있었습니다.
+      다만 쓰기가 어려웠습니다.</p>
+    <p>그리고 당시 개발자들이 진짜 아팠던 건 격리가 아니라 배포였습니다.
+      내 노트북에서는 되는데 서버에 올리면 안 되는 문제요.</p>
+    <p>도커는 그 둘을 한 번에 해결했습니다. <em>이미지</em>라는 개념으로요.
+      앱이랑 필요한 파일을 통째로 묶어서 어디서 풀든 똑같이 돌게 만든 겁니다.</p>
+    <p>그리고 이 이미지 형식은 OCI라는 공개 표준입니다. 도커만의 형식이 아니에요.
+      그래서 나중에 쿠버네티스가 도커 엔진을 안 쓰게 돼도 이미지는 그대로 씁니다.</p></aside>
+</section>
+
+<!-- 7 배경2 VM -->
+<section class="slide">
+  <div class="kicker">배경 · 2장</div>
+  <h2>가상 머신과의 차이</h2>
+  <div class="dg" style="margin-top:6px">
+    <div class="row" style="gap:110px;align-items:flex-end">
+      <div>
+        <div class="stk">
+          <div class="row" style="gap:8px">
+            <div class="box" style="width:110px">앱 A</div><div class="box" style="width:110px">앱 B</div></div>
+          <div class="row" style="gap:8px">
+            <div class="box w" style="width:110px">게스트<span class="s">커널</span></div>
+            <div class="box w" style="width:110px">게스트<span class="s">커널</span></div></div>
+          <div class="box" style="width:228px">하이퍼바이저</div>
+          <div class="box k" style="width:228px">호스트 커널</div>
+        </div>
+        <div class="cap" style="text-align:center;font-size:20px">가상 머신 · 커널 <b>여러 개</b></div>
+      </div>
+      <div>
+        <div class="stk">
+          <div class="row" style="gap:8px">
+            <div class="box" style="width:110px">앱 A</div><div class="box" style="width:110px">앱 B</div></div>
+          <div class="box" style="width:228px">컨테이너 런타임</div>
+          <div class="box k" style="width:228px">호스트 커널</div>
+        </div>
+        <div class="cap" style="text-align:center;font-size:20px">컨테이너 · 커널 <b>공유</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="key">커널 공유 → <b>가볍고 빠름, 격리는 약함</b></div>
+  <div class="foot"><span>배경 · 컨테이너</span><span>2장</span></div>
+  <aside class="sc"><p>가상 머신과 뭐가 다른지는 그림 하나로 정리됩니다.</p>
+    <p>왼쪽이 가상 머신입니다. 게스트마다 <em>커널이 통째로 하나씩</em> 있습니다.
+      앱 하나 띄우려고 운영체제 전체를 부팅해야 합니다.</p>
+    <p>오른쪽이 컨테이너입니다. <em>커널은 하나뿐입니다.</em> 호스트 것을 같이 씁니다.
+      부팅할 게 없으니 그냥 프로그램 실행 속도로 뜹니다.</p>
+    <p>여기서 오해가 생기기 쉬운데요.
+      <em>컨테이너가 가상 머신의 상위 호환이 아닙니다.</em> 빠른 대신 격리가 약합니다.
+      커널을 같이 쓰니까 커널에 구멍이 생기면 같이 뚫립니다.</p>
+    <p>그래서 신뢰할 수 없는 코드를 돌릴 때는 여전히 가상 머신을 씁니다. 8주차 보안에서 다시 나옵니다.</p></aside>
+</section>
+
+<!-- 8 배경3 CRI -->
+<section class="slide">
+  <div class="kicker">배경 · 3장</div>
+  <h2>쿠버네티스와 컨테이너 런타임</h2>
+  <ul>
+    <li>초기: kubelet에 <b>도커 호출 코드가 직접 포함</b><span class="d">런타임 교체 불가</span></li>
+    <li><b>CRI</b> — 컨테이너 생성 요청 방식을 정한 규격</li>
+    <li>도커 엔진은 CRI 미지원 → kubelet 내부 번역 계층 <code>dockershim</code></li>
+    <li><b>v1.20 폐기 예고 → v1.24 삭제</b><span class="d">삭제된 것은 번역 계층. 이미지는 OCI 표준이라 그대로 사용</span></li>
+  </ul>
+  <div class="foot"><span>배경 · CRI</span><span>3장</span></div>
+  <aside class="sc"><p>배경 마지막입니다. 여기서 좀 이상한 얘기가 나옵니다.</p>
+    <p>지금까지 도커를 설명했는데, <em>정작 쿠버네티스는 도커 엔진을 안 씁니다.</em></p>
+    <p>초창기 쿠버네티스에는 도커를 호출하는 코드가 그냥 박혀 있어서 다른 런타임으로 바꿀 수 없었습니다.</p>
+    <p>그래서 CRI라는 규격을 만들었습니다.
+      <em>컨테이너 만들어 달라고 요청하는 방식을 미리 정해 둔 약속</em>입니다.
+      이 약속만 지키면 어떤 프로그램이든 갖다 붙일 수 있게 된 거죠.</p>
+    <p>도커 엔진은 이 약속을 안 따랐습니다. 도커가 먼저 있었으니까요.
+      그래서 쿠버네티스가 번역기를 자기 안에 넣어 뒀는데, 그게 dockershim입니다. 1.24에서 그걸 지웠습니다.</p>
+    <p><em>여기서 오해하시면 안 되는 게</em>, 지운 건 번역기지 도커가 아닙니다.
+      이미지는 OCI 표준이라 그대로 쓰고, 로컬 빌드도 도커로 계속 하시면 됩니다.
+      바뀌는 건 서버에서 <code>docker ps</code> 대신 <code>crictl ps</code>를 친다는 것 정도입니다.</p></aside>
+</section>
+
+<!-- 9 배경3 그림 -->
+<section class="slide">
+  <div class="kicker">배경 · 3장</div>
+  <h2>진입점은 달라도 바닥은 동일</h2>
+  <div class="dg" style="margin-top:14px">
+    <div style="display:grid;grid-template-columns:230px 90px 230px;justify-content:center;
+                justify-items:center;align-items:stretch;row-gap:0">
+      <div class="box" style="width:230px">도커 명령어<span class="s">개발자 노트북</span></div>
+      <div></div>
+      <div class="box k" style="width:230px">kubelet<span class="s">쿠버네티스 노드</span></div>
+
+      <div class="arw s"></div>
+      <div></div>
+      <div class="arw s"></div>
+
+      <div class="box" style="width:230px">도커 엔진</div>
+      <div></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="stem" style="height:100%"></div>
+        <div class="alab" style="margin:0;white-space:nowrap">CRI</div>
+      </div>
+    </div>
+    <div class="join"></div>
+    <div class="box g" style="width:230px;margin-top:34px">containerd</div>
+    <div class="arw s"></div>
+    <div class="box w" style="width:230px">runc</div>
+    <div class="arw s"></div>
+    <div class="box k" style="width:350px">namespace + cgroup<span class="s">1장의 커널 기능</span></div>
+  </div>
+  <div class="foot"><span>배경 · CRI</span><span>3장</span></div>
+  <aside class="sc"><p>말로 하면 헷갈리니까 그림으로 보겠습니다.</p>
+    <p>왼쪽 위가 여러분 노트북입니다. <code>docker run</code>을 칩니다.
+      오른쪽 위가 쿠버네티스 서버고, kubelet이 CRI 규격으로 요청을 보냅니다.</p>
+    <p><em>들어가는 문은 다릅니다. 그런데 내려가 보면 만납니다.</em></p>
+    <p>도커 엔진도 결국 containerd를 부릅니다. kubelet도 containerd를 부릅니다.
+      containerd는 runc를 부르고, runc가 진짜로 프로세스를 만듭니다.
+      namespace 걸고 cgroup 걸어서요. <em>1장에서 본 그거요.</em></p>
+    <p>그러니까 쿠버네티스가 한 일은 <em>중간에 있던 도커 엔진 한 칸을 뺀 것</em>뿐입니다.
+      도커랑 containerd는 경쟁 관계가 아니라 부품 관계예요.</p>
+    <p>왜 뺐냐면 성능 때문이 아니라 관리 책임 때문입니다.
+      남의 회사 프로그램 전용 번역기를 계속 안고 갈 수는 없었던 거죠.</p></aside>
+</section>
+
+<!-- 10 1부4 -->
+<section class="slide">
+  <div class="kicker">1부 · 4장</div>
+  <h2>쿠버네티스가 푸는 문제</h2>
+  <table>
+    <tr><th>도커만으로 답할 수 없던 것</th><th style="width:260px">담당</th></tr>
+    <tr><td>어느 서버에 띄울 것인가</td><td>스케줄러</td></tr>
+    <tr><td>죽었을 때 누가 살리는가</td><td>컨트롤러</td></tr>
+    <tr><td>주소가 바뀌는데 어떻게 호출하는가</td><td>서비스</td></tr>
+    <tr><td>무중단으로 어떻게 교체하는가</td><td>디플로이먼트</td></tr>
+    <tr><td>상태를 어디에 저장하는가</td><td>etcd</td></tr>
+  </table>
+  <div class="foot"><span>1부 · 구조</span><span>4장</span></div>
+  <aside class="sc"><p>배경은 끝났습니다. 이제 본론입니다.</p>
+    <p><em>컨테이너 하나 띄우는 건 도커가 풀었지만, 수천 개를 계속 살아있게 하는 건 안 풀렸습니다.</em></p>
+    <p>표에 있는 질문들이 그겁니다. 서버가 100대인데 어디에 띄우지?
+      새벽에 죽으면 누가 살리지? 재시작마다 IP가 바뀌는데 다른 서비스는 얘를 뭐라고 부르지?</p>
+    <p>쿠버네티스는 이 질문들에 답하려고 나왔습니다.
+      구글이 사내에서 십수 년 하던 걸 정리해 2014년에 공개했고 2015년에 재단에 기증했습니다.</p>
+    <p>오른쪽 열이 그대로 다음 장 지도가 됩니다. 지금 외우실 필요는 없습니다.</p></aside>
+</section>
+
+<!-- 11 1부5 지도 -->
+<section class="slide">
+  <div class="kicker">1부 · 5장</div>
+  <h2>클러스터 구성</h2>
+  <div class="cols a">
+    <div>
+      <div class="dg" style="align-items:stretch;margin-top:0">
+        <div class="box d" style="width:180px;margin:0 auto">kubectl</div>
+        <div class="arw s"></div>
+        <div class="frame k" style="margin-top:0">
+          <span class="ft">컨트롤 플레인 · 판단</span>
+          <div class="row" style="align-items:center;gap:13px">
+            <div class="box k" style="width:210px">apiserver<span class="s">유일한 창구</span></div>
+            <div class="arh two" style="width:30px"></div>
+            <div class="box" style="width:160px">etcd<span class="s">상태 저장</span></div>
+          </div>
+          <div class="row" style="gap:10px;margin-top:12px">
+            <div class="box sm" style="width:128px">스케줄러</div>
+            <div class="box sm" style="width:135px">컨트롤러</div>
+            <div class="box sm" style="width:135px">클라우드</div>
+          </div>
+        </div>
+        <div class="arw s"></div>
+        <div class="row" style="gap:18px">
+          <div class="frame g" style="margin:0">
+            <span class="ft">워커 노드 1 · 실행</span>
+            <div class="stk">
+              <div class="box sm k" style="width:190px">kubelet</div>
+              <div class="box sm" style="width:190px">containerd</div>
+              <div class="box sm w" style="width:190px">파드</div>
+            </div>
+          </div>
+          <div class="frame g" style="margin:0">
+            <span class="ft">워커 노드 2</span>
+            <div class="stk">
+              <div class="box sm k" style="width:190px">kubelet</div>
+              <div class="box sm" style="width:190px">containerd</div>
+              <div class="box sm w" style="width:190px">파드</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ul>
+        <li>구성요소 간 <b>직접 호출 없음</b></li>
+        <li>전부 <b>API Server를 조회</b><span class="d">변경을 감지해 각자 동작</span></li>
+        <li><b>장애 전파 차단 · 독립 복구</b><span class="d">개별 컴포넌트는 서로를 몰라도 되며 재시작만으로 복귀</span></li>
+      </ul>
+      <div class="key">단, API Server · etcd 정지 시 <b>제어 기능 전체 중단</b>
+        <span class="d">이미 실행 중인 워크로드는 계속 동작</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>1부 · 구조</span><span>5장</span></div>
+  <aside class="sc"><p>전체 지도를 펼치겠습니다. <em>이름을 다 못 외우셔도 됩니다.</em>
+      뒤에서 하나씩 확대해서 다시 볼 거니까요.</p>
+    <p>위쪽이 컨트롤 플레인, 판단하는 쪽입니다. 아래쪽이 워커 노드, 컨테이너가 도는 쪽입니다.</p>
+    <p><em>화살표가 전부 apiserver 하나를 향합니다.</em>
+      스케줄러가 kubelet한테 전화하지 않습니다. 컨트롤러가 스케줄러를 부르지도 않습니다.
+      다들 apiserver만 보고 있다가 자기 할 일이 생기면 움직입니다.</p>
+    <p>이렇게 만들면 <em>서로를 몰라도 됩니다.</em> 그래서 스케줄러가 죽어도 이미 돌던 컨테이너는 멀쩡하고,
+      컨트롤러를 재시작해도 알아서 복귀합니다. 장애가 옆으로 번지지 않습니다.</p>
+    <p><em>다만 오해하시면 안 되는 게 있습니다.</em>
+      이게 "무슨 일이 있어도 안 멈춘다"는 뜻은 아닙니다.
+      apiserver나 etcd가 죽으면 제어는 전부 멈춥니다. 배포도 스케일도 복구도 안 됩니다.
+      계속 도는 건 이미 떠 있는 워크로드뿐입니다. 그래서 컨트롤 플레인은 보통 3대로 이중화합니다.</p></aside>
+</section>
+
+<!-- 12 1부6 컨트롤 플레인 -->
+<section class="slide">
+  <div class="kicker">1부 · 6장 · 확대 ①</div>
+  <h2>컨트롤 플레인</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="api etcd sched ctrl ccm"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <table>
+        <tr><th style="width:200px">구성요소</th><th>정지 시 영향</th></tr>
+        <tr><td><code>apiserver</code></td><td>모든 조작 불가<span class="d">실행 중 워크로드는 유지</span></td></tr>
+        <tr><td><code>etcd</code></td><td>상태 조회 · 기록 불가<span class="d">백업이 곧 클러스터 · 직접 접근은 apiserver 단독</span></td></tr>
+        <tr><td>스케줄러</td><td>신규 파드 대기 상태로 적체</td></tr>
+        <tr><td>컨트롤러</td><td>자동 복구 · 개수 유지 중단</td></tr>
+        <tr><td>클라우드 컨트롤러<span class="d">클라우드 연동이 필요한 클러스터의 선택 구성요소</span></td>
+            <td>로드밸런서 미생성 · 노드 객체 정리 중단 등
+              <span class="d">Node · Route · Service 컨트롤러를 담음.
+              어떤 것이 실제로 쓰이는지는 클라우드 · CNI 구성에 따라 다름</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ① 컨트롤 플레인</span><span>6장</span></div>
+  <aside class="sc"><p>첫 번째 확대입니다.
+      <em>각각이 무슨 일을 하는지 외우는 것보다, 멈추면 뭐가 안 되는지로 기억하시는 게 오래 갑니다.</em></p>
+    <p>apiserver가 죽으면 아무 조작도 못 합니다. 다만 이미 돌던 컨테이너는 멀쩡합니다.</p>
+    <p>etcd가 죽으면 상태를 읽지도 쓰지도 못합니다. 그래서 etcd 백업이 사실상 클러스터 백업입니다.</p>
+    <p>스케줄러가 죽으면 새 파드가 Pending에 쌓이고, 컨트롤러가 죽으면 자동 복구가 멈춥니다.</p>
+    <p><em>클라우드 컨트롤러는 조금 설명이 필요합니다.</em>
+      이건 클라우드에서 돌릴 때만 있는 컴포넌트고, 안에 컨트롤러가 세 개 들어 있습니다.
+      서비스 컨트롤러는 LoadBalancer 타입 서비스를 만들면 실제 클라우드 로드밸런서를 만들어 줍니다.
+      노드 컨트롤러는 클라우드에서 VM이 삭제되면 Node 객체를 정리합니다.
+      라우트 컨트롤러는 노드끼리 파드 통신이 되도록 클라우드 경로를 설정합니다.</p>
+    <p>그래서 이게 멈추면 외부 주소만 안 나오는 게 아니라, 죽은 노드가 목록에 남아 있고
+      노드 간 통신 경로도 갱신이 안 됩니다. 온프레미스나 minikube에는 아예 없는 컴포넌트입니다.</p>
+    <p>마지막으로, <em>etcd에 직접 붙는 건 apiserver 하나뿐입니다.</em>
+      그래서 누가 뭘 했는지 기록이 한곳에 다 남습니다.</p></aside>
+</section>
+
+<!-- 13 1부7-1 명령형/선언형 -->
+<section class="slide">
+  <div class="kicker">1부 · 7장 · 확대 ②</div>
+  <h2>명령형과 선언형</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="ctrl"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <table>
+        <tr><th style="width:130px"></th><th style="width:320px">전달하는 것</th><th>하나가 죽으면</th></tr>
+        <tr><td><b>명령형</b></td><td>목표에 도달하는 <b>절차</b><span class="d">컨테이너 3개를 띄워라</span></td>
+            <td>2개로 유지<span class="d">사람이 알아채야 함</span></td></tr>
+        <tr><td><b>선언형</b></td><td>도달해야 할 <b>상태</b><span class="d">항상 3개인 상태여야 한다</span></td>
+            <td><b>자동으로 3개 복구</b></td></tr>
+      </table>
+      <div class="dg" style="margin-top:26px">
+        <div class="row" style="align-items:center;gap:12px">
+          <div class="box k" style="width:170px">현재 상태<br>관찰</div>
+          <div class="arh"></div>
+          <div class="box" style="width:170px">목표 상태와<br>비교</div>
+          <div class="arh"></div>
+          <div class="box w" style="width:170px">차이만큼<br>조치</div>
+        </div>
+        <div class="alab" style="margin-top:14px;font-size:19px">반복 — <b>조정 루프</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ② 조정 루프</span><span>7장</span></div>
+  <aside class="sc"><p>두 번째 확대입니다. <em>오늘 발표에서 제일 중요한 장입니다.</em></p>
+    <p>둘의 차이는 <em>무엇을 전달하느냐</em>입니다.
+      명령형은 절차를 전달합니다. "3개 띄워." 선언형은 상태를 전달합니다. "3개인 상태여야 해."</p>
+    <p>명령형은 하나 죽으면 2개인 채로 남습니다. 사람이 알아채고 다시 명령해야 합니다.</p>
+    <p>선언형은 시스템이 알아서 다시 3개로 맞춥니다.
+      아래 그림처럼 현재를 보고, 목표와 비교하고, 차이만큼만 조치하고, 다시 처음으로 돕니다.
+      이걸 조정 루프라고 부릅니다.</p>
+    <p>다음 장에서 이 차이가 실무에서 왜 중요한지 조금 더 풀어 보겠습니다.</p></aside>
+</section>
+
+<!-- 14 1부7-2 실수 확률 -->
+<section class="slide">
+  <div class="kicker">1부 · 7장 · 확대 ②</div>
+  <h2>왜 선언형이 실수를 줄이는가</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="ctrl"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <table>
+        <tr><th style="width:230px"></th><th>명령형</th><th>선언형</th></tr>
+        <tr><td>현재 상태를 아는 주체</td><td><b>사람</b><span class="d">서버마다 조회해 취합</span></td>
+            <td><b>시스템</b><span class="d">항상 최신으로 관리</span></td></tr>
+        <tr><td>사람이 작성하는 것</td><td>절차 전체<span class="d">순서 · 조건 · 예외 처리</span></td>
+            <td>바뀐 값 한 줄<span class="d"><code>replicas: 3 → 5</code></span></td></tr>
+        <tr><td>두 번 실행하면</td><td>중복 생성 위험</td><td><b>결과 동일</b><span class="d">멱등</span></td></tr>
+        <tr><td>중간 실패 시</td><td>어디까지 됐는지 <b>수동 확인</b></td><td>다음 주기에 <b>자동 정합</b></td></tr>
+        <tr><td>변경 이력</td><td>명령 기록을 따로 남겨야 함</td><td><b>파일 diff로 확인</b><span class="d">리뷰 · 롤백 가능</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ② 조정 루프</span><span>7장</span></div>
+  <aside class="sc"><p>표로 정리했는데, 제가 실무에서 느낀 차이를 말씀드리겠습니다.</p>
+    <p><em>명령형이 위험한 진짜 이유는 "현재 상태를 사람이 알고 있어야 한다"는 겁니다.</em></p>
+    <p>서버 다섯 대에 배포한다고 생각해 보세요. 명령형이면 이렇게 됩니다.
+      지금 몇 번 서버에 몇 버전이 떠 있지? 3번은 지난주에 누가 수동으로 고쳤다던데?
+      이걸 사람이 다 파악하고 나서야 다음 명령을 짤 수 있습니다.
+      <em>그 파악이 틀리면 명령도 틀립니다.</em></p>
+    <p>게다가 절차를 짜야 합니다. 순서는 어떻게 할지, 중간에 실패하면 어디까지 롤백할지.
+      그리고 이 스크립트를 실수로 두 번 돌리면? 컨테이너가 여섯 개가 됩니다.</p>
+    <p><em>선언형은 이 부담을 통째로 시스템에 넘깁니다.</em>
+      현재 상태는 쿠버네티스가 이미 정확히 알고 있습니다. 우리는 목표만 적으면 돼요.</p>
+    <p>그래서 실무에서는 이렇게 됩니다. yaml 파일 열어서
+      <code>replicas: 3</code>을 <code>5</code>로 고치고 apply. 끝입니다.
+      <em>절차를 짤 필요가 없습니다. 바뀐 값 한 줄만 보면 무엇이 달라지는지 한눈에 들어옵니다.</em></p>
+    <p>두 번 돌려도 안전하고, 중간에 실패해도 다음 루프가 알아서 맞춥니다.
+      그리고 이 파일을 깃에 올려 두면 변경 이력이 그대로 남습니다.
+      리뷰도 되고 롤백도 됩니다. GitOps라는 게 여기서 나온 겁니다.</p></aside>
+</section>
+
+<!-- 15 1부7-3 장애 강함 -->
+<section class="slide">
+  <div class="kicker">1부 · 7장 · 확대 ②</div>
+  <h2>조정 루프가 장애에 강한 이유</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="ctrl"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <ul>
+        <li>변화 시점에만 반응 → <b>알림 유실 시 영구 불일치</b></li>
+        <li>쿠버네티스 → 알림 수신 시 <b>현재 상태 전체를 재확인</b><span class="d">유실이 있어도 다음 주기에 복구</span></li>
+        <li>컨트롤러 <b>재시작에 안전</b><span class="d">보관해야 할 진행 상태가 없음</span></li>
+      </ul>
+      <div class="key"><code>kubectl delete pod</code> → <b>즉시 신규 파드 생성</b>
+        <span class="d">생성 명령 없이, "3개" 선언만으로</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ② 조정 루프</span><span>7장</span></div>
+  <aside class="sc"><p>조정 루프의 또 다른 장점입니다.</p>
+    <p>보통 이런 시스템을 만들면 이벤트 기반으로 만듭니다.
+      "파드 죽었다" 알림이 오면 그때 하나 만들고요.
+      <em>그런데 이 방식은 알림을 하나 놓치면 끝입니다.</em>
+      네트워크가 잠깐 끊겨서 못 받았다? 영영 2개인 채로 남습니다.</p>
+    <p>쿠버네티스는 알림을 받으면 <em>그때 현재 상태를 통째로 다시 확인합니다.</em>
+      "지금 몇 개지? 2개네?" 이렇게요. 그러니 중간에 놓쳐도 다음 번에 바로잡힙니다.</p>
+    <p>그래서 컨트롤러를 그냥 재시작해도 됩니다. 진행 상태를 기억할 필요가 없거든요.</p>
+    <p>직접 해 보시면 확 와닿습니다. 파드 하나 지워 보세요. 바로 새로 생깁니다.
+      <em>아무도 만들라고 안 했는데요.</em> 이 얘기는 마지막 토론 질문으로 가져가겠습니다.</p></aside>
+</section>
+
+<!-- 16 1부8-1 -->
+<section class="slide">
+  <div class="kicker">1부 · 8장 · 확대 ③</div>
+  <h2>etcd · 컨트롤러 · 스케줄러</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="etcd ctrl sched"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <table>
+        <tr><th style="width:200px"></th><th>역할</th></tr>
+        <tr><td><code>etcd</code><span class="d">기억</span></td>
+            <td>클러스터 전체 상태 저장<span class="d">컨트롤러 · 스케줄러는 etcd가 아니라 apiserver를 조회</span></td></tr>
+        <tr><td>컨트롤러<span class="d">의지</span></td>
+            <td>조정 루프 수행<span class="d">사슬 구조 — 디플로이먼트 컨트롤러는 레플리카셋만 생성,
+              파드는 레플리카셋 컨트롤러가 생성</span></td></tr>
+        <tr><td>스케줄러<span class="d">배치</span></td>
+            <td>배치 노드 결정 후 통보<span class="d">컨테이너를 직접 생성하지 않음</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ③ 상세</span><span>8장</span></div>
+  <aside class="sc"><p>세 번째 확대입니다. 아까 이름만 보고 넘어간 셋을 제대로 보겠습니다.</p>
+    <p>etcd는 기억입니다. <em>컨트롤러랑 스케줄러가 etcd를 직접 안 봅니다.</em>
+      다 apiserver한테 물어봅니다. 5장에서 말씀드린 그 구조죠.</p>
+    <p>컨트롤러는 의지입니다. 7장에서 본 루프를 도는 애들이고 종류가 수십 개입니다.</p>
+    <p><em>중요한 건 컨트롤러들이 사슬처럼 이어져 있다는 겁니다.</em>
+      디플로이먼트 컨트롤러는 파드를 안 만듭니다. 레플리카셋만 만들고,
+      레플리카셋 컨트롤러가 그걸 보고 파드를 만듭니다. 2부에서 다시 나옵니다.</p>
+    <p>스케줄러는 배치입니다. <em>컨테이너를 안 만듭니다.</em>
+      "이 파드는 3번 서버에" 하고 결정만 알려 줍니다. 만드는 건 그 서버의 kubelet이고요.</p></aside>
+</section>
+
+<!-- 17 1부8-2 흐름 -->
+<section class="slide">
+  <div class="kicker">1부 · 8장 · 확대 ③</div>
+  <h2><code>kubectl apply</code> 이후의 흐름</h2>
+  <div class="cols" style="gap:50px;margin-top:10px">
+    <div class="dg" style="margin:0">
+      <div class="box d" style="width:330px">kubectl apply</div>
+      <div class="arw s"></div>
+      <div class="box k" style="width:330px">apiserver<span class="s">인증 · 권한 · 유효성 검사</span></div>
+      <div class="arw s"></div>
+      <div class="box" style="width:330px">etcd 저장<span class="s">kubectl은 여기서 종료 · 접수 완료</span></div>
+      <div class="arw s"></div>
+      <div class="box" style="width:330px">디플로이먼트 컨트롤러<span class="s">레플리카셋 생성</span></div>
+    </div>
+    <div class="dg" style="margin:0">
+      <div class="box" style="width:330px">레플리카셋 컨트롤러<span class="s">파드 생성 · 노드 미정</span></div>
+      <div class="arw s"></div>
+      <div class="box" style="width:330px">스케줄러<span class="s">배치 노드 결정</span></div>
+      <div class="arw s"></div>
+      <div class="box k" style="width:330px">해당 노드 kubelet<span class="s">변경 감지</span></div>
+      <div class="arw s"></div>
+      <div class="box g" style="width:330px">containerd · runc<span class="s">namespace + cgroup</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ③ 요청 흐름</span><span>8장</span></div>
+  <aside class="sc"><p>이게 오늘 발표의 절정입니다. <em>맨 처음에 던진 질문의 답입니다.</em></p>
+    <p>kubectl apply를 칩니다. apiserver가 인증하고 권한 보고 유효성 검사하고 etcd에 저장합니다.</p>
+    <p><em>여기서 kubectl은 끝납니다.</em> 화면에 created라고 뜨죠?
+      그건 만들어졌다는 게 아니라 접수됐다는 뜻입니다. 아직 컨테이너는 하나도 안 떴습니다.</p>
+    <p>그다음부터가 자동입니다. 디플로이먼트 컨트롤러가 레플리카셋을 만들고,
+      레플리카셋 컨트롤러가 파드를 만듭니다. 이 파드는 아직 어느 서버에 갈지 안 정해졌습니다.</p>
+    <p>스케줄러가 3번 서버로 정해 주면, 그 서버 kubelet이 자기 일인 걸 알아채고 집어갑니다.
+      containerd 부르고 runc 부르고, <em>namespace 걸고 cgroup 걸고.</em> 배경 1장으로 돌아왔습니다.</p>
+    <p>다시 강조하면, <em>이 과정에서 아무도 서로를 직접 부르지 않았습니다.</em></p></aside>
+</section>
+
+<!-- 18 1부9 kubectl -->
+<section class="slide">
+  <div class="kicker">1부 · 9장</div>
+  <h2>kubectl의 위치</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="kubectl api"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <ul>
+        <li>실제 인터페이스는 <b>apiserver의 웹 API</b><span class="d">kubectl은 클라이언트 중 하나</span></li>
+        <li>ArgoCD · 테라폼 · 자체 스크립트도 <b>동일한 자격</b></li>
+        <li><code>kubectl apply</code>는 <b>전송까지만</b><span class="d">실제 반영은 컨트롤러가 수행</span></li>
+      </ul>
+      <div class="key">쿠버네티스 <b>네임스페이스 ≠ 리눅스 namespace</b>
+        <span class="d">자원 이름을 나누는 폴더 개념. 격리 기술이 아님</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>1부 · kubectl</span><span>9장</span></div>
+  <aside class="sc"><p>잠깐 kubectl 얘기를 하고 넘어가겠습니다.</p>
+    <p><em>kubectl에는 아무 지능이 없습니다.</em> yaml을 apiserver에 전달하는 심부름꾼입니다.
+      진짜 인터페이스는 apiserver가 열어 둔 웹 API고요.</p>
+    <p>그래서 ArgoCD도, 테라폼도, 직접 짠 스크립트도
+      <em>kubectl과 똑같은 자격</em>으로 클러스터를 조작할 수 있습니다.</p>
+    <p><em>그리고 헷갈리기 쉬운 용어 하나를 짚고 가겠습니다.</em>
+      쿠버네티스 네임스페이스는 배경 1장의 리눅스 namespace랑 이름만 같고 전혀 다릅니다.
+      그냥 <em>폴더</em>라고 생각하시면 됩니다. dev 자원, prod 자원 나눠 두는 거예요.</p>
+    <p>실무 팁 하나. 뭔가 안 될 때 <code>kubectl describe</code> 치세요.
+      맨 아래 Events에 이유가 거의 다 적혀 있습니다.</p></aside>
+</section>
+
+<!-- 19 1부10 워커 -->
+<section class="slide">
+  <div class="kicker">1부 · 10장 · 확대 ④</div>
+  <h2>워커 노드</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="kubelet rt pod proxy cni"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <table>
+        <tr><th style="width:180px">구성요소</th><th>역할</th></tr>
+        <tr><td><code>kubelet</code></td><td>자기 노드에 배정된 파드를 감지해 생성 요청 후 상태 보고</td></tr>
+        <tr><td>컨테이너 런타임</td><td>containerd — 컨테이너 프로세스 생성</td></tr>
+        <tr><td><code>kube-proxy</code></td><td>서비스 주소용 네트워크 규칙 설정</td></tr>
+        <tr><td>CNI 플러그인</td><td>파드 IP 부여 · 노드 간 통신</td></tr>
+      </table>
+      <div class="key">kubelet은 <b>파드를 생성하지 않음</b>
+        <span class="d">생성은 컨트롤러, 배치는 스케줄러, kubelet은 실현만 담당</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ④ 워커 노드</span><span>10장</span></div>
+  <aside class="sc"><p>네 번째 확대입니다. 실제로 컨테이너가 도는 곳입니다.</p>
+    <p>kubelet이 이 노드의 유일한 일꾼입니다.
+      apiserver를 보다가 <em>자기 노드에 배정된 파드</em>가 있으면 집어가서
+      containerd한테 만들어 달라고 하고 결과를 보고합니다.</p>
+    <p>kube-proxy는 15장 서비스를 위한 거라 지금은 넘어가겠습니다.
+      CNI는 파드한테 IP를 주는 역할인데 4주차 주제입니다.</p>
+    <p><em>제일 헷갈리는 걸 짚겠습니다.</em>
+      kubelet은 파드를 만드는 게 아닙니다. 만드는 건 컨트롤러, 배치는 스케줄러,
+      kubelet은 정해진 걸 현실로 옮길 뿐입니다.</p>
+    <p>그리고 kubelet은 <em>자기 노드 일만 압니다.</em> 클러스터 전체를 모릅니다.</p></aside>
+</section>
+
+<!-- 20 1부11 -->
+<section class="slide">
+  <div class="kicker">1부 · 11장</div>
+  <h2>소유 관계와 실체</h2>
+  <div class="frame" style="margin-top:10px">
+    <span class="ft">생성 사슬 — etcd 안의 레코드</span>
+    <div class="row" style="align-items:center;gap:12px">
+      <div class="box" style="width:230px">디플로이먼트<span class="s">버전 · 교체 전략</span></div>
+      <div class="arh"></div>
+      <div class="box" style="width:230px">레플리카셋<span class="s">개수 유지</span></div>
+      <div class="arh"></div>
+      <div class="box w" style="width:200px">파드<span class="s">실행 단위</span></div>
+    </div>
+  </div>
+  <ul style="margin-top:22px">
+    <li>디플로이먼트 · 레플리카셋은 <b>노드에 존재하지 않음</b><span class="d">노드의 실체는 파드, 정확히는 컨테이너 프로세스</span></li>
+    <li>상단은 목표 상태, 하단은 실현 상태 → <b>연결 고리는 조정 루프</b></li>
+  </ul>
+  <div class="foot"><span>1부 정리</span><span>11장</span></div>
+  <aside class="sc"><p>1부를 정리하고 2부로 넘어가겠습니다. 두 가지만 말씀드릴게요.</p>
+    <p>첫째. 위에 있는 디플로이먼트랑 레플리카셋, <em>어느 서버에도 없습니다.</em>
+      etcd에 적힌 레코드일 뿐이에요. 서버에서 ps를 쳐도 디플로이먼트는 안 나옵니다.
+      실제로 도는 건 파드, 정확히는 컨테이너 프로세스뿐입니다.</p>
+    <p>둘째. 위쪽은 목표 상태고 아래쪽은 실제 현실입니다.
+      <em>그 둘 사이를 계속 맞춰 주는 게 7장에서 본 조정 루프고요.</em></p>
+    <p>이 두 개만 가져가시면 2부는 쉽습니다.</p></aside>
+</section>
+
+<!-- 21 2부12-1 파드 -->
+<section class="slide">
+  <div class="kicker">2부 · 12장 · 확대 ⑤</div>
+  <h2>파드</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="pod"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <ul>
+        <li><b>함께 배치되고 함께 종료되는 컨테이너 묶음</b><span class="d">스케줄링의 최소 단위</span></li>
+        <li>파드 내부 컨테이너는 <b>네트워크 공유</b><span class="d">상호 호출은 <code>localhost</code></span></li>
+        <li>프로세스 목록 · 파일 시스템은 <b>비공유</b></li>
+      </ul>
+      <div class="frame" style="border-style:solid;border-color:#f0883e66">
+        <span class="ft">파드 · IP 하나를 공유</span>
+        <div class="stk" style="align-items:center">
+          <div class="box k" style="width:300px">pause 컨테이너<span class="s">네트워크 유지 담당</span></div>
+          <div class="row" style="gap:11px">
+            <div class="box" style="width:145px">애플리케이션<span class="s">:8080</span></div>
+            <div class="box" style="width:145px">로그 수집기<span class="s">localhost:8080</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑤ 파드</span><span>12장</span></div>
+  <aside class="sc"><p>2부 시작입니다. 첫 번째는 파드입니다.</p>
+    <p>쿠버네티스는 컨테이너를 하나씩 다루지 않고 <em>파드라는 묶음 단위로 다룹니다.</em>
+      왜 한 겹을 더 뒀나 싶으실 텐데요.</p>
+    <p>실무에서 앱 컨테이너 하나만 띄우는 경우가 별로 없습니다.
+      로그 수집기도 붙여야 하고 프록시도 붙여야 하고요.
+      <em>그런 애들은 앱이랑 같은 서버에 있어야 하고 앱이 죽으면 같이 죽어야 합니다.</em> 그 묶음이 파드입니다.</p>
+    <p><em>그리고 배경 1장에서 남긴 질문에 여기서 답이 나옵니다.</em>
+      여러 프로세스가 네트워크를 함께 쓰면 어떻게 되느냐. 그게 파드입니다.
+      파드 안 컨테이너들은 네트워크를 공유해서 서로를 localhost로 부릅니다.</p>
+    <p>다만 프로세스 목록이랑 파일 시스템은 따로입니다.</p>
+    <p>그림의 pause 컨테이너는 네트워크를 붙잡고 있는 역할입니다.
+      앱이 죽었다 살아나도 파드 IP가 유지되는 게 얘 덕분입니다.</p></aside>
+</section>
+
+<!-- 22 2부12-2 일회용 -->
+<section class="slide">
+  <div class="kicker">2부 · 12장 · 확대 ⑤</div>
+  <h2>파드는 일회용</h2>
+  <div class="big" style="margin:auto 0">
+    수정하지 않고 <b>폐기 후 재생성</b>
+    <span class="sub">재생성 시 <b>이름과 IP가 유지되지 않음</b><br><br>
+      개수 유지 문제 · 13장 레플리카셋<br>
+      주소 고정 문제 · 15장 서비스</span></div>
+  <div class="foot"><span>확대 ⑤ 파드</span><span>12장</span></div>
+  <aside class="sc"><p>파드에서 제일 중요한 성질입니다.</p>
+    <p><em>파드는 한 번 쓰고 버리는 겁니다.</em>
+      접속해서 고치고 재부팅하고, 이렇게 안 씁니다. 문제가 생기면 죽이고 새로 만듭니다.</p>
+    <p>익숙해지는 데 시간이 걸립니다. 서버를 애완동물처럼 다루던 습관이 있으니까요.
+      쿠버네티스에서는 가축처럼 다룹니다. 아프면 치료가 아니라 교체입니다.</p>
+    <p><em>그리고 새로 만들면 이름도 IP도 바뀝니다.</em> 이게 문제를 두 개 만듭니다.</p>
+    <p>하나는 개수입니다. 죽었는데 아무도 안 만들면 줄어들잖아요. 13장 레플리카셋이 필요합니다.</p>
+    <p>또 하나는 주소입니다. IP가 계속 바뀌는데 다른 서비스가 얘를 어떻게 부르죠?
+      15장 서비스가 필요합니다.</p></aside>
+</section>
+
+<!-- 23 2부13 레플리카셋 -->
+<section class="slide">
+  <div class="kicker">2부 · 13장 · 확대 ⑥</div>
+  <h2>레플리카셋</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="ctrl"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <div class="cols b">
+        <div>
+          <ul>
+            <li>기능은 하나 — <b>조건에 맞는 파드 N개 유지</b></li>
+            <li>대상 식별은 <b>라벨</b><span class="d">자원에 붙이는 이름표</span></li>
+            <li><b>버전 교체 불가</b><span class="d">14장 디플로이먼트가 담당</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="dg" style="margin:0">
+            <div class="box k" style="width:250px">목표 개수 3</div>
+            <div class="arw s"></div>
+            <div class="box" style="width:250px">현재 개수 확인</div>
+            <div class="arw s"></div>
+            <div class="row" style="gap:12px">
+              <div class="box g" style="width:119px">2개<span class="s">생성</span></div>
+              <div class="box w" style="width:119px">4개<span class="s">삭제</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="key">노드 전체 장애로 3개 소실 → <b>복구 명령 없이 3개 재생성</b></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑥ 레플리카셋</span><span>13장</span></div>
+  <aside class="sc"><p>레플리카셋입니다. 7장 조정 루프의 <em>제일 순수한 예</em>라 이해하기 쉽습니다.</p>
+    <p>하는 일이 딱 하나예요. "파드가 항상 3개여야 해"를 지킵니다.
+      계속 세다가 2개면 하나 만들고 4개면 하나 지웁니다.</p>
+    <p>어떤 파드가 자기 것인지는 <em>라벨</em>로 구분합니다. 자원에 붙이는 이름표예요.
+      뒤에 서비스에서도 똑같은 라벨을 씁니다.</p>
+    <p>여기서 감동적인 부분이 있는데요.
+      <em>서버가 통째로 꺼져서 3개가 한꺼번에 날아가도 그냥 3개를 다시 만듭니다.</em>
+      장애 대응 로직이 따로 있는 게 아니에요. "3개여야 한다"만 알고 있으니까요.</p>
+    <p>다만 버전 교체는 못 합니다. 그래서 다음 장이 필요합니다.</p></aside>
+</section>
+
+<!-- 24 2부14-1 디플로이먼트 -->
+<section class="slide">
+  <div class="kicker">2부 · 14장 · 확대 ⑦</div>
+  <h2>디플로이먼트</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="ctrl"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <ul>
+        <li>파드가 아니라 <b>레플리카셋을 생성</b></li>
+        <li>교체 방식 — <b>새 레플리카셋 추가 후 점진적 전환</b></li>
+      </ul>
+      <div class="frame">
+        <span class="ft">버전 교체</span>
+        <div style="display:grid;grid-template-columns:110px 1fr;gap:16px 18px;align-items:center;font-size:19px;color:var(--dim)">
+          <div>교체 전</div>
+          <div class="bar"><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            <span style="margin-left:14px">구 버전 3</span></div>
+          <div>진행 중</div>
+          <div class="bar"><div class="cell"></div><div class="cell"></div><div class="cell off"></div>
+            <div class="cell new" style="margin-left:14px"></div>
+            <span style="margin-left:14px">혼재 구간</span></div>
+          <div>완료</div>
+          <div class="bar"><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div>
+            <div class="cell new" style="margin-left:14px"></div><div class="cell new"></div><div class="cell new"></div>
+            <span style="margin-left:14px">구 버전 <b>0개로 잔존</b></span></div>
+        </div>
+      </div>
+      <div class="key">구 레플리카셋이 남아 있으므로 <b>되돌리기 가능</b></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑦ 디플로이먼트</span><span>14장</span></div>
+  <aside class="sc"><p>디플로이먼트입니다. 실무에서 제일 많이 쓰실 겁니다.</p>
+    <p>먼저 관계를 짚으면, <em>디플로이먼트는 파드를 직접 안 만듭니다. 레플리카셋을 만듭니다.</em>
+      8장에서 말한 사슬입니다.</p>
+    <p>왜 한 겹을 더 뒀냐, 버전 교체 때문입니다.</p>
+    <p>새 버전을 배포하면 <em>레플리카셋을 하나 더 만듭니다.</em>
+      그리고 새 쪽을 하나 늘리고 옛 쪽을 하나 줄이고, 반복합니다. 그래서 서비스가 안 끊깁니다.</p>
+    <p>완료돼도 <em>옛 레플리카셋이 안 지워집니다.</em> 0개인 채로 남아 있어요.
+      그래서 롤백이 가능한 겁니다. <code>kubectl rollout undo</code> 한 줄이면 됩니다.</p>
+    <p>참고로 무한정 남지는 않고 기본값으로 최근 10개까지만 보관합니다.</p></aside>
+</section>
+
+<!-- 25 2부14-2 라벨 -->
+<section class="slide">
+  <div class="kicker">2부 · 14장 · 확대 ⑦</div>
+  <h2>라벨로 연결</h2>
+  <div class="cols" style="grid-template-columns:1.15fr 1fr;gap:44px">
+    <div>
+      <pre>kind: Deployment
+spec:
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web</pre>
+    </div>
+    <div>
+      <div class="dg" style="margin-top:0">
+        <div class="box" style="width:250px">디플로이먼트</div>
+        <div class="arw s"></div>
+        <div class="box" style="width:250px">레플리카셋</div>
+        <div class="arw s"></div>
+        <div class="box w" style="width:250px">파드<span class="s">app: web</span></div>
+        <div class="arw s"></div>
+        <div class="box g" style="width:250px">서비스<span class="s">같은 라벨로 조회</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="key"><code>selector</code>와 <code>labels</code>가 <b>일치해야 함</b>
+    <span class="d">불일치 시 자기 파드를 인식하지 못해 계속 새로 생성</span></div>
+  <div class="foot"><span>확대 ⑦ 디플로이먼트</span><span>14장</span></div>
+  <aside class="sc"><p>오늘 yaml을 거의 안 보여 드렸는데 여기서 딱 한 번 보겠습니다.
+      <em>문법 때문이 아니라 연결 구조를 보여 드리려고요.</em></p>
+    <p>app: web이 두 번 나옵니다.
+      위의 selector는 "이 이름표 붙은 파드가 내 것"이라는 뜻이고,
+      아래 template은 "파드 만들 때 이 이름표를 붙여라"라는 뜻입니다.</p>
+    <p><em>이 둘이 같아야 합니다.</em> 다르면 자기가 만든 파드를 자기 것으로 인식 못 해서
+      계속 새로 만듭니다. 초보 때 자주 겪는 사고입니다.</p>
+    <p>그리고 <em>다음 장 서비스도 똑같은 이름표로 파드를 찾습니다.</em>
+      쿠버네티스에는 외래키 같은 게 없어요. 라벨로 느슨하게 묶습니다.</p></aside>
+</section>
+
+<!-- 26 2부15-1 서비스 -->
+<section class="slide">
+  <div class="kicker">2부 · 15장 · 확대 ⑧</div>
+  <h2>서비스</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="proxy pod"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <ul>
+        <li>파드 IP는 재생성마다 변경 → <b>고정 주소와 이름 제공</b></li>
+        <li>대상 선택은 <b>라벨</b>, 규칙 반영은 <b>kube-proxy</b></li>
+      </ul>
+      <div class="dg">
+        <div class="box k" style="width:340px">서비스 web<span class="s">10.96.0.12 · 고정</span></div>
+        <div class="arw s"></div>
+        <div class="alab">라벨 <code>app=web</code> 조회</div>
+        <div class="row" style="gap:14px">
+          <div class="box w" style="width:105px">파드</div>
+          <div class="box w" style="width:105px">파드</div>
+          <div class="box w" style="width:105px">파드</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑧ 서비스</span><span>15장</span></div>
+  <aside class="sc"><p>서비스입니다. 12장에서 남겨 둔 문제를 푸는 장입니다.</p>
+    <p>파드는 재생성마다 IP가 바뀝니다. 다른 서비스가 얘를 어떻게 부를까요.
+      IP를 하드코딩할 수는 없잖아요.</p>
+    <p>그래서 서비스가 <em>변하지 않는 주소와 이름</em>을 만들어 줍니다.
+      다른 앱은 그 이름만 부르면 됩니다.</p>
+    <p>어떻게 연결되냐면 <em>또 라벨입니다.</em>
+      "app=web인 파드로 보내"라고 적어 두면 쿠버네티스가 주소 목록을 계속 갱신하고,
+      10장에서 본 kube-proxy가 각 노드에 규칙을 심어 둡니다.</p>
+    <p>이름으로 찾는 건 클러스터 안의 DNS 서버가 처리해 줍니다.</p></aside>
+</section>
+
+<!-- 27 2부15-2 가상 IP -->
+<section class="slide">
+  <div class="kicker">2부 · 15장 · 확대 ⑧</div>
+  <h2>서비스 IP의 성질</h2>
+  <div class="big" style="margin:auto 0">
+    서비스 IP는 <b>어느 장비에도 존재하지 않는 가상 주소</b>
+    <span class="sub"><b>ping 실패, 통신 정상</b><br>
+      커널이 해당 주소로 향하는 패킷을 파드 주소로 변환</span></div>
+  <div class="foot"><span>확대 ⑧ 서비스</span><span>15장</span></div>
+  <aside class="sc"><p>서비스에서 마지막으로 재밌는 얘기 하나 하겠습니다.</p>
+    <p><em>서비스 IP는 사실 어디에도 없는 가짜 주소입니다.</em>
+      어느 서버의 네트워크 카드에도 안 붙어 있어요.</p>
+    <p>그래서 ping을 때리면 안 됩니다. 근데 통신은 잘 돼요.
+      커널이 그 주소로 가는 패킷을 낚아채서 진짜 파드 주소로 바꿔치기하거든요.</p>
+    <p>처음에 <em>"서비스 IP에 ping이 안 되는데 장애인가요?"</em> 하고
+      한참 삽질하는 분들이 많습니다. 정상입니다.</p>
+    <p>예외가 하나 있는데 README 부록에 적어 뒀습니다.</p></aside>
+</section>
+
+<!-- 28 2부16-1 인그레스 -->
+<section class="slide">
+  <div class="kicker">2부 · 16장 · 확대 ⑨</div>
+  <h2>인그레스</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="pod proxy"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <ul>
+        <li>서비스는 IP · 포트 기준, 인그레스는 <b>도메인 · 경로 기준</b></li>
+        <li>HTTPS 인증서 <b>일괄 처리</b></li>
+      </ul>
+      <div class="dg">
+        <div class="box d" style="width:150px">인터넷</div>
+        <div class="arw s"></div>
+        <div class="box k" style="width:340px">인그레스 컨트롤러<span class="s">클러스터 내부의 파드</span></div>
+        <div class="arw s"></div>
+        <div class="row" style="gap:14px">
+          <div class="box sm" style="width:110px">/api</div>
+          <div class="box sm" style="width:110px">/admin</div>
+          <div class="box sm" style="width:110px">/</div>
+        </div>
+        <div class="arw s"></div>
+        <div class="row" style="gap:14px">
+          <div class="box sm g" style="width:110px">서비스</div>
+          <div class="box sm g" style="width:110px">서비스</div>
+          <div class="box sm g" style="width:110px">서비스</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑨ 인그레스</span><span>16장</span></div>
+  <aside class="sc"><p>마지막 자원, 인그레스입니다.</p>
+    <p>서비스까지 만들고 나면 이런 문제가 생깁니다.
+      서비스가 10개인데 외부에 공개하려면 로드밸런서를 10개 사야 하나?
+      클라우드 로드밸런서 하나에 월 몇 만원씩 나가는데요.</p>
+    <p>그래서 인그레스가 나옵니다. <em>입구는 하나만 두고 주소 보고 나눠 보내는 겁니다.</em>
+      /api는 api 서비스로, /admin은 관리자 페이지로요. HTTPS 인증서도 여기서 한 번에 처리합니다.</p>
+    <p>그림에서 하나만 봐 주세요.
+      <em>인그레스는 파드를 직접 가리키지 않습니다. 서비스를 가리킵니다.</em></p></aside>
+</section>
+
+<!-- 29 2부16-2 함정 -->
+<section class="slide">
+  <div class="kicker">2부 · 16장 · 확대 ⑨</div>
+  <h2>인그레스의 함정</h2>
+  <div class="big" style="margin:auto 0">
+    인그레스 자원은 <b>규칙 선언일 뿐</b>
+    <span class="sub"><b>인그레스 컨트롤러 미설치 시</b><br>
+      동작하지 않으며 <b>오류도 발생하지 않음</b></span></div>
+  <div class="foot"><span>확대 ⑨ 인그레스</span><span>16장</span></div>
+  <aside class="sc"><p>오늘 실무 팁 중에 제일 값진 걸 말씀드리겠습니다.</p>
+    <p>인그레스는 그냥 규칙을 적어 둔 종이입니다. 그 자체로는 아무것도 안 합니다.
+      규칙을 읽어서 실제로 트래픽을 나눠 줄 <em>인그레스 컨트롤러</em>를 따로 설치해야 해요. nginx 같은 거요.</p>
+    <p>안 깔고 apply 하면 <em>아무 일도 안 일어납니다. 그런데 오류도 안 납니다.</em>
+      created라고 뜨고 끝이에요. 그래서 왜 안 되는지 몇 시간씩 헤매게 됩니다.</p>
+    <p>저도 당해 봤고, 여러분도 아마 한 번은 당하실 겁니다. 미리 말씀드립니다.</p>
+    <p>인그레스 컨트롤러도 결국 클러스터 안에서 도는 파드입니다. 특별한 인프라가 아니에요.</p></aside>
+</section>
+
+<!-- 30 인그레스 동결 -->
+<section class="slide">
+  <div class="kicker">2부 · 16장 · 확대 ⑨</div>
+  <h2>인그레스의 현재 위치</h2>
+  <div class="zoomwrap">
+    <div class="map" data-focus="pod proxy"></div>
+    <div class="zarrow"><div class="zt">확대</div><div class="zl"></div></div>
+    <div class="zpanel">
+      <table>
+        <tr><th style="width:230px">상태</th><th>내용</th></tr>
+        <tr><td><b>동결</b><span class="d">frozen</span></td>
+            <td>기능 추가 · 변경 <b>중단</b><span class="d">지원 중단이 아님. GA 유지, 제거 계획 없음</span></td></tr>
+        <tr><td><b>후속</b></td>
+            <td>공식 문서가 <b>Gateway API 사용을 권고</b><span class="d">신규 구축이라면 Gateway 우선 검토</span></td></tr>
+        <tr><td><b>전환</b></td>
+            <td>Gateway API에 Ingress 종류는 <b>포함되지 않음</b><span class="d">일회성 변환 작업 필요</span></td></tr>
+      </table>
+      <div class="key">현장에는 아직 인그레스가 압도적으로 많음
+        <span class="d">둘 다 알아야 하는 과도기</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑨ 인그레스</span><span>16장</span></div>
+  <aside class="sc"><p>여기서 짚고 갈 게 하나 있습니다. 인그레스의 현재 위치입니다.</p>
+    <p>가끔 "인그레스 이제 지원 중단된 거 아니냐"는 얘기를 듣는데,
+      <em>정확히는 지원 중단이 아니라 동결입니다.</em></p>
+    <p>공식 문서 표현을 그대로 옮기면, Ingress API는 frozen 상태입니다.
+      기능 추가나 변경을 더 이상 안 한다는 뜻이고요.
+      <em>다만 GA 상태를 유지하고, 쿠버네티스에서 제거할 계획은 없다고 명시돼 있습니다.</em>
+      그러니 지금 쓰고 계신 인그레스가 갑자기 안 돌아가지는 않습니다.</p>
+    <p>대신 공식 문서가 <em>신규로는 Gateway를 쓰라고 권고</em>합니다.
+      Gateway API가 인그레스의 후속이거든요.</p>
+    <p>주의하실 건, Gateway API에는 Ingress라는 종류가 아예 없습니다.
+      그래서 옮기려면 일회성 변환 작업이 필요합니다. 자동으로 되지 않습니다.</p>
+    <p>현실적으로는 아직 인그레스 쓰는 클러스터가 압도적으로 많습니다.
+      그래서 당분간은 둘 다 알아야 하는 과도기라고 보시면 됩니다.</p></aside>
+</section>
+
+<!-- 31 Gateway API -->
+<section class="slide">
+  <div class="kicker">2부 · 16장 · 확대 ⑨</div>
+  <h2>Gateway API</h2>
+  <div class="cols a">
+    <div>
+      <div class="dg" style="margin-top:0">
+        <div class="box d" style="width:250px">GatewayClass<span class="s">인프라 담당 · 구현체 지정</span></div>
+        <div class="arw s"></div>
+        <div class="box k" style="width:250px">Gateway<span class="s">클러스터 운영자 · 리스너와 포트</span></div>
+        <div class="arw s"></div>
+        <div class="box w" style="width:250px">HTTPRoute · GRPCRoute<span class="s">앱 개발자 · 경로와 대상</span></div>
+        <div class="arw s"></div>
+        <div class="box g" style="width:250px">서비스</div>
+      </div>
+    </div>
+    <div>
+      <ul>
+        <li><b>역할별로 자원이 분리됨</b><span class="d">인프라 · 운영 · 개발 담당이 각자 자기 자원만 수정</span></li>
+        <li>인그레스에서 <b>애노테이션으로만 가능하던 기능이 표준 필드</b><span class="d">헤더 기반 분기 · 트래픽 가중치</span></li>
+        <li>쿠버네티스 <b>내장이 아닌 애드온</b><span class="d">CRD 설치 후 사용</span></li>
+      </ul>
+      <div class="key">안정화된 종류는 <b>네 가지</b>
+        <span class="d">GatewayClass · Gateway · HTTPRoute · GRPCRoute</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>확대 ⑨ Gateway API</span><span>16장</span></div>
+  <aside class="sc"><p>그럼 Gateway API가 뭐가 다른지 짧게만 보겠습니다. 자세한 건 4주차 네트워킹 주제입니다.</p>
+    <p><em>제일 큰 차이는 역할 분리입니다.</em>
+      인그레스는 자원 하나에 전부 들어 있었습니다.
+      어떤 컨트롤러를 쓸지, 어떤 포트를 열지, 어떤 경로를 어디로 보낼지가 한 파일에 섞여 있었죠.</p>
+    <p>Gateway API는 이걸 셋으로 쪼갰습니다.
+      GatewayClass는 인프라 담당이, Gateway는 클러스터 운영자가, HTTPRoute는 앱 개발자가 만듭니다.
+      <em>그래서 개발자가 경로 하나 바꾸려고 인프라 설정을 건드릴 필요가 없습니다.</em></p>
+    <p>두 번째 차이는, 인그레스에서 애노테이션으로 우겨넣던 기능들이 정식 필드가 됐다는 겁니다.
+      헤더 보고 분기한다든지, 트래픽을 90대 10으로 나눈다든지 하는 것들이요.
+      <em>인그레스에서는 컨트롤러마다 애노테이션이 달라서 옮기면 다 깨졌습니다.</em></p>
+    <p>다만 이건 쿠버네티스 내장이 아닙니다. CRD를 따로 설치해야 씁니다.</p></aside>
+</section>
+
+
+
+<div id="prog"></div>
+</div></div>
+<div id="notes"><h4>리허설 패널 — 이 창에 함께 표시됨. 발표 중에는 s 로 별도 창을 쓰세요</h4><div class="body"></div></div>
+<div id="hud">방향키 이동 · <b>s 발표자 창</b> · r 리허설 · f 전체화면 · p 인쇄</div>
+
+<script>
+(function(){
+  var MAP =
+    '<div class="mt">현재 위치</div>'+
+    '<div class="mrow"><span class="b" data-id="kubectl">kubectl</span></div>'+
+    '<div class="mconn"></div>'+
+    '<div class="mfr"><i>컨트롤 플레인</i>'+
+      '<div class="mrow"><span class="b" data-id="api">apiserver</span>'+
+                       '<span class="b" data-id="etcd">etcd</span></div>'+
+      '<div class="mrow"><span class="b" data-id="sched">스케줄러</span>'+
+                       '<span class="b" data-id="ctrl">컨트롤러</span>'+
+                       '<span class="b" data-id="ccm">클라우드</span></div>'+
+    '</div>'+
+    '<div class="mconn"></div>'+
+    '<div class="mfr"><i>워커 노드</i>'+
+      '<div class="mrow"><span class="b" data-id="kubelet">kubelet</span>'+
+                       '<span class="b" data-id="rt">containerd</span></div>'+
+      '<div class="mrow"><span class="b" data-id="pod">파드</span>'+
+                       '<span class="b" data-id="proxy">kube-proxy</span>'+
+                       '<span class="b" data-id="cni">CNI</span></div>'+
+    '</div>';
+
+  [].forEach.call(document.querySelectorAll('.map[data-focus]'), function(el){
+    el.innerHTML = MAP;
+    var on = el.getAttribute('data-focus').split(' ');
+    [].forEach.call(el.querySelectorAll('.b'), function(b){
+      b.classList.add(on.indexOf(b.getAttribute('data-id')) >= 0 ? 'hl' : 'dim');
+    });
+  });
+
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var deck=document.getElementById('deck'), prog=document.getElementById('prog');
+  var stage=document.getElementById('stage');
+  var notes=document.getElementById('notes'), nbody=notes.querySelector('.body');
+  var i=0, notesOn=false, pw=null, started=Date.now();
+
+  function scriptOf(n){
+    var el = slides[n] && slides[n].querySelector('.sc');
+    return el ? el.innerHTML : '<p class="none">이 장에는 원고가 없습니다.</p>';
+  }
+  function titleOf(n){
+    var el = slides[n] && slides[n].querySelector('h1,h2');
+    return el ? el.textContent.trim() : '(표지)';
+  }
+  function paintNotes(){ nbody.innerHTML = scriptOf(i); }
+
+  var PW_CSS = 'body{margin:0;background:#0b0f14;color:#e6edf3;'+
+    "font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;padding:22px 26px}"+
+    '#bar{display:flex;justify-content:space-between;align-items:baseline;'+
+    'font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#58a6ff;letter-spacing:.1em;'+
+    'border-bottom:1px solid #30363d;padding-bottom:10px;margin-bottom:16px}'+
+    '#bar b{font-size:26px;color:#e6edf3;letter-spacing:0}#clock{font-size:26px;color:#3fb950}'+
+    '#now{font-size:23px;font-weight:700;margin-bottom:14px;line-height:1.3}'+
+    '#sc{font-size:19px;line-height:1.9;color:#d5dde5}#sc p{margin:0 0 11px}'+
+    '#sc em{color:#f0883e;font-style:normal;font-weight:700}'+
+    '#sc code{font-family:ui-monospace,Menlo,monospace;font-size:17px;'+
+    'background:#ffffff14;padding:2px 6px;border-radius:4px;color:#a5d6ff}#sc .none{color:#6e7681}'+
+    '#nxt{margin-top:22px;padding-top:14px;border-top:1px solid #30363d;font-size:16px;color:#8b949e}'+
+    '#nxt b{color:#c9d1d9}#tip{margin-top:14px;font-size:13px;color:#484f58}';
+
+  function openPresenter(){
+    pw = window.open('', 'k8s-presenter', 'width=960,height=760');
+    if(!pw){ alert('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+    pw.document.open();
+    pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">'+
+      '<title>발표자 원고 — 청중에게 보이지 않는 창</title><style>'+PW_CSS+'</style></head><body>'+
+      '<div id="bar"><span>발표자 원고 <b id="pg"></b></span><span id="clock">00:00</span></div>'+
+      '<div id="now"></div><div id="sc"></div><div id="nxt"></div>'+
+      '<div id="tip">이 창에서도 방향키로 슬라이드를 넘길 수 있습니다. 발표자 모니터에 두세요.</div>'+
+      '</body></html>');
+    pw.document.close();
+    pw.addEventListener('keydown', relay);
+    paintPresenter();
+  }
+  function relay(e){
+    var k=e.key;
+    if(k==='ArrowRight'||k==='ArrowDown'||k===' '||k==='PageDown'){e.preventDefault();show(i+1);}
+    else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'){e.preventDefault();show(i-1);}
+  }
+  function paintPresenter(){
+    if(!pw || pw.closed){ pw=null; return; }
+    var d=pw.document; if(!d.getElementById('sc')) return;
+    d.getElementById('pg').textContent=(i+1)+' / '+slides.length;
+    d.getElementById('now').textContent=titleOf(i);
+    d.getElementById('sc').innerHTML=scriptOf(i);
+    d.getElementById('nxt').innerHTML=(i+1<slides.length)
+      ? '다음 장 &nbsp; <b>'+titleOf(i+1)+'</b>' : '<b>마지막 장입니다.</b>';
+  }
+  setInterval(function(){
+    if(!pw || pw.closed) return;
+    var el=pw.document.getElementById('clock'); if(!el) return;
+    var s=Math.floor((Date.now()-started)/1000);
+    el.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    el.style.color = s>3600 ? '#f85149' : (s>3300 ? '#f0883e' : '#3fb950');
+  },1000);
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(s,k){s.classList.toggle('on',k===i);});
+    prog.style.width=((i+1)/slides.length*100)+'%';
+    if(notesOn) paintNotes();
+    paintPresenter();
+    if(history.replaceState) history.replaceState(null,'','#'+(i+1));
+  }
+  function fit(){
+    var avail = innerHeight - (notesOn ? notes.offsetHeight : 0);
+    deck.style.transform='scale('+Math.min(innerWidth/1280, avail/720)+')';
+    stage.style.alignItems = notesOn ? 'start' : 'center';
+    stage.style.paddingTop = notesOn ? '12px' : '0';
+  }
+  addEventListener('resize',fit);
+
+  addEventListener('keydown',function(e){
+    var k=e.key;
+    if(k==='ArrowRight'||k==='ArrowDown'||k===' '||k==='PageDown'){e.preventDefault();show(i+1);}
+    else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'){e.preventDefault();show(i-1);}
+    else if(k==='Home'){show(0);}
+    else if(k==='End'){show(slides.length-1);}
+    else if(k==='s'||k==='S'){ (pw && !pw.closed) ? (pw.close(), pw=null) : openPresenter(); }
+    else if(k==='r'||k==='R'){ notesOn=!notesOn; notes.classList.toggle('on',notesOn);
+      if(notesOn) paintNotes(); fit(); }
+    else if(k==='f'||k==='F'){ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen(); }
+    else if(k==='p'||k==='P'){ print(); }
+  });
+  addEventListener('click',function(e){
+    if(notes.contains(e.target)) return;
+    show(e.clientX < innerWidth*0.25 ? i-1 : i+1);
+  });
+  addEventListener('beforeunload',function(){ if(pw && !pw.closed) pw.close(); });
+
+  var h=parseInt((location.hash||'').slice(1),10);
+  fit(); show(isNaN(h)?0:h-1);
+})();
+</script>
+</body>
+</html>

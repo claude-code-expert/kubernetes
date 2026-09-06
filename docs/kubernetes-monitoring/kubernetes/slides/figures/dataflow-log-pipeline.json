@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "로그 파이프라인 — stdout에서 그라파나까지",
+    "output": "dataflow-log-pipeline.html",
+    "viewBox": [
+      1080,
+      620
+    ],
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "collect",
+        "label": "수집 경로",
+        "focus": [
+          "app",
+          "logfile",
+          "alloy"
+        ],
+        "note": "앱은 stdout에 쓰기만 하고, 걷는 일은 노드의 데몬셋이 한다."
+      },
+      {
+        "id": "store",
+        "label": "저장과 인덱스",
+        "focus": [
+          "alloy",
+          "loki"
+        ],
+        "note": "Loki는 라벨만 인덱싱한다 — 본문 전문 인덱스가 없어서 싸다."
+      },
+      {
+        "id": "correlate",
+        "label": "메트릭과 상관",
+        "focus": [
+          "loki",
+          "prometheus",
+          "grafana"
+        ],
+        "note": "같은 시간축에 메트릭 그래프와 로그를 놓는 것이 목적지다."
+      }
+    ]
+  },
+  "stages": [
+    {
+      "label": "발생"
+    },
+    {
+      "label": "노드 기록"
+    },
+    {
+      "label": "수집"
+    },
+    {
+      "label": "저장"
+    },
+    {
+      "label": "조회"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "앱 컨테이너",
+      "sublabel": "stdout JSON 로그",
+      "stage": 0,
+      "row": 1,
+      "tag": "gateway · order-api"
+    },
+    {
+      "id": "logfile",
+      "type": "cloud",
+      "label": "노드 로그 파일",
+      "sublabel": "/var/log/pods",
+      "stage": 1,
+      "row": 1,
+      "tag": "containerd 기록"
+    },
+    {
+      "id": "alloy",
+      "type": "backend",
+      "label": "Alloy 데몬셋",
+      "sublabel": "tail + 라벨 부여",
+      "stage": 2,
+      "row": 1,
+      "tag": "k8s 메타데이터"
+    },
+    {
+      "id": "loki",
+      "type": "database",
+      "label": "Loki",
+      "sublabel": "라벨만 인덱싱",
+      "stage": 3,
+      "row": 1,
+      "tag": "청크 저장"
+    },
+    {
+      "id": "prometheus",
+      "type": "database",
+      "label": "Prometheus",
+      "sublabel": "메트릭 시계열",
+      "stage": 3,
+      "row": 3,
+      "tag": "별도 경로"
+    },
+    {
+      "id": "grafana",
+      "type": "frontend",
+      "label": "Grafana",
+      "sublabel": "Explore · 대시보드",
+      "stage": 4,
+      "row": 2
+    }
+  ],
+  "flows": [
+    {
+      "id": "stdout-write",
+      "from": "app",
+      "to": "logfile",
+      "label": "JSON 라인",
+      "classification": "앱 로그",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tail-read",
+      "from": "logfile",
+      "to": "alloy",
+      "label": "tail",
+      "classification": "노드 로컬 읽기",
+      "variant": "emphasis"
+    },
+    {
+      "id": "push-loki",
+      "from": "alloy",
+      "to": "loki",
+      "label": "push + 라벨",
+      "classification": "namespace · pod 라벨",
+      "variant": "emphasis",
+      "labelAt": [
+        638,
+        314
+      ]
+    },
+    {
+      "id": "logql-read",
+      "from": "loki",
+      "to": "grafana",
+      "label": "LogQL 결과",
+      "classification": "조회 전용"
+    },
+    {
+      "id": "promql-read",
+      "from": "prometheus",
+      "to": "grafana",
+      "label": "PromQL 결과",
+      "classification": "조회 전용",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "STDOUT 원칙",
+      "items": [
+        "앱은 파일이 아니라 stdout에 쓴다",
+        "사이드카 전달기는 리소스를 먹는다 — 데몬셋 1개로 노드 전체를 걷는다",
+        "앱 코드에 수집 로직이 없어서 어떤 언어든 같은 방식이다"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "라벨이 곧 인덱스",
+      "items": [
+        "Loki는 로그 본문을 인덱싱하지 않는다",
+        "라벨 카디널리티가 터지면 인덱스도 터진다",
+        "trace_id 같은 고유값을 라벨로 만들지 말 것"
+      ]
+    }
+  ]
+}

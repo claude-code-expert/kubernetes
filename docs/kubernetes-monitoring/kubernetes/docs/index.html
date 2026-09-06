@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠버네티스 관측성 실습 — 프로메테우스 · 그라파나 · 로키</title>
+<style>
+  :root{
+    --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+    --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.72;letter-spacing:-.005em;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  header{border-bottom:1px solid var(--ink);padding:64px 0 24px;margin-bottom:40px}
+  .kicker{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:38px;line-height:1.24;letter-spacing:-.03em;font-weight:700;margin:12px 0 14px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:22px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  section{margin:0 0 60px;scroll-margin-top:20px}
+  h2.sec{font-size:22px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h3{font-size:16.5px;font-weight:700;margin:30px 0 10px;letter-spacing:-.02em}
+  p{margin:0 0 14px;max-width:74ch}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+  strong{font-weight:700}
+
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0}
+
+  /* 문서 목록 */
+  .track{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--muted);
+         margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
+  .doc{display:grid;grid-template-columns:56px 1fr 92px;gap:0 18px;
+       border-bottom:1px solid var(--line2);padding:16px 0;align-items:baseline}
+  .doc:last-of-type{border-bottom:0}
+  .doc .n{font-family:var(--mono);font-size:19px;color:var(--muted)}
+  .doc .t{font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.4}
+  .doc .t a{border-bottom:1px solid #b9c9e2}
+  .doc .d{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.6}
+  .doc .o{font-size:13px;color:var(--ink);margin-top:6px}
+  .doc .o span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .doc .time{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+  .doc.skip .t{color:var(--muted);font-weight:400}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td.num{font-family:var(--mono);white-space:nowrap}
+
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);padding:16px 20px;margin:20px 0}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;font-size:13px;
+         color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){
+    .wrap{padding:0 18px 80px}
+    h1{font-size:28px}
+    .doc{grid-template-columns:44px 1fr;gap:0 12px}
+    .doc .time{grid-column:2;text-align:left;margin-top:6px}
+  }
+  @media print{body{font-size:11pt}.doc,table,.box,figure{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">STUDY SERIES · 2026</div>
+  <h1>쿠버네티스 관측성 실습</h1>
+  <p class="lede">
+    노트북 한 대에서 kind 클러스터를 세우고, 스프링 애플리케이션 두 개를 배포한 뒤,
+    프로메테우스·그라파나·로키로 관측하는 10단계 실습입니다.
+    각 문서는 그대로 따라 하면 동작하도록 명령과 매니페스트를 전부 포함합니다.
+  </p>
+  <div class="meta">
+    <span>문서 10편 · 도판 20점</span>
+    <span>총 소요 9–12시간</span>
+    <span>실습 환경 macOS</span>
+    <span>검증일 2026-08-19</span>
+  </div>
+</header>
+
+<!-- ── 로드맵 ── -->
+<section id="roadmap">
+  <h2 class="sec">전체 로드맵</h2>
+
+  <figure>
+    <svg viewBox="0 0 960 176" role="img" aria-label="트랙별 10개 문서 로드맵. 09 트레이싱은 미포함">
+      <rect width="960" height="176" fill="#ffffff"/>
+
+      <text x="32" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 A · 환경과 앱</text>
+      <text x="368" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 B · 설치</text>
+      <text x="532" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 C · 연동</text>
+      <text x="778" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 D · 운영</text>
+      <line x1="32" y1="44" x2="356" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="368" y1="44" x2="520" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="532" y1="44" x2="766" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="778" y1="44" x2="928" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+
+      <rect x="32" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="70" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">00</text>
+      <text x="70" y="104" text-anchor="middle" font-size="11" fill="#15181d">환경 준비</text>
+
+      <rect x="114" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="152" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">01</text>
+      <text x="152" y="104" text-anchor="middle" font-size="11" fill="#15181d">kind 구축</text>
+
+      <rect x="196" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="234" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">02</text>
+      <text x="234" y="104" text-anchor="middle" font-size="11" fill="#15181d">스프링 앱</text>
+
+      <rect x="278" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="316" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">03</text>
+      <text x="316" y="104" text-anchor="middle" font-size="11" fill="#15181d">배포</text>
+
+      <rect x="368" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="406" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">04</text>
+      <text x="406" y="104" text-anchor="middle" font-size="10" fill="#15181d">프로메테우스</text>
+
+      <rect x="450" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="488" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">05</text>
+      <text x="488" y="104" text-anchor="middle" font-size="11" fill="#15181d">그라파나</text>
+
+      <rect x="532" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="570" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">06</text>
+      <text x="570" y="104" text-anchor="middle" font-size="10" fill="#15181d">메트릭 연동</text>
+
+      <rect x="614" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="652" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">07</text>
+      <text x="652" y="104" text-anchor="middle" font-size="10" fill="#15181d">대시보드·알림</text>
+
+      <rect x="696" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="734" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">08</text>
+      <text x="734" y="104" text-anchor="middle" font-size="11" fill="#15181d">로그</text>
+
+      <rect x="778" y="60" width="76" height="62" fill="#f5f6f7" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="816" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#9aa1ad">09</text>
+      <text x="816" y="104" text-anchor="middle" font-size="11" fill="#9aa1ad">트레이싱</text>
+      <text x="816" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">미포함</text>
+
+      <rect x="860" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="898" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">10</text>
+      <text x="898" y="104" text-anchor="middle" font-size="11" fill="#15181d">운영 팁</text>
+    </svg>
+    <figcaption>
+      09(트레이싱)은 이번 시리즈에 포함하지 않았습니다. 08 → 10으로 이어져도 흐름은 완결됩니다.
+    </figcaption>
+  </figure>
+
+  <div class="box ac">
+    <span class="t">읽는 순서</span>
+    <p>
+      번호 순서대로 따라가는 것이 기본입니다. 앞 단계의 결과물이 뒤 단계의 입력이 되므로 건너뛸 수 없습니다.
+      예외적으로 <strong>이미 클러스터와 앱이 있다면 04부터</strong> 시작해도 되고,
+      <strong>메트릭만 필요하면 08을 건너뛰어도</strong> 됩니다.
+    </p>
+  </div>
+</section>
+
+<!-- ── 문서 목록 ── -->
+<section id="docs">
+  <h2 class="sec">문서 목록</h2>
+
+  <div class="track">트랙 A — 환경과 애플리케이션</div>
+
+  <div class="doc">
+    <div class="n">00</div>
+    <div>
+      <div class="t"><a href="00-실습환경-준비와-버전고정.html">실습 환경 준비와 버전 고정</a></div>
+      <div class="d">전체 아키텍처, 2026-08 기준 버전 매트릭스, 도구 설치, 사전 점검 스크립트. 코드는 쓰지 않는다.</div>
+      <div class="o"><span>산출물</span> preflight.sh · 팀 공용 버전 합의</div>
+    </div>
+    <div class="time">40–60분</div>
+  </div>
+
+  <div class="doc">
+    <div class="n">01</div>
+    <div>
+      <div class="t"><a href="01-kind-클러스터-구축.html">kind 클러스터 구축</a></div>
+      <div class="d">노드 3개 구성, 다이제스트 고정, 포트 매핑. 컨트롤 플레인 메트릭을 열어두는 kubeadm v1beta4 패치가 핵심.</div>
+      <div class="o"><span>산출물</span> kind-cluster.yaml</div>
+    </div>
+    <div class="time">30–40분</div>
+  </div>
+
+  <div class="doc">
+    <div class="n">02</div>
+    <div>
+      <div class="t"><a href="02-스프링-애플리케이션-만들기.html">스프링 애플리케이션 만들기</a></div>
+      <div class="d">Spring Boot 4.1 게이트웨이와 주문 API. 기능보다 계측 중심 — 어떤 메트릭이 어떤 이름과 태그로 나올지 여기서 정해진다.</div>
+      <div class="o"><span>산출물</span> gateway · order-api 소스</div>
+    </div>
+    <div class="time">60–90분</div>
+  </div>
+
+  <div class="doc">
+    <div class="n">03</div>
+    <div>
+      <div class="t"><a href="03-컨테이너화와-쿠버네티스-배포.html">컨테이너화와 쿠버네티스 배포</a></div>
+      <div class="d">빌드팩으로 이미지를 굽고 kind에 적재. 프로브 3종의 역할 분담과, 06단계에서 쓸 서비스 라벨·포트 이름을 심는다.</div>
+      <div class="o"><span>산출물</span> Deployment · Service · redeploy.sh</div>
+    </div>
+    <div class="time">50–70분</div>
+  </div>
+
+  <div class="track">트랙 B — 설치</div>
+
+  <div class="doc">
+    <div class="n">04</div>
+    <div>
+      <div class="t"><a href="04-프로메테우스-스택-설치.html">kube-prometheus-stack 설치</a></div>
+      <div class="d">차트 하나로 관측 스택 전체를 올린다. 문서의 절반은 타깃 14종이 전부 UP인지 확인하는 절차 — 01단계 패치의 채점표.</div>
+      <div class="o"><span>산출물</span> kps-values.yaml</div>
+    </div>
+    <div class="time">40–60분</div>
+  </div>
+
+  <div class="doc">
+    <div class="n">05</div>
+    <div>
+      <div class="t"><a href="05-그라파나-설정과-대시보드.html">그라파나 설정과 대시보드 프로비저닝</a></div>
+      <div class="d">사이드카가 라벨 붙은 ConfigMap을 감시해 대시보드를 등록하는 구조. UI는 편집기로만 쓰고 원본은 저장소에 둔다.</div>
+      <div class="o"><span>산출물</span> obs-overview.json</div>
+    </div>
+    <div class="time">40–60분</div>
+  </div>
+
+  <div class="track">트랙 C — 연동</div>
+
+  <div class="doc">
+    <div class="n">06</div>
+    <div>
+      <div class="t"><a href="06-앱-메트릭-연동과-PromQL.html">앱 메트릭 연동과 PromQL</a></div>
+      <div class="d">라벨 세 겹을 연결해 앱을 타깃으로 붙인다. 일부러 한 번 실패시킨 뒤 고치고, RED 지표를 직접 작성한다.</div>
+      <div class="o"><span>산출물</span> ServiceMonitor · RED 질의 6개</div>
+    </div>
+    <div class="time">70–90분</div>
+  </div>
+
+  <div class="doc">
+    <div class="n">07</div>
+    <div>
+      <div class="t"><a href="07-대시보드와-알림.html">대시보드와 알림</a></div>
+      <div class="d">질의를 패널과 알림 규칙으로 옮긴다. 기술보다 어려운 것은 무엇을 넣지 않을지 정하는 일.</div>
+      <div class="o"><span>산출물</span> obs-red.json · PrometheusRule 4개</div>
+    </div>
+    <div class="time">70–90분</div>
+  </div>
+
+  <div class="doc">
+    <div class="n">08</div>
+    <div>
+      <div class="t"><a href="08-로그수집-Loki-Alloy.html">로그 수집 (Loki + Alloy)</a></div>
+      <div class="d">Promtail이 아니라 Alloy. 차트 저장소도 바뀌었다. 메트릭 그래프와 로그를 같은 시간축에 놓는 것이 목적지.</div>
+      <div class="o"><span>산출물</span> loki-values.yaml · alloy-values.yaml</div>
+    </div>
+    <div class="time">60–80분</div>
+  </div>
+
+  <div class="doc skip">
+    <div class="n">09</div>
+    <div>
+      <div class="t">트레이싱 (미포함)</div>
+      <div class="d">OTLP와 Tempo로 요청 경로를 추적하는 단계. 이번 시리즈에서는 다루지 않았다.</div>
+    </div>
+    <div class="time">—</div>
+  </div>
+
+  <div class="track">트랙 D — 운영</div>
+
+  <div class="doc">
+    <div class="n">10</div>
+    <div>
+      <div class="t"><a href="10-운영팁과-마무리.html">운영 팁과 마무리</a></div>
+      <div class="d">카디널리티, 보존 기간 계산, 무중단 리사이즈, 트러블슈팅 12선. 그리고 실습에서 타협한 설정 13가지를 되짚는 표.</div>
+      <div class="o"><span>산출물</span> rebuild.sh · 사내 이전 체크리스트</div>
+    </div>
+    <div class="time">60–80분</div>
+  </div>
+</section>
+
+<!-- ── 버전 ── -->
+<section id="versions">
+  <h2 class="sec">고정 버전 요약</h2>
+
+  <p>
+    2026-08-19 기준으로 확인한 값입니다. 실습 당일 <code>helm search repo</code>로 재확인하고
+    <strong>팀 전체가 같은 값을 쓰도록</strong> 합의하세요.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:32%">구성요소</th><th style="width:26%">버전</th><th>비고</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Kubernetes</td><td class="num">1.36.x</td><td>kind v0.32.0 기본 노드 이미지 v1.36.1</td></tr>
+      <tr><td>kind</td><td class="num">v0.32.0</td><td>K8s 1.36+는 kubeadm 설정이 v1beta4</td></tr>
+      <tr><td>kube-prometheus-stack</td><td class="num">차트 88.x</td><td>Prometheus Operator v0.91 계열</td></tr>
+      <tr><td>Prometheus</td><td class="num">3.x</td><td>네이티브 히스토그램은 3.8+ 정식</td></tr>
+      <tr><td>Grafana</td><td class="num">13.x</td><td>데이터소스는 uid로만 참조</td></tr>
+      <tr><td>Loki</td><td class="num">3.7.x</td><td>차트는 grafana-community 저장소</td></tr>
+      <tr><td>로그 수집기</td><td class="num">Grafana Alloy</td><td>Promtail은 2026-03 EOL</td></tr>
+      <tr><td>Spring Boot</td><td class="num">4.1.0</td><td>Spring Cloud 2025.1.x (Oakwood)</td></tr>
+      <tr><td>JDK</td><td class="num">21 LTS</td><td>Boot 4.1은 17 이상이면 동작</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box warn">
+    <span class="t">검색 결과를 그대로 믿으면 안 되는 세 가지</span>
+    <p>
+      ① 로키·그라파나 차트는 <code>grafana</code>가 아니라 <strong><code>grafana-community</code></strong> 저장소<br>
+      ② 로그 수집기는 Promtail이 아니라 <strong>Alloy</strong> (2026-03-02 EOL)<br>
+      ③ 게이트웨이 프로퍼티는 <strong><code>spring.cloud.gateway.server.webflux.*</code></strong>
+    </p>
+  </div>
+</section>
+
+<!-- ── 파일 구성 ── -->
+<section id="files">
+  <h2 class="sec">파일 구성</h2>
+
+<pre><code>k8s-observability-study/
+├── index.html                          이 페이지
+├── 00-실습환경-준비와-버전고정.html
+├── 01-kind-클러스터-구축.html
+├── 02-스프링-애플리케이션-만들기.html
+├── 03-컨테이너화와-쿠버네티스-배포.html
+├── 04-프로메테우스-스택-설치.html
+├── 05-그라파나-설정과-대시보드.html
+├── 06-앱-메트릭-연동과-PromQL.html
+├── 07-대시보드와-알림.html
+├── 08-로그수집-Loki-Alloy.html
+├── 10-운영팁과-마무리.html
+└── figures/                            도판 20점 (SVG + PNG)
+    ├── 00-fig1.svg / .png
+    ├── 00-fig2.svg / .png
+    └── ...</code></pre>
+
+  <p>
+    문서 안의 모든 도판은 <strong>인라인 SVG</strong>로 들어 있어 HTML 파일 하나만 열어도 그대로 보입니다.
+    <code>figures/</code> 폴더는 슬라이드나 위키에 옮겨 붙일 때 쓰라고 따로 뽑아둔 것입니다 —
+    SVG는 확대해도 깨지지 않고, PNG는 붙여넣기가 간편합니다.
+  </p>
+
+  <div class="box">
+    <span class="t">링크가 동작하지 않는다면</span>
+    <p>
+      위 문서 링크는 같은 폴더에 파일이 함께 있을 때 동작합니다.
+      압축을 푼 뒤 <code>index.html</code>을 브라우저로 열어주세요.
+      웹서버에 올릴 경우 한글 파일명이 문제가 되는 환경도 있으니,
+      그럴 때는 파일명을 영문으로 바꾸고 이 페이지의 <code>href</code>도 함께 수정하면 됩니다.
+    </p>
+  </div>
+
+<pre><code><span style="color:#6b7280"># 로컬에서 간단히 서버로 띄우기</span>
+cd k8s-observability-study
+python3 -m http.server 8000
+<span style="color:#6b7280"># → http://localhost:8000</span></code></pre>
+</section>
+
+<!-- ── 스터디 운영 ── -->
+<section id="study">
+  <h2 class="sec">스터디 운영 제안</h2>
+
+  <p>
+    문서 10편을 8주에 한 편씩 배분하면 실패합니다. 02와 06에서 진도가 갈리기 때문입니다.
+    실제로 굴려보고 조정할 것을 전제로, 8주 기준 배분안을 제안합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:14%">주차</th><th style="width:28%">문서</th><th>모임에서 할 것</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">1주</td><td>00 · 01</td><td>각자 <code>preflight.sh</code> 결과 공유 → 미달자 대응 결정. 클러스터 생성까지 함께</td></tr>
+      <tr><td class="num">2–3주</td><td>02</td><td>계측 코드 리뷰. 라벨 값이 유한한지 서로 검증</td></tr>
+      <tr><td class="num">4주</td><td>03 · 04</td><td>배포와 스택 설치. <code>up == 0</code>이 빈 결과인지 다 함께 확인</td></tr>
+      <tr><td class="num">5주</td><td>05</td><td>대시보드 프로비저닝. 각자 만든 JSON을 저장소에 합치기</td></tr>
+      <tr><td class="num">6–7주</td><td>06 · 07</td><td>PromQL 실습에 시간을 몰아준다. 알림 임계값은 관측 후 정한다</td></tr>
+      <tr><td class="num">8주</td><td>08 또는 10</td><td>로그가 필요 없으면 08을 건너뛰고 10으로. 마지막에 "실습 → 운영" 표를 함께 읽는다</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box warn">
+    <span class="t">먼저 정해둘 것</span>
+    <p>
+      <strong>메모리 12 GiB 미만인 사람이 셋 이상이면</strong> 워커 노드를 1개로 줄인 구성을 기본값으로 바꾸세요.
+      08단계(로키)는 여기에 2 GiB를 더 요구하므로, 그 경우 로그 단계만 공용 클러스터로 돌리는 편이 안전합니다.
+      진도가 갈리는 원인의 대부분은 이해도가 아니라 하드웨어입니다.
+    </p>
+  </div>
+</section>
+
+<!-- ── 주의 ── -->
+<section id="caveats">
+  <h2 class="sec">읽기 전 주의</h2>
+
+  <ul>
+    <li><strong>이 설정을 사내로 그대로 옮기지 마세요.</strong> 실습 속도를 위해 타협한 설정이 13가지 있고,
+      10단계 6절에 전부 정리돼 있습니다.</li>
+    <li><strong>버전은 반드시 재확인하세요.</strong> 이 시리즈를 쓰는 동안에도 차트는 여러 번 올라갔습니다.
+      문서에 박힌 숫자보다 <code>helm search repo</code> 출력이 우선입니다.</li>
+    <li><strong>명령은 검증했지만 실환경 실행은 각자의 몫입니다.</strong>
+      YAML·PromQL·LogQL·셸·Java 문법은 파서로 확인했으나, 클러스터 동작은 하드웨어와 버전에 따라 달라집니다.</li>
+    <li><strong>부하 생성 루프를 끄는 것을 잊지 마세요.</strong> 06·07·08단계에 무한 루프가 등장합니다.</li>
+  </ul>
+</section>
+
+<footer>
+  <span>쿠버네티스 관측성 실습 시리즈 · 문서 10편 · 도판 20점</span>
+  <span>2026-08-19 기준</span>
+</footer>
+
+</div>
+</body>
+</html>

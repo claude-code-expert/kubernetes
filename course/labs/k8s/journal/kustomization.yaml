@@ -1,0 +1,38 @@
+# kubectl apply -k . 로 이 디렉터리 전체를 한 번에 배포한다.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 아래 모든 리소스의 metadata.namespace 를 journal 로 맞춘다.
+# 매니페스트 파일마다 namespace 를 적지 않아도 되고, 다른 네임스페이스로 복제하기도 쉽다.
+namespace: journal
+
+resources:
+  - 00-namespace.yaml
+  - 10-config.yaml
+  - 20-redis.yaml
+  - 30-journal-api.yaml
+  - 40-web-static.yaml
+  - 50-ingress.yaml
+  - 60-pdb.yaml
+  - 70-hpa.yaml
+
+# 공통 레이블. includeSelectors: false 가 중요하다 —
+# true 면 셀렉터에도 레이블이 추가되는데, 셀렉터는 만든 뒤 바꿀 수 없어 다음 apply 가 거부된다.
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: journal
+      app.kubernetes.io/managed-by: kustomize
+
+# 파일 내용으로 컨피그맵을 만든다. 이름 뒤에 내용 해시가 붙는다: web-content-9g4h2f6d5k
+# 파일이 바뀌면 이름이 바뀌고, 이름이 바뀌면 파드 템플릿이 바뀌어 롤아웃이 일어난다.
+# M13 에서 말한 "컨피그맵이 바뀌어도 자동 롤아웃은 없다" 문제의 해법 중 하나다.
+configMapGenerator:
+  - name: web-content
+    files:
+      - index.html
+
+# 이미지 태그를 한곳에서 바꾼다.
+images:
+  - name: journal-api
+    newTag: v1

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 5 · 보안과 정책] M23 RBAC과 인가 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 23 / 38 · PART 5 보안과 정책</div>
+  <h1>RBAC과 인가</h1>
+  <p class="ch-desc">M01부터 M22까지 우리는 이 클러스터에서 <strong>무엇이든 할 수 있었다</strong>. 네임스페이스를 지우고, 노드의 정적 파드 매니페스트를 고치고, 시크릿을 <code>base64 -d</code>로 열어 봤다. 실제 클러스터에서 그런 권한을 가진 사람은 극소수다. 이 모듈에서 권한을 실제로 좁히고, <strong>권한 밖의 명령이 어떻게 거부되는지</strong>를 메시지로 확인한다.</p>
+  <div class="meta">
+    <span class="tag">중후반</span><span class="tag">80분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m22-k8s-logging-loki.html">M22</a> 완료 — <code>journal</code>·<code>apps</code>·<code>monitoring</code> 네임스페이스가 살아 있다</li>
+    <li>지금 쓰는 kubeconfig가 관리자 권한이다. 확인: <code>kubectl auth can-i '*' '*' --all-namespaces</code>가 <code>yes</code></li>
+    <li><code>jq</code>는 필요 없다. 모든 출력은 <code>jsonpath</code>와 <code>python3</code>로 다룬다</li>
+    <li>새로 쓰는 파일: <code>course/labs/k8s/rbac/10-dev-role.yaml</code> · <code>20-aggregated.yaml</code> · <code>course/labs/scripts/make-dev-kubeconfig.sh</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. <code>journal</code> 네임스페이스에서만 일하는 서비스어카운트를 만들고, 그 계정의 kubeconfig로 실제 <code>Forbidden</code>을 여러 종류 받아 본다.</p>
+  <p>2. 거부 메시지가 "누가·무엇을·어디서"를 다 말해 준다는 것을 확인하고, <code>can-i</code>로 명령을 치기 전에 미리 물어본다.</p>
+  <p>3. 검색하면 나오는 토큰 조회 방법이 왜 빈 값을 돌려주는지 재현하고, 지금 방식으로 바꾼다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">23.1</span>우리는 지금까지 무엇이든 할 수 있었다</a>
+  <a href="#s2"><span class="num">23.2</span>이론 — 네 조각과 요청의 경로</a>
+  <a href="#s3"><span class="num">23.3</span>따라하기 ① 개발자 계정을 만든다</a>
+  <a href="#s4"><span class="num">23.4</span>따라하기 ② 거부당해 본다</a>
+  <a href="#s5"><span class="num">23.5</span>따라하기 ③ 치기 전에 물어본다</a>
+  <a href="#s6"><span class="num">23.6</span>따라하기 ④ 집약 ClusterRole</a>
+  <a href="#s7"><span class="num">23.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">23.8</span>운영 관점 — 최소 권한을 실제로 지키려면</a>
+  <a href="#s9"><span class="num">23.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">23.1</span>우리는 지금까지 무엇이든 할 수 있었다</h2>
+  <p class="lead">M19 실패 ①에서 <code>docker exec study-control-plane sed -i ...</code>로 apiserver가 있는 노드의 정적 파드 매니페스트를 고쳤다. M13에서는 시크릿을 <code>base64 -d</code>로 열어 평문을 읽었다. M16에서는 노드에 테인트를 걸고 <code>drain</code>했다.</p>
+  <p>이 모든 것이 가능했던 이유는 kind가 만들어 준 kubeconfig가 <strong>클러스터 관리자</strong>이기 때문이다. 확인해 보면 이렇다.</p>
+<pre><code>kubectl auth can-i '*' '*' --all-namespaces</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>yes</code></div>
+  <p>실무에서 이 권한을 가진 사람은 클러스터 운영자 몇 명이다. 애플리케이션 개발자는 자기 네임스페이스에서 파드를 보고 로그를 읽고 배포를 굴리는 정도이고, CI 파이프라인은 그보다 더 좁다 — 특정 디플로이먼트의 이미지만 바꿀 수 있으면 된다.</p>
+  <p>권한을 좁히는 것이 번거로워 보이지만, 좁히지 않으면 <strong>실수 하나가 클러스터 전체에 닿는다.</strong> 잘못된 네임스페이스에 <code>delete</code>를 치거나, CI 토큰이 유출됐을 때 그 토큰으로 할 수 있는 일이 전부이거나. 이 모듈에서 만드는 것은 그 경계다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">23.2</span>이론 — 네 조각과 요청의 경로</h2>
+  <p>책 4.4가 RBAC의 기초를, 17.2가 인가 모듈의 순서를 다룬다. 먼저 이 클러스터가 어떤 인가 방식을 쓰는지 본다.</p>
+<pre><code>docker exec study-control-plane \
+  grep -o '\-\-authorization-mode=[^ ]*' /etc/kubernetes/manifests/kube-apiserver.yaml</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>--authorization-mode=Node,RBAC</code></div>
+  <p>두 모듈이 순서대로 물어본다. <dfn class="term">Node 인가</dfn>는 kubelet이 자기 노드에 있는 파드의 시크릿·컨피그맵만 읽게 제한하는 특수 모듈이고, 사람과 서비스어카운트의 권한은 <dfn class="term">RBAC</dfn>이 정한다. <strong>둘 중 하나라도 허용하면 통과</strong>이고, 아무도 허용하지 않으면 거부다 — RBAC에는 "금지" 규칙이 없다.</p>
+
+  <h3>네 조각</h3>
+  <table>
+    <tr><th>오브젝트</th><th>정하는 것</th><th>범위</th></tr>
+    <tr><td><code>Role</code></td><td>어떤 <strong>동사</strong>로 어떤 <strong>리소스</strong>를</td><td>네임스페이스에 속한다</td></tr>
+    <tr><td><code>ClusterRole</code></td><td>같은 것</td><td>클러스터 전체 오브젝트</td></tr>
+    <tr><td><code>RoleBinding</code></td><td>누구에게 그 역할을</td><td><strong>그 네임스페이스 안에서만</strong></td></tr>
+    <tr><td><code>ClusterRoleBinding</code></td><td>같은 것</td><td>클러스터 전체</td></tr>
+  </table>
+  <p>헷갈리는 지점은 <strong>역할이 범위를 정하지 않는다</strong>는 것이다. 범위를 정하는 것은 바인딩이다. <code>RoleBinding</code>에 <code>ClusterRole</code>을 붙일 수 있고, 그러면 <strong>정의는 클러스터의 것을 쓰되 효력은 그 네임스페이스뿐</strong>이다. 23.6에서 이것을 직접 잰다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
+      <text class="t-h" x="40" y="46">권한의 정의와 범위는 따로 정해진다</text>
+
+      <!-- 주체 -->
+      <rect class="accent" x="40" y="70" width="180" height="70" rx="4"/>
+      <text class="t-title" x="130" y="94" text-anchor="middle">주체 (누가)</text>
+      <text class="t-mono" x="130" y="112" text-anchor="middle">ServiceAccount</text>
+      <text class="t-mono" x="130" y="128" text-anchor="middle">journal:dev</text>
+
+      <!-- 바인딩 -->
+      <rect class="accent" x="330" y="70" width="200" height="70" rx="4"/>
+      <text class="t-title" x="430" y="94" text-anchor="middle">바인딩 (어디서)</text>
+      <text class="t-mono" x="430" y="112" text-anchor="middle">RoleBinding — 한 네임스페이스</text>
+      <text class="t-mono" x="430" y="128" text-anchor="middle">ClusterRoleBinding — 전체</text>
+
+      <!-- 역할 -->
+      <rect class="accent" x="640" y="70" width="200" height="70" rx="4"/>
+      <text class="t-title" x="740" y="94" text-anchor="middle">역할 (무엇을)</text>
+      <text class="t-mono" x="740" y="112" text-anchor="middle">Role / ClusterRole</text>
+      <text class="t-mono" x="740" y="128" text-anchor="middle">동사 + 리소스 목록</text>
+
+      <path class="aline" d="M 220 105 L 324 105" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="272" y="97" text-anchor="middle">subjects</text>
+      <path class="aline" d="M 530 105 L 634 105" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="582" y="97" text-anchor="middle">roleRef</text>
+
+      <!-- 네 조합 -->
+      <rect class="soft" x="40" y="160" width="800" height="150" rx="4"/>
+      <text class="t-h" x="56" y="184">바인딩 × 역할 — 네 조합</text>
+
+      <rect class="box" x="56" y="196" width="380" height="46" rx="3"/>
+      <text class="t-mono" x="66" y="214">RoleBinding + Role</text>
+      <text class="t-sub" x="66" y="232">그 네임스페이스 안에서만. 가장 흔한 조합</text>
+
+      <rect class="warnbox" x="448" y="196" width="380" height="46" rx="3"/>
+      <text class="t-mono" x="458" y="214">RoleBinding + ClusterRole</text>
+      <text class="t-warn" x="458" y="232">정의는 클러스터 것을 쓰지만 효력은 그 네임스페이스뿐</text>
+
+      <rect class="box" x="56" y="250" width="380" height="46" rx="3"/>
+      <text class="t-mono" x="66" y="268">ClusterRoleBinding + ClusterRole</text>
+      <text class="t-sub" x="66" y="286">클러스터 전체. 노드·네임스페이스 같은 전역 리소스에 필요</text>
+
+      <rect class="box" x="448" y="250" width="380" height="46" rx="3"/>
+      <text class="t-mono" x="458" y="268">ClusterRoleBinding + Role</text>
+      <text class="t-sub" x="458" y="286">성립하지 않는다 — Role 은 네임스페이스에 속한다</text>
+
+      <!-- 요청 경로 -->
+      <text class="t-h" x="56" y="342">요청 하나가 지나가는 길</text>
+      <rect class="node" x="56" y="354" width="150" height="44" rx="3"/>
+      <text class="t-title" x="131" y="374" text-anchor="middle">인증</text>
+      <text class="t-mono" x="131" y="390" text-anchor="middle">토큰이 유효한가</text>
+      <path class="line" d="M 206 376 L 246 376" marker-end="url(#ar1)"/>
+      <rect class="accent" x="248" y="354" width="180" height="44" rx="3"/>
+      <text class="t-title" x="338" y="374" text-anchor="middle">인가 — Node, RBAC</text>
+      <text class="t-mono" x="338" y="390" text-anchor="middle">이 동사를 허용하는가</text>
+      <path class="line" d="M 428 376 L 468 376" marker-end="url(#ar1)"/>
+      <rect class="node" x="470" y="354" width="170" height="44" rx="3"/>
+      <text class="t-title" x="555" y="374" text-anchor="middle">어드미션</text>
+      <text class="t-mono" x="555" y="390" text-anchor="middle">M24 · M26</text>
+      <path class="line" d="M 640 376 L 680 376" marker-end="url(#ar1)"/>
+      <rect class="node" x="682" y="354" width="146" height="44" rx="3"/>
+      <text class="t-title" x="755" y="374" text-anchor="middle">etcd 에 기록</text>
+
+      <text class="t-sub" x="56" y="416">인증 실패는 <tspan font-family="ui-monospace,Consolas,monospace">Unauthorized</tspan>, 인가 실패는 <tspan font-family="ui-monospace,Consolas,monospace">Forbidden</tspan> — 메시지로 어느 단계에서 막혔는지 알 수 있다</text>
+    </svg>
+    <figcaption>그림 23.1 — 주체·바인딩·역할이 각각 "누가·어디서·무엇을"을 정한다. 요청은 인증 → 인가 → 어드미션 순서로 거른다.</figcaption>
+  </figure>
+
+  <h3>거부에는 두 종류가 있다</h3>
+  <p>요청이 막히는 단계가 둘이고 메시지가 다르다.</p>
+  <table>
+    <tr><th>단계</th><th>묻는 것</th><th>실패 메시지</th></tr>
+    <tr><td>인증 <span class="t-sub">authentication</span></td><td>너는 누구인가</td><td><code>error: You must be logged in to the server (Unauthorized)</code></td></tr>
+    <tr><td>인가 <span class="t-sub">authorization</span></td><td>그 일을 해도 되는가</td><td><code>Error from server (Forbidden): ... is forbidden: User "..." cannot ...</code></td></tr>
+  </table>
+  <p>토큰이 만료됐거나 잘못됐으면 <code>Unauthorized</code>이고, 신원은 확인됐는데 권한이 없으면 <code>Forbidden</code>이다. <strong>이 구분이 진단의 첫 갈림길</strong>이다 — 앞쪽이면 토큰을 다시 받고, 뒤쪽이면 권한을 봐야 한다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">23.3</span>따라하기 ① 개발자 계정을 만든다</h2>
+
+  <div class="step">
+    <h4>1단계 — 서비스어카운트와 Role을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>journal</code> 네임스페이스에서 진단하고 배포까지만 할 수 있는 계정을 정의한다.</p>
+    <p><code>course/labs/k8s/rbac/10-dev-role.yaml</code>로 저장한다.</p>
+<pre><code>apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dev
+  namespace: journal
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dev
+  namespace: journal          # Role 은 네임스페이스에 갇힌다. 여기 밖에서는 아무 권한도 없다
+rules:
+  # 읽기 — 진단에 필요한 최소한
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "configmaps", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  # 쓰기 — 배포와 롤아웃까지만
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["update", "patch"]
+  # 시크릿은 넣지 않는다. 넣으면 base64 를 벗겨 평문을 읽을 수 있다 (M13)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev
+  namespace: journal
+subjects:
+  - kind: ServiceAccount
+    name: dev
+    namespace: journal
+roleRef:
+  kind: Role
+  name: dev
+  apiGroup: rbac.authorization.k8s.io</code></pre>
+    <table>
+      <tr><th>선택</th><th>이유</th></tr>
+      <tr><td><code>apiGroups: [""]</code></td><td>빈 문자열이 <strong>핵심 API 그룹</strong>이다. 파드·서비스·컨피그맵이 여기 있다</td></tr>
+      <tr><td><code>pods/log</code></td><td>서브리소스다. <code>pods</code>를 읽을 수 있어도 로그는 별도 권한이 필요하다</td></tr>
+      <tr><td><code>deployments/scale</code></td><td><code>kubectl scale</code>이 쓰는 서브리소스. 이것만 주면 <strong>파드 수만</strong> 바꿀 수 있다</td></tr>
+      <tr><td><code>delete</code>가 없다</td><td>파드를 직접 지울 수 없다. 롤아웃으로 교체하게 만든다</td></tr>
+      <tr><td><code>secrets</code>가 없다</td><td>M13에서 본 것처럼 시크릿 읽기는 평문 읽기와 같다</td></tr>
+    </table>
+<pre><code>kubectl apply -f course/labs/k8s/rbac/10-dev-role.yaml</code></pre>
+    <div class="verdict"><span class="lbl">판정</span><code>serviceaccount/dev created</code>·<code>role.../dev created</code>·<code>rolebinding.../dev created</code> 셋이 나오면 된다. 아직 아무도 이 계정을 쓰지 않으므로 클러스터에는 변화가 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 그 계정의 kubeconfig를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>권한을 말로 확인하지 않고 <strong>실제로 그 계정이 되어</strong> 명령을 쳐 본다.</p>
+    <p><code>course/labs/scripts/make-dev-kubeconfig.sh</code>로 저장한다.</p>
+<pre><code>NS="${NS:-journal}"; SA="${SA:-dev}"; OUT="${OUT:-/tmp/dev.kubeconfig}"; TTL="${TTL:-1h}"
+CTX=$(kubectl config current-context)
+CLUSTER=$(kubectl config view -o jsonpath="{.contexts[?(@.name==\"$CTX\")].context.cluster}")
+SERVER=$(kubectl config view -o jsonpath="{.clusters[?(@.name==\"$CLUSTER\")].cluster.server}")
+CA=$(kubectl config view --raw -o jsonpath="{.clusters[?(@.name==\"$CLUSTER\")].cluster.certificate-authority-data}")
+
+# 검색하면 나오는 방법은 .secrets[0].name 으로 토큰 시크릿을 찾는 것인데,
+# 1.24 부터 그 시크릿이 자동 생성되지 않는다 (23.7 실패 ①).
+TOKEN=$(kubectl -n "$NS" create token "$SA" --duration="$TTL")
+
+cat &gt; "$OUT" &lt;&lt;KEOF
+apiVersion: v1
+kind: Config
+clusters:
+  - name: $CLUSTER
+    cluster: { server: $SERVER, certificate-authority-data: $CA }
+users:
+  - name: $SA
+    user: { token: $TOKEN }
+contexts:
+  - name: $SA@$CLUSTER
+    context: { cluster: $CLUSTER, user: $SA, namespace: $NS }
+current-context: $SA@$CLUSTER
+KEOF
+chmod 600 "$OUT"</code></pre>
+<pre><code>bash course/labs/scripts/make-dev-kubeconfig.sh
+KUBECONFIG=/tmp/dev.kubeconfig kubectl auth whoami</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>ATTRIBUTE   VALUE
+Username    system:serviceaccount:journal:dev
+UID         7c6c1c4e-9c1f-4fd2-9371-6c478af92ba8
+Groups      [system:serviceaccounts system:serviceaccounts:journal system:authenticated]</code></div>
+    <div class="verdict"><span class="lbl">판정</span>신원이 <code>system:serviceaccount:&lt;네임스페이스&gt;:&lt;이름&gt;</code> 형식으로 나온다. 이것이 23.4의 거부 메시지에 그대로 등장한다. 그룹 셋이 자동으로 붙는데, <code>system:authenticated</code>는 로그인한 모두를 뜻하므로 <strong>여기에 권한을 주면 사실상 전체 공개</strong>다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">23.4</span>따라하기 ② 거부당해 본다</h2>
+  <p>이 절의 명령은 전부 개발자 계정으로 친다. 터미널에서 한 번만 지정한다.</p>
+<pre><code>export KUBECONFIG=/tmp/dev.kubeconfig</code></pre>
+
+  <div class="step">
+    <h4>3단계 — 허용된 일부터 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>권한을 좁혔지만 개발자가 실제로 일할 수는 있는지 본다. 너무 좁히면 아무도 안 쓴다.</p>
+<pre><code>kubectl get pods
+kubectl logs deploy/journal-api --tail=1
+kubectl scale deploy journal-api --replicas=3</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-69d49f6788-fxs5p   1/1   Running   0   22m
+journal-api-69d49f6788-whhz5   1/1   Running   0   22m
+
+Found 3 pods, using pod/journal-api-69d49f6788-fxs5p
+
+deployment.apps/journal-api scaled</code></div>
+    <div class="verdict"><span class="lbl">판정</span>진단(파드 목록·로그)과 운영(스케일)이 된다. <code>-n journal</code>을 안 붙여도 되는 것은 kubeconfig의 컨텍스트에 네임스페이스가 박혀 있기 때문이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 다섯 가지 방식으로 거부당한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>거부 메시지를 읽는 연습을 한다. 메시지마다 어디가 막혔는지 다르게 적혀 있다.</p>
+<pre><code>kubectl get secret journal-secret
+kubectl delete pod --all
+kubectl -n apps get pods
+kubectl get nodes
+kubectl create ns hack</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (Forbidden): secrets "journal-secret" is forbidden: User "system:serviceaccount:journal:dev" cannot get resource "secrets" in API group "" in the namespace "journal"
+
+Error from server (Forbidden): pods "journal-api-69d49f6788-fxs5p" is forbidden: User "system:serviceaccount:journal:dev" cannot delete resource "pods" in API group "" in the namespace "journal"
+
+Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:journal:dev" cannot list resource "pods" in API group "" in the namespace "apps"
+
+Error from server (Forbidden): nodes is forbidden: User "system:serviceaccount:journal:dev" cannot list resource "nodes" in API group "" at the cluster scope
+
+Error from server (Forbidden): namespaces is forbidden: User "system:serviceaccount:journal:dev" cannot create resource "namespaces" in API group "" at the cluster scope</code></div>
+    <p>메시지가 다섯 조각으로 이루어져 있다 — <strong>누가</strong>(<code>User "..."</code>) <strong>어떤 동사로</strong>(<code>cannot get</code>) <strong>어떤 리소스를</strong>(<code>resource "secrets"</code>) <strong>어느 그룹에서</strong>(<code>API group ""</code>) <strong>어디서</strong>(<code>in the namespace "journal"</code> 또는 <code>at the cluster scope</code>).</p>
+    <div class="verdict"><span class="lbl">판정</span>마지막 조각이 특히 중요하다. <code>at the cluster scope</code>가 나오면 <strong>네임스페이스 Role로는 절대 풀 수 없다</strong>는 뜻이고, <code>ClusterRole</code>과 <code>ClusterRoleBinding</code>이 필요하다. <code>in the namespace "apps"</code>가 나오면 그 네임스페이스에 바인딩을 하나 더 만들면 된다.</div>
+    <p>세 번째와 다섯 번째를 비교하면 차이가 보인다. 같은 <code>pods</code>인데 <code>apps</code> 네임스페이스에서는 막혔다 — 권한이 네임스페이스에 매여 있다는 것이 이렇게 드러난다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">23.5</span>따라하기 ③ 치기 전에 물어본다</h2>
+
+  <div class="step">
+    <h4>5단계 — can-i로 미리 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>명령을 실제로 치지 않고 권한을 확인한다. 파괴적인 명령을 시험할 때 필요하다.</p>
+<pre><code>for pair in "get:pods" "delete:pods" "get:secrets" "update:deployments" \
+            "get:pods/log" "update:deployments/scale" "create:namespaces"; do
+  V="${pair%%:*}"; R="${pair##*:}"
+  printf '  %-8s %-22s -> ' "$V" "$R"
+  kubectl auth can-i "$V" "$R"
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  get      pods                   -> yes
+  delete   pods                   -> no
+  get      secrets                -> no
+  update   deployments            -> yes
+  get      pods/log               -> yes
+  update   deployments/scale      -> yes
+  create   namespaces             -> Warning: resource 'namespaces' is not namespace scoped</code></div>
+    <div class="note-2026">
+      <span class="lbl">zsh에서 인자가 안 나뉜다</span>
+      <code>V="get pods"; kubectl auth can-i $V</code>처럼 쓰면 zsh에서 이렇게 된다.
+      <br><code>error: you must specify two arguments: verb resource or verb resource/resourceName.</code>
+      <br>bash와 달리 zsh는 따옴표 없는 변수 확장에서 <strong>단어를 나누지 않는다.</strong> 동사와 리소스를 따로 넘기거나 <code>${=V}</code>를 쓴다. macOS의 기본 셸이 zsh이므로 자주 걸린다.
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>6단계 — 관리자가 남을 대신해 물어본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>kubeconfig를 만들지 않고 특정 계정의 권한을 점검한다. 운영에서 훨씬 자주 쓰는 방식이다.</p>
+<pre><code>unset KUBECONFIG      # 관리자로 돌아온다
+
+kubectl auth can-i get    secrets -n journal --as=system:serviceaccount:journal:dev
+kubectl auth can-i delete pods    -n journal --as=system:serviceaccount:journal:dev
+kubectl auth can-i get    pods    -n apps    --as=system:serviceaccount:journal:dev</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>no
+no
+no</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>--as</code>는 <dfn class="term">가장 <span class="en">impersonation</span></dfn>이다. 관리자가 다른 신원인 척하고 물어보는 것이고, 이 권한 자체가 강력하므로 <strong><code>impersonate</code> 동사를 아무에게나 주면 안 된다</strong> — 누구든 될 수 있다는 뜻이기 때문이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>7단계 — 가진 권한을 전부 나열한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Role을 읽지 않고 실제 유효 권한을 본다. 바인딩이 여럿이면 합쳐진 결과가 필요하다.</p>
+<pre><code>KUBECONFIG=/tmp/dev.kubeconfig kubectl auth can-i --list</code></pre>
+    <span class="out-lbl">출력 (앞부분)</span>
+    <div class="out"><code>Resources                                       Verbs
+selfsubjectreviews.authentication.k8s.io        [create]
+selfsubjectaccessreviews.authorization.k8s.io   [create]
+selfsubjectrulesreviews.authorization.k8s.io    [create]
+deployments.apps                                [get list watch update patch]
+configmaps                                      [get list watch]
+events                                          [get list watch]
+pods/log                                        [get list watch]</code></div>
+    <div class="verdict"><span class="lbl">판정</span>우리가 준 것 외에 <code>selfsubject*</code> 셋이 더 있다. 이것은 <strong>모든 인증된 사용자에게 기본으로 주어지는 권한</strong>이고, <code>can-i</code>가 동작하는 이유이기도 하다 — 자기 권한을 물어보는 것 자체가 API 호출이다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">23.6</span>따라하기 ④ 집약 ClusterRole</h2>
+  <p>팀이 여럿이고 각자 다른 리소스를 다루면 "읽기 권한" 하나를 누가 관리할지가 문제가 된다. 관측 팀이 <code>ServiceMonitor</code>를 추가할 때마다 플랫폼 팀에게 Role 수정을 부탁하는 구조는 오래가지 않는다.</p>
+
+  <div class="step">
+    <h4>8단계 — 라벨로 규칙을 모은다</h4>
+    <p class="purpose"><span class="lbl">목적</span>여러 ClusterRole의 규칙이 자동으로 합쳐지는 것을 확인한다.</p>
+    <p><code>course/labs/k8s/rbac/20-aggregated.yaml</code>로 저장한다.</p>
+<pre><code>apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: study-viewer
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.study.io/aggregate-to-viewer: "true"
+rules: []          # 비워 둔다. 컨트롤러가 채운다 — 직접 쓰면 덮어써진다
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: study-viewer-workloads
+  labels:
+    rbac.study.io/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: study-viewer-observability
+  labels:
+    rbac.study.io/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors", "prometheusrules"]
+    verbs: ["get", "list", "watch"]</code></pre>
+<pre><code>kubectl apply -f course/labs/k8s/rbac/20-aggregated.yaml
+kubectl get clusterrole study-viewer \
+  -o jsonpath='{range .rules[*]}  {.apiGroups} {.resources} {.verbs}{"\n"}{end}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  ["monitoring.coreos.com"] ["servicemonitors","prometheusrules"] ["get","list","watch"]
+  ["apps"] ["deployments","statefulsets","daemonsets"] ["get","list","watch"]</code></div>
+    <div class="verdict"><span class="lbl">판정</span>우리가 <code>rules: []</code>로 비워 둔 <code>study-viewer</code>에 두 벌의 규칙이 들어와 있다. 컨트롤러가 라벨이 맞는 ClusterRole을 찾아 합친 것이다. 이후 관측 팀이 자기 ClusterRole만 고치면 상위 역할이 자동으로 따라간다.</div>
+    <p>쿠버네티스가 기본으로 만드는 <code>view</code>·<code>edit</code>·<code>admin</code>도 같은 방식으로 되어 있다. CRD를 설치하는 오퍼레이터들이 <code>rbac.authorization.k8s.io/aggregate-to-view: "true"</code> 라벨이 붙은 ClusterRole을 함께 넣는 것이 그래서다.</p>
+  </div>
+
+  <div class="step">
+    <h4>9단계 — 바인딩이 범위를 정한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 ClusterRole을 <code>RoleBinding</code>으로 붙였을 때 효력이 어디까지인지 잰다.</p>
+<pre><code>kubectl -n apps create rolebinding dev-view \
+  --clusterrole=study-viewer --serviceaccount=journal:dev
+
+for ns in apps journal monitoring; do
+  printf '  ns=%-11s get deployments -> ' $ns
+  kubectl auth can-i get deployments -n $ns --as=system:serviceaccount:journal:dev
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  ns=apps        get deployments -> yes
+  ns=journal     get deployments -> yes
+  ns=monitoring  get deployments -> no</code></div>
+    <div class="verdict"><span class="lbl">판정"</span><code>apps</code>에서만 새로 허용됐다. <code>journal</code>이 <code>yes</code>인 것은 1단계의 Role 때문이고, <code>monitoring</code>은 여전히 <code>no</code>다. <strong>ClusterRole을 썼는데도 클러스터 전체가 되지 않는다</strong> — 범위를 정한 것은 <code>RoleBinding</code>이다.</div>
+    <p>클러스터 전체로 주려면 바인딩을 바꿔야 한다.</p>
+<pre><code># 이렇게 하면 모든 네임스페이스에서 조회할 수 있다 (여기서는 실행하지 않는다)
+kubectl create clusterrolebinding dev-view-all \
+  --clusterrole=study-viewer --serviceaccount=journal:dev</code></pre>
+    <p>실행하지 않는 이유는 <strong>되돌리기 전에 잊기 쉬워서</strong>다. 실습에서 만든 클러스터 범위 바인딩은 네임스페이스를 지워도 남는다 — 23.9의 정리에서 명시적으로 지운다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">23.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① 검색하면 나오는 토큰 조회가 빈 값을 준다</h4>
+    <p>서비스어카운트의 토큰을 얻는 방법으로 가장 많이 나오는 것이 이것이다.</p>
+    <span class="lbl">재현</span>
+<pre><code>kubectl -n journal get sa dev -o jsonpath='{.secrets}'
+kubectl -n journal get sa dev -o jsonpath='{.secrets[0].name}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>(빈 값)
+(빈 값)</code></div>
+    <p>다음 단계인 시크릿 조회는 이렇게 끝난다.</p>
+<pre><code>SECRET=$(kubectl -n journal get sa dev -o jsonpath='{.secrets[0].name}')
+kubectl -n journal get secret "$SECRET" -o jsonpath='{.data.token}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>error: resource name may not be empty</code></div>
+    <span class="lbl">원인</span>
+    <p>1.24부터 <strong>서비스어카운트를 만들어도 토큰 시크릿이 자동으로 생성되지 않는다.</strong> 그 전에는 만료되지 않는 토큰이 시크릿으로 영구히 놓여 있었고, 유출되면 회수할 방법이 마땅치 않았다. 지금은 <strong>요청할 때마다 수명이 정해진 토큰을 발급</strong>하는 방식으로 바뀌었다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>kubectl -n journal create token dev --duration=10m
+kubectl -n journal create token dev --duration=10m -o json \
+  | python3 -c "import json,sys; print('만료:', json.load(sys.stdin)['status']['expirationTimestamp'])"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>eyJhbGciOiJSUzI1NiIsImtpZCI6InEtWkw4c2Jz...
+만료: 2026-09-05T14:10:09Z</code></div>
+    <div class="verdict"><span class="lbl">판정</span>만료 시각이 붙어 있다. 이것이 2단계 스크립트가 <code>create token</code>을 쓰는 이유이고, <strong>CI에 넣을 토큰도 마찬가지</strong>다 — 영구 토큰을 파일에 박아 두는 대신 파이프라인이 매번 발급받는 구조로 만든다. 옛 방식이 꼭 필요하면 <code>kubernetes.io/service-account-token</code> 타입 시크릿을 직접 만들 수는 있지만, 그것이 바로 1.24가 없앤 위험이다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② Unauthorized와 Forbidden을 구분하지 못한다</h4>
+    <p>토큰 한 글자를 바꿔 요청하면 무엇이 나오는지 본다.</p>
+    <span class="lbl">재현</span>
+<pre><code>SERVER=$(kubectl config view -o jsonpath='{.clusters[0].cluster.server}')
+T=$(kubectl -n journal create token dev --duration=10m)
+BAD="${T%?}X"        # 마지막 글자를 바꾼다
+
+kubectl --kubeconfig=/dev/null --token="$BAD" --server="$SERVER" \
+  --insecure-skip-tls-verify -n journal get pods</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>error: You must be logged in to the server (Unauthorized)</code></div>
+    <p>같은 명령을 정상 토큰으로 치면 통과한다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-69d49f6788-fxs5p   1/1   Running   0   23m</code></div>
+    <span class="lbl">원인과 판별</span>
+    <p><code>Unauthorized</code>는 <strong>인증</strong> 단계다 — 토큰이 만료됐거나 서명이 맞지 않는다. 권한과는 무관하다. RBAC을 아무리 넓혀도 이 오류는 사라지지 않는다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>Unauthorized</code>가 나오면 <strong>토큰을 다시 받고</strong>, <code>Forbidden</code>이면 <strong>Role을 본다.</strong> 이 구분을 못 하면 권한 문제를 토큰으로, 토큰 문제를 권한으로 풀려다 시간을 쓴다.</div>
+    <p><code>--kubeconfig=/dev/null</code>을 붙인 것도 이유가 있다. 이것이 없으면 기존 kubeconfig의 관리자 인증서로 <strong>조용히 통과</strong>해 버려 실험이 성립하지 않는다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ 일단 되게 하려고 cluster-admin을 붙인다</h4>
+    <p>권한 문제를 만났을 때 가장 빠른 해결책이 이것이고, 그래서 가장 흔한 사고이기도 하다. 무엇을 주는 것인지 먼저 본다.</p>
+    <span class="lbl">확인</span>
+<pre><code>kubectl get clusterrole cluster-admin -o jsonpath='{.rules}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>[{"apiGroups":["*"],"resources":["*"],"verbs":["*"]},{"nonResourceURLs":["*"],"verbs":["*"]}]</code></div>
+    <p>모든 API 그룹의 모든 리소스에 모든 동사다. 시크릿을 읽고, 노드를 지우고, 다른 사람의 권한을 바꾸는 것까지 포함된다.</p>
+    <span class="lbl">지금 누가 갖고 있나</span>
+<pre><code>kubectl get clusterrolebinding -o json | python3 -c "
+import json,sys
+d=json.load(sys.stdin)['items']
+ca=[b for b in d if b['roleRef']['name']=='cluster-admin']
+print('cluster-admin 바인딩 수:',len(ca))
+for b in ca:
+    subs=[f\"{s['kind']}:{s['name']}\" for s in b.get('subjects',[])]
+    print(f\"  {b['metadata']['name']:24} -> {subs}\")"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>cluster-admin 바인딩 수: 2
+  cluster-admin            -> ['Group:system:masters']
+  kubeadm:cluster-admins   -> ['Group:kubeadm:cluster-admins']</code></div>
+    <div class="verdict"><span class="lbl">판정</span>갓 만든 클러스터에는 <strong>둘뿐</strong>이고 둘 다 부트스트랩용이다. 이 목록이 시간이 지나며 길어지는 것이 클러스터의 상태를 말해 준다 — 주기적으로 이 명령을 쳐서 <strong>늘어난 항목이 있는지</strong> 보는 것이 가장 싼 점검이다.</div>
+    <span class="lbl">고친다 — 무엇이 막혔는지 먼저 읽는다</span>
+    <p><code>Forbidden</code> 메시지는 필요한 것을 정확히 알려준다. 23.4의 예를 다시 보면 <code>cannot list resource "pods" in API group "" in the namespace "apps"</code>이므로, 필요한 것은 <code>cluster-admin</code>이 아니라 <strong><code>apps</code> 네임스페이스에 <code>pods</code> <code>list</code> 권한</strong>이다. 메시지의 다섯 조각을 그대로 Role의 필드로 옮기면 최소 권한이 나온다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">23.8</span>운영 관점 — 최소 권한을 실제로 지키려면</h2>
+  <p>"최소 권한"은 원칙으로는 쉽고 실무로는 어렵다. 어려운 이유는 <strong>필요한 권한을 미리 알 수 없기 때문</strong>이다. 파이프라인이 무슨 API를 호출하는지, 오퍼레이터가 어떤 리소스를 만드는지는 대개 돌려 봐야 안다.</p>
+
+  <h3>넓게 주고 좁히는 대신, 좁게 주고 넓힌다</h3>
+  <p>순서가 중요하다. <code>cluster-admin</code>으로 시작해 나중에 좁히는 계획은 거의 실행되지 않는다 — 좁히다 무언가 깨지면 되돌리기 때문이다. 반대로 최소로 시작하면 <code>Forbidden</code> 메시지가 필요한 것을 하나씩 알려주고, 그 메시지를 Role에 옮기는 것으로 끝난다. 23.7 실패 ③에서 본 대로 메시지에 필요한 정보가 다 들어 있다.</p>
+
+  <h3>주기적으로 볼 것 세 가지</h3>
+  <table>
+    <tr><th>점검</th><th>명령</th><th>무엇을 보나</th></tr>
+    <tr><td>cluster-admin 보유자</td><td><code>kubectl get clusterrolebinding</code>에서 <code>roleRef.name=cluster-admin</code></td><td>부트스트랩 항목 외에 늘어난 것</td></tr>
+    <tr><td>과도한 와일드카드</td><td>ClusterRole의 <code>verbs: ["*"]</code>·<code>resources: ["*"]</code></td><td>이름은 좁은데 내용은 넓은 역할</td></tr>
+    <tr><td>기본 그룹에 준 권한</td><td><code>system:authenticated</code>·<code>system:serviceaccounts</code>가 subject인 바인딩</td><td>사실상 전체 공개</td></tr>
+  </table>
+  <p>마지막이 특히 위험하다. <code>system:authenticated</code>는 <strong>토큰을 가진 모두</strong>이므로, 여기에 시크릿 읽기를 주면 클러스터의 모든 파드가 모든 시크릿을 읽을 수 있게 된다.</p>
+
+  <h3>사람과 워크로드는 인증 방식이 다르다</h3>
+  <p>이 모듈은 서비스어카운트를 썼다. 쿠버네티스에는 <strong>사람 사용자라는 오브젝트가 없다</strong> — 인증서, OIDC, 프록시 헤더 같은 외부 수단으로 신원을 받고 RBAC은 그 이름에 권한을 붙인다. 그래서 실무에서는 사람은 OIDC(사내 SSO)로, 워크로드는 서비스어카운트로 나누고, 사람에게는 그룹 단위로 권한을 준다.</p>
+  <p>파드가 쓰는 서비스어카운트도 점검 대상이다. 지정하지 않으면 <code>default</code> 서비스어카운트가 자동으로 붙고 토큰이 마운트된다. 필요 없으면 꺼야 한다.</p>
+<pre><code># 파드가 API 를 호출하지 않는다면
+spec:
+  automountServiceAccountToken: false</code></pre>
+  <p>우리 앱들(<code>journal-api</code>·<code>order-api</code>)은 쿠버네티스 API를 호출하지 않는데도 토큰을 갖고 있다. 컨테이너가 탈취됐을 때 그 토큰으로 할 수 있는 일이 곧 피해 범위이므로, <strong>안 쓰는 토큰은 없는 편이 낫다.</strong> M24에서 파드 수준 보안을 다룰 때 이 설정을 함께 넣는다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">23.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n journal get sa,role,rolebinding dev --no-headers | wc -l</code> → <code>3</code></li>
+      <li><code>kubectl auth can-i get secrets -n journal --as=system:serviceaccount:journal:dev</code> → <code>no</code></li>
+      <li><code>kubectl auth can-i get pods -n journal --as=system:serviceaccount:journal:dev</code> → <code>yes</code></li>
+      <li><code>kubectl auth can-i get pods -n apps --as=system:serviceaccount:journal:dev</code> → <code>no</code></li>
+      <li><code>kubectl auth can-i list nodes --as=system:serviceaccount:journal:dev</code> → <code>no</code> (경고 줄이 함께 나온다)</li>
+      <li><code>kubectl -n journal get sa dev -o jsonpath='{.secrets}'</code> → 빈 값 (1.24 이후의 정상 상태)</li>
+      <li><code>kubectl -n journal create token dev --duration=10m | wc -c</code> → <code>800</code> 이상</li>
+      <li><code>kubectl get clusterrole study-viewer -o jsonpath='{.rules}' | grep -c monitoring.coreos.com</code> → <code>1</code> (집약이 동작했다)</li>
+      <li><code>kubectl get clusterrolebinding -o json | python3 -c "import json,sys;print(len([b for b in json.load(sys.stdin)['items'] if b['roleRef']['name']=='cluster-admin']))"</code> → <code>2</code></li>
+      <li><code>kubectl -n apps get rolebinding dev-view</code> → <code>NotFound</code> (실습용 바인딩을 지웠다)</li>
+      <li><code>ls /tmp/dev.kubeconfig</code> → <code>No such file</code> (토큰 파일을 지웠다)</li>
+      <li>(이해 확인) <code>Unauthorized</code>와 <code>Forbidden</code>을 받았을 때 각각 어디를 봐야 하는지 적어 본다</li>
+      <li>(이해 확인) <code>RoleBinding</code>에 <code>ClusterRole</code>을 붙이면 권한이 어디까지 미치는지 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/rbac/10-dev-role.yaml</code> — 개발자용 SA·Role·RoleBinding. M29 CI가 이 패턴으로 파이프라인 계정을 만든다</li>
+      <li><code>course/labs/k8s/rbac/20-aggregated.yaml</code> — 집약 ClusterRole 예제</li>
+      <li><code>course/labs/scripts/make-dev-kubeconfig.sh</code> — 수명 있는 토큰으로 kubeconfig 생성</li>
+      <li>클러스터: <code>journal</code> 네임스페이스에 <code>dev</code> 계정과 그 권한. <code>study-viewer</code> 계열 ClusterRole 3개</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 실습용 바인딩과 토큰 파일을 지운다
+kubectl -n apps delete rolebinding dev-view --ignore-not-found
+rm -f /tmp/dev.kubeconfig
+unset KUBECONFIG
+
+# 클러스터 범위 바인딩을 만들었다면 반드시 지운다 (네임스페이스를 지워도 남는다)
+kubectl delete clusterrolebinding dev-view-all --ignore-not-found
+
+# 남은 것 확인
+kubectl -n journal get sa,role,rolebinding dev --no-headers</code></pre>
+  <p><code>dev</code> 계정과 <code>study-viewer</code> ClusterRole은 <strong>지우지 않는다.</strong> M24에서 이 계정으로 파드 보안 정책에 걸려 보고, M29에서 CI 파이프라인 계정을 만들 때 같은 패턴을 쓴다.</p>
+  <p>발급한 토큰은 수명이 지나면 저절로 무효가 되므로 따로 회수할 것이 없다. 이것이 실패 ①에서 본 <strong>영구 토큰과의 차이</strong>이고, 실습 파일에 토큰을 남기지 않는 이유이기도 하다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m22-k8s-logging-loki.html">← M22 로깅</a>
+  <a href="m24-k8s-pod-container-security.html">M24 파드와 컨테이너 보안 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>RBAC은 <strong>API를 통해 무엇을 할 수 있는가</strong>를 정한다. 그런데 파드가 일단 뜨고 나면 그 안에서 하는 일은 RBAC이 관여하지 않는다 — 루트로 실행하고, 호스트 파일시스템을 마운트하고, 커널 기능을 요구하는 것은 전부 파드 스펙에 적혀 있고 <strong>지금 우리 클러스터는 그것을 다 허용한다.</strong></p>
+  <p>M24에서 파드 시큐리티 어드미션을 켠다. 네임스페이스에 라벨 하나를 붙여 <code>restricted</code> 수준을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>을 먼저 본다. 그다음 <code>securityContext</code>를 채워 통과시킨다 — <code>runAsNonRoot</code>, <code>readOnlyRootFilesystem</code>, <code>drop: ["ALL"]</code>이 각각 무엇을 막는지 확인하면서.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>RBAC 인가: https://kubernetes.io/docs/reference/access-authn-authz/rbac/</li>
+    <li>인가 개요와 모듈 순서: https://kubernetes.io/docs/reference/access-authn-authz/authorization/</li>
+    <li>서비스어카운트와 토큰: https://kubernetes.io/docs/concepts/security/service-accounts/</li>
+    <li>서비스어카운트 토큰 자동 생성 제거(1.24): https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/</li>
+    <li>가장(impersonation): https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 4.4 RBAC 기초 · 17.2 인가</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · <code>--authorization-mode=Node,RBAC</code></p>
+</footer>
+
+</div>
+</body>
+</html>

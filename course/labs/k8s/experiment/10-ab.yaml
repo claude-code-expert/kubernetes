@@ -1,0 +1,99 @@
+# M38 — 기능 플래그로 두 구현을 나란히 돌린다.
+#
+# 서비스 하나가 두 디플로이먼트를 함께 고른다 (selector: app=journal-api-ab).
+# 트래픽 비율은 **파드 수**로 정해진다 — M30 의 카나리와 같은 방식이고,
+# 여기서는 "어느 쪽이 나은가"를 판정하는 것이 목적이라 비율을 반반으로 둔다.
+#
+# 두 구현을 구분하는 것은 variant 라벨이고, 프로메테우스가 pod 라벨로 그것을 본다.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: m38
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-ab
+  namespace: m38
+  labels: {app: journal-api-ab}
+spec:
+  selector: {app: journal-api-ab}      # variant 는 고르지 않는다 — 둘 다 받는다
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: journal-ab
+  namespace: m38
+  labels: {release: kps}
+spec:
+  selector:
+    matchLabels: {app: journal-api-ab}
+  endpoints:
+    - {port: http, path: /metrics, interval: 10s}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: variant-a, namespace: m38}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: journal-api-ab, variant: a}
+  template:
+    metadata:
+      labels: {app: journal-api-ab, variant: a}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, seccompProfile: {type: RuntimeDefault}}
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: APP_VERSION, value: "variant-a"}
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 30m, memory: 48Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: variant-b, namespace: m38}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: journal-api-ab, variant: b}
+  template:
+    metadata:
+      labels: {app: journal-api-ab, variant: b}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, seccompProfile: {type: RuntimeDefault}}
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: journal-api:v3
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: APP_VERSION, value: "variant-b"}
+            # 새 구현이 5% 확률로 실패한다고 가정한다.
+            # 실험의 목적은 이 차이를 **메트릭으로 발견하는 것**이지 이미 아는 것을 확인하는 게 아니다.
+            - {name: FAULT_RATE, value: "0.05"}
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 30m, memory: 48Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2

@@ -1,0 +1,105 @@
+# 주문 API — Spring Boot 4.1.0 / JDK 21. docs/kubernetes-monitoring 의 앱을 그대로 쓴다.
+# journal-api 와 달리 /actuator/prometheus 로 메트릭을 노출하고 ChaosController 를 갖고 있다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: order-api
+    app.kubernetes.io/part-of: obs-study
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: order-api
+        app.kubernetes.io/part-of: obs-study
+    spec:
+      # M15 에서 잰 그 값이다. JVM 은 종료에 시간이 더 걸린다.
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001          # Dockerfile 에서 만든 UID. 베이스 이미지의 1000 과 겹치지 않는다
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: order-api
+          image: order-api:v1
+          imagePullPolicy: IfNotPresent    # kind load 로 넣은 로컬 이미지 (M07)
+          ports:
+            # 이 포트 '이름'을 M20 의 ServiceMonitor 가 참조한다. 숫자가 아니다.
+            - name: http
+              containerPort: 8080
+          # 액세스 로그를 파일이 아니라 stdout 으로 보낸다 (M22, 책 3.8 의 stdout 원칙).
+          # 컨테이너 안 파일에 쓰면 파드가 사라질 때 함께 사라지고, 수집기도 읽지 못한다.
+          # 톰캣은 디렉터리와 접두사로 대상을 정하므로 /dev/stdout 을 이렇게 표현한다.
+          env:
+            - name: SERVER_TOMCAT_ACCESSLOG_ENABLED
+              value: "true"
+            - name: SERVER_TOMCAT_ACCESSLOG_DIRECTORY
+              value: /dev
+            - name: SERVER_TOMCAT_ACCESSLOG_PREFIX
+              value: stdout
+            - name: SERVER_TOMCAT_ACCESSLOG_SUFFIX
+              value: ""
+            - name: SERVER_TOMCAT_ACCESSLOG_BUFFERED
+              value: "false"
+            # 회전을 끄지 않으면 톰캣이 파일명 뒤에 날짜를 붙인다 — /dev/stdout.2026-09-05
+            # 그런 파일은 없으므로 액세스 로그가 조용히 사라진다.
+            - name: SERVER_TOMCAT_ACCESSLOG_ROTATE
+              value: "false"
+            # %D 는 처리 시간(밀리초). 기본 패턴에는 없어 지연을 로그로 못 본다.
+            - name: SERVER_TOMCAT_ACCESSLOG_PATTERN
+              value: '%h %l %u %t "%r" %s %b %D'
+          # M15 에서 만든 프로브 3종 구성을 JVM 앱에 그대로 적용한다.
+          # 기동이 느린 앱이라 startupProbe 가 흉내가 아니라 실제로 필요하다.
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: http}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: http}
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: http}
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m               # journal-api 는 50m 이었다. JVM 은 기동에만도 이만큼 쓴다
+              memory: 384Mi
+            limits:
+              # CPU limit 을 두지 않는다 — 스로틀링이 지연을 왜곡한다 (M16 실측)
+              memory: 640Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    # M20 의 ServiceMonitor 가 이 라벨로 서비스를 찾는다
+    app.kubernetes.io/name: order-api
+    app.kubernetes.io/part-of: obs-study
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: order-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 1 · 도커] M07 레지스트리와 이미지 공급망 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 07 / 38 · PART 1 도커</div>
+  <h1>레지스트리와 이미지 공급망</h1>
+  <p class="ch-desc">지금까지 만든 이미지는 이 노트북에만 있다. 클러스터 노드가 그것을 받으려면 레지스트리가 필요하다. 올리는 방법과 함께, 올라간 이미지에 무엇이 딸려 들어갔는지 — 취약점 13건이 어디서 왔고 어떻게 2건으로 만드는지 확인한다.</p>
+  <div class="meta">
+    <span class="tag">초반</span><span class="tag">60분</span><span class="tag">registry:3.1.1</span><span class="tag">Trivy 0.74.0</span><span class="tag">kind v0.33.0</span>
+    <br>2026-09-05 검증 · Part 1의 마지막 모듈. 여기서 만든 이미지가 Part 2의 배포 대상이 된다 · 레지스트리 · Trivy 버전과 취약점 개수는 실습 당일 다시 확인한다 — 취약점 DB는 매일 바뀐다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m04-docker-dockerfile-build.html">M04</a> 완료 — <code>journal-api:v1</code> · <code>journal-api:v2</code> 이미지와 <code>course/labs/apps/journal-api/Dockerfile</code></li>
+    <li><a href="m01-setup-environment.html">M01</a>의 kind 클러스터가 떠 있다 (<code>kubectl get nodes</code>로 노드 3개). 7.5절에서 쓴다</li>
+    <li>작업 디렉터리: <code>course/labs/apps/journal-api/</code>. M06은 상위 <code>apps/</code>였으므로 한 단계 내려온다</li>
+    <li>7.4절은 취약점 DB를 내려받으므로 인터넷이 필요하다. 나머지 절은 로컬에서 끝난다</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 레지스트리는 이미지의 저장소이자 <strong>배포 경로</strong>다. 노드는 여기서 이미지를 받는다.</p>
+  <p>2. 이미지에는 애플리케이션만 들어가지 않는다. 이 실습에서 취약점 13건 중 <strong>11건이 애플리케이션과 무관한 npm</strong>이었다. 지웠더니 2건이 됐다.</p>
+  <p>3. 로컬 클러스터에서는 레지스트리를 건너뛰는 지름길이 있다 — <code>kind load docker-image</code>. 대신 그 지름길이 감추는 것도 안다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">7.1</span>왜 레지스트리가 필요한가</a>
+  <a href="#s2"><span class="num">7.2</span>이론 — 이미지 공급망</a>
+  <a href="#s3"><span class="num">7.3</span>따라하기 ① 로컬 레지스트리</a>
+  <a href="#s4"><span class="num">7.4</span>따라하기 ② 취약점 스캔과 개선</a>
+  <a href="#s5"><span class="num">7.5</span>따라하기 ③ 클러스터에 올린다</a>
+  <a href="#s6"><span class="num">7.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">7.7</span>Part 1 정리 — 체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">7.1</span>왜 레지스트리가 필요한가</h2>
+  <p class="lead">M01에서 만든 클러스터의 워커 노드는 도커 컨테이너다. 그 안에는 별도의 컨테이너 런타임(containerd)이 있고, 맥의 이미지 캐시를 보지 못한다. 파드를 배포하면 노드는 자기가 아는 곳 — 레지스트리에서 이미지를 찾는다.</p>
+  <p><dfn class="term">레지스트리 <span class="en">(Registry)</span></dfn>는 이미지를 저장하고 배포하는 서버다. Docker Hub가 가장 유명하지만, 실무에서는 사내 레지스트리(Harbor, Nexus)나 클라우드 레지스트리(ECR, GCR, ACR)를 쓰는 경우가 더 많다. 이유는 셋이다 — Docker Hub의 익명 풀 요청 제한, 사내 코드가 든 이미지를 외부에 두지 않으려는 정책, 그리고 클러스터와 같은 네트워크에서 받는 속도.</p>
+  <p>이 모듈에서는 레지스트리를 컨테이너로 직접 띄운다. 레지스트리 실습은 계정도 인터넷도 필요 없고, 실제 레지스트리와 같은 API(<code>/v2/</code>)를 쓰기 때문에 동작을 그대로 관찰할 수 있다. 인터넷이 필요한 곳은 7.4절의 취약점 스캔 한 군데다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">7.2</span>이론 — 이미지 공급망</h2>
+  <p>책 1.3.1은 이미지 관리 모범 사례를 말하면서 이미지 빌드가 <dfn class="term">공급망 공격 <span class="en">(Supply-chain Attack)</span></dfn>에 취약하다고 지적한다. 내 코드가 안전해도 이미지 안에는 내가 쓰지 않은 것들이 잔뜩 들어 있기 때문이다. M04에서 만든 246MB 이미지 안에서 저널 API 소스는 3KB도 안 된다. 나머지는 전부 남이 만든 것이다.</p>
+  <table>
+    <tr><th>층</th><th>들어오는 것</th><th>내가 통제하는 방법</th></tr>
+    <tr><td>베이스 이미지</td><td>OS 패키지 수십 개, 때로는 언어 런타임과 그 도구</td><td>더 작은 베이스 선택, 정기적 재빌드</td></tr>
+    <tr><td>의존성</td><td>직접 쓰는 라이브러리 + 그것들이 끌어오는 전이 의존성</td><td>락 파일 고정, 스캔, 정기 업데이트</td></tr>
+    <tr><td>빌드 과정</td><td>빌드 중 받아오는 스크립트, 캐시</td><td>재현 가능한 빌드, <code>npm ci</code> 류의 고정 설치</td></tr>
+    <tr><td>내 코드</td><td>애플리케이션</td><td>코드 리뷰, 테스트</td></tr>
+  </table>
+  <p>이 층들이 공격 경로가 되는 방식은 두 가지다. 하나는 <strong>이미 들어 있는 취약점</strong> — 베이스 이미지의 OS 패키지나 전이 의존성에 알려진 CVE가 있고, 그 이미지가 그대로 배포된다. 다른 하나는 <strong>바꿔치기</strong> — 빌드가 참조하는 태그가 다른 내용을 가리키게 되거나, 레지스트리와 노드 사이에서 이미지가 다른 것으로 대체된다. M03에서 배운 태그와 다이제스트의 구분이 여기서 실전 의미를 갖는다. 태그는 움직이고 다이제스트는 내용에 묶여 있으므로, "스캔한 이미지"와 "배포된 이미지"가 같은 것임을 보장하는 유일한 방법은 다이제스트다.</p>
+  <p>책 19.4(코드 보안)는 대응을 두 지점에 둔다. <strong>빌드 시점</strong>에 스캔해 기준을 넘는 이미지를 CI에서 막고, <strong>배포 시점</strong>에 클러스터가 검증된 이미지만 받아들이게 한다. 앞의 것이 이 모듈이고 뒤의 것이 M26이다. 두 지점 사이에 시간이 흐른다는 점이 중요하다 — 스캔을 통과한 이미지도 다음 주에 새 CVE가 공개되면 취약한 이미지가 된다. 그래서 스캔은 한 번이 아니라 레지스트리에 있는 이미지를 주기적으로 다시 돌리는 일이 된다.</p>
+  <p>확인 방법은 세 가지가 있고, 답하는 질문이 다르다. <strong>취약점 스캔</strong>은 "이미지에 든 패키지 중 알려진 CVE가 있는 것은 무엇인가"에 답한다. 이 모듈에서 Trivy로 한다. <strong>SBOM</strong>(Software Bill of Materials)은 "이미지에 무엇이 들었는가"의 목록 자체다. 나중에 새 CVE가 공개됐을 때 "우리 이미지 중 그 패키지가 든 것은 어느 것인가"를 이미지를 다시 스캔하지 않고 목록 검색으로 답할 수 있다 — 이미지가 수백 개일 때 스캔과 목록 검색의 비용 차이가 이 도구의 존재 이유다. <strong>서명</strong>은 "이 이미지를 우리가 빌드했는가"에 답한다. 빌드 파이프라인이 다이제스트에 서명하고, 클러스터의 어드미션 단계가 서명 없는 이미지를 거절한다. 스캔은 내용을 보고, SBOM은 내용을 기록하고, 서명은 출처를 증명한다. 셋 중 하나로 나머지를 대신할 수 없다.</p>
+  <p>이 과정의 배치는 이렇다. 여기서는 스캔을 실습하고 SBOM과 서명은 개념만 본다. M29(CI)에서 SBOM 생성과 이미지 서명을 파이프라인에 넣고, M26(어드미션 컨트롤)에서 서명되지 않은 이미지를 막는 정책을 만든다 — 그 정책이 여기서 예고한 서명 검증의 집행 지점이다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">7.3</span>따라하기 ① 로컬 레지스트리</h2>
+
+  <div class="step">
+    <h4>1단계. 레지스트리를 띄운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이미지를 밀어 넣을 목적지를 만든다. 실제 레지스트리와 같은 API를 쓰는 컨테이너 하나다.</p>
+<pre><code>cd course/labs/apps/journal-api
+docker run -d --name registry -p 5001:5000 registry:3.1.1
+sleep 2
+docker exec registry registry --version
+curl -s localhost:5001/v2/_catalog</code></pre>
+    <ul class="tight">
+      <li><code>registry:3.1.1</code> — CNCF Distribution 프로젝트의 공식 레지스트리 구현. 검색 결과에 많이 보이는 <code>registry:2</code>는 이전 메이저 라인이다. 메이저만 적은 <code>registry:3</code>은 내일 다른 이미지를 가리킬 수 있으므로 패치 버전까지 박는다 (3.1.1 — 2026-09-05 확인, 실습 당일 재확인)</li>
+      <li>호스트 포트는 5001을 쓴다. 맥에서 5000은 시스템 서비스가 점유하는 경우가 많다(M02의 포트 충돌)</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>registry github.com/distribution/distribution/v3 3.1.1
+{"repositories":[]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>버전 줄에 <code>3.1.1</code>이 찍히고, 빈 목록이 JSON으로 돌아오면 레지스트리 API가 살아 있다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 태그를 붙이고 푸시한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이미지 이름에 레지스트리 주소가 포함된다는 규칙을 익힌다.</p>
+<pre><code>docker tag journal-api:v1 localhost:5001/journal-api:v1
+docker push localhost:5001/journal-api:v1</code></pre>
+    <p>이름 규칙이 <code>[레지스트리주소/][네임스페이스/]이름:태그</code>다. 레지스트리 주소를 생략하면 Docker Hub로 간다 — <code>nginx:1.29-alpine</code>이 실제로는 <code>docker.io/library/nginx:1.29-alpine</code>인 이유다. 그래서 푸시하려면 <strong>먼저 태그를 다시 붙여야</strong> 한다. <code>docker push journal-api:v1</code>은 Docker Hub의 존재하지 않는 저장소로 향한다.</p>
+    <span class="out-lbl">실행 결과 (Waiting 줄은 생략)</span>
+    <div class="out"><code>The push refers to repository [localhost:5001/journal-api]
+58db720c7371: Pushed
+7219ec201c38: Pushed
+3d098bfa22b2: Pushed
+5de55e5ef9c0: Layer already exists
+b05773cc67e1: Layer already exists
+...
+v1: digest: sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3 size: 856</code></div>
+    <p>레이어 단위로 올라갔다(M03에서 본 그 레이어들이다). 위 출력은 같은 레지스트리에 이전 빌드를 한 번 올린 뒤의 것이라 베이스 이미지 레이어들이 <code>Layer already exists</code>다 — 빈 레지스트리에 처음 올리면 전부 <code>Pushed</code>로 나온다. 마지막 줄의 <code>digest:</code>가 이 이미지의 내용 주소이며, 이 값은 빌드마다 다르다. <strong>배포 매니페스트(쿠버네티스에 "무엇을 어떻게 띄울지" 선언하는 YAML, M08부터 쓴다)에 박을 값이 이것</strong>이다.</p>
+<pre><code>curl -s localhost:5001/v2/_catalog
+curl -s localhost:5001/v2/journal-api/tags/list</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"repositories":["journal-api"]}
+{"name":"journal-api","tags":["v1"]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>저장소와 태그가 목록에 보인다. 이 두 API는 사내 레지스트리 점검 스크립트에서도 그대로 쓴다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 다이제스트로 받아서 태그로 받은 것과 비교한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M03에서 배운 다이제스트 지정을 실제 배포 경로에서 확인하고, 다이제스트로 받은 이미지와 태그로 받은 이미지가 같은 것인지 ID로 대조한다.</p>
+<pre><code># 로컬 사본을 지운 뒤 다이제스트로 받는다 (다이제스트는 2단계 출력의 값을 쓴다)
+docker rmi localhost:5001/journal-api:v1
+docker pull localhost:5001/journal-api@sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Untagged: localhost:5001/journal-api:v1
+localhost:5001/journal-api@sha256:6d8310e7b3c2…: Pulling from journal-api
+Digest: sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3
+Status: Downloaded newer image for localhost:5001/journal-api@sha256:6d8310e7b3c2…
+localhost:5001/journal-api@sha256:6d8310e7b3c2…</code></div>
+    <p><code>rmi</code>가 <code>Untagged</code>만 찍고 <code>Deleted</code>가 없는 것은 같은 이미지에 <code>journal-api:v1</code> 태그가 남아 있기 때문이다. 태그로 받을 때와 달리, 다이제스트 pull은 그 사이 누군가 <code>v1</code> 태그를 다른 이미지로 덮어썼더라도 <strong>원래 이미지</strong>를 가져온다. M29의 CI 파이프라인에서 빌드한 이미지를 배포로 넘길 때 태그가 아니라 다이제스트를 넘기는 이유다.</p>
+<pre><code>docker pull localhost:5001/journal-api:v1
+docker image inspect -f '{{.Id}}' localhost:5001/journal-api@sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3
+docker image inspect -f '{{.Id}}' localhost:5001/journal-api:v1
+docker image inspect -f '{{.Id}}' journal-api:v1</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>v1: Pulling from journal-api
+Digest: sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3
+Status: Downloaded newer image for localhost:5001/journal-api:v1
+localhost:5001/journal-api:v1
+sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3
+sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3
+sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 줄이 <strong>같은 값</strong>이다. 다이제스트로 받은 것, 태그로 받은 것, 로컬에서 빌드한 것이 모두 한 이미지다. 이 환경에서는 <code>Id</code>가 푸시 다이제스트와 같은 값으로 나오는데, Docker Engine 29의 containerd 이미지 저장소가 이미지 ID로 매니페스트 다이제스트를 쓰기 때문이다. 다른 저장소 설정에서는 <code>Id</code>가 다른 값(설정 다이제스트)이지만, 세 줄이 같다는 판정은 변하지 않는다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">7.4</span>따라하기 ② 취약점 스캔과 개선</h2>
+  <p>스캐너는 Trivy를 쓴다. 컨테이너로 실행하므로 설치가 필요 없고, 로그인도 요구하지 않는다. 태그는 <code>aquasec/trivy:0.74.0</code>으로 고정한다 — M03에서 정한 latest 금지는 도구 이미지에도 적용된다 (0.74.0은 2026-09-05 확인, 실습 당일 <code>docker run --rm aquasec/trivy:0.74.0 --version</code>으로 재확인).</p>
+
+  <div class="step">
+    <h4>4단계. 현재 이미지를 스캔한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M04에서 만든 이미지에 알려진 취약점이 몇 건 있고 어디서 왔는지 본다.</p>
+<pre><code>docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:0.74.0 image --scanners vuln --severity HIGH,CRITICAL journal-api:v1</code></pre>
+    <ul class="tight">
+      <li><code>-v /var/run/docker.sock:...</code> — 스캐너 컨테이너가 호스트의 이미지를 읽게 한다</li>
+      <li><code>--scanners vuln</code> — 취약점만. 빼면 시크릿 탐지까지 돌아 느려진다</li>
+      <li><code>--severity HIGH,CRITICAL</code> — 심각도를 좁힌다. 빼면 LOW·MEDIUM까지 나와 수백 줄이 된다</li>
+      <li>처음 실행하면 취약점 DB(수십 MB)를 내려받느라 시간이 걸린다. 결과 개수는 DB 갱신에 따라 날마다 달라진다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 (요약 표의 0건 행과 상세 목록은 생략)</span>
+    <div class="out"><code>2026-09-05T08:22:05Z	INFO	Detected OS	family="alpine" version="3.24.1"
+2026-09-05T08:22:05Z	INFO	[alpine] Detecting vulnerabilities...	os_version="3.24" repository="3.24" pkg_num=18
+2026-09-05T08:22:05Z	INFO	[node-pkg] Detecting vulnerabilities...
+
+Report Summary
+│ Target                                                                   │ Type     │ Vulnerabilities │
+│ journal-api:v1 (alpine 3.24.1)                                           │ alpine   │        2        │
+│ usr/local/lib/node_modules/npm/node_modules/@npmcli/metavuln-calculator/…│ node-pkg │        1        │
+│ usr/local/lib/node_modules/npm/node_modules/brace-expansion/package.json  │ node-pkg │        3        │
+│ usr/local/lib/node_modules/npm/node_modules/ip-address/package.json       │ node-pkg │        1        │
+│ usr/local/lib/node_modules/npm/node_modules/pacote/package.json           │ node-pkg │        1        │
+│ usr/local/lib/node_modules/npm/node_modules/picomatch/package.json        │ node-pkg │        1        │
+│ usr/local/lib/node_modules/npm/node_modules/sigstore/package.json         │ node-pkg │        1        │
+│ usr/local/lib/node_modules/npm/node_modules/tar/package.json              │ node-pkg │        3        │
+...
+
+journal-api:v1 (alpine 3.24.1)
+Total: 2 (HIGH: 2, CRITICAL: 0)
+
+Node.js (node-pkg)
+Total: 11 (HIGH: 10, CRITICAL: 1)</code></div>
+    <p>두 덩어리로 나뉜 것을 본다. 알파인 OS 패키지에서 2건, 노드 패키지에서 11건. 그런데 이 애플리케이션의 런타임 의존성은 <code>express</code>와 <code>redis</code> 둘뿐이고, 요약 표에서 <code>app/node_modules/</code> 아래 행은 전부 0이다. 11건이 어디서 왔는지는 표의 경로가 말해 준다 — 전부 <code>usr/local/lib/node_modules/npm/</code> 아래, 즉 <strong><code>node:22-alpine</code> 이미지에 기본 포함된 npm</strong>의 의존성이다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>Total: 2</code>와 <code>Total: 11</code> 두 줄. 취약점 13건 중 11건이 애플리케이션이 쓰지 않는 도구에서 나왔다. 실행에 npm은 필요 없다 — <code>node dist/server.js</code>만 돌면 된다. 개수는 실습 당일 DB에 따라 다를 수 있지만 "노드 쪽 전부가 npm 경로 아래"라는 구조는 같다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계. 쓰지 않는 것을 들어내고 다시 스캔한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"공격 표면을 줄인다"는 말을 숫자로 확인한다.</p>
+    <p><code>Dockerfile.hardened</code>는 M04의 <code>Dockerfile</code>과 마지막 스테이지의 <code>RUN rm -rf</code> 한 줄만 다르다. 앞의 두 스테이지는 같으므로 마지막 스테이지만 싣는다.</p>
+<pre><code># Dockerfile.hardened — 마지막 스테이지에 한 줄을 추가
+FROM node:22-alpine
+ARG APP_VERSION=v1
+ENV NODE_ENV=production APP_VERSION=${APP_VERSION}
+# npm · npx 는 애플리케이션 실행에 필요 없다. 지우면 스캔 결과가 줄어든다.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+WORKDIR /app
+USER node
+COPY --from=deps  --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --chown=node:node package.json ./
+EXPOSE 8080
+CMD ["node", "dist/server.js"]</code></pre>
+<pre><code>cd course/labs/apps/journal-api
+docker build -f Dockerfile.hardened -t journal-api:v1-hardened .
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:0.74.0 image --scanners vuln --severity HIGH,CRITICAL journal-api:v1-hardened</code></pre>
+    <p><code>cd</code>를 빠뜨리면 <code>failed to read dockerfile</code>로 멈춘다 — M06에서 <code>apps/</code>에 있었다면 지금 한 단계 아래로 내려와야 한다. 빌드는 앞 두 스테이지가 M04 캐시를 그대로 쓰므로 몇 초면 끝난다.</p>
+    <span class="out-lbl">실행 결과 (요약 부분)</span>
+    <div class="out"><code>2026-09-05T08:22:13Z	INFO	Detected OS	family="alpine" version="3.24.1"
+...
+journal-api:v1-hardened (alpine 3.24.1)
+Total: 2 (HIGH: 2, CRITICAL: 0)</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Node.js (node-pkg)</code> 섹션이 <strong>통째로 사라졌다</strong>. <code>Total:</code> 줄이 하나뿐이다. 13건 → 2건. 남은 2건은 알파인 베이스의 OS 패키지이므로, 베이스 이미지가 갱신될 때 함께 해결된다.</div>
+    <p>여기서 한 가지를 분명히 해둔다. 이 조치는 <strong>실행에 필요 없는 도구를 지운 것</strong>이지 취약점을 고친 것이 아니다. 하지만 효과는 실질적이다 — 컨테이너에 침입한 공격자가 패키지를 설치하거나 스크립트를 받아올 도구가 없어진다. 같은 발상의 끝이 distroless 이미지(셸조차 없음)이고, M24에서 <code>readOnlyRootFilesystem</code>과 함께 다룬다.</p>
+    <p>크기는 거의 안 줄었다(<code>docker images journal-api:v1-hardened</code>로 보면 246MB 그대로). 취약점 개수와 이미지 크기는 <strong>다른 축</strong>이라는 것도 함께 기억한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계. 스캔을 게이트로 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>스캔 결과를 사람이 읽는 표가 아니라 스크립트가 판단할 수 있는 <strong>종료 코드</strong>로 받는다. CI에서 빌드를 실패시키는 장치다.</p>
+<pre><code># 심각도 HIGH 이상이 하나라도 있으면 종료 코드 1
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:0.74.0 image --scanners vuln --severity HIGH,CRITICAL \
+  --exit-code 1 journal-api:v1 &gt; /dev/null
+echo $?</code></pre>
+    <ul class="tight">
+      <li><code>--exit-code 1</code> — 조건에 맞는 취약점이 있으면 그 값으로 종료한다. 기본은 취약점이 있어도 0</li>
+      <li><code>&gt; /dev/null</code> — 표는 버리고 종료 코드만 본다. CI에서는 표를 아티팩트로 남기고 종료 코드로 판정한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>1</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>echo $?</code>가 <code>1</code>. 13건이 있는 <code>journal-api:v1</code>은 이 게이트를 통과하지 못한다. <code>journal-api:v1-hardened</code>로 바꿔 돌려도 알파인 2건 때문에 역시 <code>1</code>이다 — 게이트를 <code>CRITICAL</code>만으로 좁히거나 <code>--ignore-unfixed</code>(수정 버전이 아직 없는 것은 제외)를 붙여야 0이 되며, 어느 쪽을 택할지가 팀의 정책이다.</div>
+    <p>책 5.3의 원칙 — <strong>파이프라인에서 테스트가 실패하면 빌드도 실패한 것</strong> — 이 스캔에도 그대로 적용된다. M29에서 이 명령을 GitHub Actions 워크플로에 넣는다. 실무에서는 처음부터 <code>--exit-code 1</code>을 켜면 기존 이미지들 때문에 전부 빨간불이 되므로, 보통 <strong>새로 생긴 취약점만</strong> 막고 기존 것은 기한을 정해 줄여나간다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">7.5</span>따라하기 ③ 클러스터에 올린다</h2>
+  <p>Part 1의 결승선이다. 만든 이미지를 M01의 클러스터에서 실행한다. 올릴 이미지는 <code>journal-api:v1</code>과 <code>journal-api:v2</code> 둘이다 — M10 롤아웃이 v1에서 v2로 바꾸는 실습이고, M15 프로브 실습도 두 버전을 쓴다.</p>
+  <p>왜 취약점을 줄인 <code>v1-hardened</code>가 아니라 v1을 올리는지 밝혀 둔다. M08~M18의 매니페스트와 <code>course/labs/scripts/rebuild.sh</code>가 <code>journal-api:v1</code> · <code>v2</code> 태그와 M04의 <code>Dockerfile</code>을 기준으로 짜여 있다. <code>v1-hardened</code>는 스캔 전후를 비교하기 위한 실험 이미지로 남기고, 노드에는 뒤 모듈이 참조하는 태그를 올린다. 실무라면 <code>RUN rm -rf … npm</code> 한 줄을 <code>Dockerfile</code> 본체에 넣어 모든 빌드가 hardened가 되게 하는 것이 맞다 — 이 과정은 M24(파드 시큐리티)에서 실행 이미지 다듬기를 한 번에 다룰 때 그 선택을 다시 꺼낸다.</p>
+
+  <div class="step">
+    <h4>7단계. v2 이미지를 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M04 4.5절에서 만든 v2가 있는지 확인하고, 없으면 같은 명령으로 만든다. 소스는 같고 <code>APP_VERSION</code>만 다른 이미지다.</p>
+<pre><code>docker build --build-arg APP_VERSION=v2 -t journal-api:v2 .
+docker run --rm journal-api:v2 node -e 'console.log(process.env.APP_VERSION)'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>#16 DONE 0.1s
+v2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>M04에서 이미 만들었다면 빌드가 전부 캐시로 끝나고(마지막 줄 <code>DONE 0.1s</code>), 컨테이너가 <code>v2</code>를 출력한다. 단계 번호는 환경마다 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>8단계. kind 노드에 두 이미지를 적재한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>로컬 이미지를 레지스트리 없이 클러스터 노드로 옮긴다.</p>
+<pre><code>kind load docker-image journal-api:v1 --name study
+kind load docker-image journal-api:v2 --name study</code></pre>
+    <span class="out-lbl">실행 결과 (약 3초씩)</span>
+    <div class="out"><code>Image: "journal-api:v1" with ID "sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3" not yet present on node "study-worker", loading...
+Image: "journal-api:v1" with ID "sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3" not yet present on node "study-worker2", loading...
+Image: "journal-api:v1" with ID "sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3" not yet present on node "study-control-plane", loading...
+Image: "journal-api:v2" with ID "sha256:01d00533618ff6923aeb7945e90607f745fa67e129f54493286b29d2d40625c0" not yet present on node "study-worker", loading...
+Image: "journal-api:v2" with ID "sha256:01d00533618ff6923aeb7945e90607f745fa67e129f54493286b29d2d40625c0" not yet present on node "study-worker2", loading...
+Image: "journal-api:v2" with ID "sha256:01d00533618ff6923aeb7945e90607f745fa67e129f54493286b29d2d40625c0" not yet present on node "study-control-plane", loading...</code></div>
+    <p>노드 <strong>세 개 모두</strong>에 넣는다. 파드가 어느 노드에 스케줄될지 모르기 때문이다. v1의 ID가 7.3절에서 푸시한 다이제스트와 같은 값인 것도 확인해 둔다. 실제로 노드 안에 들어갔는지 볼 수 있다.</p>
+<pre><code>docker exec study-worker crictl images | grep journal</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>docker.io/library/journal-api   v1   db131bda7bf84   59.3MB
+docker.io/library/journal-api   v2   44f9acd40910e   59.3MB</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>v1</code>과 <code>v2</code> 두 줄. 59.3MB — M04에서 본 <code>CONTENT SIZE</code>와 같은 값이다.</div>
+    <p><code>crictl</code>은 노드의 컨테이너 런타임(containerd)을 직접 다루는 도구다. 여기 찍힌 ID가 <code>kind load</code>의 ID와 다른 것은 containerd가 매니페스트가 아니라 이미지 설정의 다이제스트를 ID로 쓰기 때문이다. 같은 이미지를 두 도구가 다른 이름으로 부르는 셈이며, 두 값 모두 환경마다 다르다.</p>
+  </div>
+
+  <div class="step">
+    <h4>9단계. 파드로 실행한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M04에서 빌드한 이미지가 M01의 클러스터에서 실제로 돈다는 것을 파드 하나로 확인한다.</p>
+<pre><code>kubectl run journal-test --image=journal-api:v1 --image-pull-policy=IfNotPresent --port=8080
+sleep 6
+kubectl get pod journal-test -o wide
+kubectl logs journal-test</code></pre>
+    <ul class="tight">
+      <li><code>--image-pull-policy=IfNotPresent</code> — <strong>반드시 필요하다.</strong> 기본 정책은 태그에 따라 달라지고, <code>Always</code>가 적용되면 노드에 이미지가 있어도 레지스트리로 받으러 가서 실패한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME           READY   STATUS    RESTARTS   AGE   IP           NODE
+journal-test   1/1     Running   0          6s    10.244.2.2   study-worker2
+
+{"level":"info","msg":"no REDIS_URL, using in-memory store"}
+{"level":"info","msg":"listening","port":8080,"version":"v1"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Running</code>, <code>READY 1/1</code>. 로그가 <code>kubectl logs</code>로 그대로 나온다 — M02에서 표준 출력으로 로그를 보낸 결과다. 레디스가 없으니 메모리 모드로 떴다. 파드 IP와 노드는 환경마다 다르다.</div>
+    <p>M04에서 빌드한 이미지가 M01의 클러스터에서 돌고 있다. Part 1이 Part 2로 이어지는 지점이다.</p>
+<pre><code>kubectl delete pod journal-test --now</code></pre>
+  </div>
+
+  <div class="note-2026">
+    <span class="lbl">kind load 는 지름길이다</span>
+    편리하지만 실제 배포 경로를 건너뛴다 — 레지스트리 인증, 이미지 풀 시크릿, 네트워크 지연, 풀 정책이 전부 생략된다. 그래서 <code>kind load</code>로만 실습하면 사내 클러스터에 처음 배포할 때 <code>ImagePullBackOff</code>에서 막힌다. 이 과정은 M14까지 <code>kind load</code>를 쓰고, M29(CI)에서 레지스트리를 거치는 실제 경로로 바꾼다.
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">7.6</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 노드에 없는 이미지를 요청한다</span>
+    <p>쿠버네티스에서 가장 자주 보는 실패다. 지금 원인을 알고 넘어가면 나중에 5분을 아낀다.</p>
+<pre><code>kubectl run journal-missing --image=journal-api:v9 --image-pull-policy=IfNotPresent
+sleep 10
+kubectl get pod journal-missing
+kubectl describe pod journal-missing | grep -A6 "Events:"</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME              READY   STATUS         RESTARTS   AGE
+journal-missing   0/1     ErrImagePull   0          10s
+
+Events:
+  Type     Reason     Age   From               Message
+  ----     ------     ----  ----               -------
+  Normal   Scheduled  10s   default-scheduler  Successfully assigned default/journal-missing to study-worker
+  Normal   Pulling    9s    kubelet            Pulling image "journal-api:v9"
+  Warning  Failed     8s    kubelet            Failed to pull image "journal-api:v9": failed to resolve reference
+                                               "docker.io/library/journal-api:v9": pull access denied, repository does
+                                               not exist or may require authorization: server message:
+                                               insufficient_scope: authorization failed
+  Warning  Failed     8s    kubelet            Error: ErrImagePull</code></div>
+    <p>메시지를 뜯어 읽는다. <code>Successfully assigned … to study-worker</code>는 스케줄링이 성공했다는 뜻이다 — 노드 배치 문제가 아니다. <code>docker.io/library/journal-api:v9</code>는 노드가 <strong>Docker Hub</strong>를 찾아갔다는 뜻이다. 레지스트리 주소가 없는 이름은 이렇게 해석된다(7.3절). 마지막으로 <code>pull access denied, repository does not exist or may require authorization</code> 한 줄에는 세 가지 가능성이 섞여 있다. 이름 오타, 이미지 없음, 인증 실패.</p>
+    <p>실무에서 이 메시지를 만나면 순서대로 확인한다. ① 이미지 이름과 태그 오타(가장 흔하다), ② 노드에 이미지가 실제로 있는지(<code>crictl images</code>), ③ 프라이빗 레지스트리라면 <code>imagePullSecrets</code>가 붙어 있는지. 잠시 후 상태는 <code>ImagePullBackOff</code>로 바뀌는데, 재시도 간격을 점점 늘리며 기다리는 상태라는 뜻이다.</p>
+<pre><code>kubectl delete pod journal-missing --now</code></pre>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — HTTP 레지스트리에 localhost 가 아닌 주소로 푸시한다</span>
+    <p>로컬 레지스트리는 TLS 없이 떴다. <code>localhost:5001</code>은 도커가 예외로 허용하지만, 같은 레지스트리를 맥의 네트워크 주소로 부르면 다른 머신에서 접근하는 것과 같은 취급을 받는다.</p>
+<pre><code>IP=$(ipconfig getifaddr en0)          # 맥의 네트워크 주소. 리눅스는 hostname -I | awk '{print $1}'
+docker tag journal-api:v1 $IP:5001/journal-api:v1
+docker push $IP:5001/journal-api:v1
+docker rmi $IP:5001/journal-api:v1    # 실험용 태그 정리</code></pre>
+    <span class="out-lbl">실행 결과 (Waiting 줄 생략. 주소는 필자 환경의 값이라 &lt;IP&gt;로 바꿔 적었다)</span>
+    <div class="out"><code>failed to do request: Head "https://&lt;IP&gt;:5001/v2/journal-api/blobs/sha256:3d098bfa22b2…": http: server gave HTTP response to HTTPS client
+Untagged: &lt;IP&gt;:5001/journal-api:v1</code></div>
+    <p><code>Head "https://…"</code> — 도커가 HTTPS로 말을 걸었고, 레지스트리는 HTTP로 답했다. 도커는 <code>localhost</code>와 <code>127.0.0.0/8</code>을 제외한 모든 레지스트리에 HTTPS를 요구한다. 해결책이 둘인데 방향이 정반대다. 실습에서는 데몬 설정에 <code>insecure-registries</code>로 예외를 준다 — 편하지만 통신이 평문이다. 실무에서는 인증서를 붙인다 — 사내 CA로 발급하고 노드에 신뢰 인증서를 배포한다.</p>
+    <p>이 과정은 <code>localhost</code>만 쓰므로 예외 설정이 필요 없다. 다만 사내에서 "일단 <code>insecure-registries</code>로 열어두자"가 그대로 굳는 경우가 많다는 것은 알아둔다 — 이미지가 평문으로 오간다는 뜻이고, 중간에서 바꿔치기할 수 있다는 뜻이다. 7.2절에서 말한 두 번째 공격 경로가 이것이며, M26에서 서명되지 않은 이미지를 막는 정책이 필요한 이유 중 하나다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">7.7</span>Part 1 정리 — 체크포인트와 정리</h2>
+  <p>도커 파트가 끝났다. 여섯 모듈에서 만든 것을 한 번에 본다.</p>
+  <table>
+    <tr><th>모듈</th><th>배운 것</th><th>Part 2에서 어떻게 이어지나</th></tr>
+    <tr><td>M02</td><td>컨테이너는 격리된 프로세스. PID 1, cgroup, 종료 코드 137</td><td>파드 안 컨테이너, 리소스 limits와 OOMKilled 진단(M16), 종료 신호와 프로브(M15)</td></tr>
+    <tr><td>M03</td><td>레이어, 태그 vs 다이제스트</td><td>매니페스트의 이미지 지정, latest 금지 정책(M26)</td></tr>
+    <tr><td>M04</td><td>멀티스테이지, 빌드 캐시, 넌루트 실행, <code>--build-arg</code>로 v1 · v2</td><td>롤아웃(M10), CI 빌드(M29), 파드 시큐리티(M24)</td></tr>
+    <tr><td>M05</td><td>볼륨, 사용자 정의 네트워크와 이름 해석</td><td>PV/PVC(M18), Service와 CoreDNS(M11)</td></tr>
+    <tr><td>M06</td><td>선언형 구성, 헬스체크와 기동 순서, compose watch</td><td>매니페스트(M08~), 프로브(M15), 저널 앱 이전(M14)</td></tr>
+    <tr><td>M07</td><td>레지스트리, 취약점 스캔, 노드로의 이미지 전달</td><td>이미지 풀 정책, 스캔 게이트 · SBOM · 서명(M29), 서명 검증 정책(M26)</td></tr>
+  </table>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>curl -s localhost:5001/v2/journal-api/tags/list</code> → <code>{"name":"journal-api","tags":["v1"]}</code></li>
+      <li><code>docker image inspect -f '{{.Id}}' localhost:5001/journal-api:v1 journal-api:v1</code> → 같은 <code>sha256:…</code> 값 두 줄</li>
+      <li><code>docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.74.0 image --scanners vuln --severity HIGH,CRITICAL journal-api:v1-hardened 2&gt;/dev/null | grep 'Total:'</code> → <code>Total: 2 (HIGH: 2, CRITICAL: 0)</code> 한 줄만 (Node.js 섹션이 없다. 숫자는 당일 DB에 따라 다를 수 있다)</li>
+      <li><code>docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.74.0 image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 journal-api:v1 &gt;/dev/null 2&gt;&amp;1; echo $?</code> → <code>1</code></li>
+      <li><code>docker exec study-worker crictl images | grep -c journal-api</code> → <code>2</code> (v1 · v2)</li>
+      <li><code>kubectl run journal-check --image=journal-api:v2 --image-pull-policy=IfNotPresent --restart=Never -- node -e 'console.log(process.env.APP_VERSION)' &amp;&amp; sleep 5 &amp;&amp; kubectl logs journal-check</code> → <code>v2</code> (확인 뒤 <code>kubectl delete pod journal-check --now</code>)</li>
+      <li><code>kubectl get pods</code> → <code>journal-test</code> · <code>journal-missing</code> · <code>journal-check</code>가 목록에 없다</li>
+      <li><code>bash course/labs/scripts/preflight.sh</code> → 실패 0</li>
+      <li>(이해 확인) <code>ErrImagePull</code> 이벤트를 만나면 순서대로 확인할 세 가지</li>
+      <li>(이해 확인) 스캔 · SBOM · 서명이 각각 답하는 질문</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/apps/journal-api/Dockerfile.hardened</code> — npm을 제거한 실행 이미지 정의. <code>Dockerfile</code>과 <code>RUN rm -rf</code> 한 줄 차이</li>
+      <li>kind 노드 3개에 적재된 <code>journal-api:v1</code>과 <code>journal-api:v2</code> — v1은 M09 첫 파드 정의부터, v2는 M10 롤아웃과 M15 프로브 실습의 입력이다. <code>course/labs/scripts/rebuild.sh</code>가 같은 두 이미지를 다시 만들어 적재한다</li>
+      <li>로컬 레지스트리 컨테이너 <code>registry</code>(<code>localhost:5001</code>)와 그 안의 <code>journal-api:v1</code></li>
+      <li>로컬 이미지 <code>journal-api:v1-hardened</code> — 7.4절 비교용. 노드에는 올리지 않는다(7.5절 첫 문단)</li>
+    </ul>
+  </div>
+  <p>정리는 아래만 한다. 레지스트리 컨테이너는 <strong>남긴다</strong> — M04 4.7절의 멀티 아키텍처 푸시를 해 볼 곳이고, M29 CI 실습이 같은 <code>localhost:5001</code>로 실제 배포 경로를 만든다. 다시 띄우려면 1단계 명령 한 줄이지만 안에 올린 이미지는 컨테이너와 함께 사라진다.</p>
+<pre><code># 레지스트리에서 받아온 로컬 사본의 태그를 지운다 (레지스트리 안의 이미지와 journal-api:v1 은 남는다)
+docker rmi localhost:5001/journal-api:v1
+
+# 실험 파드가 남아 있지 않은지 확인
+kubectl get pods
+
+# 레지스트리 컨테이너까지 지우려면 — M29 전에 다시 띄워야 한다
+# docker rm -f registry
+
+# journal-api:v1-hardened 는 v1 과 레이어를 공유해 디스크를 거의 차지하지 않는다. 지우려면
+# docker rmi journal-api:v1-hardened</code></pre>
+</section>
+
+<div class="navlinks">
+  <a href="m06-docker-compose.html">← M06 Compose로 다중 서비스</a>
+  <a href="m08-k8s-cluster-first-deploy.html">M08 클러스터 구조와 첫 배포 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>Part 2가 시작된다. M08은 M01에서 만든 클러스터로 돌아가 컨트롤 플레인이 실제로 무엇을 하는지 보고, 첫 배포는 <code>nginx:1.29-alpine</code>으로 한다 — 저널 API를 꺼내기 전에 클러스터의 부품을 먼저 익히기 위해서다. 오늘 노드에 올린 <code>journal-api:v1</code>은 M09에서 파드 정의에 처음 쓰이고, <code>v2</code>는 M10 롤아웃에서 v1을 대체한다. 파드를 일부러 죽여 되살아나는 것을 관찰하는 M08의 실습은 Compose에는 없던 능력이다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>Distribution 레지스트리: https://distribution.github.io/distribution/</li>
+    <li>레지스트리 HTTP API v2: https://distribution.github.io/distribution/spec/api/</li>
+    <li>도커 데몬의 insecure-registries: https://docs.docker.com/reference/cli/dockerd/#insecure-registries</li>
+    <li>Trivy 문서: https://trivy.dev/latest/docs/ (이미지 스캔, <code>--exit-code</code>, <code>--ignore-unfixed</code>)</li>
+    <li>kind — 로컬 이미지 사용: https://kind.sigs.k8s.io/docs/user/quick-start/#loading-an-image-into-your-cluster</li>
+    <li>쿠버네티스 이미지 풀 정책: https://kubernetes.io/docs/concepts/containers/images/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.3.1 이미지 관리 모범 사례, 5.3 파이프라인의 테스트 실패 원칙, 5.5 컨테이너 이미지 태깅, 19.4 코드 보안</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · Docker Engine 29.2.1 · registry:3.1.1 · Trivy 0.74.0 · kind v0.33.0 · Kubernetes 1.37.0 · 2026-09-05. 출력의 다이제스트 · 이미지 ID · 취약점 개수 · 파드 IP는 환경과 날짜에 따라 다르다.</p>
+</footer>
+</div>
+</body>
+</html>

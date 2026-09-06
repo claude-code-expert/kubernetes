@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · 운영 팁과 마무리 — 관측성 실습</title>
+<style>
+  :root{
+    --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+    --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.72;letter-spacing:-.005em;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  header{border-bottom:1px solid var(--ink);padding:56px 0 22px;margin-bottom:36px}
+  .docnum{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:34px;line-height:1.28;letter-spacing:-.03em;font-weight:700;margin:10px 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  nav.toc{border:1px solid var(--line);padding:20px 24px;margin:0 0 48px}
+  nav.toc h2{font-size:12px;font-family:var(--mono);letter-spacing:.14em;color:var(--muted);
+             font-weight:500;margin-bottom:12px}
+  nav.toc ol{list-style:none;counter-reset:t;columns:2;column-gap:36px}
+  nav.toc li{counter-increment:t;font-size:14.5px;line-height:2}
+  nav.toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+                     font-size:12px;color:var(--muted);margin-right:10px}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2.sec{font-size:23px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--ac);margin-right:12px;font-weight:500}
+  h3{font-size:17px;font-weight:700;margin:32px 0 10px;letter-spacing:-.02em}
+  h4{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--muted)}
+  p{margin:0 0 14px;max-width:74ch}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700}
+
+  .term{border-bottom:1px dotted var(--muted);cursor:help}
+
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  .fn{font-family:var(--mono);font-size:12px;color:var(--muted);margin:20px 0 -6px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0;font-size:13px}
+  pre .c{color:#6b7280}
+  pre .o{color:#0b4f2f}
+  .cap{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+  .cap b{color:var(--ink);font-weight:600}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td code{font-size:12.5px}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .note{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);padding:16px 20px;margin:20px 0}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+  figcaption b{color:var(--ink);font-weight:600}
+
+  ul.check{list-style:none;padding-left:0}
+  ul.check li{padding-left:30px;position:relative;margin:9px 0;font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:14px;
+                      border:1.5px solid var(--muted);border-radius:2px}
+
+  .src{font-size:13px;color:var(--muted);line-height:1.85}
+  .src ul{list-style:none;padding-left:0;max-width:none}
+  .src li{margin:4px 0;word-break:break-all}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;font-size:13px;
+         color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){.wrap{padding:0 18px 80px}h1{font-size:27px}nav.toc ol{columns:1}}
+  @media print{body{font-size:11pt}figure,table,.box,pre{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div style="max-width:920px;margin:0 auto;padding:22px 28px 0">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#585f6b;text-decoration:none;border-bottom:1px solid #d8dbe0">← 목차로</a>
+</div>
+<div class="wrap">
+
+<header>
+  <div class="docnum">STEP 10 / 11 · 트랙 D — 운영과 팁 · macOS</div>
+  <h1>운영 팁과 마무리</h1>
+  <p class="lede">
+    지금까지 만든 것은 <strong>동작하는 관측 스택</strong>입니다. 여기서는 그것을
+    <strong>망가지지 않는 관측 스택</strong>으로 만드는 방법을 다룹니다.
+    그리고 마지막 절에서, 이 실습에서 일부러 타협한 설정들을 하나씩 되짚습니다 —
+    그대로 사내로 옮기면 안 되는 것들입니다.
+  </p>
+  <div class="meta">
+    <span>검증일 2026-08-19</span>
+    <span>소요 60–80분</span>
+    <span>선행: 08단계까지 (09 트레이싱은 선택)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">완성된 스택 되돌아보기</a></li>
+    <li><a href="#s2">카디널리티 — 1번 사망 원인</a></li>
+    <li><a href="#s3">잘라내기 실습</a></li>
+    <li><a href="#s4">간격·보존·디스크 계산</a></li>
+    <li><a href="#s5">자원 튜닝과 무중단 리사이즈</a></li>
+    <li><a href="#s6">실습 설정 → 운영 설정</a></li>
+    <li><a href="#s7">트러블슈팅 12선</a></li>
+    <li><a href="#s8">대시보드와 알림이 늘어날 때</a></li>
+    <li><a href="#s9">정리와 재현</a></li>
+    <li><a href="#s10">스터디 과제와 마무리</a></li>
+  </ol>
+</nav>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2 class="sec"><span class="n">01</span>완성된 스택 되돌아보기</h2>
+
+  <figure>
+    <svg viewBox="0 0 960 430" role="img" aria-label="아홉 단계를 거쳐 완성된 관측 스택의 전체 구조">
+      <rect width="960" height="430" fill="#ffffff"/>
+
+      <rect x="16" y="34" width="928" height="380" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="32" y="26" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">kind 클러스터 — 노드 3개 (01단계)</text>
+
+      <!-- apps -->
+      <rect x="40" y="60" width="264" height="150" fill="#ffffff" stroke="#15181d" stroke-width="1.5"/>
+      <text x="56" y="84" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">namespace: apps</text>
+      <rect x="56" y="98" width="232" height="40" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="70" y="123" font-size="12.5" fill="#15181d">gateway · order-api ×2</text>
+      <text x="56" y="160" font-size="11.5" fill="#585f6b">02 계측 · 03 배포</text>
+      <text x="56" y="182" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">/actuator/prometheus</text>
+
+      <!-- monitoring -->
+      <rect x="330" y="60" width="290" height="320" fill="#ffffff" stroke="#15181d" stroke-width="1.5"/>
+      <text x="346" y="84" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">namespace: monitoring</text>
+      <rect x="346" y="98" width="258" height="38" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="360" y="122" font-size="12.5" fill="#15181d">Prometheus (04)</text>
+      <rect x="346" y="146" width="258" height="38" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="360" y="170" font-size="12.5" fill="#15181d">Alertmanager (07)</text>
+      <rect x="346" y="194" width="258" height="38" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="360" y="218" font-size="12.5" fill="#15181d">Grafana (05)</text>
+      <rect x="346" y="242" width="258" height="38" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="360" y="266" font-size="12.5" fill="#15181d">kube-state-metrics</text>
+      <rect x="346" y="290" width="258" height="38" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="360" y="314" font-size="12.5" fill="#15181d">node-exporter</text>
+      <text x="346" y="356" font-size="11.5" fill="#585f6b">ServiceMonitor · PrometheusRule (06·07)</text>
+
+      <!-- logging -->
+      <rect x="646" y="60" width="264" height="150" fill="#ffffff" stroke="#15181d" stroke-width="1.5"/>
+      <text x="662" y="84" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">namespace: logging</text>
+      <rect x="662" y="98" width="232" height="38" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="676" y="122" font-size="12.5" fill="#15181d">Alloy · Loki (08)</text>
+      <text x="662" y="160" font-size="11.5" fill="#585f6b">Promtail 아님</text>
+      <text x="662" y="182" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">LogQL</text>
+
+      <!-- 화살표 -->
+      <path d="M344 118 L312 118" fill="none" stroke="#6a4a9c" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#o1)"/>
+      <text x="328" y="106" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#6a4a9c">pull</text>
+
+      <path d="M606 214 L648 214 L648 150" fill="none" stroke="#1f4d8f" stroke-width="1.5" marker-end="url(#o2)"/>
+      <text x="656" y="234" font-family="ui-monospace,monospace" font-size="10.5" fill="#1f4d8f">LogQL 질의</text>
+
+      <path d="M170 212 L170 404 L778 404 L778 212" fill="none" stroke="#b4621a" stroke-width="1.5" marker-end="url(#o3)"/>
+      <text x="186" y="300" font-family="ui-monospace,monospace" font-size="11" fill="#b4621a">파드 로그 수집 → push</text>
+      <text x="186" y="322" font-size="11.5" fill="#585f6b">앱은 표준 출력에만</text>
+
+      <defs>
+        <marker id="o1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+        </marker>
+        <marker id="o2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1f4d8f"/>
+        </marker>
+        <marker id="o3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#b4621a"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>
+      <b>그림 1.</b> 00단계에서 그렸던 목표 구조가 그대로 완성됐다.
+      화살표 방향 — 메트릭은 당겨오고 로그는 밀어 넣는다 — 도 그때 예고한 그대로다.
+    </figcaption>
+  </figure>
+
+  <p>현재 상태를 숫자로 확인해 둡니다. 뒤 절에서 비교 기준이 됩니다.</p>
+
+<pre data-lang="bash"><code>curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=prometheus_tsdb_head_series' \
+  | jq -r '.data.result[0].value[1]'
+
+curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=rate(prometheus_tsdb_head_samples_appended_total[5m])' \
+  | jq -r '.data.result[0].value[1]'</code></pre>
+
+  <p class="cap">
+    앞의 값은 <b>현재 시계열 개수</b>, 뒤의 값은 <b>초당 저장되는 샘플 수</b>입니다.
+    실습 규모라면 시계열 3만~8만, 초당 샘플 500~2000 정도가 나옵니다.
+  </p>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2 class="sec"><span class="n">02</span>카디널리티 — 1번 사망 원인</h2>
+
+  <p>
+    프로메테우스가 죽는 이유는 대개 트래픽이 아니라 <strong>라벨</strong>입니다.
+    시계열 하나하나가 메모리를 차지하는데, 라벨 값의 조합만큼 시계열이 생기기 때문입니다.
+    곱셈이라는 점이 무섭습니다.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 960 340" role="img" aria-label="메트릭 하나가 라벨 조합의 곱만큼 시계열로 늘어나는 구조">
+      <rect width="960" height="340" fill="#ffffff"/>
+
+      <text x="24" y="36" font-family="ui-monospace,monospace" font-size="12.5" fill="#15181d">http_server_requests_seconds_bucket</text>
+
+      <rect x="24" y="58" width="150" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="99" y="84" text-anchor="middle" font-size="12" fill="#15181d">엔드포인트</text>
+      <text x="99" y="104" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">12</text>
+
+      <text x="186" y="96" text-anchor="middle" font-size="15" fill="#585f6b">×</text>
+
+      <rect x="200" y="58" width="150" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="275" y="84" text-anchor="middle" font-size="12" fill="#15181d">상태 코드</text>
+      <text x="275" y="104" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">5</text>
+
+      <text x="362" y="96" text-anchor="middle" font-size="15" fill="#585f6b">×</text>
+
+      <rect x="376" y="58" width="150" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="451" y="84" text-anchor="middle" font-size="12" fill="#15181d">버킷 수</text>
+      <text x="451" y="104" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">20</text>
+
+      <text x="538" y="96" text-anchor="middle" font-size="15" fill="#585f6b">×</text>
+
+      <rect x="552" y="58" width="150" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="627" y="84" text-anchor="middle" font-size="12" fill="#15181d">파드 수</text>
+      <text x="627" y="104" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">3</text>
+
+      <text x="714" y="96" text-anchor="middle" font-size="15" fill="#585f6b">=</text>
+
+      <rect x="730" y="58" width="206" height="62" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="833" y="84" text-anchor="middle" font-size="12" fill="#15181d">시계열</text>
+      <text x="833" y="106" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" fill="#1f4d8f">3,600</text>
+
+      <line x1="24" y1="150" x2="936" y2="150" stroke="#d8dbe0" stroke-width="1"/>
+
+      <text x="24" y="180" font-size="13" fill="#8f4408">여기에 라벨을 하나만 잘못 추가하면</text>
+
+      <rect x="24" y="198" width="150" height="62" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="99" y="224" text-anchor="middle" font-size="12" fill="#15181d">주문 ID</text>
+      <text x="99" y="244" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" fill="#8f4408">50,000</text>
+
+      <text x="186" y="236" text-anchor="middle" font-size="15" fill="#585f6b">×</text>
+
+      <rect x="200" y="198" width="326" height="62" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="363" y="234" text-anchor="middle" font-size="12.5" fill="#15181d">위의 조합 3,600</text>
+
+      <text x="538" y="236" text-anchor="middle" font-size="15" fill="#585f6b">=</text>
+
+      <rect x="552" y="198" width="384" height="62" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="744" y="226" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" fill="#8f4408">180,000,000</text>
+      <text x="744" y="248" text-anchor="middle" font-size="11.5" fill="#585f6b">프로메테우스는 OOM으로 죽는다</text>
+
+      <text x="24" y="296" font-size="12.5" fill="#15181d">라벨 값이 유한한지 스스로 묻는 것 — 계측 코드 리뷰에서 가장 중요한 질문</text>
+      <text x="24" y="320" font-size="12" fill="#585f6b">사용자 ID · 요청 ID · 이메일 · 전체 URL · 타임스탬프는 절대 라벨이 될 수 없다</text>
+    </svg>
+    <figcaption>
+      <b>그림 2.</b> 02단계에서 <code>@PathVariable</code>로 매핑해 <code>uri</code>가
+      <code>/api/orders/{id}</code>로 찍히게 한 것이 바로 이 사고를 막는 장치였다.
+      직접 문자열을 파싱해 라우팅했다면 주문 ID가 그대로 라벨이 됐을 것이다.
+    </figcaption>
+  </figure>
+
+  <h3>진단 질의</h3>
+
+<pre data-lang="promql"><code><span class="c"># 시계열을 가장 많이 차지하는 메트릭 10개</span>
+topk(10, count by (__name__) ({__name__=~".+"}))</code></pre>
+
+<pre data-lang="promql"><code><span class="c"># 특정 라벨이 몇 종류의 값을 갖는지 — 이 숫자가 계속 늘면 위험 신호</span>
+count(count by (uri) (http_server_requests_seconds_count))</code></pre>
+
+<pre data-lang="promql"><code><span class="c"># 스크레이프 대상별로 몇 개의 시계열을 만들어내는지</span>
+topk(10, count by (job, instance) ({__name__=~".+"}))</code></pre>
+
+  <div class="box ac">
+    <span class="t">더 편한 방법 — TSDB Status</span>
+    <p>
+      <a href="http://localhost:30900/tsdb-status">localhost:30900/tsdb-status</a>를 열면
+      메트릭별·라벨별 시계열 수가 표로 정리돼 있습니다.
+      질의를 외울 필요 없이 여기부터 보는 것이 실전에서 빠릅니다.
+      <strong>위 진단 질의들은 모든 시계열을 훑으므로 운영 프로메테우스에서 습관적으로 쓰면 안 됩니다.</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2 class="sec"><span class="n">03</span>잘라내기 실습</h2>
+
+  <p>
+    수집 단계에서 필요 없는 메트릭을 버립니다. 저장된 뒤에 지우는 것보다 훨씬 싸고 확실합니다.
+    ServiceMonitor의 <code>metricRelabelings</code>가 그 자리입니다.
+  </p>
+
+  <p class="fn">k8s/monitoring/90-servicemonitors.yaml — order-api 엔드포인트에 추가</p>
+<pre data-lang="yaml"><code>  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
+      <span class="c"># 저장 직전에 적용된다. 여기서 drop된 것은 디스크에 남지 않는다.</span>
+      metricRelabelings:
+        <span class="c"># 1) 실습에서 볼 일 없는 메트릭 묶음을 통째로 버린다</span>
+        - sourceLabels: [__name__]
+          regex: "jvm_buffer_.*|jvm_classes_.*|process_start_time_seconds"
+          action: drop
+
+        <span class="c"># 2) 액추에이터 엔드포인트 자신에 대한 요청은 관심 대상이 아니다</span>
+        - sourceLabels: [uri]
+          regex: "/actuator.*"
+          action: drop
+
+        <span class="c"># 3) 404가 찍히는 정체불명 경로는 uri 라벨을 통일해 버린다
+        #    (스캐너가 임의 경로를 두드리면 카디널리티가 폭증한다)</span>
+        - sourceLabels: [status]
+          regex: "404"
+          targetLabel: uri
+          replacement: "NOT_FOUND"
+          action: replace</code></pre>
+
+<pre data-lang="bash"><code>kubectl apply -f k8s/monitoring/90-servicemonitors.yaml
+
+<span class="c"># 적용 전후로 시계열 수를 비교한다</span>
+sleep 60
+curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=prometheus_tsdb_head_series' \
+  | jq -r '.data.result[0].value[1]'</code></pre>
+
+  <p class="cap">
+    이미 저장된 시계열은 즉시 사라지지 않습니다. 새로 들어오는 데이터가 없으면
+    보존 기간이 지나며 자연스럽게 정리됩니다.
+  </p>
+
+  <div class="box warn">
+    <span class="t">드롭 규칙은 되돌리기 어렵다</span>
+    <p>
+      버린 데이터는 없는 데이터입니다. 장애 조사 중에 "그 메트릭이 있었더라면"이라고 후회하는 상황이
+      실제로 생깁니다. <strong>먼저 지울 것은 명백한 쓰레기부터</strong>,
+      애매한 것은 보존 기간을 줄이는 쪽으로 대응하세요.
+    </p>
+  </div>
+
+  <h3>네이티브 히스토그램이라는 대안</h3>
+  <p>
+    버킷이 카디널리티의 큰 몫을 차지한다는 것을 그림 2에서 봤습니다.
+    Prometheus 3.8부터 정식 기능이 된 네이티브 히스토그램은
+    버킷을 미리 정하지 않고 자동으로 나누므로, 시계열 수를 근본적으로 줄입니다.
+    다만 기존 대시보드와 <code>histogram_quantile</code> 사용법이 달라지고,
+    스프링·그라파나 양쪽 지원 상태를 확인해야 하므로
+    <strong>지금 당장 바꾸기보다 다음 분기 과제로 올려두는 것</strong>을 권합니다.
+  </p>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2 class="sec"><span class="n">04</span>간격·보존·디스크 계산</h2>
+
+  <p>디스크 필요량은 곱셈 세 개로 어림합니다.</p>
+
+<pre data-lang="text"><code>필요 디스크 ≈ 보존 기간(초) × 초당 샘플 수 × 샘플당 바이트(1~2B)
+
+예) 15일 보존, 초당 2,000샘플, 샘플당 2B
+    = 1,296,000 × 2,000 × 2
+    ≈ 5.2 GB  (여기에 여유 30~50%를 더한다)</code></pre>
+
+<pre data-lang="bash"><code><span class="c"># 우리 클러스터의 실제 초당 샘플 수</span>
+curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=sum(rate(prometheus_tsdb_head_samples_appended_total[10m]))' \
+  | jq -r '.data.result[0].value[1]'</code></pre>
+
+  <table>
+    <thead>
+      <tr><th style="width:26%">조절 손잡이</th><th style="width:22%">효과</th><th>주의</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>scrapeInterval</code>을 30s→60s</td>
+        <td>샘플 수 절반</td>
+        <td><code>rate()</code> 윈도도 함께 늘려야 한다(간격의 4배 이상). 짧은 스파이크를 놓친다</td>
+      </tr>
+      <tr>
+        <td><code>retention</code> 단축</td>
+        <td>디스크 선형 감소</td>
+        <td>주간 비교·용량 추세 분석이 불가능해진다</td>
+      </tr>
+      <tr>
+        <td><code>metricRelabelings</code> 드롭</td>
+        <td>디스크·메모리 모두 감소</td>
+        <td>되돌릴 수 없다</td>
+      </tr>
+      <tr>
+        <td><code>retentionSize</code> 지정</td>
+        <td>디스크 상한 보장</td>
+        <td>기간보다 먼저 걸리면 <b>오래된 데이터가 조용히 사라진다</b></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="box">
+    <span class="t">04단계 설정의 함정</span>
+    <p>
+      값 파일에 <code>retention: 3d</code>와 <code>retentionSize: 4GB</code>를 함께 넣었습니다.
+      둘 중 <strong>먼저 도달하는 쪽이 이깁니다.</strong>
+      실습에서 부하를 크게 걸면 3일이 되기 전에 4GB에 걸려
+      "어제 그래프가 사라졌다"는 상황이 생깁니다. 버그가 아니라 설정대로 동작한 것입니다.
+    </p>
+  </div>
+
+  <p>
+    규모가 더 커지면 손잡이를 돌리는 것으로는 부족합니다.
+    그때는 <span class="term" title="장기 저장소로 메트릭을 전송하는 방식. Thanos, Mimir, Cortex 등이 수신 측이 된다">원격 쓰기</span>로
+    장기 저장을 분리하는 구조로 넘어갑니다. Prometheus 3.x의 Remote-Write 2.0이 그 통로입니다.
+    이 실습 범위를 벗어나므로 이름만 기억해 두세요.
+  </p>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2 class="sec"><span class="n">05</span>자원 튜닝과 무중단 리사이즈</h2>
+
+  <h3>먼저 스로틀링부터 확인한다</h3>
+  <p>
+    03단계에서 애플리케이션에 CPU 제한을 걸지 않았습니다.
+    그 판단이 왜 필요했는지 숫자로 확인합니다.
+  </p>
+
+<pre data-lang="promql"><code><span class="c"># CPU 스로틀링 비율 — 0에 가까워야 정상</span>
+sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="apps"}[5m]))
+/
+sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="apps"}[5m]))</code></pre>
+
+  <p class="cap">
+    이 값이 0.2를 넘으면 컨테이너가 주기의 20%를 강제로 쉬고 있다는 뜻입니다.
+    응답 시간 그래프의 톱니가 코드 때문인지 스로틀링 때문인지는
+    <b>이 질의를 함께 봐야만</b> 구분됩니다.
+  </p>
+
+  <h3>메모리는 다르게 다룬다</h3>
+<pre data-lang="promql"><code><span class="c"># 제한 대비 실제 사용률</span>
+max by (pod) (
+  container_memory_working_set_bytes{namespace="apps", container!=""}
+)
+/
+max by (pod) (
+  kube_pod_container_resource_limits{namespace="apps", resource="memory"}
+)</code></pre>
+
+  <p class="cap">
+    0.9를 넘나든다면 OOMKilled가 임박한 것입니다.
+    CPU는 모자라면 느려지지만, <b>메모리는 모자라면 죽습니다.</b>
+    그래서 CPU 제한은 신중하게, 메모리 제한은 반드시 겁니다.
+  </p>
+
+  <h3>재시작 없이 자원 바꾸기 (Kubernetes 1.35+)</h3>
+  <p>
+    예전에는 자원을 바꾸려면 파드를 다시 만들어야 했습니다.
+    <strong>In-Place Pod Resize가 1.35에서 정식 기능</strong>이 되면서 달라졌습니다.
+    01단계에서 만든 클러스터는 1.36이므로 바로 써볼 수 있습니다.
+  </p>
+
+<pre data-lang="bash"><code>POD=$(kubectl -n apps get pod -l app.kubernetes.io/name=order-api \
+  -o jsonpath='{.items[0].metadata.name}')
+
+<span class="c"># 바꾸기 전 상태</span>
+kubectl -n apps get pod "$POD" \
+  -o jsonpath='{.spec.containers[0].resources}{"\n"}{.status.containerStatuses[0].restartCount}{"\n"}'
+
+<span class="c"># resize 서브리소스로 메모리 상한을 올린다 (kubectl v1.32+ 필요)</span>
+kubectl -n apps patch pod "$POD" --subresource resize --type=merge \
+  -p '{"spec":{"containers":[{"name":"order-api","resources":{"requests":{"memory":"448Mi"},"limits":{"memory":"768Mi"}}}]}}'
+
+<span class="c"># 재시작 없이 반영됐는지 — restartCount가 그대로여야 한다</span>
+kubectl -n apps get pod "$POD" \
+  -o jsonpath='{.status.containerStatuses[0].resources}{"\n"}{.status.containerStatuses[0].restartCount}{"\n"}'</code></pre>
+
+  <div class="box ac">
+    <span class="t">읽어야 할 두 곳이 생겼다</span>
+    <p>
+      <code>spec.containers[*].resources</code>는 이제 <b>원하는 상태</b>이고,
+      <code>status.containerStatuses[*].resources</code>가 <b>실제 적용된 값</b>입니다.
+      둘이 다를 수 있다는 것이 이 기능의 핵심이며, 진행 상황은
+      <code>PodResizePending</code>·<code>PodResizeInProgress</code> 조건으로 노출됩니다.
+      노드에 여유가 없으면 <code>Infeasible</code> 사유로 거절됩니다.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <span class="t">디플로이먼트를 고치는 것과 다르다</span>
+    <p>
+      위 명령은 <strong>파드 하나</strong>를 고칩니다. 디플로이먼트의 템플릿은 그대로이므로,
+      파드가 어떤 이유로든 다시 만들어지면 원래 값으로 돌아갑니다.
+      영구 반영은 여전히 매니페스트를 고쳐 배포하는 것입니다.
+      리사이즈는 <em>지금 당장 죽어가는 파드를 살리는</em> 용도로 쓰세요.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2 class="sec"><span class="n">06</span>실습 설정 → 운영 설정</h2>
+
+  <p>
+    이 시리즈에서 <strong>일부러 타협한 설정들</strong>입니다.
+    실습을 빨리 굴리기 위한 선택이었고, 사내 클러스터로 옮길 때는 반드시 바꿔야 합니다.
+    스터디 마지막 시간에 이 표를 함께 읽는 것을 권합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:14%">단계</th><th style="width:34%">실습에서의 선택</th><th>운영에서 바꿀 것</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">01</td>
+        <td><code>bind-address: 0.0.0.0</code>으로 컨트롤 플레인 메트릭 개방</td>
+        <td>노드 IP만 바인딩하거나 방화벽으로 대역 제한. kind는 VM 안에 갇혀 있어 안전했을 뿐이다</td>
+      </tr>
+      <tr>
+        <td class="num">02</td>
+        <td><code>ChaosController</code>가 항상 활성</td>
+        <td><code>@Profile</code>로 분리. 운영 프로파일에서는 빈 등록조차 되지 않게 한다</td>
+      </tr>
+      <tr>
+        <td class="num">03</td>
+        <td>CPU limit 미설정</td>
+        <td>공용 클러스터라면 반드시 설정. 대신 스로틀링 메트릭을 함께 감시한다</td>
+      </tr>
+      <tr>
+        <td class="num">03</td>
+        <td><code>readOnlyRootFilesystem</code> 미적용</td>
+        <td>적용하고 <code>/tmp</code>에 emptyDir을 붙인다</td>
+      </tr>
+      <tr>
+        <td class="num">03</td>
+        <td>레지스트리 없이 <code>kind load</code></td>
+        <td>사내 레지스트리 + 이미지 서명·스캔 파이프라인</td>
+      </tr>
+      <tr>
+        <td class="num">04</td>
+        <td><code>insecureSkipVerify: true</code></td>
+        <td>노드 IP를 SAN에 포함한 인증서를 발급해 검증을 켠다</td>
+      </tr>
+      <tr>
+        <td class="num">04</td>
+        <td>관측 스택을 노드 한 대에 몰아넣음</td>
+        <td>분산 배치. 모니터링이 한 노드와 함께 죽으면 장애를 볼 눈이 없어진다</td>
+      </tr>
+      <tr>
+        <td class="num">04</td>
+        <td>그라파나 비밀번호를 값 파일에 평문으로</td>
+        <td>Secret 또는 외부 시크릿 관리자. 가능하면 SSO 연동</td>
+      </tr>
+      <tr>
+        <td class="num">04</td>
+        <td>NodePort로 UI 직접 노출</td>
+        <td>인증을 거치는 진입점 뒤에 둔다. 프로메테우스 UI는 인증이 없다</td>
+      </tr>
+      <tr>
+        <td class="num">05</td>
+        <td>사이드카 <code>searchNamespace: ALL</code></td>
+        <td>필요한 네임스페이스만 나열. 권한과 API 부하를 줄인다</td>
+      </tr>
+      <tr>
+        <td class="num">07</td>
+        <td>임계값 5% · 500ms를 임의로 설정</td>
+        <td>2주 이상 관측한 실제 분포를 근거로 재설정</td>
+      </tr>
+      <tr>
+        <td class="num">08</td>
+        <td>로키 파일시스템 단일 인스턴스</td>
+        <td>오브젝트 스토리지 + 확장 모드. 파일시스템은 데이터를 잃는 구성이다</td>
+      </tr>
+      <tr>
+        <td class="num">08</td>
+        <td>캐시 비활성</td>
+        <td>운영 규모에서는 필수. 없으면 질의가 감당 안 된다</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="box warn">
+    <span class="t">가장 위험한 것은 값 파일이다</span>
+    <p>
+      매니페스트는 리뷰를 거치지만, <code>values.yaml</code>은 "잘 되는 설정"이라며 통째로 복사되는 일이 잦습니다.
+      파일 이름에 환경을 박아두세요 — <code>kps-values.kind.yaml</code>처럼요.
+      이름만으로도 복사를 한 번 망설이게 만듭니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2 class="sec"><span class="n">07</span>트러블슈팅 12선</h2>
+
+  <p>전 단계에서 실제로 부딪히는 순서대로 정리했습니다.</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:6%">#</th><th style="width:32%">증상</th><th>첫 번째로 볼 곳</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">1</td><td>클러스터 생성이 타임아웃</td><td>Docker Desktop 메모리 할당. 10 GiB 미만이면 04단계에서 반드시 막힌다</td></tr>
+      <tr><td class="num">2</td><td>컨트롤 플레인 타깃 DOWN</td><td>01단계 bind-address 패치. 클러스터 재생성이 필요하다</td></tr>
+      <tr><td class="num">3</td><td><code>ImagePullBackOff</code></td><td><code>kind load</code> 여부와 <code>imagePullPolicy: IfNotPresent</code></td></tr>
+      <tr><td class="num">4</td><td><code>CrashLoopBackOff</code>인데 로그는 정상</td><td><code>startupProbe</code>의 <code>failureThreshold × periodSeconds</code></td></tr>
+      <tr><td class="num">5</td><td>ServiceMonitor가 무시됨</td><td><code>release: kps</code> 라벨. 오류 없이 조용히 실패한다</td></tr>
+      <tr><td class="num">6</td><td>타깃 그룹은 있는데 대상 0개</td><td>Service 라벨과 포트 <b>이름</b></td></tr>
+      <tr><td class="num">7</td><td><code>_bucket</code>이 없어 P95 계산 불가</td><td>02단계 <code>percentiles-histogram</code>. 이미지 재빌드 필요</td></tr>
+      <tr><td class="num">8</td><td><code>histogram_quantile</code>이 NaN</td><td><code>sum by</code>에 <code>le</code>가 빠졌는지</td></tr>
+      <tr><td class="num">9</td><td>대시보드가 <code>No data</code></td><td>같은 질의를 프로메테우스 UI에서 실행해 데이터 유무부터 분리</td></tr>
+      <tr><td class="num">10</td><td>알림이 안 울림</td><td><code>/alerts</code>에서 <code>pending</code> 여부 → Alertmanager 라우팅 순으로</td></tr>
+      <tr><td class="num">11</td><td>로그가 안 보임</td><td>Alloy UI(12345)에서 컴포넌트 상태. 설정 파일보다 빠르다</td></tr>
+      <tr><td class="num">12</td><td>어제 그래프가 사라짐</td><td><code>retentionSize</code>에 먼저 걸렸는지. 설정대로 동작한 것이다</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box ac">
+    <span class="t">공통 원칙</span>
+    <p>
+      "안 된다"는 상황에서 가장 먼저 할 일은 <strong>범위를 절반으로 자르는 것</strong>입니다.
+      대시보드가 비면 프로메테우스 UI에서 같은 질의를 돌려보고,
+      거기서도 비면 타깃 상태를 보고, 타깃이 UP이면 앱 엔드포인트를 직접 curl 합니다.
+      한 번에 한 계층씩 내려가면 대부분 세 번 안에 원인에 닿습니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2 class="sec"><span class="n">08</span>대시보드와 알림이 늘어날 때</h2>
+
+  <p>
+    스택이 안정되면 다음 문제는 기술이 아니라 관리입니다.
+    대시보드는 만드는 사람은 있지만 지우는 사람이 없어서 늘어납니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:30%">신호</th><th>대응</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>비슷한 대시보드가 세 개 이상</td>
+        <td>변수로 합친다. 07단계에서 만든 <code>service</code> 변수가 그 방법이다</td>
+      </tr>
+      <tr>
+        <td>아무도 열지 않는 대시보드</td>
+        <td>그라파나 사용 통계로 확인해 정리한다. 폴더에 <b>Archive</b>를 두는 것도 방법</td>
+      </tr>
+      <tr>
+        <td>같은 장애에 알림이 열 개</td>
+        <td>증상 알림만 남기고 원인 알림은 지운다. <code>inhibit_rules</code>도 함께 손본다</td>
+      </tr>
+      <tr>
+        <td>Silence가 만료 없이 쌓임</td>
+        <td>영구 침묵은 규칙 삭제와 같다. 만료 기간을 반드시 설정한다</td>
+      </tr>
+      <tr>
+        <td>한 번도 울리지 않은 알림</td>
+        <td>임계값이 비현실적이거나 질의가 틀렸다. 의도적으로 터뜨려 검증한다</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="cap">
+    분기에 한 번 <b>알림 회고</b>를 하는 팀이 늘고 있습니다.
+    "지난 분기에 울린 알림 목록"과 "그중 실제로 조치한 것"을 나란히 놓고,
+    조치율이 낮은 알림부터 지웁니다.
+  </p>
+</section>
+
+<!-- ══════ 9 ══════ -->
+<section id="s9">
+  <h2 class="sec"><span class="n">09</span>정리와 재현</h2>
+
+  <p>실습이 끝났다면 노트북 자원을 돌려받습니다.</p>
+
+<pre data-lang="bash"><code><span class="c"># 전체 삭제 — 클러스터를 지우면 안의 모든 것이 사라진다</span>
+kind delete cluster --name obs
+
+<span class="c"># 도커에 남은 이미지·볼륨 정리</span>
+docker system prune -a --volumes</code></pre>
+
+  <p>
+    다시 처음부터 만들 때는 아래 순서 그대로입니다.
+    저장소에 커밋해 둔 파일만 있으면 40분 안에 복원됩니다.
+  </p>
+
+  <p class="fn">rebuild.sh</p>
+<pre data-lang="bash"><code>#!/usr/bin/env bash
+<span class="c"># 관측성 실습 환경 재구축 — 각 단계 문서를 대체하지 않는다. 복원용이다.</span>
+set -euo pipefail
+
+ROOT="$HOME/k8s-observability"
+CHART_VERSION="88.3.0"
+
+echo "[1/6] 클러스터 생성"
+kind create cluster --config "$ROOT/infra/kind-cluster.yaml"
+
+echo "[2/6] 앱 이미지 빌드와 적재"
+for app in order-api gateway; do
+  (cd "$ROOT/apps/$app" &amp;&amp; ./gradlew bootBuildImage)
+  kind load docker-image "obs/${app}:0.0.1" --name obs
+done
+
+echo "[3/6] 앱 배포"
+kubectl apply -f "$ROOT/k8s/00-namespace.yaml"
+kubectl apply -f "$ROOT/k8s/10-order-api.yaml"
+kubectl apply -f "$ROOT/k8s/20-gateway.yaml"
+kubectl -n apps rollout status deploy/order-api --timeout=180s
+kubectl -n apps rollout status deploy/gateway --timeout=180s
+
+echo "[4/6] 관측 스택 설치"
+helm upgrade --install kps prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  --version "$CHART_VERSION" \
+  -f "$ROOT/monitoring/kps-values.yaml" \
+  --wait --timeout 15m
+
+echo "[5/6] 연동 리소스"
+kubectl apply -f "$ROOT/k8s/monitoring/90-servicemonitors.yaml"
+kubectl apply -f "$ROOT/k8s/monitoring/91-prometheusrule.yaml"
+
+echo "[6/6] 대시보드"
+kubectl -n monitoring create configmap obs-red-dashboard \
+  --from-file=obs-red.json="$ROOT/monitoring/dashboards/obs-red.json" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n monitoring label configmap obs-red-dashboard grafana_dashboard=1 --overwrite
+kubectl -n monitoring annotate configmap obs-red-dashboard grafana_folder="Obs Study" --overwrite
+
+echo "완료 — http://localhost:30300 (grafana) · http://localhost:30900 (prometheus)"</code></pre>
+
+  <p class="cap">
+    로그 스택(08단계)은 메모리를 크게 쓰므로 이 스크립트에 넣지 않았습니다. 필요할 때만 별도로 설치하세요.
+  </p>
+</section>
+
+<!-- ══════ 10 ══════ -->
+<section id="s10">
+  <h2 class="sec"><span class="n">10</span>스터디 과제와 마무리</h2>
+
+  <h3>과제 — 각자 하나씩 골라 다음 모임에서 공유</h3>
+
+  <table>
+    <thead>
+      <tr><th style="width:26%">과제</th><th>내용</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>장애 시나리오</td>
+        <td>동료에게 클러스터를 망가뜨리게 하고(파드 삭제, 자원 축소, 잘못된 라벨 등),
+          <b>대시보드와 로그만으로</b> 원인을 찾아 5분 안에 설명하기</td>
+      </tr>
+      <tr>
+        <td>알림 하나 만들기</td>
+        <td>기존 규칙과 겹치지 않는 알림 하나를 설계하고, 왜 이것이 <em>사람이 행동할 수 있는</em> 알림인지 근거 대기</td>
+      </tr>
+      <tr>
+        <td>카디널리티 감사</td>
+        <td>TSDB Status를 열어 상위 5개 메트릭을 분석하고, 드롭 규칙 하나를 제안하기</td>
+      </tr>
+      <tr>
+        <td>사내 이전 계획</td>
+        <td>06절 표에서 자기 팀에 해당하는 항목 3개를 골라 구체적 대안을 작성하기</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>최종 체크리스트</h3>
+  <ul class="check">
+    <li>TSDB Status에서 상위 메트릭과 시계열 수를 확인했다</li>
+    <li><code>metricRelabelings</code>를 적용하고 시계열 수 변화를 비교했다</li>
+    <li>CPU 스로틀링과 메모리 사용률 질의를 실행해 봤다</li>
+    <li>resize 서브리소스로 재시작 없이 자원을 바꿔 봤다</li>
+    <li>06절 "실습 → 운영" 표를 팀과 함께 읽었다</li>
+    <li><code>rebuild.sh</code>로 재구축이 되는지 한 번 검증했다</li>
+    <li>모든 매니페스트·값 파일·대시보드 JSON이 저장소에 있다</li>
+    <li>실습이 끝난 클러스터를 삭제해 자원을 돌려받았다</li>
+  </ul>
+
+  <div class="box ac">
+    <span class="t">시리즈를 마치며</span>
+    <p>
+      10개 문서를 지나오며 만든 것은 도구 모음이 아니라 <strong>질문의 순서</strong>입니다.
+      "지금 문제가 있는가"(대시보드 상단) → "어느 서비스인가"(RED 지표) →
+      "언제부터인가"(시계열) → "무슨 일이 있었나"(로그).
+      도구는 몇 년 안에 바뀝니다. Promtail이 사라지고 Alloy가 온 것처럼요.
+      하지만 이 순서는 남습니다. 다음에 새 도구를 도입할 때
+      "이 순서의 어느 칸을 채우는가"만 물으면 됩니다.
+    </p>
+  </div>
+
+  <h3>출처</h3>
+  <div class="src">
+    <ul>
+      <li>Kubernetes 1.35 In-Place Pod Resize 정식 승격 — https://kubernetes.io/blog/2025/12/19/kubernetes-v1-35-in-place-pod-resize-ga</li>
+      <li>In-Place Pod Resize 베타 단계 변경점 (resize 서브리소스) — https://kubernetes.io/blog/2025/05/16/kubernetes-v1-33-in-place-pod-resize-beta/</li>
+      <li>Prometheus Remote-Write 2.0 규격 — https://prometheus.io/docs/specs/prw/remote_write_spec_2_0/</li>
+      <li>kube-prometheus-stack 값 파일 — https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml</li>
+      <li>로키 헬름 차트 값 레퍼런스 — https://grafana.com/docs/loki/latest/setup/install/helm/reference/</li>
+      <li>Kubernetes 릴리스 현황 — https://kubernetes.io/releases/</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <span>관측성 실습 시리즈 · STEP 10 / 11 · macOS · 마지막 문서</span>
+  <span>2026-08-19 기준 · 버전은 실습 당일 재확인</span>
+</footer>
+
+</div>
+<div style="max-width:920px;margin:0 auto;padding:0 28px 60px">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#1a4fa0;text-decoration:none;border-bottom:1px solid #b9c9e2">← 시리즈 목차로 돌아가기</a>
+</div>
+</body>
+</html>

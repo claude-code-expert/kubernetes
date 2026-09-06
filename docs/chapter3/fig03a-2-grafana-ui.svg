@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .frame { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .side { fill: #f7f7f5; stroke: #c8c8c8; stroke-width: 1; }
+    .ui { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .t-item { font-size: 13px; fill: #555555; }
+    .t-item-on { font-size: 13px; font-weight: 700; fill: #2456c4; }
+    .t-sub { font-size: 11px; fill: #888888; }
+    .t-ui { font-size: 12px; fill: #555555; }
+    .t-ui-b { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-note { font-size: 12px; fill: #444444; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- 브라우저 프레임 -->
+  <rect class="frame" x="20" y="20" width="860" height="408" rx="6"/>
+
+  <!-- 좌측 내비게이션 -->
+  <rect class="side" x="21" y="21" width="198" height="406"/>
+  <text class="t-item" x="44" y="56">Home</text>
+  <text class="t-item" x="44" y="90">Bookmarks</text>
+  <text class="t-item-on" x="44" y="124">Dashboards</text>
+  <text class="t-item" x="44" y="158">Explore</text>
+  <text class="t-item" x="44" y="192">Drilldown</text>
+  <text class="t-sub" x="60" y="212">Metrics · Logs · Traces</text>
+  <text class="t-item" x="44" y="246">Alerting</text>
+  <text class="t-item" x="44" y="280">Connections</text>
+  <text class="t-sub" x="60" y="300">Data sources</text>
+  <text class="t-item" x="44" y="334">Administration</text>
+  <text class="t-sub" x="44" y="392">← 좌측 사이드바가</text>
+  <text class="t-sub" x="52" y="410">모든 기능의 입구</text>
+
+  <!-- 상단 바: 제목 + 시간 피커 + 새로고침 -->
+  <text class="t-ui-b" x="240" y="52">Kubernetes / Compute Resources / Namespace</text>
+  <rect class="ui" x="632" y="32" width="152" height="28" rx="4"/>
+  <text class="t-ui" x="708" y="51" text-anchor="middle">최근 1시간 ▾</text>
+  <rect class="ui" x="796" y="32" width="66" height="28" rx="4"/>
+  <text class="t-ui" x="829" y="51" text-anchor="middle">30s ▾</text>
+
+  <!-- 변수 드롭다운 행 -->
+  <rect class="ui" x="240" y="72" width="180" height="28" rx="4"/>
+  <text class="t-ui" x="330" y="91" text-anchor="middle">datasource ▾</text>
+  <rect class="ui" x="432" y="72" width="200" height="28" rx="4"/>
+  <text class="t-ui" x="532" y="91" text-anchor="middle">namespace: default ▾</text>
+  <text class="t-note" x="648" y="91">← 대시보드 변수</text>
+
+  <!-- 패널 2x2 -->
+  <rect class="ui" x="240" y="116" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="256" y="140">CPU Usage</text>
+  <text class="t-ui" x="524" y="140" text-anchor="end">⋮</text>
+  <text class="t-ui" x="390" y="182" text-anchor="middle">시계열 그래프</text>
+  <text class="t-sub" x="390" y="204" text-anchor="middle">범례 클릭 = 해당 시리즈만 표시</text>
+
+  <rect class="ui" x="560" y="116" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="576" y="140">Memory Usage</text>
+  <text class="t-ui" x="710" y="182" text-anchor="middle">시계열 그래프</text>
+  <text class="t-sub" x="710" y="204" text-anchor="middle">드래그로 구간 확대(전 패널 동기화)</text>
+
+  <rect class="ui" x="240" y="252" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="256" y="276">Pods 상태</text>
+  <text class="t-ui" x="390" y="318" text-anchor="middle">스탯 / 테이블</text>
+
+  <rect class="ui" x="560" y="252" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="576" y="276">네트워크 I/O</text>
+  <text class="t-ui" x="710" y="318" text-anchor="middle">시계열 그래프</text>
+
+  <!-- 주석 -->
+  <text class="t-note" x="240" y="402">패널 우상단 ⋮ 메뉴: Edit · Explore로 열기 · Metrics drilldown · New alert rule · Duplicate</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="462" text-anchor="middle">그라파나 v12 화면 지도. 왼쪽 사이드바에서 기능을 고르고, 대시보드 안에서는 시간 피커·변수·패널 메뉴 세 가지만 알면 조작의 대부분이 된다.</text>
+  <text class="t-cap" x="450" y="486" text-anchor="middle">Drilldown(구 Explore Apps)은 쿼리 없이 클릭만으로 메트릭·로그를 탐색하는 v12의 신설 메뉴다.</text>
+</svg>

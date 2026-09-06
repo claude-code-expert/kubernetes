@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 2 · 쿠버네티스 코어] M11 서비스와 클러스터 네트워크 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 11 / 38 · PART 2 쿠버네티스 코어</div>
+  <h1>서비스와 클러스터 네트워크</h1>
+  <p class="ch-desc">M08에서 파드를 지웠더니 IP가 다른 새 파드가 생겼다. 그럼 그 파드를 부르던 쪽은 어떻게 되나. 서비스는 그 문제 하나를 풀기 위해 존재한다 — 그리고 셀렉터 오타 하나면 그 해결책이 조용히 무력화된다.</p>
+  <div class="meta">
+    <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 · journal-api 파드 4개 · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m10-k8s-deployment-rollout.html">M10</a> 완료 — <code>kubectl get deploy journal-api</code>가 <code>READY 4/4</code>, <code>kubectl get pod curlbox</code>가 <code>Running</code>. M10 정리에서 <code>expose</code>로 만든 서비스는 지웠다</li>
+    <li>매니페스트: <code>course/labs/k8s/m11-services.yaml</code></li>
+    <li>M04에서 만든 앱이 <code>/healthz</code> 응답에 파드 이름(<code>pod</code> 필드 — 환경변수 <code>HOSTNAME</code>을 읽는다)을 함께 돌려준다. M09 4단계에서 <code>"pod":"journal-with-sidecar"</code>로 이미 봤다</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 서비스는 <strong>고정된 이름과 가상 IP</strong>다. 뒤에 있는 파드가 바뀌어도 앞은 그대로다.</p>
+  <p>2. 연결은 레이블 셀렉터로 맺어지고, 실제 대상 목록은 <strong>EndpointSlice</strong>에 적힌다. 문제가 생기면 여기부터 본다.</p>
+  <p>3. 셀렉터가 어긋나면 서비스는 정상으로 보이고 엔드포인트만 비어 있다. 호출하는 쪽은 <code>connection refused</code>만 받는다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">11.1</span>왜 expose 한 줄로는 안 되는가</a>
+  <a href="#s2"><span class="num">11.2</span>이론 — 네 가지 서비스 타입</a>
+  <a href="#s3"><span class="num">11.3</span>이론 — 요청이 파드에 닿기까지</a>
+  <a href="#s4"><span class="num">11.4</span>따라하기 ① ClusterIP와 엔드포인트</a>
+  <a href="#s5"><span class="num">11.5</span>따라하기 ② DNS와 헤드리스</a>
+  <a href="#s6"><span class="num">11.6</span>따라하기 ③ NodePort</a>
+  <a href="#s7"><span class="num">11.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">11.8</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">11.1</span>왜 expose 한 줄로는 안 되는가</h2>
+  <p class="lead">M10에서 <code>kubectl expose deploy journal-api --port=8080</code> 한 줄로 서비스를 만들어 부하 측정에 썼다. 잘 동작했다. 그런데 그 한 줄이 무엇을 만들었는지, 요청이 <code>journal-api:8080</code>이라는 이름에서 어떻게 파드까지 갔는지는 보지 않았다.</p>
+  <p>보지 않아도 됐던 이유는 셀렉터를 디플로이먼트에서 자동으로 베껴 왔기 때문이다. 실무에서 서비스는 사람이 파일로 쓰고, 셀렉터·포트·타입을 직접 적는다. 그 셋 중 하나만 어긋나도 서비스는 <strong>정상으로 보이면서</strong> 트래픽을 아무 데도 보내지 않는다 — M09 실패 ①에서 예고한 "조용한 0개"가 서비스에서는 어떻게 나타나는지, 그리고 그것을 어디서 잡아내는지가 이 모듈의 절반이다.</p>
+  <p>나머지 절반은 M08 7단계의 질문이다. 파드를 지우면 IP가 다른 새 파드가 생겼다. 그럼 그 파드를 부르던 쪽은 어디로 요청을 보내야 하나. M10에서 <code>expose</code>로 만든 서비스는 정리 블록에서 지웠으므로, 같은 것을 파일로 다시 만들면서 그 안을 들여다본다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">11.2</span>이론 — 네 가지 서비스 타입</h2>
+  <p class="lead">M05의 도커 네트워크에서는 컨테이너 이름이 곧 주소였다. 쿠버네티스에서는 파드가 훨씬 자주 죽고 다시 만들어지므로, 파드 이름을 주소로 쓸 수 없다. 그래서 파드 <strong>집합</strong> 앞에 고정된 이름을 세운다. 책 9.3(쿠버네티스 서비스)이 아래 네 타입을 나열하는 절이다.</p>
+  <table>
+    <tr><th>타입</th><th>접근 범위</th><th>쓰는 곳</th></tr>
+    <tr><td><code>ClusterIP</code> (기본)</td><td>클러스터 내부만</td><td>대부분의 서비스 간 통신. 외부 노출은 인그레스가 담당한다(M12)</td></tr>
+    <tr><td><code>NodePort</code></td><td>모든 노드의 특정 포트(30000~32767)</td><td>로드밸런서가 없는 환경, 온프레미스 진입점. 포트를 사람이 관리해야 한다</td></tr>
+    <tr><td><code>LoadBalancer</code></td><td>클라우드 로드밸런서가 붙은 외부 IP</td><td>클라우드에서 외부 공개. <strong>로컬 kind에서는 EXTERNAL-IP가 <code>&lt;pending&gt;</code>으로 남는다</strong></td></tr>
+    <tr><td><code>ExternalName</code></td><td>—</td><td>클러스터 밖 주소에 클러스터 안 이름을 붙인다. CNAME으로만 동작하고 프록시하지 않는다(M34)</td></tr>
+  </table>
+  <p>여기에 타입은 아니지만 중요한 변형이 하나 더 있다. <code>clusterIP: None</code>인 <dfn class="term">헤드리스 서비스 <span class="en">(Headless Service)</span></dfn>는 가상 IP를 만들지 않고 DNS 조회에 <strong>파드 IP를 그대로</strong> 돌려준다. 클라이언트가 개별 파드를 직접 골라야 하는 경우 — 데이터베이스 복제본, 카프카 브로커 — 에 쓰며, 스테이트풀셋과 짝을 이룬다 — M14에서 레디스로 처음 쓰고 M18에서 파고든다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">11.3</span>이론 — 요청이 파드에 닿기까지</h2>
+  <p>서비스 이름으로 요청을 보내면 네 단계를 거친다. 어느 단계가 깨졌는지 아는 것이 네트워크 문제 진단의 전부다. 책 9.1(쿠버네티스 네트워킹 원리)이 파드 네트워크와 CNI를, 9.2(서비스 디스커버리)가 아래 1단계의 DNS 이름 규칙을 다룬다.</p>
+  <ol class="tight">
+    <li><strong>DNS</strong> — CoreDNS가 <code>journal-api</code>를 서비스의 ClusterIP로 바꾼다</li>
+    <li><strong>연결 시도</strong> — 클라이언트가 그 가상 IP로 패킷을 보낸다. 이 IP를 가진 네트워크 인터페이스는 <strong>어디에도 없다</strong></li>
+    <li><strong>kube-proxy 규칙</strong> — 노드의 커널 규칙(iptables 또는 nftables)이 그 패킷의 목적지를 실제 파드 IP 중 하나로 바꾼다(DNAT)</li>
+    <li><strong>파드 도착</strong> — CNI 플러그인이 만든 네트워크로 해당 파드에 전달된다</li>
+  </ol>
+  <p>대상 파드 목록은 <dfn class="term">엔드포인트슬라이스 <span class="en">(EndpointSlice)</span></dfn>라는 오브젝트에 들어 있다. 엔드포인트 컨트롤러가 셀렉터에 맞는 파드를 찾아 <strong>준비된(ready) 것만</strong> 여기에 넣고, kube-proxy가 이 목록을 보고 규칙을 만든다. 파드가 죽거나 레디니스 프로브가 실패하면 목록에서 빠진다 — M10의 롤아웃 중 트래픽이 옮겨간 것이 이 메커니즘이다.</p>
+  <div class="note-2026">
+    <span class="lbl">Endpoints 와 EndpointSlice</span>
+    예전에는 <code>Endpoints</code>라는 오브젝트 하나에 모든 파드 IP를 담았다. 파드가 수천 개인 서비스에서 갱신 비용이 커져 여러 조각으로 나눈 <code>EndpointSlice</code>가 도입됐고, 지금은 이쪽이 정본이다. <code>Endpoints</code> API는 1.33에서 <strong>deprecated</strong>됐다 — 검색하면 <code>kubectl get endpoints</code>가 많이 나오지만, 이 과정은 <code>kubectl get endpointslices</code>를 쓴다.
+    <span class="src">출처: kubernetes.io/docs/concepts/services-networking/endpoint-slices/</span>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">11.4</span>따라하기 ① ClusterIP와 엔드포인트</h2>
+
+  <div class="step">
+    <h4>1단계. 서비스 세 개를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M10에서 <code>expose</code>로 만든 것을 파일로 다시 쓰고, 타입이 다른 서비스 셋을 나란히 만들어 비교한다.</p>
+<pre><code># course/labs/k8s/m11-services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api            # 이 이름이 클러스터 안 DNS 이름이 된다
+spec:
+  type: ClusterIP              # 기본값. 클러스터 내부에서만 접근 가능
+  selector:
+    app: journal-api           # 이 레이블을 가진 파드로 트래픽을 보낸다
+  ports:
+    - name: http
+      port: 8080               # 서비스가 여는 포트
+      targetPort: 8080         # 파드의 포트
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: journal-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080          # 30000~32767 범위. 생략하면 자동 할당
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api-headless
+spec:
+  clusterIP: None              # 헤드리스 — 가상 IP 없이 파드 IP를 직접 돌려준다
+  selector:
+    app: journal-api
+  ports:
+    - port: 8080</code></pre>
+    <p><code>port</code>와 <code>targetPort</code>를 구분한다. 앞은 <strong>서비스가 받는</strong> 포트, 뒤는 <strong>파드가 듣는</strong> 포트다. 여기서는 둘 다 8080이지만, 서비스를 80으로 열고 파드는 8080을 쓰는 구성이 흔하다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/m11-services.yaml
+kubectl get svc</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service/journal-api created
+service/journal-api-nodeport created
+service/journal-api-headless created
+
+NAME                   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+journal-api            ClusterIP   10.96.48.160   &lt;none&gt;        8080/TCP         0s
+journal-api-headless   ClusterIP   None           &lt;none&gt;        8080/TCP         0s
+journal-api-nodeport   NodePort    10.96.14.138   &lt;none&gt;        8080:30080/TCP   0s
+kubernetes             ClusterIP   10.96.0.1      &lt;none&gt;        443/TCP          42h</code></div>
+    <div class="verdict"><span class="lbl">판정</span>새 서비스 3행의 AGE가 같다 — M10 정리에서 <code>expose</code>로 만든 것을 지웠으므로 셋이 지금 함께 생겼다. <code>CLUSTER-IP</code>는 환경마다 다르고, 이 문서의 나머지 출력은 <code>10.96.48.160</code>을 기준으로 이어진다. <code>kubernetes</code> 서비스의 AGE는 클러스터를 만든 시점부터다.</div>
+    <p>헤드리스 서비스의 <code>CLUSTER-IP</code>가 <code>None</code>이다. <code>kubernetes</code> 서비스는 클러스터가 기본으로 만든 것으로, 파드 안에서 apiserver를 부를 때 쓰는 주소다(M23에서 다시 나온다).</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 엔드포인트를 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>서비스를 만든 뒤 <strong>반드시</strong> 확인해야 할 것. 여기가 비어 있으면 서비스는 무용지물이다.</p>
+<pre><code>kubectl get endpointslices -l kubernetes.io/service-name=journal-api
+
+kubectl get endpointslices -l kubernetes.io/service-name=journal-api \
+  -o jsonpath='{range .items[*].endpoints[*]}{.addresses[0]}{" ready="}{.conditions.ready}{"\n"}{end}'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME                ADDRESSTYPE   PORTS   ENDPOINTS                                         AGE
+journal-api-ptw2m   IPv4          8080    10.244.1.56,10.244.1.57,10.244.2.61 + 1 more...   0s
+
+10.244.1.56 ready=true
+10.244.1.57 ready=true
+10.244.2.61 ready=true
+10.244.2.60 ready=true</code></div>
+    <ul class="tight">
+      <li><code>-l kubernetes.io/service-name=journal-api</code> — 엔드포인트슬라이스는 이름이 <code>&lt;서비스&gt;-&lt;임의문자열&gt;</code>이라 이름으로 찍을 수 없다. 서비스 이름이 이 레이블에 들어 있으므로 레이블로 고른다</li>
+      <li><code>-o jsonpath='{range ...}{end}'</code> — 목록을 한 항목씩 돌며 원하는 필드만 찍는다. <code>ENDPOINTS</code> 열은 3개까지만 보여주고 나머지를 <code>+ N more...</code>로 접기 때문에 전부 보려면 이렇게 뽑는다</li>
+    </ul>
+    <div class="verdict"><span class="lbl">판정</span>파드 4개의 IP가 전부 <code>ready=true</code>로 등록됐다. <code>kubectl get pods -l app=journal-api -o wide</code>의 IP 열과 같은 값이어야 한다. IP는 환경마다 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 부하가 실제로 나뉘는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>서비스 하나가 파드 여럿에 요청을 나누는지 응답의 <code>pod</code> 필드로 확인한다.</p>
+<pre><code>kubectl exec curlbox -- sh -c 'for i in $(seq 1 12); do curl -s -m 2 http://journal-api:8080/healthz; echo; done' \
+  | sort | uniq -c</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>   3 {"status":"ok","version":"v1","pod":"journal-api-55c87ff598-4fb2b"}
+   2 {"status":"ok","version":"v1","pod":"journal-api-55c87ff598-52xh5"}
+   2 {"status":"ok","version":"v1","pod":"journal-api-55c87ff598-mr9c2"}
+   5 {"status":"ok","version":"v1","pod":"journal-api-55c87ff598-w2qss"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>12번의 요청이 파드 4개에 나뉘었다(<code>55c87ff598</code>은 M10의 v1 레플리카셋 해시다). 균등하지 않은 것이 정상이다 — 커널 규칙이 확률적으로 고르기 때문이며, 요청 수가 많아질수록 고르게 수렴한다. 파드 이름 접미사와 분포는 환경마다 다르다.</div>
+    <p>서비스를 만든 직후 바로 치면 응답 대신 <strong>빈 줄</strong>이 몇 개 섞여 나올 수 있다(이 검증에서는 1단계 직후 12번 중 6번이 빈 줄이었다). kube-proxy가 각 노드의 규칙을 갱신하는 데 1~2초가 걸리기 때문이며, 몇 초 뒤 다시 치면 사라진다. 이 지연은 M10의 17건과 같은 뿌리다 — 서비스 목록이 바뀐 것과 노드의 규칙이 바뀐 것은 같은 순간이 아니다.</p>
+    <p>주의할 점이 하나 있다. 이 분산은 <strong>연결 단위</strong>다. HTTP keep-alive로 커넥션을 유지하는 클라이언트는 한 파드에 계속 붙어 있는다. gRPC처럼 커넥션을 오래 쓰는 프로토콜에서 부하가 한쪽에 몰리는 현상이 여기서 나오고, 해결책이 클라이언트 측 로드밸런싱이나 서비스 메시(M25)다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">11.5</span>따라하기 ② DNS와 헤드리스</h2>
+
+  <div class="step">
+    <h4>4단계. 이름이 무엇으로 풀리는지 비교한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 이름 규칙의 두 서비스가 DNS에서 무엇으로 풀리는지 비교한다. 정식 이름(FQDN)으로 조회한다 — 이유는 이 단계 끝에 있다.</p>
+<pre><code>kubectl exec curlbox -- nslookup journal-api.default.svc.cluster.local
+kubectl exec curlbox -- nslookup journal-api-headless.default.svc.cluster.local</code></pre>
+    <span class="out-lbl">실행 결과 — ClusterIP</span>
+    <div class="out"><code>Server:		10.96.0.10
+Address:	10.96.0.10:53
+
+Name:	journal-api.default.svc.cluster.local
+Address: 10.96.48.160</code></div>
+    <span class="out-lbl">실행 결과 — 헤드리스</span>
+    <div class="out"><code>Server:		10.96.0.10
+Address:	10.96.0.10:53
+
+
+Name:	journal-api-headless.default.svc.cluster.local
+Address: 10.244.2.60
+Name:	journal-api-headless.default.svc.cluster.local
+Address: 10.244.1.57
+Name:	journal-api-headless.default.svc.cluster.local
+Address: 10.244.2.61
+Name:	journal-api-headless.default.svc.cluster.local
+Address: 10.244.1.56</code></div>
+    <div class="verdict"><span class="lbl">판정</span>맨 위 <code>Server: 10.96.0.10</code>은 질문을 받은 DNS 서버 — CoreDNS의 ClusterIP다. ClusterIP 서비스는 1단계 <code>CLUSTER-IP</code>와 같은 가상 IP <strong>하나</strong>, 헤드리스는 2단계 엔드포인트슬라이스에 있던 <strong>파드 IP 네 개</strong>를 돌려준다. 헤드리스에서는 어느 파드로 갈지 클라이언트가 정한다. 헤드리스 응답의 순서는 조회마다 바뀐다.</div>
+    <h4>이름의 전체 형태 — 그리고 짧은 이름으로 조회하면 생기는 잡음</h4>
+    <p>서비스의 정식 이름은 <code>&lt;서비스&gt;.&lt;네임스페이스&gt;.svc.cluster.local</code>이다. 같은 네임스페이스 안에서는 <code>journal-api</code>만 써도 되는데, 파드의 <code>/etc/resolv.conf</code>에 검색 도메인이 설정돼 있어 뒤를 자동으로 붙여주기 때문이다.</p>
+<pre><code>kubectl exec curlbox -- cat /etc/resolv.conf</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>search default.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.96.0.10
+options ndots:5</code></div>
+    <p><code>search</code> 줄이 그 목록이다. <code>curl http://journal-api:8080</code>이 되는 이유는 리졸버가 <code>journal-api.default.svc.cluster.local</code>을 먼저 만들어 물어보기 때문이다. 다른 네임스페이스의 서비스를 부를 때는 <code>journal-api.other-ns</code>처럼 네임스페이스를 붙인다 — 두 번째 검색 도메인 <code>svc.cluster.local</code>이 뒤에 붙어 정식 이름이 된다. 짧은 이름이 안 될 때 이것부터 의심한다.</p>
+    <p>그런데 위에서 왜 짧은 이름 대신 정식 이름으로 조회했는가. busybox 계열(alpine 포함)의 <code>nslookup</code>은 검색 도메인을 <strong>전부 순회하며 실패한 조회를 그대로 찍기</strong> 때문이다. 짧은 이름으로 치면 이런 화면이 나온다.</p>
+<pre><code>kubectl exec curlbox -- nslookup journal-api</code></pre>
+    <span class="out-lbl">실행 결과 (빈 줄은 줄였다)</span>
+    <div class="out"><code>Server:		10.96.0.10
+Address:	10.96.0.10:53
+** server can't find journal-api.cluster.local: NXDOMAIN
+** server can't find journal-api.svc.cluster.local: NXDOMAIN
+** server can't find journal-api.cluster.local: NXDOMAIN
+** server can't find journal-api.svc.cluster.local: NXDOMAIN
+Name:	journal-api.default.svc.cluster.local
+Address: 10.96.48.160
+command terminated with exit code 1</code></div>
+    <p>답은 나왔는데(<code>Name:/Address:</code> 두 줄) <code>NXDOMAIN</code> 네 줄이 섞여 있고 종료 코드가 1이다. 실패한 검색 도메인 두 개(<code>svc.cluster.local</code>, <code>cluster.local</code>)에 대해 A와 AAAA 레코드를 각각 물어본 결과가 찍힌 것이며, <strong>에러가 아니다</strong>. 이 화면을 보고 "DNS가 깨졌다"고 판단하는 실수가 흔하다. 진단할 때는 정식 이름으로 조회하거나, 애플리케이션이 쓰는 방식 그대로 <code>curl</code>로 확인한다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">11.6</span>따라하기 ③ NodePort</h2>
+
+  <div class="step">
+    <h4>5단계. 노드 포트로 접근한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>클러스터 밖에서 들어오는 가장 원시적인 방법을 확인하고, 왜 실무에서 이것만 쓰지 않는지 이해한다.</p>
+<pre><code>docker exec study-worker curl -s -m 3 http://localhost:30080/healthz
+docker exec study-control-plane curl -s -m 3 http://localhost:30080/healthz</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"ok","version":"v1","pod":"journal-api-55c87ff598-4fb2b"}
+{"status":"ok","version":"v1","pod":"journal-api-55c87ff598-52xh5"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>모든 노드</strong>에서 30080이 열려 있다. 파드가 그 노드에 없어도 된다 — 받은 노드가 알아서 다른 노드의 파드로 넘긴다.</div>
+    <p>맥에서 직접 <code>curl localhost:30080</code>이 안 되는 이유는 M01의 kind 설정(<code>labs/infra/kind-cluster.yaml</code>)이 호스트 <code>18080</code>→노드 <code>80</code>, 호스트 <code>18443</code>→노드 <code>443</code> 두 개만 넘겼기 때문이다(M12 인그레스용). 노드 포트 30080을 호스트에서 직접 열려면 <code>extraPortMappings</code>에 <code>containerPort: 30080</code>을 추가해 클러스터를 다시 만들어야 한다 — 그래서 여기서는 노드 컨테이너 안에서 <code>docker exec</code>로 확인했다.</p>
+    <h4>NodePort의 한계</h4>
+    <ul class="tight">
+      <li>포트 범위가 30000~32767로 제한된다. 서비스마다 번호를 배정하고 <strong>사람이 기억해야</strong> 한다</li>
+      <li>노드 IP를 클라이언트가 알아야 한다. 노드가 교체되면 주소가 바뀐다</li>
+      <li>TLS 종료, 경로 기반 라우팅, 가상 호스트 같은 L7 기능이 없다</li>
+    </ul>
+    <p>그래서 실무의 외부 노출은 대부분 인그레스나 Gateway API가 담당하고(M12), NodePort는 그 인그레스 컨트롤러 자신을 노출하는 데 쓰이는 정도다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">11.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 셀렉터 오타 (이 과정에서 가장 중요한 실패)</span>
+    <p>M09에서 예고한 상황이다. <code>app: journal-api</code>를 <code>app: journal-app</code>으로 잘못 쓴 서비스를 만든다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api-typo
+spec:
+  selector:
+    app: journal-app
+  ports:
+    - port: 8080
+EOF
+
+kubectl get svc journal-api-typo
+kubectl get endpointslices -l kubernetes.io/service-name=journal-api-typo</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service/journal-api-typo created
+
+NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+journal-api-typo   ClusterIP   10.96.167.241   &lt;none&gt;        8080/TCP   1s
+
+NAME                     ADDRESSTYPE   PORTS     ENDPOINTS   AGE
+journal-api-typo-q85s6   IPv4          &lt;unset&gt;   &lt;unset&gt;     1s</code></div>
+    <p>서비스는 <strong>정상적으로 만들어졌고</strong> ClusterIP까지 받았다. 경고도 이벤트도 없다. 하지만 <code>ENDPOINTS</code>가 <code>&lt;unset&gt;</code> — 대상이 하나도 없다.</p>
+<pre><code>kubectl exec curlbox -- sh -c 'curl -s -m 3 http://journal-api-typo:8080/healthz; echo "exit=$?"'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>exit=7</code></div>
+    <p>curl 종료 코드 7은 <code>Failed to connect</code>다. DNS는 정상적으로 풀렸고(서비스가 존재하니까), 연결만 안 된다. 호출하는 쪽 개발자가 보는 것은 이것뿐이다 — 상대 서비스가 죽었는지, 네트워크가 막혔는지, 셀렉터가 틀렸는지 구분할 단서가 없다.</p>
+    <div class="verdict"><span class="lbl">진단 순서</span>이 증상을 만나면 순서대로 확인한다. ① <code>kubectl get endpointslices -l kubernetes.io/service-name=&lt;서비스&gt;</code> — 비어 있으면 셀렉터 문제. ② 비어 있지 않은데 안 되면 파드의 레디니스 상태. ③ 그것도 정상이면 네트워크 정책(M25)이나 포트 불일치.</div>
+<pre><code>kubectl describe svc journal-api-typo | grep -E "Selector|Endpoints"
+kubectl get pods -l app=journal-app        # 이 셀렉터에 맞는 파드가 있나?</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Selector:                 app=journal-app
+Endpoints:
+
+No resources found in default namespace.</code></div>
+    <p>서비스의 셀렉터와 실제 파드 레이블을 나란히 놓고 비교하는 것이 확실한 방법이다.</p>
+<pre><code>kubectl delete svc journal-api-typo</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service "journal-api-typo" deleted from default namespace</code></div>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 포트를 잘못 맞춘다</span>
+    <p>셀렉터는 맞지만 <code>targetPort</code>를 앱이 듣지 않는 8000으로 적은 서비스를 만든다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api-badport
+spec:
+  selector:
+    app: journal-api
+  ports:
+    - port: 8080
+      targetPort: 8000
+EOF
+sleep 6
+kubectl get endpointslices -l kubernetes.io/service-name=journal-api-badport
+kubectl exec curlbox -- sh -c 'curl -s -m 3 http://journal-api-badport:8080/healthz; echo "exit=$?"'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service/journal-api-badport created
+NAME                        ADDRESSTYPE   PORTS   ENDPOINTS                                         AGE
+journal-api-badport-ntpp9   IPv4          8000    10.244.1.56,10.244.1.57,10.244.2.61 + 1 more...   6s
+exit=7</code></div>
+    <p>실패 ①과 같은 <code>exit=7</code>(연결 거부)인데, 엔드포인트슬라이스는 <strong>파드 IP 네 개로 차 있다</strong>. 다른 점은 <code>PORTS</code> 열 — <code>8000</code>이다. 파드에서 8000을 듣는 프로세스가 없으니 커널이 연결을 거절한다. 그래서 진단 순서의 ①(엔드포인트가 비었나)과 ②(차 있는데 안 되나)를 구분해야 한다. ②에서는 <code>describe</code>로 포트를 본다. <code>sleep</code>을 넣은 이유 — 서비스를 만든 직후 바로 치면 규칙이 아직 없어 <code>exit=28</code>(타임아웃)이 나올 수 있다(이 검증에서 실제로 그랬다).</p>
+<pre><code>kubectl describe svc journal-api-badport | grep -E "^Selector|^TargetPort|^Endpoints"
+kubectl delete svc journal-api-badport</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Selector:                 app=journal-api
+TargetPort:               8000/TCP
+Endpoints:                10.244.1.56:8000,10.244.1.57:8000,10.244.2.61:8000 + 1 more...
+service "journal-api-badport" deleted from default namespace</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Endpoints</code>에 IP는 있고 포트가 <code>:8000</code>이다. 파드의 <code>containerPort</code>(8080)와 다르면 이 실패다. 증상은 셀렉터 오타와 같은 <code>connection refused</code>지만 엔드포인트슬라이스가 차 있다는 점이 다르다.</div>
+    <p>이 실수를 줄이는 방법은 <code>targetPort</code>에 숫자 대신 <strong>이름</strong>을 쓰는 것이다.</p>
+<pre><code># 파드 쪽
+          ports:
+            - name: http
+              containerPort: 8080
+# 서비스 쪽
+    - port: 80
+      targetPort: http     # 숫자가 아니라 이름으로 참조</code></pre>
+    <p>파드의 포트가 바뀌어도 서비스를 고칠 필요가 없어진다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ③ — 로컬에서 LoadBalancer 타입을 쓴다</span>
+<pre><code>kubectl expose deploy journal-api --type=LoadBalancer --port=8080 --name=journal-lb
+kubectl get svc journal-lb
+sleep 20
+kubectl get svc journal-lb</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service/journal-lb exposed
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+journal-lb   LoadBalancer   10.96.173.76   &lt;pending&gt;     8080:32241/TCP   0s
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+journal-lb   LoadBalancer   10.96.173.76   &lt;pending&gt;     8080:32241/TCP   20s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>20초 뒤에도 <code>EXTERNAL-IP</code>가 <code>&lt;pending&gt;</code>. 클라우드에서는 이 자리에 1~2분 안에 외부 IP가 채워진다. <code>PORT(S)</code>의 <code>32241</code>은 LoadBalancer 타입이 내부적으로 NodePort도 함께 연다는 것을 보여준다 — 클라우드 로드밸런서가 그 노드 포트로 트래픽을 넘기는 구조다. 번호는 환경마다 다르다.</div>
+    <p><code>EXTERNAL-IP</code>가 <code>&lt;pending&gt;</code>에서 영원히 멈춘다. 이 타입은 클라우드 사업자의 컨트롤러가 실제 로드밸런서를 만들어 IP를 채워주는 구조인데, kind에는 그런 컨트롤러가 없기 때문이다.</p>
+    <p>로컬에서 흉내내려면 MetalLB나 <code>cloud-provider-kind</code> 같은 도구를 따로 설치해야 한다. 이 과정은 그러지 않고 인그레스(M12)로 외부 접근을 만든다 — 실무에서도 서비스마다 로드밸런서를 하나씩 만드는 것보다 인그레스 하나 뒤에 여러 서비스를 두는 편이 비용과 관리 면에서 낫다.</p>
+<pre><code>kubectl delete svc journal-lb</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service "journal-lb" deleted from default namespace</code></div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">11.8</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get svc journal-api journal-api-headless journal-api-nodeport</code> → 3행. <code>journal-api-headless</code>의 <code>CLUSTER-IP</code>가 <code>None</code>, <code>journal-api-nodeport</code>의 <code>PORT(S)</code>가 <code>8080:30080/TCP</code></li>
+      <li><code>kubectl get endpointslices -l kubernetes.io/service-name=journal-api -o jsonpath='{.items[0].endpoints[*].conditions.ready}'</code> → <code>true true true true</code></li>
+      <li><code>kubectl exec curlbox -- sh -c 'for i in $(seq 1 12); do curl -s -m 2 http://journal-api:8080/healthz; echo; done' | sort -u | wc -l</code> → <code>2</code> 이상 (응답한 파드가 둘 이상. 12번이면 보통 <code>4</code>)</li>
+      <li><code>kubectl exec curlbox -- nslookup journal-api-headless.default.svc.cluster.local | grep -c Address:</code> → <code>5</code> (DNS 서버 1 + 파드 4)</li>
+      <li><code>docker exec study-worker curl -s -o /dev/null -w '%{http_code}\n' http://localhost:30080/healthz</code> → <code>200</code></li>
+      <li><code>kubectl get svc journal-api-typo journal-api-badport journal-lb</code> → 세 이름 모두 <code>Error from server (NotFound)</code> (실패 ①②③을 정리했다)</li>
+      <li>(이해 확인) <code>connection refused</code>를 받았을 때 확인하는 순서 세 단계 — 실패 ①의 진단 순서로 답하고, 실패 ②가 어느 단계에서 갈리는지 말한다</li>
+      <li>(이해 확인) kind에서 <code>LoadBalancer</code>가 <code>&lt;pending&gt;</code>인 이유와, 실무에서 서비스마다 로드밸런서를 두지 않고 무엇을 쓰는지 (M12)</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/m11-services.yaml</code> — 서비스 3종</li>
+      <li>클러스터에 남는 것: <code>journal-api</code> 디플로이먼트(v1, 파드 4개) · 서비스 3개(<code>journal-api</code> · <code>journal-api-nodeport</code> · <code>journal-api-headless</code>) · <code>curlbox</code>. M12가 <code>journal-api</code> 서비스를 인그레스 뒤에 둔다. 이 모듈은 정리 명령이 없다 — 실패 ①②③에서 만든 것은 각 블록 안에서 지웠다</li>
+    </ul>
+  </div>
+</section>
+
+<div class="navlinks">
+  <a href="m10-k8s-deployment-rollout.html">← M10 디플로이먼트와 롤아웃</a>
+  <a href="m12-k8s-ingress-gateway.html">M12 인그레스와 Gateway API →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>서비스까지는 클러스터 안 이야기다. 브라우저에서 접속하려면 진입점이 필요하고, 경로에 따라 다른 서비스로 보내야 한다 — M06의 nginx 설정이 하던 일이다. M12에서 그것을 인그레스로 만들고, 같은 구성을 Gateway API v1.6으로 다시 작성해 둘을 비교한다.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
+  <ul>
+    <li>서비스: https://kubernetes.io/docs/concepts/services-networking/service/</li>
+    <li>EndpointSlice: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/</li>
+    <li>클러스터 DNS: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/</li>
+    <li>가상 IP와 서비스 프록시: https://kubernetes.io/docs/reference/networking/virtual-ips/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 9.1 쿠버네티스 네트워킹 원리, 9.2 서비스 디스커버리, 9.3 쿠버네티스 서비스</li>
+  </ul>
+  <p>검증 환경: kind v0.33.0 · Kubernetes 1.37.0 · kindnet CNI</p>
+</footer>
+</div>
+</body>
+</html>

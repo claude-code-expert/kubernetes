@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH09 네트워킹, 네트워크 보안, 서비스 메시 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .fix { border: 1px solid var(--line); border-left: 3px solid #b8860b; padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .fix .lbl { display: block; font-size: 12.5px; font-weight: 700; color: #b8860b; letter-spacing: 0.05em; margin-bottom: 6px; }
+
+  .link-back { border: 1px solid var(--line); padding: 12px 18px; margin: 14px 0; font-size: 14px; border-radius: 6px; background: var(--bg-soft); color: var(--sub); }
+  .link-back strong { color: var(--ink); }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 09</div>
+  <h1>네트워킹, 네트워크 보안, 서비스 메시</h1>
+  <p class="ch-desc">1장 부록 A에서 이미 "이름 하나가 파드까지 도달하는 경로"를 낱낱이 뜯어봤다. 이 장은 그 위에 쌓는다 — 서비스 타입이 왜 네 가지나 있는지, 트래픽을 어떤 규칙으로 막을지, 그리고 서비스가 수백 개로 늘었을 때 이 모든 걸 사람이 더 이상 손으로 못 하게 되는 지점(서비스 메시)까지.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함 · 원문의 서비스 메시 아키텍처 서술을 현재 기준으로 갱신</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 서비스 타입 넷(ClusterIP·NodePort·LoadBalancer·ExternalName)은 "무엇을, 누구에게 노출하는가"만 다르다 — 안정적인 이름을 준다는 목표는 같다.</p>
+  <p>2. 인그레스의 한계(벤더 종속·표현력 부족)를 역할 기반으로 푼 것이 게이트웨이 API다 — 2026년 현재 신규 구축의 기본 권장값.</p>
+  <p>3. 서비스 메시는 원서가 설명한 사이드카·구식 컴포넌트(Mixer 등)에서 크게 바뀌었다 — 현재는 사이드카 없는 앰비언트 모드가 기본 권장이다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s9-1"><span class="num">9.1</span>쿠버네티스 네트워킹 원리</a>
+  <a href="#s9-2"><span class="num">9.2</span>네트워크 플러그인</a>
+  <a href="#s9-3"><span class="num">9.3</span>쿠버네티스 서비스</a>
+  <a href="#s9-4"><span class="num">9.4</span>네트워크 보안 정책</a>
+  <a href="#s9-5"><span class="num">9.5</span>네트워크 정책 모범 사례</a>
+  <a href="#s9-6"><span class="num">9.6</span>서비스 메시</a>
+  <a href="#s9-7"><span class="num">9.7</span>서비스 메시 모범 사례</a>
+</nav>
+
+<section id="s9-1">
+  <h2 class="sec"><span class="num">9.1</span>쿠버네티스 네트워킹 원리</h2>
+  <p class="lead">쿠버네티스 네트워킹은 몇 가지 규칙 위에 서 있다. 그중 가장 근본적인 둘.</p>
+  <ul class="tight">
+    <li><strong>같은 파드 안의 컨테이너끼리</strong>는 네트워크 네임스페이스를 공유해 <code>localhost</code>로 직접 통신한다 — 그래서 같은 파드 안 컨테이너는 서로 다른 포트를 써야 한다.</li>
+    <li><strong>모든 파드는 NAT 없이 서로 통신 가능해야 한다</strong> — 수신 파드가 보는 발신 파드의 IP는 항상 발신 파드의 진짜 IP다. 같은 노드든 다른 노드든 이 규칙은 동일하게 적용된다.</li>
+  </ul>
+  <div class="link-back">
+    <strong>1장 부록 A 참고</strong> — order 파드가 payment-svc를 부를 때 이름이 ClusterIP로 바뀌고(CoreDNS), 그 가상 IP가 실제 파드 IP로 바뀌고(kube-proxy iptables DNAT), 노드 간에 배달되는(CNI) 전체 경로는 거기서 이미 단계별로 다뤘다. 이 장에서는 그 경로의 "왜"와 "무엇으로"를 채운다.
+  </div>
+</section>
+
+<section id="s9-2">
+  <h2 class="sec"><span class="num">9.2</span>네트워크 플러그인</h2>
+  <p>쿠버네티스는 네트워킹 자체를 구현하지 않는다 — <dfn class="term">CNI <span class="en">(Container Network Interface)</span></dfn> 스펙을 통해 서드파티가 구현하게 한다. 스펙은 최소한의 인터페이스(IP 할당, 컨테이너 추가/삭제)만 규정하고 나머지는 구현체 자유다. 이 개방성 덕분에 수많은 CNI 플러그인이 생겼다.</p>
+
+  <h3>9.2.1~9.2.2 Kubenet</h3>
+  <p><dfn class="term">Kubenet</dfn>은 쿠버네티스에 기본 내장된 가장 단순한 네트워크 플러그인이다 — 리눅스 브리지(<code>cbr0</code>)와 파드마다 veth 쌍을 만드는 최소 구현으로, 크로스 노드 라우팅이나 네트워크 정책 같은 고급 기능은 자체적으로 없다(클라우드 프로바이더의 라우팅에 의존).</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    Kubenet은 이제 <strong>레거시로 취급된다.</strong> Azure AKS는 kubenet을 "권장하지 않음"으로 분류하고 2028-03-31 완전 은퇴를 예고했으며, GKE를 비롯한 주요 관리형 서비스도 VPC 네이티브(별도 CNI) 방식을 기본값으로 삼은 지 오래다. 신규 클러스터라면 처음부터 진짜 CNI 플러그인(Cilium, Calico, Azure CNI Overlay 등)을 쓰는 것이 맞다 — Kubenet은 개념 이해용으로만 남겨 둔다.
+    <span class="src">출처: learn.microsoft.com/azure/aks(kubenet 레거시·은퇴 예고 페이지)</span>
+  </div>
+
+  <h3>9.2.3~9.2.4 CNI 플러그인과 모범 사례</h3>
+  <p>CNI 프로젝트는 최소 스펙을 구현하는 라이브러리와, 그 위에서 다양한 기능을 얹는 생태계를 함께 제공한다. 클라우드 네이티브 CNI(AWS VPC CNI, Azure CNI 등)부터 범용 CNI(Cilium, Calico)까지 선택지가 넓다. 고를 때 볼 것: <strong>네트워크 정책 지원 여부</strong>(9.4절과 직결), <strong>클라우드의 SDN에 네이티브하게 통합되는지</strong>, <strong>관찰성·보안 툴과의 호환성</strong>. 어떤 CNI를 쓰든 최소한 4대 골든 시그널(레이턴시·트래픽·에러·포화도)은 들여다볼 수 있어야 한다.</p>
+</section>
+
+<section id="s9-3">
+  <h2 class="sec"><span class="num">9.3</span>쿠버네티스 서비스</h2>
+  <p class="lead">파드는 원칙적으로 클러스터 안에서만 서로 닿는다. 파드 IP는 파드가 사라지면 같이 사라지므로, 외부(또는 다른 파드)가 안정적으로 부를 이름이 필요하다 — 이 역할을 <dfn class="term">서비스 <span class="en">(Service)</span></dfn> API가 한다. 타입은 넷이고, 차이는 "무엇을 노출하는가"다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow91" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .row { fill: none; stroke: #d8d8d8; stroke-width: 1; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-row { font-size: 13.5px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- ClusterIP -->
+  <rect class="row" x="20" y="20" width="860" height="90" rx="6"/>
+  <text class="t-row" x="36" y="44">ClusterIP (기본값) — 클러스터 내부에서만</text>
+  <rect class="box" x="36" y="56" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="106" y="81" text-anchor="middle">클러스터 밖</text>
+  <text class="t-sub" x="106" y="94" text-anchor="middle" fill="#b23b3b">접근 불가</text>
+  <line class="line" x1="176" y1="77" x2="216" y2="77" marker-end="url(#arrow91)" stroke-dasharray="3 3"/>
+  <rect class="box-accent" x="220" y="56" width="160" height="42" rx="4"/>
+  <text class="t-title" x="300" y="81" text-anchor="middle">가상 IP (내부 전용)</text>
+  <line class="line" x1="380" y1="77" x2="420" y2="77" marker-end="url(#arrow91)"/>
+  <rect class="box" x="424" y="56" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="494" y="81" text-anchor="middle">파드</text>
+  <text class="t-sub" x="660" y="81" text-anchor="middle">1장 부록 A에서 내부 동작 상세</text>
+
+  <!-- NodePort -->
+  <rect class="row" x="20" y="122" width="860" height="90" rx="6"/>
+  <text class="t-row" x="36" y="146">NodePort — 모든 노드의 고정 포트(30000~32767) 개방</text>
+  <rect class="box" x="36" y="158" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="106" y="183" text-anchor="middle">외부 클라이언트</text>
+  <line class="line" x1="176" y1="179" x2="216" y2="179" marker-end="url(#arrow91)"/>
+  <rect class="box-accent" x="220" y="158" width="160" height="42" rx="4"/>
+  <text class="t-title" x="300" y="176" text-anchor="middle">노드IP:30080</text>
+  <text class="t-sub" x="300" y="192" text-anchor="middle">모든 노드 동일 포트</text>
+  <line class="line" x1="380" y1="179" x2="420" y2="179" marker-end="url(#arrow91)"/>
+  <rect class="box" x="424" y="158" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="494" y="183" text-anchor="middle">파드</text>
+  <text class="t-sub" x="660" y="183" text-anchor="middle">노드 IP 노출 — 보통 프로덕션 진입점 X</text>
+
+  <!-- LoadBalancer -->
+  <rect class="row" x="20" y="224" width="860" height="90" rx="6"/>
+  <text class="t-row" x="36" y="248">LoadBalancer — 클라우드가 실제 LB를 대신 만들어 줌</text>
+  <rect class="box" x="36" y="260" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="106" y="285" text-anchor="middle">외부 클라이언트</text>
+  <line class="line" x1="176" y1="281" x2="216" y2="281" marker-end="url(#arrow91)"/>
+  <rect class="box-accent" x="220" y="260" width="160" height="42" rx="4"/>
+  <text class="t-title" x="300" y="278" text-anchor="middle">클라우드 LB</text>
+  <text class="t-sub" x="300" y="294" text-anchor="middle">외부 IP 자동 할당</text>
+  <line class="line" x1="380" y1="281" x2="420" y2="281" marker-end="url(#arrow91)"/>
+  <rect class="box" x="424" y="260" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="494" y="285" text-anchor="middle">파드</text>
+  <text class="t-sub" x="660" y="285" text-anchor="middle">서비스마다 LB 1개 — 여러 개면 비용 급증</text>
+
+  <!-- ExternalName -->
+  <rect class="row" x="20" y="326" width="860" height="90" rx="6"/>
+  <text class="t-row" x="36" y="350">ExternalName — 프록시 없이 DNS만 바꿔치기 (CNAME)</text>
+  <rect class="box" x="36" y="362" width="140" height="42" rx="4"/>
+  <text class="t-sub" x="106" y="387" text-anchor="middle">클러스터 내부 파드</text>
+  <line class="line" x1="176" y1="383" x2="216" y2="383" marker-end="url(#arrow91)"/>
+  <rect class="box-accent" x="220" y="362" width="160" height="42" rx="4"/>
+  <text class="t-title" x="300" y="380" text-anchor="middle">DNS CNAME 응답</text>
+  <text class="t-sub" x="300" y="396" text-anchor="middle">IP·프록시 개입 없음</text>
+  <line class="line" x1="380" y1="383" x2="420" y2="383" marker-end="url(#arrow91)" stroke-dasharray="3 3"/>
+  <rect class="box" x="424" y="362" width="180" height="42" rx="4"/>
+  <text class="t-sub" x="514" y="387" text-anchor="middle">클러스터 밖 DB 등</text>
+  <text class="t-sub" x="700" y="383" text-anchor="middle">실사용은 드묾</text>
+
+  <text class="t-cap" x="450" y="450" text-anchor="middle">넷 다 "안정적인 이름"이라는 목표는 같다 — 무엇을 노출하고, 누가 그 노출을 대신 만들어 주는지가 다르다.</text>
+</svg>
+    <figcaption>그림 9-1. 서비스 타입 4종. ClusterIP는 1장 부록 A에서 내부 동작을 이미 상세히 다뤘다.</figcaption>
+  </figure>
+
+  <h3>9.3.1 ClusterIP</h3>
+  <p>타입을 지정하지 않으면 기본값이다. 클러스터 내부 CIDR에서 가상 IP를 할당하고, 셀렉터로 백엔드 파드를 매핑한다 — 정확한 내부 동작(DNS→DNAT→CNI)은 1장 부록 A 참고.</p>
+
+  <h3>9.3.2 NodePort</h3>
+  <p>모든 노드의 동일한 고정 포트(<code>30000</code>~<code>32767</code>)를 열어 외부에서 <code>노드IP:포트</code>로 접근하게 한다. 노드 IP를 그대로 노출하는 구조라 <strong>프로덕션의 기본 진입점으로는 잘 안 쓴다</strong> — 뒤에 나올 LoadBalancer나 인그레스가 흔히 NodePort 위에서 동작한다.</p>
+
+  <h3>9.3.3 ExternalName</h3>
+  <p>실사용은 드물지만 개념은 유용하다 — 셀렉터도 프록시도 없이, 그냥 DNS 조회에 <strong>CNAME</strong>을 돌려준다. 클러스터 밖의 관리형 DB를 클러스터 내부 이름처럼 부르고 싶을 때, 또는 나중에 그 DB를 클러스터 안으로 옮길 계획일 때 유용하다.</p>
+
+  <h3>9.3.4 LoadBalancer</h3>
+  <p>클라우드 프로바이더의 실제 로드밸런서를 자동으로 프로비저닝한다. 편리하지만 <strong>서비스마다 LB가 하나씩</strong> 생긴다 — 서비스 수십 개를 이 타입으로 노출하면 그만큼 클라우드 청구서가 는다. 여러 서비스를 하나의 진입점으로 묶고 싶다면 다음 절의 인그레스나 게이트웨이가 정답이다.</p>
+
+  <h3>9.3.5 인그레스와 인그레스 컨트롤러</h3>
+  <p>서비스 API는 L3/L4(IP·포트)까지만 안다. 실제 웹 트래픽은 호스트·경로 기반의 <strong>L7(HTTP) 라우팅</strong>이 필요할 때가 많다 — <dfn class="term">인그레스 <span class="en">(Ingress)</span></dfn>가 이 역할이다. 인그레스 리소스 자체는 규칙 선언일 뿐이고, 이를 실제로 구현하는 것이 <dfn class="term">인그레스 컨트롤러</dfn>(서드파티 구현체)다.</p>
+  <div class="link-back">
+    <strong>1장 3.7절·0장 참고</strong> — 원서가 예로 든 NGINX 인그레스 컨트롤러(ingress-nginx)는 2026년 3월부로 은퇴했다. 신규 구축이라면 Contour, Envoy Gateway 등 유지보수 중인 구현체나, 아래 게이트웨이 API를 쓴다.
+  </div>
+
+  <h3>9.3.6 게이트웨이 API</h3>
+  <p>인그레스 API는 수년간 세 가지 한계를 드러냈다 — ① 여러 구현체의 최소 공통분모만 표현할 수 있어 <strong>표현력이 떨어지고</strong>, ② 벤더마다 다른 애너테이션에 기능을 욱여넣어야 해 <strong>확장성이 없고</strong>, ③ 그 벤더 종속 애너테이션 때문에 원래 있던 <strong>이식성이 사라졌다.</strong> <dfn class="term">게이트웨이 API <span class="en">(Gateway API)</span></dfn>는 이를 역할별로 나눠 해결한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow92" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-role { font-size: 12px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 인프라 프로바이더 레인 -->
+  <rect class="lane" x="20" y="20" width="270" height="150" rx="6"/>
+  <text class="t-role" x="36" y="42">인프라 프로바이더</text>
+  <text class="t-sub" x="36" y="58">(클라우드·플랫폼 팀)</text>
+  <rect class="box-accent" x="36" y="70" width="238" height="80" rx="4"/>
+  <text class="t-title" x="155" y="98" text-anchor="middle">GatewayClass</text>
+  <text class="t-sub" x="155" y="118" text-anchor="middle">어떤 구현체를 쓸지</text>
+  <text class="t-sub" x="155" y="134" text-anchor="middle">(Envoy, Cilium 등) 정의</text>
+
+  <line class="line" x1="290" y1="110" x2="326" y2="110" marker-end="url(#arrow92)"/>
+
+  <!-- 플랫폼 관리자 레인 -->
+  <rect class="lane" x="330" y="20" width="270" height="150" rx="6"/>
+  <text class="t-role" x="346" y="42">플랫폼 관리자</text>
+  <text class="t-sub" x="346" y="58">(운영·보안 팀)</text>
+  <rect class="box-accent" x="346" y="70" width="238" height="80" rx="4"/>
+  <text class="t-title" x="465" y="98" text-anchor="middle">Gateway</text>
+  <text class="t-sub" x="465" y="118" text-anchor="middle">리스너·포트·TLS 정책</text>
+  <text class="t-sub" x="465" y="134" text-anchor="middle">누가 뭘 붙일 수 있는지 통제</text>
+
+  <line class="line" x1="600" y1="110" x2="636" y2="110" marker-end="url(#arrow92)"/>
+
+  <!-- 개발자 레인 -->
+  <rect class="lane" x="640" y="20" width="240" height="150" rx="6"/>
+  <text class="t-role" x="656" y="42">개발자</text>
+  <text class="t-sub" x="656" y="58">(애플리케이션 팀)</text>
+  <rect class="box-accent" x="656" y="70" width="208" height="80" rx="4"/>
+  <text class="t-title" x="760" y="98" text-anchor="middle">HTTPRoute</text>
+  <text class="t-sub" x="760" y="118" text-anchor="middle">/api → 내 서비스로</text>
+  <text class="t-sub" x="760" y="134" text-anchor="middle">라우팅 규칙만 선언</text>
+
+  <!-- 인그레스 비교 -->
+  <rect class="box" x="40" y="210" width="820" height="130" rx="6"/>
+  <text class="t-title" x="60" y="234">왜 셋으로 나눴나 — 인그레스 API의 한계와 대비</text>
+  <text class="t-sub" x="60" y="260">인그레스: 역할 구분 없이 애너테이션 하나에 모든 설정이 뒤섞임 → 벤더 종속, 멀티테넌시 어려움</text>
+  <text class="t-sub" x="60" y="282">게이트웨이 API: 인프라·정책·라우팅을 계층으로 분리 → 개발자는 라우팅 규칙만, 나머지는 플랫폼팀 책임</text>
+  <text class="t-sub" x="60" y="304">HTTP 외 TCP·gRPC 등 프로토콜도 같은 모델로 확장 — 2026년 현재 정식(GA) API, 신규 구축의 기본 권장값</text>
+
+  <text class="t-cap" x="450" y="362" text-anchor="middle">세 오브젝트는 각각 다른 사람이 만들고 관리한다 — "누가 무엇을 책임지는가"가 인그레스와의 근본적 차이다.</text>
+</svg>
+    <figcaption>그림 9-2. GatewayClass(인프라)·Gateway(정책)·HTTPRoute(라우팅)를 서로 다른 역할이 나눠 관리한다.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 확인</span>
+    원서 집필 시점엔 게이트웨이 API가 초기 단계였지만, 지금은 <strong>정식(GA)</strong>이고 신규 구축의 기본 권장값이다(1장에서 이미 확인). HTTP뿐 아니라 TCP·gRPC 같은 다른 프로토콜로도 같은 역할 기반 모델이 확장되고 있고, KubeCon 2026 발표에서는 멀티클러스터 지원(베타)과 AI 워크로드용 확장까지 논의됐다 — 게이트웨이 API가 인그레스를 대체할 표준 트래픽 진입점으로 자리잡는 흐름은 계속되고 있다.
+    <span class="src">출처: 1장 갱신 주석(kubernetes.io 공식 문서) 참고 · 업계 컨퍼런스 발표 자료(2026) 교차 확인</span>
+  </div>
+
+  <h3>9.3.7 서비스와 인그레스 컨트롤러 모범 사례</h3>
+  <table>
+    <tr><th>원칙</th><th>왜</th></tr>
+    <tr><td>내부 통신은 ClusterIP, 외부 노출은 인그레스/게이트웨이로 통합</td><td>서비스마다 LoadBalancer를 쓰면 비용·관리 부담이 선형으로 증가한다.</td></tr>
+    <tr><td>신규 구축은 게이트웨이 API 우선 검토</td><td>인그레스보다 표현력·이식성이 높고 현재 공식 권장값이다.</td></tr>
+    <tr><td>NodePort는 임시·디버깅 용도로 한정</td><td>노드 IP 직접 노출은 프로덕션 진입점의 정석이 아니다.</td></tr>
+  </table>
+</section>
+
+<section id="s9-4">
+  <h2 class="sec"><span class="num">9.4</span>네트워크 보안 정책</h2>
+  <p><dfn class="term">NetworkPolicy</dfn>는 쿠버네티스에 내장된 API로, 파드 수준의 인그레스/이그레스 접근을 제어한다 — <strong>동서(East-West) 트래픽을 위한 방화벽</strong>이라고 생각하면 된다. 단, API가 존재한다고 바로 동작하는 건 아니다 — 이를 실제로 집행하는 것은 CNI 플러그인의 몫이라, NetworkPolicy를 지원하는 CNI(9.2절)가 깔려 있어야 한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-open { fill: #ffffff; stroke: #3a8a5c; stroke-width: 1.5; }
+    .box-closed { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .box-allow { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- Before: 정책 없음 -->
+  <text class="t-lane" x="450" y="30" text-anchor="middle">정책 적용 전 — 모두 서로 통신 가능 (기본 동작)</text>
+  <rect class="box-open" x="60" y="46" width="140" height="60" rx="4"/>
+  <text class="t-title" x="130" y="72" text-anchor="middle">파드 A</text>
+  <rect class="box-open" x="240" y="46" width="140" height="60" rx="4"/>
+  <text class="t-title" x="310" y="72" text-anchor="middle">파드 B</text>
+  <rect class="box-open" x="420" y="46" width="140" height="60" rx="4"/>
+  <text class="t-title" x="490" y="72" text-anchor="middle">파드 C</text>
+  <rect class="box-open" x="600" y="46" width="220" height="60" rx="4"/>
+  <text class="t-title" x="710" y="72" text-anchor="middle">클러스터 밖 어디든</text>
+  <text class="t-sub" x="450" y="126" text-anchor="middle">NetworkPolicy 오브젝트가 하나도 없으면, 모든 파드는 서로 그리고 외부와 자유롭게 통신한다.</text>
+
+  <!-- 구분선 -->
+  <line x1="20" y1="152" x2="880" y2="152" stroke="#d8d8d8" stroke-dasharray="2 4"/>
+
+  <!-- After: B에 정책 적용 -->
+  <text class="t-lane" x="450" y="178" text-anchor="middle">파드 B에 NetworkPolicy 하나를 걸면 — B만 "화이트리스트 모드"로 전환</text>
+
+  <rect class="box-open" x="60" y="196" width="140" height="60" rx="4"/>
+  <text class="t-title" x="130" y="222" text-anchor="middle">파드 A</text>
+  <text class="t-sub" x="130" y="242" text-anchor="middle">정책 대상 아님</text>
+  <text class="t-sub" x="130" y="256" text-anchor="middle">— 계속 자유롭게 통신</text>
+
+  <rect class="box-closed" x="240" y="196" width="180" height="60" rx="4"/>
+  <text class="t-title" x="330" y="222" text-anchor="middle">파드 B — 정책 대상</text>
+  <text class="t-sub" x="330" y="242" text-anchor="middle">명시하지 않은 모든</text>
+  <text class="t-sub" x="330" y="256" text-anchor="middle">인그레스·이그레스 차단</text>
+
+  <rect class="box-allow" x="460" y="196" width="180" height="60" rx="4"/>
+  <text class="t-title" x="550" y="222" text-anchor="middle">ingress 규칙에 명시된</text>
+  <text class="t-sub" x="550" y="242" text-anchor="middle">podSelector: app=frontend</text>
+  <text class="t-sub" x="550" y="256" text-anchor="middle">→ 이것만 예외적으로 허용</text>
+
+  <rect class="box-open" x="680" y="196" width="140" height="60" rx="4"/>
+  <text class="t-title" x="750" y="222" text-anchor="middle">파드 C</text>
+  <text class="t-sub" x="750" y="242" text-anchor="middle">정책 대상 아님</text>
+  <text class="t-sub" x="750" y="256" text-anchor="middle">— 영향 없음</text>
+
+  <text class="t-cap" x="450" y="304" text-anchor="middle">핵심: 정책의 대상(셀렉터에 매치)이 되는 순간부터 기본이 "전체 차단"으로 뒤집힌다.</text>
+  <text class="t-cap" x="450" y="326" text-anchor="middle">대상이 아닌 파드는 몇 개의 정책이 클러스터에 있든 계속 예전처럼 자유롭게 통신한다.</text>
+</svg>
+    <figcaption>그림 9-3. 정책의 대상이 되는 순간 그 파드만 기본 거부로 전환된다. 나머지 파드는 영향받지 않는다.</figcaption>
+  </figure>
+<pre><code>apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-allow-frontend
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 8080</code></pre>
+  <p>핵심 규칙 셋. ① <code>podSelector</code>가 유일한 필수 필드이며 비워 두면 네임스페이스의 모든 파드가 대상이 된다. ② 정책 대상이 된 파드는 <strong>명시하지 않은 트래픽이 전부 차단</strong>된다 — 위 예시처럼 <code>ingress</code>만 적었다면 아웃바운드(egress)는 이 정책의 관할이 아니라 별도 판단을 따른다. ③ 같은 파드에 정책이 여러 개 있으면 <strong>효과가 누적</strong>된다(합집합으로 허용).</p>
+</section>
+
+<section id="s9-5">
+  <h2 class="sec"><span class="num">9.5</span>네트워크 정책 모범 사례</h2>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>네임스페이스 단위 기본 거부(default-deny)부터 시작</td><td>새 네임스페이스에 정책 없이 며칠씩 방치되는 구간이 있진 않은가?</td></tr>
+    <tr><td>필요한 통신만 화이트리스트로 명시</td><td>정책이 실제로 필요한 최소한의 경로만 열고 있는가, 편의상 넓게 열진 않았는가?</td></tr>
+    <tr><td>CNI의 NetworkPolicy 지원 여부를 사전 확인</td><td>지금 쓰는 CNI가 정책을 실제로 집행하는가? (선언만 하고 무시되는 경우가 있다)</td></tr>
+    <tr><td>네임스페이스 간 통신은 namespaceSelector로 명시</td><td>팀 간 네임스페이스 경계가 정책으로 실제 강제되고 있는가?</td></tr>
+  </table>
+</section>
+
+<section id="s9-6">
+  <h2 class="sec"><span class="num">9.6</span>서비스 메시</h2>
+  <p class="lead">서비스가 수백 개로 늘어난 클러스터를 상상해 보자. 트래픽 로드밸런싱, 서비스 디스커버리, 관찰성, 상호 인증, 서킷 브레이커 — 이 전부를 애플리케이션 코드마다 구현할 수는 없다. <dfn class="term">서비스 메시 <span class="en">(Service Mesh)</span></dfn>는 이 공통 기능을 애플리케이션 밖으로 빼내, 전용 데이터 플레인·컨트롤 플레인으로 처리하는 계층이다.</p>
+
+  <div class="fix">
+    <span class="lbl">원문 내용 갱신 필요</span>
+    원서는 이스티오의 컨트롤 플레인을 "믹서·파일럿·갤리·시타델 네 컴포넌트"로 설명하지만, 이 구조는 <strong>더 이상 존재하지 않는다.</strong> 믹서는 2020년(Istio 1.5)에 완전히 폐지됐고, 파일럿·갤리·시타델은 <code>istiod</code>라는 단일 컨트롤 플레인 바이너리로 통합된 지 오래다. 그리고 더 근본적인 변화가 하나 더 있다 — 아래 갱신 주석 참고.
+  </div>
+
+  <p>메시가 애플리케이션 코드를 거의 건드리지 않고 이 모든 걸 제공하는 비결은 전통적으로 <dfn class="term">사이드카 프록시 <span class="en">(Sidecar Proxy)</span></dfn>였다 — 각 파드에 Envoy 프록시를 함께 주입해, 앱은 그저 로컬호스트로 자기 프록시와만 대화하고 나머지는 프록시가 처리한다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow94" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-app { fill: #ffffff; stroke: #3a8a5c; stroke-width: 1.2; }
+    .box-proxy { fill: #fafaf8; stroke: #2456c4; stroke-width: 1.2; }
+    .box-node { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 3 3; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-old { font-size: 11px; fill: #888888; }
+    .t-title { font-size: 12px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.1; fill: none; }
+  </style>
+
+  <!-- 왼쪽: 사이드카 모델 -->
+  <rect class="lane" x="20" y="20" width="410" height="330" rx="6"/>
+  <text class="t-lane" x="36" y="44">사이드카 모델 (전통 방식)</text>
+  <text class="t-old" x="36" y="60">원서 서술: Mixer·Pilot·Galley·Citadel</text>
+
+  <!-- 노드 1 -->
+  <rect class="box-node" x="40" y="76" width="180" height="130" rx="4"/>
+  <text class="t-sub" x="52" y="94">노드 1</text>
+  <rect class="box-app" x="52" y="102" width="150" height="42" rx="4"/>
+  <text class="t-title" x="127" y="126" text-anchor="middle">파드: 앱 A</text>
+  <rect class="box-proxy" x="52" y="150" width="150" height="42" rx="4"/>
+  <text class="t-title" x="127" y="174" text-anchor="middle">Envoy 사이드카</text>
+
+  <!-- 노드 2 -->
+  <rect class="box-node" x="240" y="76" width="180" height="130" rx="4"/>
+  <text class="t-sub" x="252" y="94">노드 2</text>
+  <rect class="box-app" x="252" y="102" width="150" height="42" rx="4"/>
+  <text class="t-title" x="327" y="126" text-anchor="middle">파드: 앱 B</text>
+  <rect class="box-proxy" x="252" y="150" width="150" height="42" rx="4"/>
+  <text class="t-title" x="327" y="174" text-anchor="middle">Envoy 사이드카</text>
+
+  <text class="t-sub" x="230" y="230" text-anchor="middle">파드마다 프록시 컨테이너 1개 — 파드 수만큼 자원 소모</text>
+  <text class="t-sub" x="230" y="248" text-anchor="middle">주입 시점(재시작)에만 사이드카 적용 가능</text>
+
+  <!-- istiod -->
+  <rect class="box" x="140" y="270" width="180" height="50" rx="4"/>
+  <text class="t-title" x="230" y="292" text-anchor="middle">istiod (통합 컨트롤 플레인)</text>
+  <text class="t-sub" x="230" y="308" text-anchor="middle">Mixer는 폐지, Pilot·Galley·Citadel 통합됨</text>
+
+  <!-- 오른쪽: 앰비언트 모델 -->
+  <rect class="lane" x="460" y="20" width="420" height="330" rx="6"/>
+  <text class="t-lane" x="476" y="44">앰비언트 모드 (Istio 1.24 GA, 2026 기본 권장)</text>
+  <text class="t-old" x="476" y="60">ztunnel(L4) + 선택적 waypoint(L7)</text>
+
+  <!-- 노드 1 (ambient) -->
+  <rect class="box-node" x="480" y="76" width="200" height="150" rx="4"/>
+  <text class="t-sub" x="492" y="94">노드 1</text>
+  <rect class="box-app" x="492" y="102" width="80" height="42" rx="4"/>
+  <text class="t-title" x="532" y="126" text-anchor="middle">앱 A</text>
+  <rect class="box-app" x="584" y="102" width="80" height="42" rx="4"/>
+  <text class="t-title" x="624" y="126" text-anchor="middle">앱 A'</text>
+  <text class="t-sub" x="578" y="160" text-anchor="middle">사이드카 없음 — 순수 앱 컨테이너만</text>
+  <rect class="box-proxy" x="492" y="176" width="172" height="38" rx="4"/>
+  <text class="t-title" x="578" y="200" text-anchor="middle">ztunnel (노드당 1개, DaemonSet)</text>
+
+  <!-- 노드 2 (ambient) -->
+  <rect class="box-node" x="700" y="76" width="160" height="150" rx="4"/>
+  <text class="t-sub" x="712" y="94">노드 2</text>
+  <rect class="box-app" x="712" y="102" width="136" height="42" rx="4"/>
+  <text class="t-title" x="780" y="126" text-anchor="middle">앱 B</text>
+  <rect class="box-proxy" x="712" y="176" width="136" height="38" rx="4"/>
+  <text class="t-title" x="780" y="200" text-anchor="middle">ztunnel</text>
+
+  <line class="line" x1="664" y1="195" x2="700" y2="195" marker-end="url(#arrow94)"/>
+  <text class="t-sub" x="682" y="185" text-anchor="middle" font-size="9">mTLS</text>
+
+  <!-- waypoint (선택) -->
+  <rect class="box-proxy" x="580" y="236" width="180" height="40" rx="4" stroke-dasharray="3 3"/>
+  <text class="t-title" x="670" y="254" text-anchor="middle">waypoint (선택, 네임스페이스당)</text>
+  <text class="t-sub" x="670" y="268" text-anchor="middle">L7 라우팅·재시도·세밀한 인가가 필요할 때만</text>
+
+  <!-- istiod -->
+  <rect class="box" x="580" y="290" width="180" height="40" rx="4"/>
+  <text class="t-title" x="670" y="308" text-anchor="middle">istiod</text>
+  <text class="t-sub" x="670" y="322" text-anchor="middle">동일 컨트롤 플레인</text>
+
+  <text class="t-sub" x="670" y="336" text-anchor="middle" font-size="9"> </text>
+
+  <!-- 캡션 -->
+  <rect class="box" x="40" y="370" width="820" height="130" rx="6"/>
+  <text class="t-title" x="60" y="394">무엇이 바뀌었나</text>
+  <text class="t-sub" x="60" y="416">자원 소모 — 파드마다 프록시를 두지 않고 노드마다 하나(ztunnel)만 두어 메모리·CPU 오버헤드를 크게 줄인다.</text>
+  <text class="t-sub" x="60" y="436">무중단 적용 — 사이드카 주입처럼 파드 재시작이 필요 없다. 기존 워크로드에 그대로 적용된다.</text>
+  <text class="t-sub" x="60" y="456">단계적 도입 — 기본은 L4(mTLS·기본 인가)만 켜고, HTTP 라우팅 같은 L7 기능이 필요한 네임스페이스에만 waypoint를 얹는다.</text>
+  <text class="t-sub" x="60" y="476">컨트롤 플레인은 그대로 — istiod 하나가 양쪽 모드를 다 관리한다. 원서가 나열한 Mixer는 2020년(1.5)에 이미 폐지됐다.</text>
+
+  <text class="t-cap" x="450" y="512" text-anchor="middle">둘 다 같은 것(mTLS·관찰성·트래픽 제어)을 하지만, 오른쪽이 2026년 현재 신규 도입의 기본 선택지다.</text>
+</svg>
+    <figcaption>그림 9-4. 사이드카(왼쪽)와 앰비언트(오른쪽) 비교. 2026년 현재 신규 도입의 기본은 오른쪽이다.</figcaption>
+  </figure>
+
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석 — 아키텍처 전환</span>
+    <dfn class="term">앰비언트 메시 <span class="en">(Ambient Mesh)</span></dfn>가 <strong>Istio 1.24(2024-11)에서 정식(GA)</strong>이 됐고, 2026년 현재는 신규 도입 시 기본 권장 모드다. 구조는 두 층으로 나뉜다 — 노드마다 하나씩 도는 <dfn class="term">ztunnel</dfn>이 L4(mTLS·기본 인가·관찰성)를 처리하고, HTTP 라우팅 같은 L7 기능이 필요한 네임스페이스에만 선택적으로 <dfn class="term">waypoint</dfn> 프록시를 얹는다. 사이드카가 사라지면서 파드당 오버헤드가 크게 줄고, 사이드카 주입 특유의 "적용하려면 파드 재시작" 문제도 사라졌다. Linkerd(Rust 기반 자체 프록시)는 원서 시점과 마찬가지로 여전히 사이드카 모델을 유지하며 가벼움을 강점으로 내세운다 — 메시 선택은 이제 "사이드카냐 아니냐"도 함께 고려해야 하는 문제가 됐다.
+    <span class="src">출처: istio.io/latest/blog/2024/ambient-reaches-ga(공식 GA 발표) · docs.solo.io(ztunnel·waypoint 구조 설명)</span>
+  </div>
+</section>
+
+<section id="s9-7">
+  <h2 class="sec"><span class="num">9.7</span>서비스 메시 모범 사례</h2>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>서비스 수가 적다면 메시 없이도 충분할 수 있다</td><td>메시가 해결하려는 문제(mTLS·재시도·관찰성)를 지금 정말 겪고 있는가, 아니면 유행이라 도입하려는가?</td></tr>
+    <tr><td>사이드카 vs 앰비언트를 자원·운영 부담 기준으로 선택</td><td>파드 수가 많은 클러스터에서 사이드카 오버헤드를 실측해 봤는가?</td></tr>
+    <tr><td>L7 기능은 필요한 네임스페이스에만 선택적으로</td><td>모든 네임스페이스에 waypoint(또는 사이드카)를 일괄 적용해 불필요한 복잡도를 늘리고 있진 않은가?</td></tr>
+    <tr><td>메시 도입 전 관찰성·mTLS를 먼저 개별 툴로 검토</td><td>메시 없이도 3장의 프로메테우스·4장의 시크릿 관리로 상당 부분 해결되진 않는가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: learn.microsoft.com/azure/aks(Kubenet 레거시) · istio.io/latest/blog/2024/ambient-reaches-ga · docs.solo.io(ztunnel·waypoint) — 세부 출처는 각 절의 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig09-1 ~ fig09-4)도 제공됩니다.<br>
+  이 장은 1장 부록 A(서비스 간 호출 경로)의 후속편입니다 — 함께 보면 이해가 빠릅니다.
+</footer>
+
+</div>
+</body>
+</html>

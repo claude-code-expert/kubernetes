@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow53" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow53b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-code { font-size: 10.5px; font-family: monospace; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-loop { stroke: #2456c4; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="70" width="160" height="100" rx="4"/>
+  <text class="t-title" x="100" y="98" text-anchor="middle">① 코드 수정</text>
+  <text class="t-sub" x="100" y="118" text-anchor="middle">server.js 한 줄 변경</text>
+  <text class="t-code" x="100" y="140" text-anchor="middle">git commit</text>
+
+  <line class="line" x1="180" y1="120" x2="216" y2="120" marker-end="url(#arrow53)"/>
+
+  <rect class="box" x="220" y="70" width="160" height="100" rx="4"/>
+  <text class="t-title" x="300" y="98" text-anchor="middle">② 이미지 빌드</text>
+  <text class="t-sub" x="300" y="118" text-anchor="middle">로컬 도커로 빌드</text>
+  <text class="t-code" x="300" y="140" text-anchor="middle">docker build -t</text>
+  <text class="t-code" x="300" y="156" text-anchor="middle">journal:v2 .</text>
+
+  <line class="line" x1="380" y1="120" x2="416" y2="120" marker-end="url(#arrow53)"/>
+
+  <rect class="box-accent" x="420" y="70" width="180" height="100" rx="4"/>
+  <text class="t-title" x="510" y="98" text-anchor="middle">③ kind로 반입</text>
+  <text class="t-sub" x="510" y="118" text-anchor="middle">레지스트리 없이 직행</text>
+  <text class="t-code" x="510" y="140" text-anchor="middle">kind load docker-image</text>
+  <text class="t-code" x="510" y="156" text-anchor="middle">journal:v2 --name study</text>
+
+  <line class="line" x1="600" y1="120" x2="636" y2="120" marker-end="url(#arrow53)"/>
+
+  <rect class="box" x="640" y="70" width="160" height="100" rx="4"/>
+  <text class="t-title" x="720" y="98" text-anchor="middle">④ 롤아웃</text>
+  <text class="t-sub" x="720" y="118" text-anchor="middle">디플로이먼트 갱신</text>
+  <text class="t-code" x="720" y="140" text-anchor="middle">kubectl set image</text>
+  <text class="t-code" x="720" y="156" text-anchor="middle">deploy/frontend …</text>
+
+  <!-- 관찰 -->
+  <rect class="box" x="420" y="200" width="380" height="70" rx="4"/>
+  <text class="t-title" x="610" y="228" text-anchor="middle">⑤ 관찰</text>
+  <text class="t-code" x="610" y="250" text-anchor="middle">kubectl rollout status deployment/frontend</text>
+
+  <line class="line-loop" x1="720" y1="170" x2="720" y2="200" marker-end="url(#arrow53b)"/>
+  <polyline class="line-loop" points="420,235 200,235 200,174" marker-end="url(#arrow53b)"/>
+  <text class="t-sub" x="200" y="220" text-anchor="middle">문제 발견 시 다시 ①로</text>
+
+  <text class="t-cap" x="450" y="286" text-anchor="middle">실제 CI는 이 ①~④를 원격 러너가 자동으로 하지만, kind 실습에서는 손으로 같은 순서를 밟아 파이프라인의 뼈대를 몸에 익힌다.</text>
+</svg>

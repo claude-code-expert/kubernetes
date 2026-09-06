@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 2 · 쿠버네티스 코어] M09 파드 · 레이블 · 네임스페이스 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 09 / 38 · PART 2 쿠버네티스 코어</div>
+  <h1>파드 · 레이블 · 네임스페이스</h1>
+  <p class="ch-desc">파드는 컨테이너 하나가 아니라 <strong>같은 운명을 공유하는 컨테이너 묶음</strong>이다. 왜 그런 단위가 필요한지 두 컨테이너를 한 파드에 넣어 확인하고, 레이블 오타 하나로 아무것도 못 찾는 상황을 만든다.</p>
+  <div class="meta">
+    <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 · journal-api:v1 (M04 · M07 산출물) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m08-k8s-cluster-first-deploy.html">M08</a> 완료 — <code>describe</code> · <code>logs</code> · <code>get events</code>를 쓸 수 있다</li>
+    <li><a href="m07-docker-registry-supplychain.html">M07</a>에서 <code>kind load docker-image journal-api:v1</code>을 했다. 안 했다면 지금 한다</li>
+    <li>매니페스트: <code>course/labs/k8s/m09-pod-sidecar.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 두 컨테이너를 한 파드에 넣고, 사이드카가 <code>localhost</code>로 본체를 호출한 것과 init 컨테이너가 쓴 파일을 본체가 읽은 것을 로그와 <code>exec</code>로 확인한다.</p>
+  <p>2. <code>kubectl label</code>로 레이블을 붙이고 <code>-l</code> 셀렉터로 골라낸다. 오타가 나면 에러 대신 <strong>0개</strong>가 나온다는 것을 직접 본다 — 서비스·디플로이먼트·네트워크 정책이 전부 이 셀렉터로 대상을 고르므로 이 실습에서 가장 중요한 결과다.</p>
+  <p>3. 네임스페이스를 만들어 같은 이름의 파드를 둘 띄우고, 컨텍스트의 기본 네임스페이스를 바꿔 <code>-n</code> 없이 조회한 뒤 되돌린다. 권한 · 쿼터 · 파드 보안 수준이 전부 이 단위로 걸린다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">9.1</span>왜 파드라는 단위가 있나</a>
+  <a href="#s2"><span class="num">9.2</span>이론 — 파드 안에서 공유되는 것</a>
+  <a href="#s3"><span class="num">9.3</span>따라하기 ① 두 컨테이너 한 파드</a>
+  <a href="#s4"><span class="num">9.4</span>따라하기 ② 레이블과 셀렉터</a>
+  <a href="#s5"><span class="num">9.5</span>따라하기 ③ 네임스페이스</a>
+  <a href="#s6"><span class="num">9.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">9.7</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">9.1</span>왜 파드라는 단위가 있나</h2>
+  <p class="lead">M08에서 파드는 "컨테이너가 들어 있는 것" 정도로 지나갔다. 그런데 컨테이너를 그냥 스케줄링하면 될 것을 왜 한 겹을 더 뒀을까.</p>
+  <p>같이 있어야만 동작하는 컨테이너들이 있기 때문이다. 로그를 읽어 전송하는 에이전트는 애플리케이션과 <strong>같은 파일시스템</strong>을 봐야 하고, 프록시는 애플리케이션과 <strong>같은 네트워크</strong>에 있어야 <code>localhost</code>로 가로챌 수 있다. 이것들을 별도로 스케줄링하면 다른 노드에 떨어져 아무 일도 못 한다.</p>
+  <p>그래서 쿠버네티스는 "항상 같은 노드에, 같이 뜨고 같이 죽는" 묶음을 하나의 단위로 만들었다. 그것이 파드다. 대부분의 파드는 컨테이너가 하나지만, 구조는 여러 개를 담을 수 있게 되어 있다 — 그리고 M25의 서비스 메시, M22의 로그 수집이 이 구조를 쓴다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">9.2</span>이론 — 파드 안에서 공유되는 것</h2>
+  <table>
+    <tr><th>공유되는 것</th><th>결과</th><th>M02에서 본 것</th></tr>
+    <tr><td>네트워크 네임스페이스</td><td>같은 IP를 쓴다. 서로를 <code>localhost</code>로 부른다. 포트는 파드 안에서 유일해야 한다</td><td>네임스페이스가 시야를 가른다</td></tr>
+    <tr><td>볼륨</td><td>같은 볼륨을 각자 마운트해 파일을 주고받는다</td><td><code>-v</code>로 붙이던 볼륨</td></tr>
+    <tr><td>수명</td><td>같은 노드에 배치되고, 파드가 지워지면 함께 지워진다</td><td>—</td></tr>
+    <tr><td>공유되지 않는 것</td><td>파일시스템(볼륨 제외), 프로세스 목록(기본 설정), 리소스 제한(컨테이너별)</td><td>—</td></tr>
+  </table>
+  <h3>컨테이너 세 종류</h3>
+  <p>파드 안 컨테이너는 역할에 따라 세 가지로 나뉜다. <strong>일반 컨테이너</strong>는 <code>containers:</code>에 나열하는 것으로, 전부 동시에 시작되며 순서를 지정할 수 없다. 이 실습의 <code>api</code>와 <code>sidecar</code>가 여기 속한다.</p>
+  <p><dfn class="term">init 컨테이너 <span class="en">(Init Container)</span></dfn>는 <code>initContainers:</code>에 적는다. 하나씩 <strong>순서대로</strong> 실행되고, 전부 성공적으로 끝나야 일반 컨테이너가 시작된다. 설정 파일 생성, 스키마 마이그레이션, 의존 서비스 대기처럼 "본체보다 먼저 끝나야 하는 일"에 쓴다.</p>
+  <p><dfn class="term">사이드카 <span class="en">(Sidecar)</span></dfn>는 본체를 보조하는 컨테이너다. 로그 수집기나 프록시처럼 본체보다 먼저 떠서 본체보다 나중에 죽어야 하는 것이 대상인데, 일반 컨테이너로는 그 순서를 보장할 수 없다. 그래서 <code>initContainers</code>에 <code>restartPolicy: Always</code>를 준 컨테이너를 사이드카로 취급하는 기능이 들어왔다 — 1.29에서 베타(기본 활성)로 들어오고 <strong>1.33에서 GA</strong>가 됐다. 검색하면 "1.28 알파" "1.29 정식" 같은 표현이 섞여 나오는데, 지금 기준은 1.33 GA다.</p>
+  <div class="note-2026">
+    <span class="lbl">사이드카를 일반 컨테이너로 두면 생기는 문제</span>
+    잡(Job)에서 애플리케이션이 끝나도 사이드카가 계속 돌아 파드가 완료되지 않는다. 또 시작 순서를 보장할 수 없어 애플리케이션이 프록시보다 먼저 떠서 초기 요청을 놓친다. 네이티브 사이드카(1.29 베타 · 1.33 GA)가 들어온 이유가 이 두 가지다. 이 실습에서는 구조를 보는 것이 목적이라 일반 컨테이너로 두고, 차이는 M25 서비스 메시에서 다시 본다.
+    <span class="src">출처: kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/</span>
+  </div>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">9.3</span>따라하기 ① 두 컨테이너 한 파드</h2>
+
+  <div class="step">
+    <h4>1단계. 매니페스트를 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>YAML을 직접 쓴다. M08의 명령형에서 선언형으로 넘어가는 지점이다.</p>
+<pre><code># course/labs/k8s/m09-pod-sidecar.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: journal-with-sidecar
+  labels:
+    app: journal
+    tier: api
+spec:
+  initContainers:
+    # 순서 강제: 이 컨테이너가 끝나야 아래 컨테이너들이 시작한다.
+    - name: init-config
+      image: alpine:3.22
+      command: ["sh", "-c", "echo 'ready at' $(date -u +%H:%M:%S) &gt; /shared/init.txt; echo init done"]
+      volumeMounts:
+        - name: shared
+          mountPath: /shared
+  containers:
+    - name: api
+      image: journal-api:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 8080
+      volumeMounts:
+        - name: shared
+          mountPath: /shared
+    - name: sidecar
+      image: alpine:3.22
+      # 사이드카가 같은 파드의 api 를 localhost 로 호출한다.
+      command: ["sh", "-c", "apk add --no-cache curl &gt;/dev/null 2&gt;&amp;1; while true; do curl -s localhost:8080/healthz; echo; sleep 10; done"]
+      volumeMounts:
+        - name: shared
+          mountPath: /shared
+  volumes:
+    - name: shared
+      emptyDir: {}</code></pre>
+    <table>
+      <tr><th>필드</th><th>의미</th></tr>
+      <tr><td><code>apiVersion</code> · <code>kind</code></td><td>어떤 종류의 오브젝트인지. 이 조합이 스키마를 결정한다. 헷갈리면 <code>kubectl explain pod</code></td></tr>
+      <tr><td><code>metadata.labels</code></td><td>이 파드에 붙는 꼬리표. 9.4절의 주제</td></tr>
+      <tr><td><code>imagePullPolicy: IfNotPresent</code></td><td>노드에 이미지가 있으면 받지 않는다. <code>kind load</code>로 넣은 이미지를 쓰려면 필요하다(M07)</td></tr>
+      <tr><td><code>volumes.emptyDir</code></td><td>파드 수명 동안만 존재하는 빈 디렉터리. 컨테이너 간 파일 공유용. 파드가 죽으면 사라진다</td></tr>
+      <tr><td><code>ports.containerPort</code></td><td>문서용 표시에 가깝다. 이것을 적지 않아도 통신은 된다</td></tr>
+    </table>
+<pre><code>kubectl apply -f course/labs/k8s/m09-pod-sidecar.yaml</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>pod/journal-with-sidecar created</code></div>
+    <p><code>apply</code>는 <code>create</code>와 다르다. 이미 있으면 에러 대신 <strong>차이만 반영</strong>한다. 같은 파일을 여러 번 적용해도 안전하므로 이 과정은 이후 전부 <code>apply</code>를 쓴다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 컨테이너 두 개가 한 파드에 있는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨테이너 수와 IP 수를 확인한다. 이 둘의 비율이 파드라는 단위의 정의다.</p>
+<pre><code>kubectl get pod journal-with-sidecar -o wide</code></pre>
+    <span class="out-lbl">실행 결과 (20초 시점)</span>
+    <div class="out"><code>NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE           NOMINATED NODE   READINESS GATES
+journal-with-sidecar   2/2     Running   0          20s   10.244.1.37   study-worker   &lt;none&gt;           &lt;none&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>READY 2/2</code> — 컨테이너 2개 중 2개가 준비됐다. IP는 <strong>하나</strong>다. 두 컨테이너가 그 IP를 공유한다. IP와 NODE는 환경마다 다르다. 처음 몇 초는 <code>Init:0/1</code>(init 컨테이너 진행 중) → <code>PodInitializing</code>을 거친다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. init 컨테이너가 먼저 끝났는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>init 컨테이너가 "끝났다"는 것이 어떤 상태로 표시되는지 본다. 이 표시를 알아야 init 실패를 구분할 수 있다.</p>
+<pre><code>kubectl logs journal-with-sidecar -c init-config
+kubectl describe pod journal-with-sidecar | grep -E "Init Containers|Containers:|State:|Ready:" | head -12</code></pre>
+    <ul class="tight">
+      <li><code>-c &lt;이름&gt;</code> — 파드에 컨테이너가 여럿이면 필수다. 빼면 어느 것을 원하는지 물어본다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>init done
+
+Init Containers:
+    State:          Terminated
+    Ready:          True
+Containers:
+    State:          Running
+    Ready:          True
+    State:          Running
+    Ready:          True</code></div>
+    <p>init 컨테이너는 <code>Terminated</code>이면서 <code>Ready: True</code>다 — 할 일을 마치고 정상 종료했다는 뜻이다. 일반 컨테이너 둘은 <code>Running</code>. init이 실패하면 일반 컨테이너는 <strong>시작조차 하지 않고</strong> 파드가 <code>Init:Error</code> 또는 <code>Init:CrashLoopBackOff</code>에 머문다.</p>
+  </div>
+
+  <div class="step">
+    <h4>4단계. 공유의 증거 두 가지</h4>
+    <p class="purpose"><span class="lbl">목적</span>네트워크 공유와 볼륨 공유를 각각 확인한다.</p>
+<pre><code># ① 네트워크 — 사이드카가 localhost 로 api 를 호출한 결과
+kubectl logs journal-with-sidecar -c sidecar | head -3
+
+# ② 볼륨 — init 컨테이너가 쓴 파일을 api 컨테이너가 읽는다
+kubectl exec journal-with-sidecar -c api -- cat /shared/init.txt</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"ok","version":"v1","pod":"journal-with-sidecar"}
+{"status":"ok","version":"v1","pod":"journal-with-sidecar"}
+
+ready at 08:20:46</code></div>
+    <div class="verdict"><span class="lbl">판정</span>사이드카가 <code>localhost:8080</code>으로 API의 응답을 받았고, api 컨테이너가 init 컨테이너의 파일을 읽었다. 서로 다른 이미지, 다른 파일시스템인데도 그렇다. 시각은 환경마다 다르다.</div>
+    <p>응답의 <code>pod</code> 필드는 M04·M05에서 도커로 직접 돌릴 때는 <code>"local"</code>이었다. 앱이 환경변수 <code>HOSTNAME</code>을 읽어 돌려주는데, 쿠버네티스는 컨테이너의 <code>HOSTNAME</code>을 <strong>파드 이름</strong>으로 설정한다. 어느 파드가 응답했는지 보는 이 장치를 M11에서 로드밸런싱 확인에 쓴다. 값은 파드 이름이므로 환경마다 다르다.</p>
+    <p>여기서 제약 하나가 따라온다. 두 컨테이너가 같은 IP를 쓰므로 <strong>같은 포트를 둘 다 열 수는 없다</strong>. 파드 안에서 포트는 유일해야 한다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">9.4</span>따라하기 ② 레이블과 셀렉터</h2>
+  <p><dfn class="term">레이블 <span class="en">(Label)</span></dfn>은 오브젝트에 붙이는 <code>키=값</code> 꼬리표고, <dfn class="term">셀렉터 <span class="en">(Selector)</span></dfn>는 "이런 레이블을 가진 것"이라는 조건식이다. M08에서 <code>-l app=web</code>으로 쓴 것이 셀렉터였고, <code>create deployment</code>가 붙인 <code>app=web</code>이 레이블이었다. 레이블은 이 시스템에서 가장 단순하면서 가장 중요한 개념이다. 서비스가 어느 파드로 트래픽을 보낼지, 디플로이먼트가 어느 파드를 자기 것으로 볼지, 네트워크 정책이 어느 파드에 적용될지 — 전부 레이블 셀렉터로 정해진다.</p>
+
+  <div class="step">
+    <h4>5단계. 레이블을 보고 붙이고 고른다</h4>
+    <p class="purpose"><span class="lbl">목적</span>매니페스트에 적은 레이블을 확인하고, 실행 중인 오브젝트에 레이블을 덧붙인 뒤 셀렉터로 골라낸다.</p>
+<pre><code>kubectl get pods --show-labels -l app=journal</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME                   READY   STATUS    RESTARTS   AGE   LABELS
+journal-with-sidecar   2/2     Running   0          21s   app=journal,tier=api</code></div>
+<pre><code>kubectl label pod journal-with-sidecar env=dev --overwrite
+kubectl get pods -l 'app=journal,env=dev' --show-labels</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>pod/journal-with-sidecar labeled
+NAME                   READY   STATUS    RESTARTS   AGE   LABELS
+journal-with-sidecar   2/2     Running   0          41s   app=journal,env=dev,tier=api</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>LABELS</code>에 <code>env=dev</code>가 추가됐고, 두 조건을 AND로 묶은 셀렉터가 그 파드를 골랐다. <code>--overwrite</code>는 같은 키가 이미 있을 때 덮어쓰겠다는 뜻이다 — 없으면 에러가 난다.</div>
+    <p>셀렉터 문법은 몇 가지가 더 있다. 실무에서 쓰는 것만 정리한다.</p>
+    <table>
+      <tr><th>표현</th><th>의미</th></tr>
+      <tr><td><code>-l app=journal</code></td><td>같음</td></tr>
+      <tr><td><code>-l app=journal,env=dev</code></td><td>둘 다 만족 (AND)</td></tr>
+      <tr><td><code>-l 'app!=journal'</code></td><td>다름</td></tr>
+      <tr><td><code>-l 'env in (dev,stage)'</code></td><td>집합 포함</td></tr>
+      <tr><td><code>-l 'app'</code></td><td>그 키가 <strong>존재</strong>하면 (값 무관)</td></tr>
+    </table>
+    <h4>레이블과 어노테이션</h4>
+    <p><dfn class="term">어노테이션 <span class="en">(Annotation)</span></dfn>은 비슷하게 생겼지만 <strong>셀렉터로 고를 수 없다</strong>. 레이블은 "고르기 위한 것", 어노테이션은 "적어두기 위한 것"이다. 빌드 정보, 도구 설정, 담당자 연락처 같은 것은 어노테이션에 넣는다 — 레이블에 넣으면 인덱스가 커지고 셀렉터가 지저분해진다.</p>
+    <p>책 6장이 권장하는 릴리스 레이블 규약(<code>app</code>, <code>version</code>, <code>env</code>, <code>release</code>)은 M30에서 카나리 배포를 만들 때 실제로 쓴다. 지금은 규칙 하나만 — <strong>레이블은 처음 정할 때 팀 전체가 합의한다.</strong> 나중에 바꾸면 그 레이블에 의존하던 서비스·정책·대시보드가 한꺼번에 깨진다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">9.5</span>따라하기 ③ 네임스페이스</h2>
+
+  <div class="step">
+    <h4>6단계. 네임스페이스를 만들고 그 안에 배포한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 이름의 오브젝트가 네임스페이스만 다르면 공존하는 것을 확인한다.</p>
+<pre><code>kubectl create namespace journal-dev
+kubectl get ns</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>namespace/journal-dev created
+
+NAME                 STATUS   AGE
+default              Active   31m
+journal-dev          Active   0s
+kube-node-lease      Active   31m
+kube-public          Active   31m
+kube-system          Active   31m
+local-path-storage   Active   31m</code></div>
+    <p>기본으로 있는 것들의 역할을 짚어둔다. <code>default</code>는 네임스페이스를 지정하지 않았을 때 쓰이는 곳이고, <code>kube-system</code>은 컨트롤 플레인과 시스템 애드온이 사는 곳이다(M01에서 본 그 파드들). <code>kube-node-lease</code>는 노드 하트비트, <code>kube-public</code>은 인증 없이 읽을 수 있는 정보용, <code>local-path-storage</code>는 kind가 설치한 기본 스토리지 프로비저너다(M18에서 쓴다).</p>
+<pre><code>kubectl apply -f course/labs/k8s/m09-pod-sidecar.yaml -n journal-dev
+sleep 15
+kubectl get pods -n journal-dev
+kubectl get pods -A -l app=journal</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>pod/journal-with-sidecar created
+
+NAME                   READY   STATUS    RESTARTS   AGE
+journal-with-sidecar   2/2     Running   0          15s
+
+NAMESPACE     NAME                   READY   STATUS    RESTARTS   AGE
+journal-dev   journal-with-sidecar   2/2     Running   0          15s
+default       journal-with-sidecar   2/2     Running   0          4m37s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>마지막 표에 <strong>같은 이름</strong>의 파드가 <code>NAMESPACE</code>만 다르게 2행. 같은 이름의 파드가 두 네임스페이스에 공존한다 — 이름의 유효 범위가 네임스페이스이기 때문이다. AGE는 환경마다 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>7단계. 기본 네임스페이스를 바꾼다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>-n</code>을 매번 붙이는 실수를 줄인다.</p>
+<pre><code>kubectl config set-context --current --namespace=journal-dev
+kubectl config view --minify | grep namespace
+kubectl get pods</code></pre>
+    <ul class="tight">
+      <li><code>--current</code> — 지금 쓰는 컨텍스트(<code>kind-study</code>)를 대상으로. 컨텍스트 이름을 직접 적어도 된다</li>
+      <li><code>--minify</code> — kubeconfig 전체가 아니라 현재 컨텍스트에 관련된 부분만 출력한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Context "kind-study" modified.
+    namespace: journal-dev
+NAME                   READY   STATUS    RESTARTS   AGE
+journal-with-sidecar   2/2     Running   0          15s</code></div>
+    <p><code>-n</code>을 붙이지 않았는데 <code>journal-dev</code>의 파드가 나온다. 이제 <code>default</code>에 있는 같은 이름의 파드는 <code>-n default</code>를 붙여야 보이고, M08의 <code>web</code> 디플로이먼트를 그냥 <code>kubectl get deploy web</code>으로 찾으면 <code>Error from server (NotFound)</code>가 난다 — M08 실패 ②의 상황을 반대 방향에서 겪는 것이다.</p>
+<pre><code># 확인했으면 되돌린다. 이 과정의 나머지 모듈은 default 를 기준으로 쓴다
+kubectl config set-context --current --namespace=default
+kubectl config view --minify | grep namespace</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Context "kind-study" modified.
+    namespace: default</code></div>
+    <div class="verdict"><span class="lbl">판정</span>마지막 줄이 <code>namespace: default</code>. 이것을 되돌리지 않으면 M10부터 모든 명령이 <code>journal-dev</code>로 가서 <code>No resources found</code>만 보게 된다.</div>
+    <p>네임스페이스가 이름 구분만 하는 것이 아니라는 점이 중요하다. 앞으로 붙는 것들이 전부 여기 걸린다.</p>
+    <table>
+      <tr><th>네임스페이스에 걸리는 것</th><th>다루는 모듈</th></tr>
+      <tr><td>RBAC 권한 (Role · RoleBinding)</td><td>M23</td></tr>
+      <tr><td>리소스 쿼터 · 리밋레인지</td><td>M16</td></tr>
+      <tr><td>파드 시큐리티 수준 (레이블로 지정)</td><td>M24</td></tr>
+      <tr><td>네트워크 정책의 기본 범위</td><td>M25</td></tr>
+      <tr><td>DNS 이름 (<code>&lt;서비스&gt;.&lt;네임스페이스&gt;.svc.cluster.local</code>)</td><td>M11</td></tr>
+    </table>
+    <p>책 2.3절이 개발 클러스터를 여러 사람이 나눠 쓰는 방법으로 네임스페이스를 제시하는 이유가 이것이다 — 이름 충돌을 막는 것보다, <strong>권한과 자원을 나누는 경계</strong>로서의 역할이 크다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">9.6</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 레이블 오타는 에러가 아니라 0개다</span>
+<pre><code>kubectl get pods -l app=jounal</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>No resources found in default namespace.</code></div>
+    <p><code>journal</code>이 <code>jounal</code>이 됐을 뿐인데 <strong>에러가 나지 않는다.</strong> 셀렉터는 "조건에 맞는 것"을 찾을 뿐이고, 없으면 없는 것이 정상 결과다.</p>
+    <p>이것이 쿠버네티스에서 가장 찾기 어려운 부류의 버그를 만든다. 서비스의 셀렉터에 오타가 있으면 <strong>서비스는 정상으로 보이는데</strong> 트래픽이 아무 데도 가지 않는다(M11에서 재현). 디플로이먼트의 셀렉터와 파드 템플릿의 레이블이 어긋나면 파드가 계속 만들어지기만 한다. 네트워크 정책의 셀렉터가 어긋나면 정책이 아무에게도 적용되지 않아 <strong>보안이 뚫린 채로 조용하다</strong>.</p>
+    <p>습관 두 가지로 막는다.</p>
+    <ul class="tight">
+      <li>셀렉터를 쓰는 오브젝트를 만든 뒤에는 <strong>반드시 대상 개수를 확인</strong>한다. 서비스면 <code>kubectl get endpointslices</code>, 정책이면 <code>describe</code>의 대상 목록</li>
+      <li>레이블 값을 손으로 반복해 쓰지 않는다. 매니페스트에서 복사하거나 Kustomize의 공통 레이블 기능을 쓴다(M28)</li>
+    </ul>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 파드 안에서 포트가 겹친다</span>
+    <p>파드 하나에 IP가 하나이므로 같은 포트는 한 컨테이너만 열 수 있다. 가장 단순한 재현은 같은 이미지를 두 번 넣는 것이다 — M08의 nginx 두 개를 한 파드에 담는다. 둘 다 80을 열려고 한다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: port-clash
+spec:
+  containers:
+    - name: web
+      image: nginx:1.29-alpine
+    - name: web2
+      image: nginx:1.29-alpine
+EOF
+sleep 10
+kubectl get pod port-clash</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>pod/port-clash created
+NAME         READY   STATUS   RESTARTS     AGE
+port-clash   1/2     Error    1 (7s ago)   10s</code></div>
+    <p><code>READY 1/2</code> — 하나는 떴고 하나는 못 떴다. <code>STATUS</code>는 보는 순간에 따라 <code>Error</code>(죽은 직후)와 <code>CrashLoopBackOff</code>(재시작 대기 중)를 오가고, <code>RESTARTS</code>는 계속 오른다. 파드 상태만으로는 <strong>왜</strong> 죽었는지 알 수 없다. 컨테이너 로그로 간다.</p>
+<pre><code>kubectl logs port-clash -c web2</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>nginx: [emerg] bind() to [::]:80 failed (98: Address in use)
+2026/09/05 08:40:56 [notice] 1#1: try again to bind() after 500ms
+2026/09/05 08:40:56 [emerg] 1#1: still could not bind()
+nginx: [emerg] still could not bind()</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>bind() to [::]:80 failed (98: Address in use)</code>. 먼저 뜬 <code>web</code>이 80을 잡고 있어서 <code>web2</code>가 바인드에 실패했다. 어느 쪽이 먼저 뜨는지는 <code>containers:</code>에 적은 순서를 따른다.</div>
+    <p>메시지는 애플리케이션마다 다르다 — nginx는 위와 같고, Go나 Node 계열은 보통 <code>address already in use</code>(<code>EADDRINUSE</code>)를 찍는다. 공통점은 <strong>컨테이너 로그를 봐야만 원인이 보인다</strong>는 것이다. 이런 상황에서 원인을 찾는 순서는 다음과 같다.</p>
+<pre><code>kubectl get pod &lt;파드&gt;                         # READY n/m 과 RESTARTS 로 어느 컨테이너가 문제인지 좁힌다
+kubectl describe pod &lt;파드&gt;                    # Last State: Terminated / Exit Code 와 BackOff 이벤트
+kubectl logs &lt;파드&gt; -c &lt;컨테이너&gt;             # 죽어 있는 동안은 마지막 실행의 로그가 그대로 나온다
+kubectl logs &lt;파드&gt; -c &lt;컨테이너&gt; --previous  # 다시 Running 이 된 뒤에 직전 인스턴스의 로그를 볼 때</code></pre>
+    <p><code>--previous</code>의 의미를 정확히 알아둔다. 컨테이너가 <code>Error</code>·<code>CrashLoopBackOff</code>로 <strong>멈춰 있는 동안</strong>은 <code>--previous</code> 없이도 마지막 실행의 로그가 나온다(위 출력이 그것이다). <code>--previous</code>는 컨테이너가 재시작해 다시 <code>Running</code>이 된 뒤, 방금 죽은 인스턴스의 로그를 볼 때 쓴다. 이 kind 클러스터(containerd 2.3)에서는 <code>--previous</code>가 <code>unable to retrieve container logs for containerd://...</code>를 돌려주는 경우가 있었다 — 죽은 컨테이너가 이미 정리된 뒤라서다. 그때는 <code>describe</code>의 <code>Last State</code>(<code>Reason: Error</code>, <code>Exit Code: 1</code>)와 죽어 있는 동안의 <code>logs</code>로 대신한다.</p>
+<pre><code>kubectl delete pod port-clash</code></pre>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ③ — 네임스페이스를 지우면 안의 것이 전부 사라진다</span>
+<pre><code>kubectl delete namespace journal-dev
+kubectl get ns journal-dev
+kubectl get pods -n journal-dev</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>namespace "journal-dev" deleted
+Error from server (NotFound): namespaces "journal-dev" not found
+No resources found in journal-dev namespace.</code></div>
+    <p>마지막 줄에 주의한다. 없는 네임스페이스를 <code>-n</code>으로 지정해도 에러가 아니라 <code>No resources found</code>다 — 레이블 오타(실패 ①)와 같은 부류의 "조용한 0개"다. 삭제가 몇 초 걸리면 첫 <code>get ns</code>에 <code>Terminating</code>이 보일 수도 있다.</p>
+    <p>확인 질문이 없다. 네임스페이스 안의 모든 오브젝트 — 파드, 서비스, 컨피그맵, <strong>PVC까지</strong> — 가 함께 삭제된다. PVC가 지워지면 스토리지클래스의 reclaim 정책에 따라 실제 데이터도 지워질 수 있다(M18).</p>
+    <p>삭제가 <code>Terminating</code>에서 멈추는 경우도 흔하다. 파이널라이저가 걸린 리소스가 남아 있기 때문인데, 원인 리소스를 찾아 정리하는 것이 정석이다. 파이널라이저를 강제로 지우는 방법이 검색하면 나오지만, 정리되지 않은 외부 자원(클라우드 로드밸런서, 디스크)이 고아로 남으므로 마지막 수단으로만 쓴다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">9.7</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get pod journal-with-sidecar</code> → <code>READY 2/2</code> · <code>Running</code></li>
+      <li><code>kubectl logs journal-with-sidecar -c sidecar --tail=1</code> → <code>{"status":"ok","version":"v1","pod":"journal-with-sidecar"}</code> (사이드카가 <code>localhost</code>로 api를 호출한 결과)</li>
+      <li><code>kubectl get pod journal-with-sidecar -o jsonpath='{.status.initContainerStatuses[0].state.terminated.reason}'</code> → <code>Completed</code></li>
+      <li><code>kubectl exec journal-with-sidecar -c api -- cat /shared/init.txt</code> → <code>ready at HH:MM:SS</code> (init 컨테이너가 쓴 파일을 다른 컨테이너가 읽는다)</li>
+      <li><code>kubectl get pods -l 'app=journal,env=dev' --no-headers | wc -l</code> → <code>1</code>, 그리고 <code>kubectl get pods -l app=jounal</code> → <code>No resources found in default namespace.</code></li>
+      <li><code>kubectl config view --minify -o jsonpath='{..namespace}'</code> → <code>default</code> (또는 빈 출력). <code>journal-dev</code>가 나오면 7단계의 되돌리기를 빼먹었다</li>
+      <li><code>kubectl get ns journal-dev</code> → <code>Error from server (NotFound)</code></li>
+      <li>(이해 확인) 네임스페이스에 걸리는 것을 이름 말고 세 가지 이상 — 7단계의 표로 답한다</li>
+      <li>(이해 확인) <code>READY 1/2</code> · <code>CrashLoopBackOff</code>를 봤을 때 원인을 찾는 명령 순서 — 실패 ②의 네 줄</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/m09-pod-sidecar.yaml</code> — 멀티 컨테이너 파드 예제</li>
+    </ul>
+  </div>
+<pre><code>kubectl delete -f course/labs/k8s/m09-pod-sidecar.yaml
+kubectl delete namespace journal-dev --ignore-not-found   # 실패 ③에서 이미 지웠다. 건너뛰었다면 여기서 지워진다
+kubectl delete deploy web --ignore-not-found              # M08에서 만든 것</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>pod "journal-with-sidecar" deleted from default namespace
+deployment.apps "web" deleted from default namespace</code></div>
+    <p><code>--ignore-not-found</code>를 붙인 줄은 대상이 없으면 아무 출력 없이 넘어간다(종료 코드 0). 정리 스크립트가 "이미 지워져 있어서 실패"하는 일을 막는 옵션이다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m08-k8s-cluster-first-deploy.html">← M08 클러스터 구조와 첫 배포</a>
+  <a href="m10-k8s-deployment-rollout.html">M10 디플로이먼트와 롤아웃 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>파드를 직접 만들었더니 자가 복구가 없었다(M08 실패 ①). M10에서 디플로이먼트로 되돌아가, 이번에는 <strong>버전을 바꾸는</strong> 실습을 한다 — 롤링 업데이트가 진행되는 것을 실시간으로 보고, 존재하지 않는 이미지로 업데이트해 멈추게 만든 뒤 되돌린다.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
+  <ul>
+    <li>파드: https://kubernetes.io/docs/concepts/workloads/pods/</li>
+    <li>사이드카 컨테이너: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/</li>
+    <li>init 컨테이너: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/</li>
+    <li>레이블과 셀렉터: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/</li>
+    <li>네임스페이스: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 2.3.2 네임스페이스 생성과 보안, 6.2 릴리스 레이블</li>
+  </ul>
+  <p>검증 환경: kind v0.33.0 · Kubernetes 1.37.0</p>
+</footer>
+</div>
+</body>
+</html>

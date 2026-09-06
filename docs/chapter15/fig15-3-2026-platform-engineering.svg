@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow153" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #2456c4; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+  </style>
+
+  <text class="t-h" x="220" y="28" text-anchor="middle">이 장(2024)의 개념</text>
+  <text class="t-h" x="680" y="28" text-anchor="middle">2026년 실제 구현 — Backstage (CNCF)</text>
+
+  <!-- 왼쪽 4개 -->
+  <rect class="box" x="40" y="44" width="360" height="64" rx="4"/>
+  <text class="t-title" x="220" y="68" text-anchor="middle">15.2.2 UX 확장</text>
+  <text class="t-sub" x="220" y="86" text-anchor="middle">kubectl 플러그인 · Headlamp</text>
+
+  <rect class="box" x="40" y="122" width="360" height="64" rx="4"/>
+  <text class="t-title" x="220" y="146" text-anchor="middle">15.2.4 푸시-투-디플로이</text>
+  <text class="t-sub" x="220" y="164" text-anchor="middle">GitHub Actions + 깃옵스</text>
+
+  <rect class="box" x="40" y="200" width="360" height="64" rx="4"/>
+  <text class="t-title" x="220" y="224" text-anchor="middle">15.1 확장(Extend) 전략</text>
+  <text class="t-sub" x="220" y="242" text-anchor="middle">CRD + 제어 루프로 새 리소스</text>
+
+  <rect class="box" x="40" y="278" width="360" height="64" rx="4"/>
+  <text class="t-title" x="220" y="302" text-anchor="middle">15.3.2 기존 서비스와 연동</text>
+  <text class="t-sub" x="220" y="320" text-anchor="middle">플랫폼이 고립되지 않게</text>
+
+  <!-- 오른쪽 4개 -->
+  <rect class="box-accent" x="500" y="44" width="360" height="64" rx="4"/>
+  <text class="t-title" x="680" y="68" text-anchor="middle">소프트웨어 카탈로그</text>
+  <text class="t-sub" x="680" y="86" text-anchor="middle">모든 서비스·오너·의존성 중앙 등록</text>
+
+  <rect class="box-accent" x="500" y="122" width="360" height="64" rx="4"/>
+  <text class="t-title" x="680" y="146" text-anchor="middle">스캐폴더 (Golden Path)</text>
+  <text class="t-sub" x="680" y="164" text-anchor="middle">폼 입력 → 리포지터리·CI·카탈로그 자동 생성</text>
+
+  <rect class="box-accent" x="500" y="200" width="360" height="64" rx="4"/>
+  <text class="t-title" x="680" y="224" text-anchor="middle">Crossplane 등</text>
+  <text class="t-sub" x="680" y="242" text-anchor="middle">CRD로 클라우드 인프라까지 추상화</text>
+
+  <rect class="box-accent" x="500" y="278" width="360" height="64" rx="4"/>
+  <text class="t-title" x="680" y="302" text-anchor="middle">플러그인 생태계</text>
+  <text class="t-sub" x="680" y="320" text-anchor="middle">수백 종 — Datadog·PagerDuty 등 통합</text>
+
+  <!-- 연결선 -->
+  <line class="line" x1="400" y1="76" x2="496" y2="76" marker-end="url(#arrow153)"/>
+  <line class="line" x1="400" y1="154" x2="496" y2="154" marker-end="url(#arrow153)"/>
+  <line class="line" x1="400" y1="232" x2="496" y2="232" marker-end="url(#arrow153)"/>
+  <line class="line" x1="400" y1="310" x2="496" y2="310" marker-end="url(#arrow153)"/>
+
+  <!-- 하단 통계 -->
+  <rect class="box" x="40" y="362" width="820" height="70" rx="6"/>
+  <text class="t-title" x="60" y="386">"플랫폼 엔지니어링"이라는 이름의 독립 분야가 됐다</text>
+  <text class="t-sub" x="60" y="406">Gartner: 플랫폼팀을 두는 대규모 조직 비율 45%(2022) → 80% 목표(2026) · Backstage는 스포티파이가 만들어 2022년 CNCF에 기증, 현재 CNCF Incubating.</text>
+  <text class="t-sub" x="60" y="422">이 장이 원리로 설명한 것을 실제로 손에 쥐여 주는 완성형 오픈소스가 등장한 셈이다 — 직접 다 만들 필요가 없어졌다.</text>
+
+  <text class="t-cap" x="450" y="452" text-anchor="middle">그렇다고 이 장이 무의미해진 건 아니다 — Backstage 뒤에서 실제로 벌어지는 일이 정확히 이 장의 내용이다.</text>
+</svg>

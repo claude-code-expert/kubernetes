@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow113" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-warn { fill: #ffffff; stroke: #b8860b; stroke-width: 1.2; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 집행 액션 3단계 -->
+  <text class="t-lane" x="20" y="30">enforcementAction — 위반 시 무엇을 할지</text>
+
+  <rect class="box" x="20" y="46" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="72" text-anchor="middle">dryrun</text>
+  <text class="t-sub" x="150" y="92" text-anchor="middle">거부하지 않고 위반만 기록</text>
+  <text class="t-sub" x="150" y="108" text-anchor="middle">새 정책의 첫 단계로 항상 권장</text>
+
+  <line class="line" x1="280" y1="86" x2="316" y2="86" marker-end="url(#arrow113)"/>
+
+  <rect class="box-warn" x="320" y="46" width="260" height="80" rx="4"/>
+  <text class="t-title" x="450" y="72" text-anchor="middle">warn</text>
+  <text class="t-sub" x="450" y="92" text-anchor="middle">요청자에게 경고 메시지 표시</text>
+  <text class="t-sub" x="450" y="108" text-anchor="middle">생성은 허용됨</text>
+
+  <line class="line" x1="580" y1="86" x2="616" y2="86" marker-end="url(#arrow113)"/>
+
+  <rect class="box-accent" x="620" y="46" width="260" height="80" rx="4"/>
+  <text class="t-title" x="750" y="72" text-anchor="middle">deny (기본값)</text>
+  <text class="t-sub" x="750" y="92" text-anchor="middle">위반 리소스 생성 자체를 거부</text>
+  <text class="t-sub" x="750" y="108" text-anchor="middle">충분히 검증된 정책만 여기로</text>
+
+  <!-- 구분선 -->
+  <line x1="20" y1="152" x2="880" y2="152" stroke="#d8d8d8" stroke-dasharray="2 4"/>
+
+  <!-- 정책 테스팅 파이프라인 -->
+  <text class="t-lane" x="20" y="180">정책 테스팅 파이프라인 — 깃옵스 흐름의 일부로</text>
+
+  <rect class="box" x="20" y="196" width="200" height="80" rx="4"/>
+  <text class="t-title" x="120" y="222" text-anchor="middle">로컬 gator test</text>
+  <text class="t-sub" x="120" y="242" text-anchor="middle">샘플 리소스로</text>
+  <text class="t-sub" x="120" y="258" text-anchor="middle">정책 초안 검증</text>
+
+  <line class="line" x1="220" y1="236" x2="256" y2="236" marker-end="url(#arrow113)"/>
+
+  <rect class="box" x="260" y="196" width="200" height="80" rx="4"/>
+  <text class="t-title" x="360" y="222" text-anchor="middle">CI 파이프라인</text>
+  <text class="t-sub" x="360" y="242" text-anchor="middle">PR마다 gator test</text>
+  <text class="t-sub" x="360" y="258" text-anchor="middle">자동 실행 (5장 연결)</text>
+
+  <line class="line" x1="460" y1="236" x2="496" y2="236" marker-end="url(#arrow113)"/>
+
+  <rect class="box" x="500" y="196" width="200" height="80" rx="4"/>
+  <text class="t-title" x="600" y="222" text-anchor="middle">dryrun으로 배포</text>
+  <text class="t-sub" x="600" y="242" text-anchor="middle">실클러스터에서</text>
+  <text class="t-sub" x="600" y="258" text-anchor="middle">위반 현황 관찰</text>
+
+  <line class="line" x1="700" y1="236" x2="736" y2="236" marker-end="url(#arrow113)"/>
+
+  <rect class="box-accent" x="740" y="196" width="140" height="80" rx="4"/>
+  <text class="t-title" x="810" y="222" text-anchor="middle">deny로 전환</text>
+  <text class="t-sub" x="810" y="242" text-anchor="middle">확신이 선</text>
+  <text class="t-sub" x="810" y="258" text-anchor="middle">뒤에만</text>
+
+  <text class="t-cap" x="450" y="316" text-anchor="middle">두 축은 사실 같은 원칙이다 — 새 정책은 절대 처음부터 deny로 시작하지 않는다(10장 파드 보안 수준과 동일한 교훈).</text>
+</svg>

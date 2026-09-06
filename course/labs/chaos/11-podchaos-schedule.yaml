@@ -1,0 +1,22 @@
+# M36 실험 ①-b — 주기적으로 죽인다.
+#
+# 한 번 살아남는 것과 계속 살아남는 것은 다르다.
+# 30초마다 한 마리씩 죽이면서 실패율이 유지되는지 본다.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: kill-api-periodically
+  namespace: journal
+spec:
+  schedule: "*/1 * * * *"
+  # 지난 실험이 아직 돌면 건너뛴다 (M35 의 concurrencyPolicy 와 같은 개념)
+  concurrencyPolicy: Forbid
+  historyLimit: 3
+  type: PodChaos
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces: [journal]
+      labelSelectors:
+        app: journal-api

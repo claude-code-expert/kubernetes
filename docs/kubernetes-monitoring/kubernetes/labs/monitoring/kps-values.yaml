@@ -1,0 +1,184 @@
+# ── 프로메테우스 본체 ──────────────────────────────
+prometheus:
+  service:
+    # 01단계에서 뚫어둔 호스트 포트 30900과 짝
+    type: NodePort
+    nodePort: 30900
+  prometheusSpec:
+    # 관측 스택은 obs-worker2에 모은다
+    nodeSelector:
+      workload: observability
+
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # 실습용. 로컬 디스크를 아끼기 위해 짧게 잡는다.
+    retention: 3d
+    retentionSize: 4GB
+
+    # kind에는 local-path 기반 기본 StorageClass(standard)가 이미 있다.
+    # storageSpec을 생략하면 emptyDir이 되어 파드 재시작 시 데이터가 사라진다.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 8Gi
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 900Mi
+      limits:
+        memory: 1600Mi
+
+# ── Alertmanager ─────────────────────────────────
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      workload: observability
+    resources:
+      requests:
+        cpu: 20m
+        memory: 96Mi
+      limits:
+        memory: 192Mi
+
+  # 이 블록을 쓰면 차트 기본 설정을 전부 대체한다.
+  # Watchdog 처리와 억제 규칙을 빠뜨리면 안 되는 이유다.
+  config:
+    global:
+      resolve_timeout: 5m
+
+    route:
+      # 같은 네임스페이스·같은 알림이면 한 덩어리로 묶어 보낸다
+      group_by: ["namespace", "alertname"]
+      # 첫 알림을 30초 기다렸다가 보낸다 — 연달아 터지는 것을 한 번에 묶기 위해
+      group_wait: 30s
+      # 같은 그룹에 새 알림이 추가되면 5분 간격으로 다시 보낸다
+      group_interval: 5m
+      # 해결되지 않은 알림을 4시간마다 재통보
+      repeat_interval: 4h
+      receiver: study-default
+      routes:
+        # Watchdog은 "모니터링이 살아있다"를 알리는 상시 알림이다. 버린다.
+        - receiver: "null"
+          matchers:
+            - alertname =~ "InfoInhibitor|Watchdog"
+        - receiver: study-critical
+          matchers:
+            - severity = "critical"
+
+    # critical이 울리는 동안 같은 대상의 warning/info는 숨긴다
+    inhibit_rules:
+      - source_matchers:
+          - severity = "critical"
+        target_matchers:
+          - severity =~ "warning|info"
+        equal: ["namespace", "alertname"]
+
+    receivers:
+      - name: "null"
+      - name: study-default
+      - name: study-critical
+      # 슬랙 웹훅이 있다면 위 receiver에 아래를 붙인다.
+      # slack_configs:
+      #   - api_url: https://hooks.slack.com/services/XXX/YYY/ZZZ
+      #     channel: "#obs-study"
+      #     send_resolved: true
+
+# ── 그라파나 ─────────────────────────────────────
+grafana:
+  adminPassword: obs-study
+  nodeSelector:
+    workload: observability
+  service:
+    type: NodePort
+    nodePort: 30300
+
+  # 기본 대시보드의 시간대. 한국 시간으로 보면 로그와 대조하기 쉽다.
+  defaultDashboardsTimezone: Asia/Seoul
+
+  sidecar:
+    dashboards:
+      enabled: true
+      # 이 라벨이 붙은 ConfigMap을 대시보드로 인식한다
+      label: grafana_dashboard
+      labelValue: "1"
+      # 모든 네임스페이스를 감시 — apps 네임스페이스에 둔 대시보드도 잡힌다
+      searchNamespace: ALL
+      # ConfigMap에 이 애너테이션을 달면 해당 폴더로 들어간다
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      searchNamespace: ALL
+
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      # 그라파나 파드에서 접근하는 주소다. 브라우저 주소가 아니다.
+      url: http://loki-gateway.logging.svc.cluster.local
+      jsonData:
+        # 한 번에 가져올 로그 줄 수 상한
+        maxLines: 1000
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 160Mi
+    limits:
+      memory: 384Mi
+
+# ── 오퍼레이터 ────────────────────────────────────
+prometheusOperator:
+  nodeSelector:
+    workload: observability
+
+kube-state-metrics:
+  nodeSelector:
+    workload: observability
+
+# ── 컨트롤 플레인 타깃 ────────────────────────────
+# 01단계에서 bind-address를 0.0.0.0으로 열어둔 덕분에
+# 아래 설정이 실제로 동작한다. 패치가 없으면 전부 DOWN이다.
+kubeControllerManager:
+  enabled: true
+  service:
+    port: 10257
+    targetPort: 10257
+  serviceMonitor:
+    # HTTPS를 끄지 않는다. kind의 인증서는 노드 IP를 SAN에 갖고 있지 않으므로
+    # 검증만 건너뛴다.
+    https: true
+    insecureSkipVerify: true
+
+kubeScheduler:
+  enabled: true
+  service:
+    port: 10259
+    targetPort: 10259
+  serviceMonitor:
+    https: true
+    insecureSkipVerify: true
+
+kubeEtcd:
+  enabled: true
+  service:
+    # 2379는 상호 TLS가 필요한 클라이언트 포트다.
+    # 메트릭 전용 2381을 쓴다 (01단계 listen-metrics-urls 설정).
+    port: 2381
+    targetPort: 2381
+  serviceMonitor:
+    scheme: http
+
+kubeProxy:
+  enabled: true
+  service:
+    port: 10249
+    targetPort: 10249

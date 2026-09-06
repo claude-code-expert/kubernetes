@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "알림의 생애 — Inactive에서 Resolved까지",
+    "output": "lifecycle-alert.html",
+    "viewBox": [
+      980,
+      570
+    ],
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "main-rail",
+        "label": "정상 경로",
+        "focus": [
+          "inactive",
+          "pending",
+          "firing",
+          "notified",
+          "resolved"
+        ],
+        "note": "조건 발생부터 해소까지, PrometheusRule 알림이 밟는 다섯 상태."
+      },
+      {
+        "id": "silence",
+        "label": "침묵 처리",
+        "focus": [
+          "firing",
+          "silenced"
+        ],
+        "note": "점검 시간에는 silence로 통보만 막는다 — 평가는 계속된다."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "알림 상태"
+    },
+    {
+      "id": "ops",
+      "label": "운영자 개입"
+    }
+  ],
+  "states": [
+    {
+      "id": "inactive",
+      "type": "start",
+      "label": "Inactive",
+      "sublabel": "조건 거짓",
+      "lane": "main",
+      "col": 0,
+      "step": "01"
+    },
+    {
+      "id": "pending",
+      "type": "waiting",
+      "label": "Pending",
+      "sublabel": "expr 참 · for 대기",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "for: 2~5m"
+    },
+    {
+      "id": "firing",
+      "type": "active",
+      "label": "Firing",
+      "sublabel": "Alertmanager로 전달",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "severity"
+    },
+    {
+      "id": "notified",
+      "type": "waiting",
+      "label": "통보됨",
+      "sublabel": "수신 채널 도달",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "라우팅"
+    },
+    {
+      "id": "resolved",
+      "type": "success",
+      "label": "Resolved",
+      "sublabel": "조건 해소",
+      "lane": "main",
+      "col": 4,
+      "step": "05"
+    },
+    {
+      "id": "silenced",
+      "type": "waiting",
+      "label": "Silenced",
+      "sublabel": "점검 중 통보 차단",
+      "lane": "ops",
+      "col": 0,
+      "tag": "만료 시각 필수"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "firing",
+      "to": "silenced",
+      "variant": "dashed",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "for가 오탐을 거른다",
+      "items": [
+        "expr가 참이 돼도 곧장 발화하지 않는다",
+        "for 동안 조건이 유지돼야 Pending → Firing",
+        "임계치는 최소 5분, 패턴으로 표준화한다"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Silence는 게이트다",
+      "items": [
+        "평가는 계속되고 통보만 막는다",
+        "만료 시각 없는 silence는 알림을 영원히 죽인다",
+        "점검이 끝나면 만료를 기다리지 말고 직접 해제한다"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH08 리소스 관리 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  h4 { font-size: 15px; font-weight: 700; margin: 18px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 08</div>
+  <h1>리소스 관리</h1>
+  <p class="ch-desc">스케줄러가 파드를 어디에 놓을지 어떻게 정하는가부터, 파드 하나가 자원을 얼마나 써도 되는지, 그리고 부하가 바뀔 때 무엇을(파드 수·파드 크기·노드 수) 늘릴 것인가까지 — 클러스터 자원 관리의 전체 그림을 다루는 장이다. 이 장의 개념들은 8주 스터디에서 가장 촘촘하게 서로 얽힌다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 스케줄링은 두 단계다 — 못 쓸 노드를 걸러내고(Filter, 구 프레디킷), 남은 노드 중 최선을 고른다(Score, 구 우선순위).</p>
+  <p>2. 자원 관리는 세 계층으로 나뉜다 — 파드 몇 개(HPA), 파드 하나가 얼마나(VPA), 노드 몇 대(클러스터 오토스케일러). 셋은 서로를 촉발한다.</p>
+  <p>3. requests·limits를 어떻게 설정하느냐가 QoS 클래스(Guaranteed·Burstable·BestEffort)를 정하고, 이는 곧 자원 부족 시 "누가 먼저 죽는가"를 정한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s8-1"><span class="num">8.1</span>쿠버네티스 스케줄러</a>
+  <a href="#s8-2"><span class="num">8.2</span>고급 스케줄링 기법</a>
+  <a href="#s8-3"><span class="num">8.3</span>파드 리소스 관리</a>
+  <a href="#s8-4"><span class="num">8.4</span>리소스 관리 모범 사례</a>
+</nav>
+
+<section id="s8-1">
+  <h2 class="sec"><span class="num">8.1</span>쿠버네티스 스케줄러</h2>
+  <p class="lead"><dfn class="term">스케줄러 <span class="en">(kube-scheduler)</span></dfn>는 컨트롤 플레인에 있는 컴포넌트로, 새로 생긴 파드를 어느 노드에 배치할지 결정한다. 결정은 클러스터의 제약 조건과 사용자가 지정한 조건을 종합해 이뤄진다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow81" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-out { fill: #fafaf8; stroke: #d8d8d8; stroke-width: 1; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-old { font-size: 11px; fill: #888888; font-style: italic; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 노드 후보 입력 -->
+  <rect class="box-out" x="20" y="150" width="130" height="100" rx="4"/>
+  <text class="t-title" x="85" y="178" text-anchor="middle">노드 5개</text>
+  <text class="t-sub" x="85" y="198" text-anchor="middle">클러스터의</text>
+  <text class="t-sub" x="85" y="214" text-anchor="middle">모든 노드</text>
+
+  <line class="line" x1="150" y1="200" x2="196" y2="200" marker-end="url(#arrow81)"/>
+
+  <!-- Filter 단계 -->
+  <rect class="box-accent" x="200" y="120" width="240" height="160" rx="4"/>
+  <text class="t-title" x="320" y="148" text-anchor="middle">Filter 단계</text>
+  <text class="t-old" x="320" y="166" text-anchor="middle">(구 명칭: 프레디킷 Predicate)</text>
+  <text class="t-sub" x="320" y="192" text-anchor="middle">true/false — 강한 제약조건</text>
+  <text class="t-sub" x="320" y="212" text-anchor="middle">CPU·메모리 부족, 포트 충돌,</text>
+  <text class="t-sub" x="320" y="230" text-anchor="middle">테인트 불허용 등</text>
+  <text class="t-sub" x="320" y="256" text-anchor="middle">→ 못 쓸 노드는 여기서 탈락</text>
+
+  <line class="line" x1="440" y1="200" x2="486" y2="200" marker-end="url(#arrow81)"/>
+
+  <!-- Score 단계 -->
+  <rect class="box-accent" x="490" y="120" width="240" height="160" rx="4"/>
+  <text class="t-title" x="610" y="148" text-anchor="middle">Score 단계</text>
+  <text class="t-old" x="610" y="166" text-anchor="middle">(구 명칭: 우선순위 Priority)</text>
+  <text class="t-sub" x="610" y="192" text-anchor="middle">통과한 노드에 점수 매기기</text>
+  <text class="t-sub" x="610" y="212" text-anchor="middle">여유 자원 많은 순, 분산 배치</text>
+  <text class="t-sub" x="610" y="230" text-anchor="middle">선호도(affinity) 반영 등</text>
+  <text class="t-sub" x="610" y="256" text-anchor="middle">→ 최고 점수 노드 선택</text>
+
+  <line class="line" x1="730" y1="200" x2="776" y2="200" marker-end="url(#arrow81)"/>
+
+  <!-- 결과 -->
+  <rect class="box" x="780" y="150" width="100" height="100" rx="4"/>
+  <text class="t-title" x="830" y="192" text-anchor="middle">배치</text>
+  <text class="t-sub" x="830" y="212" text-anchor="middle">확정</text>
+
+  <text class="t-cap" x="450" y="340" text-anchor="middle">쿠버네티스 스케줄러는 두 단계를 거친다 — 먼저 못 쓸 노드를 걸러내고(Filter), 남은 노드 중 최선을 고른다(Score).</text>
+  <text class="t-cap" x="450" y="362" text-anchor="middle">원서의 "프레디킷·우선순위"는 옛 이름이다. 현재는 이 두 단계를 포함한 11개 확장점을 가진 스케줄링 프레임워크로 재구성되어 있다.</text>
+</svg>
+    <figcaption>그림 8-1. 스케줄링은 Filter(구 프레디킷)로 후보를 거르고 Score(구 우선순위)로 순위를 매기는 두 단계다.</figcaption>
+  </figure>
+
+  <h3>8.1.1 프레디킷</h3>
+  <p>스케줄러가 쓰는 첫 함수는 어느 노드가 이 파드를 <strong>아예 받을 수 없는지</strong> 걸러내는 것이다. true/false만 반환하는 <dfn class="term">강한 제약조건 <span class="en">(Hard Constraint)</span></dfn>이다 — 예를 들어 노드에 남은 메모리가 파드 요청량보다 적으면 즉시 탈락, 파드가 요구하는 포트가 이미 그 노드에서 쓰이고 있으면 탈락.</p>
+
+  <h3>8.1.2 우선순위</h3>
+  <p>탈락시키고 남은 노드들에는 상대적인 점수가 매겨진다. 여유 자원이 많은 노드를 우대하거나, 같은 레플리카셋의 파드를 여러 노드에 골고루 분산시키는 식이다. 가장 높은 점수를 받은 노드가 최종 배치지가 된다.</p>
+
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석 — 용어 체계 변경</span>
+    "프레디킷"·"우선순위"라는 이름은 옛 스케줄러 구조의 용어다. 현재 스케줄러는 <dfn class="term">스케줄링 프레임워크 <span class="en">(Scheduling Framework)</span></dfn>로 재구성되어, <code>queueSort</code>·<code>preFilter</code>·<strong><code>filter</code></strong>·<code>postFilter</code>·<code>preScore</code>·<strong><code>score</code></strong>·<code>reserve</code>·<code>permit</code>·<code>preBind</code>·<code>bind</code>·<code>postBind</code> 11개 확장점(extension point)의 플러그인 체인으로 동작한다. 이 장에서 말하는 프레디킷은 <code>filter</code> 확장점에, 우선순위는 <code>score</code> 확장점에 대응한다 — 동작 원리는 같고 이름과 커스터마이즈 방식만 정교해졌다.
+    <span class="src">출처: kubernetes.io/docs/reference/scheduling/config (확장점 정의) · kubernetes.io/docs/reference/scheduling/</span>
+  </div>
+</section>
+
+<section id="s8-2">
+  <h2 class="sec"><span class="num">8.2</span>고급 스케줄링 기법</h2>
+  <p>쿠버네티스는 대부분의 경우 알아서 잘 배치한다 — 여유 있는 노드를 우선하고, 같은 레플리카셋은 흩어 놓는다. 하지만 기본 동작을 오버라이드해야 할 때가 있다. 방법은 세 가지이고, 방향이 서로 다르다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .row { fill: none; stroke: #d8d8d8; stroke-width: 1; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-taint { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.2; }
+    .t-row { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .t-note { font-size: 11.5px; fill: #555555; }
+  </style>
+
+  <!-- Row 1: nodeSelector -->
+  <rect class="row" x="20" y="20" width="860" height="120" rx="6"/>
+  <text class="t-row" x="36" y="44">① 노드셀렉터 — 가장 단순, 파드 쪽에서 "이 레이블 노드만"</text>
+  <rect class="box" x="36" y="58" width="160" height="66" rx="4"/>
+  <text class="t-title" x="116" y="84" text-anchor="middle">파드 스펙</text>
+  <text class="t-sub" x="116" y="102" text-anchor="middle">nodeSelector:</text>
+  <text class="t-sub" x="116" y="116" text-anchor="middle">disktype: ssd</text>
+
+  <rect class="box-accent" x="240" y="58" width="160" height="66" rx="4"/>
+  <text class="t-title" x="320" y="84" text-anchor="middle">노드 A</text>
+  <text class="t-sub" x="320" y="102" text-anchor="middle">disktype=ssd</text>
+  <text class="t-sub" x="320" y="116" text-anchor="middle">→ 배치 가능</text>
+
+  <rect class="box" x="440" y="58" width="160" height="66" rx="4"/>
+  <text class="t-title" x="520" y="84" text-anchor="middle">노드 B</text>
+  <text class="t-sub" x="520" y="102" text-anchor="middle">disktype=hdd</text>
+  <text class="t-sub" x="520" y="116" text-anchor="middle">→ 배치 불가</text>
+
+  <text class="t-note" x="640" y="90">동등 조건 매칭만 가능. 세밀한 규칙은 다음 두 방식으로.</text>
+
+  <!-- Row 2: affinity/anti-affinity -->
+  <rect class="row" x="20" y="160" width="860" height="130" rx="6"/>
+  <text class="t-row" x="36" y="184">② 어피니티 / 안티-어피니티 — 파드 간 상대적 배치, 선호(soft) 또는 필수(hard)</text>
+
+  <rect class="box-accent" x="36" y="200" width="180" height="72" rx="4"/>
+  <text class="t-title" x="126" y="226" text-anchor="middle">캐시 파드</text>
+  <text class="t-sub" x="126" y="244" text-anchor="middle">podAffinity:</text>
+  <text class="t-sub" x="126" y="258" text-anchor="middle">"app=web과 같은 노드"</text>
+
+  <rect class="box" x="260" y="200" width="180" height="72" rx="4"/>
+  <text class="t-title" x="350" y="226" text-anchor="middle">web 파드</text>
+  <text class="t-sub" x="350" y="248" text-anchor="middle">이미 배치됨</text>
+
+  <rect class="box-accent" x="480" y="200" width="200" height="72" rx="4"/>
+  <text class="t-title" x="580" y="226" text-anchor="middle">레플리카 파드끼리</text>
+  <text class="t-sub" x="580" y="244" text-anchor="middle">podAntiAffinity:</text>
+  <text class="t-sub" x="580" y="258" text-anchor="middle">"서로 다른 가용 영역"</text>
+
+  <text class="t-note" x="720" y="240">고가용성 확보에</text>
+  <text class="t-note" x="720" y="256">가장 흔히 쓰임</text>
+
+  <!-- Row 3: taint/toleration -->
+  <rect class="row" x="20" y="308" width="860" height="130" rx="6"/>
+  <text class="t-row" x="36" y="332">③ 테인트 / 톨러레이션 — 노드 쪽에서 "허가된 파드만" (①②와 반대 방향)</text>
+
+  <rect class="box-taint" x="36" y="348" width="200" height="72" rx="4"/>
+  <text class="t-title" x="136" y="374" text-anchor="middle">GPU 노드</text>
+  <text class="t-sub" x="136" y="392" text-anchor="middle">taint: gpu=true:NoSchedule</text>
+  <text class="t-sub" x="136" y="406" text-anchor="middle">기본적으로 모든 파드 거부</text>
+
+  <rect class="box" x="270" y="348" width="200" height="72" rx="4"/>
+  <text class="t-title" x="370" y="374" text-anchor="middle">일반 파드</text>
+  <text class="t-sub" x="370" y="392" text-anchor="middle">톨러레이션 없음</text>
+  <text class="t-sub" x="370" y="406" text-anchor="middle">→ 이 노드에 못 감</text>
+
+  <rect class="box-accent" x="504" y="348" width="220" height="72" rx="4"/>
+  <text class="t-title" x="614" y="374" text-anchor="middle">GPU 학습 파드</text>
+  <text class="t-sub" x="614" y="392" text-anchor="middle">toleration: gpu=true</text>
+  <text class="t-sub" x="614" y="406" text-anchor="middle">→ 이 노드에 배치 가능</text>
+
+  <text class="t-note" x="760" y="388">노드를 "특별한</text>
+  <text class="t-note" x="760" y="404">용도로 예약"할 때</text>
+
+  <text class="t-cap" x="450" y="452" text-anchor="middle">①②는 파드가 노드를 고르는 것, ③은 노드가 파드를 고르는 것 — 방향이 반대다.</text>
+</svg>
+    <figcaption>그림 8-2. nodeSelector·어피니티는 "파드가 노드를 고른다", 테인트·톨러레이션은 "노드가 파드를 고른다".</figcaption>
+  </figure>
+
+  <h3>8.2.1 파드 어피니티와 안티-어피니티</h3>
+  <p><dfn class="term">어피니티 <span class="en">(Affinity)</span></dfn>는 파드를 다른 파드 기준으로 상대 배치하는 규칙이다. "이 파드는 X 파드와 같은 노드에"(어피니티) 또는 "같은 노드에 두지 마라"(안티-어피니티)를 선언한다. 강제(<code>requiredDuringScheduling…</code>)와 선호(<code>preferredDuringScheduling…</code>) 두 강도가 있다. 실무에서 가장 흔한 쓰임은 <strong>같은 워크로드의 레플리카를 서로 다른 가용 영역에 흩어 고가용성을 확보하는 것</strong>이다.</p>
+
+  <h3>8.2.2 노드셀렉터</h3>
+  <p><dfn class="term">노드셀렉터 <span class="en">(nodeSelector)</span></dfn>는 파드를 특정 노드에 배치하는 가장 단순한 방법이다 — 키/값 레이블이 정확히 일치하는 노드만 후보가 된다. GPU가 달린 노드에만 GPU 워크로드를 배치하는 것이 전형적인 예다. 표현력은 낮지만(동등 조건만 가능) 이해하기 쉬워 간단한 경우엔 이것으로 충분하다.</p>
+
+  <h3>8.2.3 테인트와 톨러레이션</h3>
+  <p><dfn class="term">테인트 <span class="en">(Taint)</span></dfn>는 노드에 걸어 두는 "거부" 표식이다 — 이 표식이 있으면 대응하는 <dfn class="term">톨러레이션 <span class="en">(Toleration)</span></dfn>을 가진 파드만 그 노드에 배치될 수 있다. 안티-어피니티와 얼핏 비슷해 보이지만 <strong>방향이 반대다</strong> — 어피니티는 파드가 노드를 선택하는 것이고, 테인트는 노드가 파드를 거부하는 것이다. 그래서 "이 노드는 GPU 전용, 톨러레이션 없는 일반 파드는 원천 차단"처럼 노드를 예약해 둘 때 테인트를 쓴다.</p>
+</section>
+
+<section id="s8-3">
+  <h2 class="sec"><span class="num">8.3</span>파드 리소스 관리</h2>
+  <p class="lead">쿠버네티스 운영에서 가장 신경 써야 할 부분이다. 목표는 하나 — 클러스터 전체 사용률을 낭비 없이, 그러나 어느 워크로드도 굶기지 않게 최적화하는 것.</p>
+
+  <h3>8.3.1 리소스 요청</h3>
+  <p><dfn class="term">리소스 요청 <span class="en">(Resource Request)</span></dfn>은 컨테이너가 스케줄링되는 데 필요한 최소 CPU·메모리다. 스케줄러는 이 값을 보고 배치 가능한 노드를 판단한다 — 요청이 8Gi인데 모든 노드의 여유 메모리가 4Gi뿐이라면, 그 파드는 영원히 <code>Pending</code>이다.</p>
+
+  <h3>8.3.2 리소스 리밋과 파드 QoS</h3>
+  <p><dfn class="term">리소스 리밋 <span class="en">(Resource Limit)</span></dfn>은 사용량의 상한이다. 도달했을 때 결과가 자원마다 다르다는 점이 중요하다 — CPU는 그 이상을 못 쓰게 <strong>제한(스로틀링)</strong>될 뿐이지만, 메모리는 초과 시 컨테이너가 <strong>OOMKilled</strong>로 즉시 종료된다.</p>
+  <p>requests와 limits를 어떻게 설정했는지에 따라 파드는 세 <dfn class="term">QoS 클래스 <span class="en">(Quality of Service Class)</span></dfn> 중 하나로 자동 분류되고, 이는 노드에 자원 압박이 왔을 때 축출 순서를 결정한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow83" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-g { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-b { fill: #ffffff; stroke: #b8860b; stroke-width: 1.5; }
+    .box-e { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-q { font-size: 12px; fill: #444444; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 질문 1 -->
+  <rect class="box" x="20" y="20" width="260" height="70" rx="4"/>
+  <text class="t-q" x="150" y="48" text-anchor="middle" font-weight="700">모든 컨테이너에</text>
+  <text class="t-q" x="150" y="66" text-anchor="middle" font-weight="700">requests·limits가 있는가?</text>
+
+  <text class="t-sub" x="130" y="106" text-anchor="middle">아니오 (하나도 없음)</text>
+  <line class="line" x1="150" y1="90" x2="150" y2="130" marker-end="url(#arrow83)"/>
+
+  <rect class="box-e" x="40" y="134" width="220" height="70" rx="4"/>
+  <text class="t-title" x="150" y="160" text-anchor="middle">BestEffort</text>
+  <text class="t-sub" x="150" y="180" text-anchor="middle">자원 부족 시 가장 먼저 축출</text>
+  <text class="t-sub" x="150" y="194" text-anchor="middle">예측 불가능한 성능</text>
+
+  <!-- 질문 1 예 분기 -->
+  <line class="line" x1="280" y1="55" x2="330" y2="55" marker-end="url(#arrow83)"/>
+  <text class="t-sub" x="305" y="42" text-anchor="middle">예</text>
+
+  <rect class="box" x="330" y="20" width="260" height="70" rx="4"/>
+  <text class="t-q" x="460" y="48" text-anchor="middle" font-weight="700">requests == limits인가?</text>
+  <text class="t-q" x="460" y="66" text-anchor="middle" font-weight="700">(모든 리소스에서)</text>
+
+  <line class="line" x1="460" y1="90" x2="460" y2="130" marker-end="url(#arrow83)"/>
+  <text class="t-sub" x="510" y="112" text-anchor="middle">예</text>
+
+  <rect class="box-g" x="350" y="134" width="220" height="70" rx="4"/>
+  <text class="t-title" x="460" y="160" text-anchor="middle">Guaranteed</text>
+  <text class="t-sub" x="460" y="180" text-anchor="middle">가장 마지막에 축출</text>
+  <text class="t-sub" x="460" y="194" text-anchor="middle">예측 가능·안정적</text>
+
+  <line class="line" x1="590" y1="55" x2="650" y2="55" marker-end="url(#arrow83)"/>
+  <text class="t-sub" x="620" y="42" text-anchor="middle">아니오</text>
+
+  <rect class="box-b" x="650" y="20" width="220" height="70" rx="4"/>
+  <text class="t-q" x="760" y="52" text-anchor="middle" font-weight="700">그 외 모든 경우</text>
+  <text class="t-q" x="760" y="70" text-anchor="middle" font-weight="700">(requests &lt; limits 포함)</text>
+
+  <line class="line" x1="760" y1="90" x2="760" y2="130" marker-end="url(#arrow83)"/>
+
+  <rect class="box-b" x="650" y="134" width="220" height="70" rx="4"/>
+  <text class="t-title" x="760" y="160" text-anchor="middle">Burstable</text>
+  <text class="t-sub" x="760" y="180" text-anchor="middle">중간 우선순위 축출</text>
+  <text class="t-sub" x="760" y="194" text-anchor="middle">여유 있으면 limits까지 사용</text>
+
+  <!-- 축출 순서 바 -->
+  <rect class="box" x="40" y="240" width="830" height="90" rx="6"/>
+  <text class="t-title" x="60" y="264">노드 자원 압박 시 축출 순서 (BestEffort가 먼저 죽는다)</text>
+
+  <rect class="box-e" x="60" y="278" width="200" height="36" rx="4"/>
+  <text class="t-sub" x="160" y="300" text-anchor="middle">BestEffort — 1순위 축출</text>
+
+  <line class="line" x1="264" y1="296" x2="300" y2="296" marker-end="url(#arrow83)"/>
+
+  <rect class="box-b" x="304" y="278" width="240" height="36" rx="4"/>
+  <text class="t-sub" x="424" y="300" text-anchor="middle">Burstable (사용량이 요청 초과분) — 2순위</text>
+
+  <line class="line" x1="548" y1="296" x2="584" y2="296" marker-end="url(#arrow83)"/>
+
+  <rect class="box-g" x="588" y="278" width="240" height="36" rx="4"/>
+  <text class="t-sub" x="708" y="300" text-anchor="middle">Guaranteed — 최후순위, 사실상 보호됨</text>
+
+  <text class="t-cap" x="450" y="360" text-anchor="middle">PodDisruptionBudget(8.3.3)은 이 축출 중에서도 "자발적" 축출(노드 드레인 등)에서 최소 가용량을 보장한다.</text>
+  <text class="t-cap" x="450" y="382" text-anchor="middle">ResourceQuota(8.3.5)는 네임스페이스 전체 총량을, LimitRange(8.3.6)는 미지정 파드에 자동으로 값을 채운다.</text>
+</svg>
+    <figcaption>그림 8-3. QoS 클래스 결정 로직과 축출 우선순위. Guaranteed가 가장 안전하고, BestEffort가 가장 먼저 죽는다.</figcaption>
+  </figure>
+<pre><code># Guaranteed — requests == limits (모든 리소스)
+resources:
+  requests: { cpu: "500m", memory: "256Mi" }
+  limits:   { cpu: "500m", memory: "256Mi" }
+
+# Burstable — requests < limits, 또는 일부만 지정
+resources:
+  requests: { cpu: "250m", memory: "128Mi" }
+  limits:   { cpu: "500m", memory: "256Mi" }
+
+# BestEffort — 아무것도 지정하지 않음 (프로덕션에서는 피할 것)</code></pre>
+
+  <h3>8.3.3 PodDisruptionBudgets</h3>
+  <p>파드가 노드에서 쫓겨나는 <dfn class="term">축출 <span class="en">(Eviction)</span></dfn>에는 두 종류가 있다. <strong>비자발적 축출</strong>은 노드 장애처럼 사람이 통제할 수 없는 상황이고, <strong>자발적 축출</strong>은 노드 드레인·클러스터 업그레이드처럼 사람(또는 자동화)이 의도적으로 일으키는 것이다. <dfn class="term">PodDisruptionBudget <span class="en">(PDB)</span></dfn>은 후자를 통제한다 — "이 워크로드는 자발적 축출 중에도 최소 N개(또는 N% 미만 손실)는 항상 떠 있어야 한다"를 선언한다.</p>
+<pre><code>apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: frontend</code></pre>
+
+  <h3>8.3.4 네임스페이스를 이용한 리소스 관리</h3>
+  <p>2장에서 배운 네임스페이스가 여기서 다시 등장한다 — 리소스쿼터·RBAC·네트워크 정책을 네임스페이스 단위로 걸 수 있다는 것은, 곧 <strong>네임스페이스가 멀티테넌시의 기본 격리 단위</strong>라는 뜻이다.</p>
+
+  <h3>8.3.5 리소스쿼터</h3>
+  <p>여러 팀이 클러스터 하나를 같이 쓴다면 네임스페이스마다 <dfn class="term">ResourceQuota</dfn>를 반드시 걸어야 한다 — 걸지 않으면 한 팀의 실수(또는 버그)가 클러스터 전체의 자원을 잠식할 수 있다. 2장에서 다룬 개발자 온보딩의 리소스쿼터가 바로 이 장치다.</p>
+
+  <h3>8.3.6 리밋레인지</h3>
+  <p>컨테이너 수준에 requests·limits를 설정하는 방법은 8.3.1~2에서 봤다. 그런데 사용자가 실수로 이 값을 빼먹으면? <dfn class="term">LimitRange</dfn>가 네임스페이스에 미리 걸려 있으면, 값이 없는 파드에 자동으로 기본값을 채워준다 — BestEffort 파드가 실수로 양산되는 것을 막는 안전망이다.</p>
+
+  <h3>8.3.7 클러스터 스케일링</h3>
+  <p>노드 자체의 개수·크기를 조정하는 층이다. 워크로드가 다양하게 섞인 클러스터라면 인스턴스 크기 선택은 과학보다는 경험에 가깝다 — 처음엔 수동으로 조정하며 워크로드 프로파일을 파악하고, 패턴이 보이면 자동화한다.</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    전통적인 <dfn class="term">클러스터 오토스케일러 <span class="en">(Cluster Autoscaler)</span></dfn>는 미리 정의된 노드 그룹(ASG 등)의 크기를 늘리고 줄이는 방식이라 간접적이고 느리다(수 분 단위). 대안으로 떠오른 <dfn class="term">Karpenter</dfn>는 노드 그룹 개념 없이 클라우드 API를 직접 호출해 <strong>대기 중인 파드에 딱 맞는 인스턴스</strong>를 즉시 골라 띄운다(수십 초 단위) — 2026년 현재 CNCF Incubating 프로젝트로 GA 상태이며, AWS·Azure에서 안정적으로 쓰인다(GCP는 아직 베타). 다만 AWS 밖이나 온프레미스, 멀티클라우드 환경에서는 지원 범위가 넓은 클러스터 오토스케일러가 여전히 더 안전한 기본값이다. 이벤트 기반으로 파드를 0개까지 줄이는 워크로드(큐 처리 등)에는 별도로 <dfn class="term">KEDA</dfn>(CNCF Graduated)를 HPA와 함께 쓰는 조합이 흔하다.
+    <span class="src">출처: 업계 비교 자료 다수(2026년) 교차 확인 — Karpenter CNCF Incubating·AWS/Azure 안정, GCP 베타 / KEDA CNCF Graduated</span>
+  </div>
+
+  <h3>8.3.8 애플리케이션 스케일링</h3>
+  <p>가장 단순한 스케일링은 Deployment의 <code>replicas</code>를 수동으로 바꾸는 것이다(0장에서 이미 해봤다). 이제부터는 이걸 자동화하는 두 축 — 수평(HPA)과 수직(VPA) — 을 본다.</p>
+
+  <h3>8.3.9 HPA를 이용한 수평 스케일링</h3>
+  <p><dfn class="term">HPA <span class="en">(HorizontalPodAutoscaler)</span></dfn>는 CPU·메모리 또는 커스텀 메트릭에 따라 Deployment의 레플리카 수를 자동 조정한다. 4장에서 배운 메트릭 서버가 CPU·메모리 지표의 원천이다.</p>
+<pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70</code></pre>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 확인</span>
+    <code>autoscaling/v2</code>가 유일한 표준 API다. 옛 자료에 보이는 <code>autoscaling/v2beta2</code>·<code>v2beta1</code>은 1.26에서 완전히 제거되어 더 이상 존재하지 않는다.
+    <span class="src">출처: kubernetes.io/docs/reference/using-api/deprecation-guide</span>
+  </div>
+
+  <h3>8.3.10 커스텀 메트릭을 이용한 HPA</h3>
+  <p>CPU·메모리만으로는 부족할 때가 있다 — 큐 길이, 초당 요청 수 같은 애플리케이션 고유 지표로 스케일링하고 싶다면 <strong>커스텀 메트릭</strong>이 필요하다. 3장에서 설치한 프로메테우스가 이미 이런 지표를 갖고 있다면, <dfn class="term">Prometheus Adapter</dfn>가 그 값을 쿠버네티스 커스텀 메트릭 API 형태로 노출해 HPA가 읽을 수 있게 중개한다.</p>
+
+  <h3>8.3.11 수직 파드 오토스케일러</h3>
+  <p><dfn class="term">VPA <span class="en">(VerticalPodAutoscaler)</span></dfn>는 레플리카 수가 아니라 <strong>파드 하나가 가진 requests 값 자체</strong>를 조정한다. "이 컨테이너는 실제로 늘 300m CPU만 쓰는데 requests를 1 코어로 잡아 뒀다"처럼 잘못된 사이징을 과거 사용량 데이터로 교정해 준다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow84" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .layer { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-layer { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-trig { stroke: #2456c4; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+  </style>
+
+  <!-- Layer 1: HPA -->
+  <rect class="layer" x="20" y="20" width="860" height="110" rx="6"/>
+  <text class="t-layer" x="36" y="42">① 수평(HPA) — 8.3.9 · "파드 몇 개?"</text>
+
+  <rect class="box" x="40" y="56" width="180" height="58" rx="4"/>
+  <text class="t-title" x="130" y="80" text-anchor="middle">metrics-server</text>
+  <text class="t-sub" x="130" y="98" text-anchor="middle">CPU·메모리 (4장)</text>
+
+  <rect class="box" x="240" y="56" width="180" height="58" rx="4"/>
+  <text class="t-title" x="330" y="80" text-anchor="middle">Prometheus Adapter</text>
+  <text class="t-sub" x="330" y="98" text-anchor="middle">커스텀 메트릭 (8.3.10)</text>
+
+  <line class="line" x1="420" y1="85" x2="466" y2="85" marker-end="url(#arrow84)"/>
+  <line class="line" x1="220" y1="85" x2="466" y2="85"/>
+
+  <rect class="box-accent" x="470" y="56" width="180" height="58" rx="4"/>
+  <text class="t-title" x="560" y="80" text-anchor="middle">HorizontalPodAutoscaler</text>
+  <text class="t-sub" x="560" y="98" text-anchor="middle">autoscaling/v2</text>
+
+  <line class="line" x1="650" y1="85" x2="696" y2="85" marker-end="url(#arrow84)"/>
+
+  <rect class="box" x="700" y="56" width="160" height="58" rx="4"/>
+  <text class="t-title" x="780" y="80" text-anchor="middle">replicas 조정</text>
+  <text class="t-sub" x="780" y="98" text-anchor="middle">Deployment</text>
+
+  <!-- Layer 2: VPA -->
+  <rect class="layer" x="20" y="150" width="860" height="110" rx="6"/>
+  <text class="t-layer" x="36" y="172">② 수직(VPA) — 8.3.11 · "파드 하나가 얼마나?"</text>
+
+  <rect class="box" x="40" y="186" width="220" height="58" rx="4"/>
+  <text class="t-title" x="150" y="210" text-anchor="middle">과거 사용량 관찰</text>
+  <text class="t-sub" x="150" y="228" text-anchor="middle">Recommender</text>
+
+  <line class="line" x1="260" y1="215" x2="306" y2="215" marker-end="url(#arrow84)"/>
+
+  <rect class="box-accent" x="310" y="186" width="220" height="58" rx="4"/>
+  <text class="t-title" x="420" y="210" text-anchor="middle">VerticalPodAutoscaler</text>
+  <text class="t-sub" x="420" y="228" text-anchor="middle">requests·limits 추천</text>
+
+  <line class="line" x1="530" y1="215" x2="576" y2="215" marker-end="url(#arrow84)"/>
+
+  <rect class="box" x="580" y="186" width="280" height="58" rx="4"/>
+  <text class="t-title" x="720" y="206" text-anchor="middle">InPlaceOrRecreate</text>
+  <text class="t-sub" x="720" y="224" text-anchor="middle">가능하면 재시작 없이 즉시 반영</text>
+  <text class="t-sub" x="720" y="238" text-anchor="middle">(2026 기준 GA — 아래 갱신 주석)</text>
+
+  <!-- Layer 3: Cluster -->
+  <rect class="layer" x="20" y="280" width="860" height="110" rx="6"/>
+  <text class="t-layer" x="36" y="302">③ 노드(클러스터 오토스케일러/Karpenter) · "노드 몇 대?"</text>
+
+  <rect class="box" x="40" y="316" width="220" height="58" rx="4"/>
+  <text class="t-title" x="150" y="340" text-anchor="middle">Pending 파드 감지</text>
+  <text class="t-sub" x="150" y="358" text-anchor="middle">①②의 결과로 자원이 모자라면</text>
+
+  <line class="line" x1="260" y1="345" x2="306" y2="345" marker-end="url(#arrow84)"/>
+
+  <rect class="box-accent" x="310" y="316" width="240" height="58" rx="4"/>
+  <text class="t-title" x="430" y="340" text-anchor="middle">Cluster Autoscaler / Karpenter</text>
+  <text class="t-sub" x="430" y="358" text-anchor="middle">클라우드에 노드 요청</text>
+
+  <line class="line" x1="550" y1="345" x2="596" y2="345" marker-end="url(#arrow84)"/>
+
+  <rect class="box" x="600" y="316" width="260" height="58" rx="4"/>
+  <text class="t-title" x="730" y="340" text-anchor="middle">새 노드 합류</text>
+  <text class="t-sub" x="730" y="358" text-anchor="middle">Pending 파드가 스케줄됨</text>
+
+  <!-- 계층 간 트리거 화살표 -->
+  <path class="line-trig" d="M 780 114 C 780 145, 420 145, 420 182" marker-end="url(#arrow84)"/>
+  <path class="line-trig" d="M 720 244 C 720 278, 420 278, 420 312" marker-end="url(#arrow84)"/>
+
+  <text class="t-cap" x="450" y="420" text-anchor="middle">세 계층은 독립적이지만 서로를 촉발한다 — HPA가 파드를 늘리면(①) 자리가 없어져 노드가 늘고(③),</text>
+  <text class="t-cap" x="450" y="442" text-anchor="middle">VPA가 파드 하나의 몫을 키우면(②) 마찬가지로 남는 자리가 줄어 노드 증설을 촉발할 수 있다.</text>
+</svg>
+    <figcaption>그림 8-4. HPA(파드 개수)·VPA(파드 크기)·클러스터 오토스케일러(노드 개수)는 독립적이지만 서로를 촉발한다.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석 — VPA의 오랜 약점이 해소됨</span>
+    VPA는 오랫동안 치명적인 단점이 있었다 — 값을 바꾸려면 <strong>파드를 축출하고 재생성</strong>해야 했다(실행 중인 컨테이너의 requests·limits는 불변 필드였다). 이는 <strong>쿠버네티스 1.35(2025-12)에서 해결됐다</strong> — <dfn class="term">인플레이스 파드 리사이즈 <span class="en">(In-Place Pod Resize)</span></dfn>가 정식(GA) 기능이 되어, 재시작 없이 실행 중인 컨테이너의 CPU·메모리를 바로 바꿀 수 있게 됐다. VPA는 이를 활용하는 <code>updateMode: "InPlaceOrRecreate"</code>를 지원한다 — 가능하면 무중단으로 즉시 반영하고, 리사이즈가 불가능한 상황(예: 그 노드에 여유가 없음)에서만 기존처럼 축출 후 재생성으로 대체한다.
+<pre><code>apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: frontend-vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"</code></pre>
+    참고로 HPA와 VPA를 CPU·메모리 같은 같은 지표로 동시에 쓰면 서로 충돌할 수 있다(VPA가 파드를 키우는 동안 HPA는 그 지표를 보고 파드 수를 줄이려 하는 식) — 함께 쓴다면 지표를 겹치지 않게 나누는 것이 정석이다.
+    <span class="src">출처: kubernetes.io/blog (In-Place Pod Resize GA 발표, 1.35) · kubernetes.io/docs/concepts/workloads/autoscaling/vertical-pod-autoscale</span>
+  </div>
+</section>
+
+<section id="s8-4">
+  <h2 class="sec"><span class="num">8.4</span>리소스 관리 모범 사례</h2>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>고가용성이 필요한 워크로드는 안티-어피니티로 영역 분산</td><td>가용 영역 하나가 죽으면 서비스 전체가 죽지 않는가?</td></tr>
+    <tr><td>특수 하드웨어(GPU 등)는 테인트로 노드를 예약</td><td>일반 워크로드가 GPU 노드를 낭비하고 있진 않은가?</td></tr>
+    <tr><td>노드 조건 이상은 NodeCondition 테인트로 선제 대응</td><td>장애 징후가 있는 노드에 새 파드가 계속 배치되고 있진 않은가?</td></tr>
+    <tr><td>다양한 크기의 노드로 실험 후 프로덕션 적용</td><td>비용·성능의 적정 조합을 데이터로 확인했는가, 감으로 정했는가?</td></tr>
+    <tr><td>워크로드 특성이 다르면 노드 풀을 분리</td><td>배치·상시 서비스가 같은 노드 풀에서 서로 자원을 다투고 있진 않은가?</td></tr>
+    <tr><td>모든 파드에 CPU·메모리 requests·limits 설정</td><td>BestEffort로 도는 프로덕션 파드가 있진 않은가?</td></tr>
+    <tr><td>ResourceQuota로 팀·네임스페이스 간 공평 분배</td><td>쿼터 없는 네임스페이스가 아직 남아 있진 않은가?</td></tr>
+    <tr><td>LimitRange로 미지정 파드에 기본값 보장</td><td>실수로 requests 없는 파드가 배포될 여지를 막아 뒀는가?</td></tr>
+    <tr><td>워크로드 프로파일을 완전히 이해하기 전엔 수동 스케일링</td><td>오토스케일링을 자기 워크로드 특성도 모른 채 켜 두진 않았는가?</td></tr>
+    <tr><td>부하 변동이 큰 워크로드는 HPA로</td><td>트래픽 급증에 사람이 수동으로 replicas를 올려 주고 있진 않은가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: kubernetes.io/docs/reference/scheduling/config · kubernetes.io/docs/reference/using-api/deprecation-guide · kubernetes.io/blog(In-Place Pod Resize GA) · kubernetes.io/docs/concepts/workloads/autoscaling/vertical-pod-autoscale — 세부 출처는 각 절의 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig08-1 ~ fig08-4)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

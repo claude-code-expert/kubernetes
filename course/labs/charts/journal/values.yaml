@@ -1,0 +1,83 @@
+# 기본값 — 이 파일만으로도 설치가 된다. 환경별 파일은 여기서 달라지는 것만 덮어쓴다.
+#
+# M28 에서 M15~M27 의 변경분을 전부 반영했다. 값의 개수가 두 배가 됐는데,
+# 그 자체가 이 모듈의 논점이다 — 템플릿은 노출한 값만큼만 유연하고, 노출한 값만큼 복잡해진다.
+
+api:
+  # replicas 는 autoscaling.enabled 가 false 일 때만 쓴다 (M17).
+  # HPA 가 켜져 있으면 이 값을 렌더링하지 않는다 — 필드의 주인이 둘일 수 없다.
+  replicas: 3
+  image:
+    repository: journal-api
+    tag: ""                    # 비우면 Chart.yaml 의 appVersion 을 쓴다
+    pullPolicy: IfNotPresent
+  logLevel: info
+  resources:                   # M16
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 192Mi}    # cpu limit 은 일부러 걸지 않는다 (스로틀링)
+  # M15 — 종료 창
+  terminationGracePeriodSeconds: 30
+  preStopSleep: 10
+  probes:                      # M15 — 3종
+    startup:   {periodSeconds: 1,  failureThreshold: 30}
+    readiness: {periodSeconds: 2}
+    liveness:  {periodSeconds: 10, failureThreshold: 3}
+  # M16 — 노드에 고르게 편다. nodeTaintsPolicy 가 없으면 스케줄이 통째로 막힌다
+  topologySpread:
+    enabled: true
+    maxSkew: 1
+
+web:
+  replicas: 2
+  image:
+    # M24 — 비루트 이미지로 바꿨다. 포트도 80 이 아니라 8080 이다
+    repository: nginxinc/nginx-unprivileged
+    tag: "1.29-alpine"
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 64Mi}
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "8.2-alpine"
+  storage: 1Gi
+  password: "s3cr3t-pass"      # 실습용. 운영에서는 --set 이나 외부 시크릿 (M31)
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+  fsGroup: 999                 # M24 — 볼륨 소유권을 redis 그룹으로
+
+ingress:
+  enabled: true
+  className: nginx
+  host: journal.local
+
+# ── M17 ───────────────────────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120
+
+pdb:
+  enabled: true
+  minAvailable: 2
+
+# ── M20 ───────────────────────────────────────────────────────────────
+metrics:
+  serviceMonitor:
+    enabled: false             # 프로메테우스 오퍼레이터가 있을 때만 켠다
+    interval: 15s
+    # kube-prometheus-stack 이 자기 릴리스 이름으로 ServiceMonitor 를 고른다.
+    # 이 값이 틀리면 오브젝트는 만들어지고 타깃은 안 생긴다 (M20 의 3단 라벨 사슬).
+    releaseLabel: kps
+
+# ── M24 ───────────────────────────────────────────────────────────────
+podSecurity:
+  enabled: true
+  apiRunAsUser: 1000

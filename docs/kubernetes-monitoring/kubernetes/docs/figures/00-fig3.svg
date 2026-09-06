@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 176" role="img" aria-label="11단계 실습 로드맵, 현재 위치는 00단계">
+      <rect width="960" height="176" fill="#ffffff"/>
+
+      <!-- 트랙 라벨 -->
+      <text x="32" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 A · 환경과 앱</text>
+      <text x="368" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 B · 설치</text>
+      <text x="532" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 C · 연동</text>
+      <text x="778" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 D · 운영</text>
+      <line x1="32" y1="44" x2="356" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="368" y1="44" x2="520" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="532" y1="44" x2="766" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="778" y1="44" x2="928" y2="44" stroke="#d8dbe0" stroke-width="1"/>
+
+      <!-- 00 (현재) -->
+      <rect x="32" y="60" width="76" height="62" fill="#15181d" stroke="#15181d" stroke-width="1.5"/>
+      <text x="70" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#ffffff">00</text>
+      <text x="70" y="104" text-anchor="middle" font-size="11" fill="#ffffff">환경 준비</text>
+      <text x="70" y="140" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#15181d">현재</text>
+
+      <rect x="114" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="152" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">01</text>
+      <text x="152" y="104" text-anchor="middle" font-size="11" fill="#15181d">kind 구축</text>
+
+      <rect x="196" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="234" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">02</text>
+      <text x="234" y="104" text-anchor="middle" font-size="11" fill="#15181d">스프링 앱</text>
+
+      <rect x="278" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="316" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">03</text>
+      <text x="316" y="104" text-anchor="middle" font-size="11" fill="#15181d">배포</text>
+
+      <rect x="368" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="406" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">04</text>
+      <text x="406" y="104" text-anchor="middle" font-size="10" fill="#15181d">프로메테우스</text>
+
+      <rect x="450" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="488" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">05</text>
+      <text x="488" y="104" text-anchor="middle" font-size="11" fill="#15181d">그라파나</text>
+
+      <rect x="532" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="570" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">06</text>
+      <text x="570" y="104" text-anchor="middle" font-size="11" fill="#15181d">메트릭 연동</text>
+
+      <rect x="614" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="652" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">07</text>
+      <text x="652" y="104" text-anchor="middle" font-size="10" fill="#15181d">대시보드·알림</text>
+
+      <rect x="696" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="734" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">08</text>
+      <text x="734" y="104" text-anchor="middle" font-size="11" fill="#15181d">로그</text>
+
+      <rect x="778" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="816" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#585f6b">09</text>
+      <text x="816" y="104" text-anchor="middle" font-size="11" fill="#585f6b">트레이싱</text>
+
+      <rect x="860" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="898" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">10</text>
+      <text x="898" y="104" text-anchor="middle" font-size="11" fill="#15181d">운영 팁</text>
+
+      <text x="816" y="140" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">선택</text>
+    </svg>

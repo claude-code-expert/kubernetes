@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 7 · 확장] M34 멀티클러스터와 외부 서비스 연동 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 34 / 38 · PART 7 확장</div>
+  <h1>멀티클러스터와 외부 서비스 연동</h1>
+  <p class="ch-desc">M32에서 클러스터를 둘로 늘렸지만 <strong>배포만 나눴고 통신은 나누지 않았다.</strong> 각 리전의 앱은 자기 클러스터 안에서만 서로를 불렀다. 실제로는 클러스터 밖의 데이터베이스를 부르고, 다른 클러스터의 서비스를 부른다. 이 모듈에서 <strong>셀렉터 없는 서비스</strong>와 <code>EndpointSlice</code>를 손으로 써서 그 경로를 만들고, <code>ExternalName</code>이 무엇을 하고 무엇을 못 하는지 확인한다. 그리고 <strong>손으로 쓴 엔드포인트가 상태를 모른다</strong>는 것을 장애로 재현한다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · 클러스터 2개 · redis 8.2-alpine) · 도커에 1GiB 이상 여유가 필요하다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m11-k8s-service-network.html">M11</a>의 서비스와 엔드포인트를 안다. 이 모듈은 그 구조를 손으로 만든다</li>
+    <li><a href="m32-k8s-global-rollout.html">M32</a>에서 두 번째 클러스터를 만들어 봤다. 같은 <code>infra/kind-edge.yaml</code>을 다시 쓴다</li>
+    <li>도커에 여유가 있다. 확인: <code>docker stats --no-stream</code>의 합계</li>
+    <li>새로 만들 파일: <code>course/labs/k8s/external/</code>의 <code>00-namespace.yaml</code> · <code>10-selectorless.yaml</code> · <code>20-externalname.yaml</code> · <code>30-export-edge.yaml</code> · <code>40-import-study.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 셀렉터 없는 서비스에 <code>EndpointSlice</code>를 손으로 붙여, 클러스터 밖 주소를 <strong>클러스터 안 서비스와 구분되지 않게</strong> 만든다.</p>
+  <p>2. <code>ExternalName</code>이 <strong>DNS 별칭일 뿐</strong>이라는 것을 포트 매핑 실패와 엔드포인트 부재로 확인한다.</p>
+  <p>3. 다른 클러스터의 서비스를 같은 방법으로 가져오고, <strong>상대가 죽어도 <code>ready: true</code>가 유지되는</strong> 이 방식의 한계를 재현한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">34.1</span>클러스터 밖은 서비스가 아니다</a>
+  <a href="#s2"><span class="num">34.2</span>이론 — 서비스가 감추는 것</a>
+  <a href="#s3"><span class="num">34.3</span>따라하기 ① 셀렉터 없는 서비스</a>
+  <a href="#s4"><span class="num">34.4</span>따라하기 ② ExternalName의 자리</a>
+  <a href="#s5"><span class="num">34.5</span>따라하기 ③ 다른 클러스터의 서비스</a>
+  <a href="#s6"><span class="num">34.6</span>따라하기 ④ MCS API가 채우려는 자리</a>
+  <a href="#s7"><span class="num">34.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">34.8</span>운영 관점 — 어디까지 연결할 것인가</a>
+  <a href="#s9"><span class="num">34.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">34.1</span>클러스터 밖은 서비스가 아니다</h2>
+  <p class="lead">M11에서 서비스를 배웠을 때 그것은 <strong>클러스터 안의 파드를 묶는 것</strong>이었다. <code>selector</code>가 라벨로 파드를 고르고, 엔드포인트 컨트롤러가 그 파드들의 IP를 모아 준다. 이 구조는 대상이 파드일 때만 동작한다.</p>
+  <p>그런데 실제 시스템에서 앱이 부르는 것의 절반은 파드가 아니다. 관리형 데이터베이스, 사내 레거시 시스템, 다른 팀의 클러스터, 외부 API. 이것들에는 라벨이 없고, 엔드포인트 컨트롤러가 찾을 방법도 없다.</p>
+  <p>가장 쉬운 대응은 <strong>앱에 주소를 박는 것</strong>이다. 환경 변수에 <code>db.internal:5432</code>를 넣으면 된다. 그리고 그것이 문제를 만든다 — 주소가 바뀌면 <strong>앱을 다시 배포해야</strong> 하고, 환경마다 다른 값을 관리해야 하며, 클러스터 안의 서비스와 밖의 서비스를 앱이 <strong>다르게 다뤄야</strong> 한다.</p>
+  <p>이 모듈은 그 차이를 없앤다. 클러스터 밖의 주소도 <strong>서비스 이름으로</strong> 부르게 만들면, 앱은 상대가 어디 있는지 몰라도 되고 주소 변경은 매니페스트 한 줄이 된다. 그 대신 무엇을 잃는지도 함께 확인한다 — <strong>공짜가 아니다.</strong></p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">34.2</span>이론 — 서비스가 감추는 것</h2>
+  <p><span class="lbl">책 매핑</span>12.1~12.7 멀티클러스터의 이유와 설계 문제 · 13.1~13.3 서비스 임포트와 익스포트, MCS API</p>
+
+  <h3>서비스는 두 부분이다</h3>
+  <p>서비스 하나가 하는 일은 사실 둘로 나뉜다. <strong>이름과 가상 IP를 제공하는 것</strong>(<code>Service</code> 오브젝트), 그리고 <strong>그 뒤에 무엇이 있는지 말하는 것</strong>(<code>EndpointSlice</code>). 평소에는 <code>selector</code>가 있어서 쿠버네티스가 두 번째를 자동으로 채운다.</p>
+  <p><code>selector</code>를 <strong>쓰지 않으면</strong> 두 번째를 자동으로 채우지 않는다. 그 자리가 비어 있게 되고, <strong>우리가 채울 수 있다.</strong> 이것이 이 모듈의 핵심 기법이고, 이름이 <dfn class="term">셀렉터 없는 서비스<span class="en">selectorless service</span></dfn>다.</p>
+  <p>채워 넣은 주소는 파드 IP일 필요가 없다. 클러스터 밖의 IP든 다른 클러스터의 노드 IP든 상관없다 — <strong>kube-proxy는 그것이 무엇인지 묻지 않고 그냥 그리로 보낸다.</strong></p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+      <text class="t-h" x="40" y="46">앱은 상대가 어디 있는지 모른다 — 서비스가 그것을 감춘다</text>
+
+      <!-- study 클러스터 -->
+      <rect class="nsbox" x="40" y="66" width="420" height="176" rx="4"/>
+      <text class="t-title" x="56" y="88">study 클러스터</text>
+      <rect class="node" x="56" y="100" width="110" height="44" rx="3"/>
+      <text class="t-mono" x="111" y="127" text-anchor="middle">파드</text>
+      <path class="aline" d="M 166 122 L 200 122" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="183" y="114" text-anchor="middle">이름</text>
+      <rect class="accent" x="202" y="100" width="240" height="44" rx="3"/>
+      <text class="t-mono" x="212" y="120">Service (selector 없음)</text>
+      <text class="t-sub" x="212" y="136">ClusterIP 10.96.140.114</text>
+
+      <rect class="accent" x="202" y="156" width="240" height="66" rx="3"/>
+      <text class="t-mono" x="212" y="176">EndpointSlice (손으로 씀)</text>
+      <text class="t-mono" x="212" y="194">addresses: 172.20.0.5</text>
+      <text class="t-mono" x="212" y="212">conditions.ready: true</text>
+      <path class="line" d="M 322 144 L 322 152" marker-end="url(#ar1)"/>
+
+      <!-- 밖 -->
+      <rect class="box" x="500" y="100" width="160" height="44" rx="3"/>
+      <text class="t-mono" x="580" y="120" text-anchor="middle">클러스터 밖 레디스</text>
+      <text class="t-sub" x="580" y="136" text-anchor="middle">172.20.0.5:6379</text>
+      <path class="line" d="M 442 122 L 496 122" marker-end="url(#ar1)"/>
+
+      <rect class="box" x="690" y="100" width="170" height="44" rx="3"/>
+      <text class="t-mono" x="775" y="120" text-anchor="middle">edge 클러스터</text>
+      <text class="t-sub" x="775" y="136" text-anchor="middle">NodePort 31080 고정</text>
+      <path class="line" d="M 442 178 C 560 178 600 150 686 136" marker-end="url(#ar1)"/>
+      <text class="t-sub" x="560" y="196">같은 방법으로 다른 클러스터의 서비스도 가져온다</text>
+
+      <!-- ExternalName -->
+      <rect class="soft" x="40" y="256" width="400" height="120" rx="4"/>
+      <text class="t-h" x="56" y="280">ExternalName 은 다르다</text>
+      <rect class="box" x="56" y="292" width="368" height="30" rx="3"/>
+      <text class="t-mono" x="66" y="312">DNS 가 CNAME 을 돌려주고 끝난다 (ClusterIP 없음)</text>
+      <rect class="warnbox" x="56" y="328" width="368" height="38" rx="3"/>
+      <text class="t-warn" x="66" y="346">포트를 못 바꾼다 — 16379 로 걸면 Connection refused</text>
+      <text class="t-warn" x="66" y="361">엔드포인트가 없어 상태를 알 방법이 없다</text>
+
+      <!-- 한계 -->
+      <rect class="soft" x="456" y="256" width="384" height="120" rx="4"/>
+      <text class="t-h" x="472" y="280">손으로 쓴 엔드포인트의 대가</text>
+      <rect class="warnbox" x="472" y="292" width="352" height="38" rx="3"/>
+      <text class="t-mono" x="482" y="310">docker stop ext-redis</text>
+      <text class="t-warn" x="482" y="325">ready=true 그대로 · 접속은 timeout</text>
+      <rect class="box" x="472" y="336" width="352" height="30" rx="3"/>
+      <text class="t-sub" x="482" y="356">상대 노드가 늘면 목록을 사람이 고쳐야 한다</text>
+
+      <rect class="soft" x="56" y="390" width="784" height="34" rx="4"/>
+      <text class="t-sub" x="70" y="411">MCS API(ServiceExport · ServiceImport)가 표준화하려는 것이 이 손작업이다. 기본으로는 없고 컨트롤러를 설치해야 한다</text>
+    </svg>
+    <figcaption>그림 34.1 — 서비스 이름 뒤에 무엇이 있든 앱은 구분하지 못한다. 아래 두 칸이 이 방식의 대가와 <code>ExternalName</code>의 한계다.</figcaption>
+  </figure>
+
+  <h3>ExternalName은 다른 물건이다</h3>
+  <p>이름이 비슷해서 헷갈리는데 <code>type: ExternalName</code>은 <strong>완전히 다른 메커니즘</strong>이다. ClusterIP를 만들지 않고, kube-proxy 규칙도 만들지 않는다. 하는 일은 <strong>CoreDNS가 CNAME을 돌려주는 것</strong>뿐이고, 그다음 연결은 파드가 직접 한다.</p>
+  <p>따라서 <strong>클러스터가 관여할 수 있는 것이 없다.</strong> 포트를 바꿀 수 없고, 상태를 알 수 없고, 네트워크 정책으로 다루기도 어렵다(정책은 IP를 보는데 이 경우 최종 IP는 파드가 스스로 알아낸다). 34.4에서 앞의 둘을 측정으로 확인한다.</p>
+
+  <h3>클러스터를 넘을 때의 문제</h3>
+  <p>다른 클러스터의 서비스를 부르려면 세 가지가 필요하다. <strong>거기까지 닿는 네트워크</strong>, <strong>클러스터 밖에서 접근 가능한 주소</strong>, 그리고 <strong>그 주소를 이쪽에서 이름으로 부르는 방법</strong>.</p>
+  <p>두 번째가 실무의 난점이다. 상대 클러스터의 ClusterIP는 그 클러스터 안에서만 의미가 있으므로, <strong>내보내는 쪽이 노출 지점을 만들어야</strong> 한다 — 클라우드에서는 내부 로드밸런서, 실습에서는 NodePort다. 세 번째는 이 모듈의 기법 그대로다.</p>
+  <p>이 손작업을 표준화하려는 것이 <dfn class="term">MCS API<span class="en">Multi-Cluster Services</span></dfn>다. <code>ServiceExport</code>를 만들면 컨트롤러가 다른 클러스터에 <code>ServiceImport</code>와 엔드포인트를 만들어 준다. <strong>다만 기본으로 들어 있지 않고</strong> CRD와 컨트롤러를 따로 설치해야 한다 — 34.6에서 그 사실을 확인한다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">34.3</span>따라하기 ① 셀렉터 없는 서비스</h2>
+
+  <div class="step">
+    <h4>1단계 — 클러스터 밖에 진짜 서비스를 띄운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>흉내가 아니라 <strong>클러스터가 관리하지 않는 실제 프로세스</strong>를 상대로 한다.</p>
+<pre><code>docker run -d --name ext-redis --network kind redis:8.2-alpine \
+  --requirepass extpass --appendonly no
+
+EXT_IP=$(docker inspect ext-redis \
+  --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
+echo $EXT_IP
+docker exec ext-redis redis-cli -a extpass SET greeting "클러스터 밖에서 왔다"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>172.20.0.5
+OK</code></div>
+    <p>도커의 <code>kind</code> 네트워크에 붙인 것이 요점이다. kind 노드들이 그 네트워크에 있으므로 <strong>파드에서 이 IP로 나갈 수 있다.</strong> 실제 환경에서는 이 자리가 VPC 안의 데이터베이스 주소가 된다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 서비스와 엔드포인트를 각각 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>평소 자동으로 채워지던 부분을 손으로 채운다.</p>
+<pre><code>apiVersion: v1
+kind: Service
+metadata: {name: ext-redis, namespace: m34}
+spec:
+  # selector 가 없다. 이것이 핵심이다.
+  ports:
+    - {name: redis, port: 6379, targetPort: 6379, protocol: TCP}
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: ext-redis-1
+  namespace: m34
+  labels:
+    # 이 라벨이 슬라이스를 서비스에 붙인다. 틀리면 조용히 아무 데도 안 붙는다.
+    kubernetes.io/service-name: ext-redis
+addressType: IPv4
+ports:
+  - {name: redis, port: 6379, protocol: TCP}   # 서비스의 포트 이름과 같아야 한다
+endpoints:
+  - addresses: ["172.20.0.5"]
+    conditions:
+      ready: true     # 우리가 직접 말해야 한다 — 프로브가 없다</code></pre>
+    <table>
+      <thead><tr><th>연결 고리</th><th>틀리면</th></tr></thead>
+      <tbody>
+        <tr><td><code>labels."kubernetes.io/service-name"</code></td><td>슬라이스가 서비스에 붙지 않는다. 오류는 없고 <strong>엔드포인트가 비어 보인다</strong></td></tr>
+        <tr><td>슬라이스의 <code>ports[].name</code></td><td>서비스의 포트 이름과 다르면 그 포트로 트래픽이 가지 않는다</td></tr>
+        <tr><td><code>conditions.ready</code></td><td><code>false</code>면 트래픽을 보내지 않는다. <strong>이 값은 우리가 관리한다</strong></td></tr>
+      </tbody>
+    </table>
+<pre><code>kubectl apply -f course/labs/k8s/external/10-selectorless.yaml
+kubectl -n m34 get svc,endpointslice --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>service/ext-redis   ClusterIP   10.96.140.114   &lt;none&gt;   6379/TCP   7s
+endpointslice.discovery.k8s.io/ext-redis-1   IPv4   6379   172.20.0.5   7s</code></div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 파드에서 이름으로 부른다</h4>
+    <p class="purpose"><span class="lbl">목적</span>앱이 <strong>안과 밖을 구분하지 못한다</strong>는 것을 확인한다.</p>
+<pre><code>kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass PING
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass GET greeting
+kubectl -n m34 exec probe -- getent hosts ext-redis.m34.svc.cluster.local</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>PONG
+클러스터 밖에서 왔다
+10.96.140.114     ext-redis.m34.svc.cluster.local  ext-redis.m34.svc.cluster.local</code></div>
+    <div class="verdict"><span class="lbl">판정</span>DNS가 돌려준 것은 <strong>클러스터의 ClusterIP</strong>(<code>10.96.140.114</code>)다. 파드는 그 IP로 보내고, kube-proxy가 <code>172.20.0.5</code>로 바꿔 준다. <strong>앱 입장에서 M14의 레디스와 완전히 같다</strong> — 이름도, 응답도, DNS 결과의 형태도.</div>
+    <p>얻은 것이 분명하다. 데이터베이스 주소가 바뀌면 <code>EndpointSlice</code> 한 줄을 고치고, <strong>앱은 재배포하지 않는다.</strong> 개발 환경에서는 클러스터 안 레디스를, 운영에서는 관리형 레디스를 같은 이름으로 쓸 수 있다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">34.4</span>따라하기 ② ExternalName의 자리</h2>
+
+  <div class="step">
+    <h4>1단계 — 별칭을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>더 간단해 보이는 방법을 써 보고 무엇이 다른지 본다.</p>
+<pre><code>apiVersion: v1
+kind: Service
+metadata: {name: alias-redis, namespace: m34}
+spec:
+  type: ExternalName
+  externalName: ext-redis.m34.svc.cluster.local</code></pre>
+<pre><code>kubectl -n m34 exec probe -- nslookup -type=cname alias-redis.m34.svc.cluster.local
+kubectl -n m34 exec probe -- redis-cli -h alias-redis -a extpass PING
+kubectl -n m34 get svc alias-redis -o jsonpath='{.spec.type}{" clusterIP="}{.spec.clusterIP}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>alias-redis.m34.svc.cluster.local	canonical name = ext-redis.m34.svc.cluster.local
+
+PONG
+
+ExternalName clusterIP=</code></div>
+    <div class="verdict"><span class="lbl">판정</span>동작은 한다. 그런데 <strong><code>clusterIP</code>가 비어 있다</strong> — 가상 IP도, kube-proxy 규칙도 없다. DNS가 이름을 다른 이름으로 바꿔 주고 끝이다. 이 차이가 다음 두 실험에서 결과로 나타난다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 포트를 바꿔 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>가장 자주 기대하는 기능이 되지 않는 것을 확인한다.</p>
+<pre><code>apiVersion: v1
+kind: Service
+metadata: {name: alias-port, namespace: m34}
+spec:
+  type: ExternalName
+  externalName: ext-redis.m34.svc.cluster.local
+  ports:
+    - {name: redis, port: 16379, targetPort: 6379}</code></pre>
+<pre><code>kubectl apply -f -   # 위 매니페스트
+kubectl -n m34 exec probe -- redis-cli -h alias-port -p 16379 -a extpass PING</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>service/alias-port created
+Could not connect to Redis at alias-port:16379: Connection refused</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>매니페스트는 받아들여졌는데 <code>ports</code>가 아무 일도 하지 않는다.</strong> 검증에서 걸리지도 않아서 "설정했다고 생각하고 넘어가는" 형태의 사고가 난다. <code>ExternalName</code>에는 포트를 바꿀 주체가 없다 — 트래픽이 클러스터의 어떤 구성요소도 지나지 않기 때문이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 상태를 물어본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>두 방식이 <strong>관측 가능성</strong>에서 갈리는 것을 확인한다.</p>
+<pre><code>kubectl -n m34 get endpointslice -l kubernetes.io/service-name=alias-redis
+kubectl -n m34 get endpointslice -l kubernetes.io/service-name=ext-redis</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>No resources found in m34 namespace.
+
+NAME          ADDRESSTYPE   PORTS   ENDPOINTS    AGE
+ext-redis-1   IPv4          6379    172.20.0.5   3m7s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ExternalName</code>에는 엔드포인트라는 개념이 없다. <strong>"이 서비스 뒤에 무엇이 있는가"를 클러스터에 물어볼 수 없다</strong> — 대시보드도, <code>kubectl get endpointslice</code>도, 네트워크 정책도 이 서비스에 대해 할 말이 없다.</div>
+    <p>선택 기준이 정리된다. <strong>DNS 이름만 바꾸면 되고 그 뒤는 관여할 필요가 없을 때</strong> <code>ExternalName</code>을 쓴다 — 예를 들어 외부 SaaS 엔드포인트에 짧은 별칭을 붙일 때. <strong>포트를 바꾸거나, 여러 주소로 분배하거나, 상태를 관리해야 하면</strong> 셀렉터 없는 서비스를 쓴다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">34.5</span>따라하기 ③ 다른 클러스터의 서비스</h2>
+
+  <div class="step">
+    <h4>1단계 — 내보내는 쪽을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>상대 클러스터 밖에서 닿는 <strong>고정 주소</strong>를 만든다.</p>
+<pre><code>kind create cluster --config course/labs/infra/kind-edge.yaml
+kind load docker-image journal-api:v1 --name edge
+kubectl --context kind-edge apply -f course/labs/k8s/external/30-export-edge.yaml</code></pre>
+<pre><code>apiVersion: v1
+kind: Service
+metadata: {name: greeter, namespace: shared}
+spec:
+  type: NodePort
+  selector: {app: greeter}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 31080      # 고정한다. 임의 포트면 상대 클러스터 설정이 매번 바뀐다</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>pod/greeter-54845c864b-gwc2z   1/1   Running   0   30s
+pod/greeter-54845c864b-t6zr6   1/1   Running   0   30s
+service/greeter   NodePort   10.96.235.25   &lt;none&gt;   8080:31080/TCP   30s
+
+edge 노드 IP: 172.20.0.6</code></div>
+    <p><code>nodePort</code>를 고정한 것이 중요하다. 지정하지 않으면 30000~32767에서 임의로 정해지고, <strong>서비스를 다시 만들 때마다 바뀐다</strong> — 그러면 가져오는 쪽 설정을 매번 고쳐야 한다. 클라우드에서 내부 로드밸런서를 쓸 때도 같은 이유로 <strong>고정 IP나 안정된 DNS 이름</strong>을 요구한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 가져오는 쪽을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>34.3과 <strong>완전히 같은 기법</strong>을 쓴다. 대상만 다르다.</p>
+<pre><code>apiVersion: v1
+kind: Service
+metadata: {name: greeter-edge, namespace: m34}
+spec:
+  ports:
+    - {name: http, port: 8080, targetPort: 31080, protocol: TCP}
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: greeter-edge-1
+  namespace: m34
+  labels: {kubernetes.io/service-name: greeter-edge}
+addressType: IPv4
+ports:
+  - {name: http, port: 31080, protocol: TCP}
+endpoints:
+  # edge 클러스터의 노드 주소들. 노드가 늘면 여기도 늘려야 한다.
+  - addresses: ["172.20.0.6"]
+    conditions: {ready: true}</code></pre>
+<pre><code>kubectl --context kind-study apply -f course/labs/k8s/external/40-import-study.yaml
+for i in 1 2 3 4; do
+  kubectl --context kind-study -n m34 exec probe -- \
+    sh -c 'wget -qO- --timeout=5 http://greeter-edge:8080/healthz'; echo
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"status":"ok","version":"edge-greeter","pod":"greeter-54845c864b-t6zr6"}
+{"status":"ok","version":"edge-greeter","pod":"greeter-54845c864b-t6zr6"}
+{"status":"ok","version":"edge-greeter","pod":"greeter-54845c864b-gwc2z"}
+{"status":"ok","version":"edge-greeter","pod":"greeter-54845c864b-t6zr6"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>study의 파드가 <code>greeter-edge</code>라는 <strong>평범한 서비스 이름</strong>으로 다른 클러스터의 앱을 불렀고, 응답한 파드 이름이 두 가지로 나온다 — <strong>NodePort가 edge 안에서 분배</strong>했기 때문이다. 부하 분산이 두 단계로 일어난다: study의 kube-proxy가 노드를 고르고, edge의 kube-proxy가 파드를 고른다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">34.6</span>따라하기 ④ MCS API가 채우려는 자리</h2>
+
+  <div class="step">
+    <h4>1단계 — 표준이 있는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"쿠버네티스가 알아서 해 주지 않나"를 확인으로 정리한다.</p>
+<pre><code>kubectl api-resources | grep -i "serviceexport\|serviceimport"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>(아무것도 나오지 않는다)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>API 자체가 없다. <strong>MCS API는 표준으로 정의돼 있지만 클러스터에 기본으로 들어 있지 않다</strong> — CRD와 컨트롤러를 따로 설치해야 하고, 그 구현은 클라우드 사업자나 메시 프로젝트가 제공한다. M33에서 본 대로 <strong>표준이 없는 자리를 컨트롤러가 채우는</strong> 구조 그대로다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 손작업의 양을 센다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨트롤러가 무엇을 대신해 주는지 <strong>구체적으로</strong> 안다.</p>
+<pre><code>kubectl --context kind-study -n m34 get endpointslice greeter-edge-1 \
+  -o jsonpath='{.endpoints[*].addresses[*]}{"\n"}'
+kubectl --context kind-edge get nodes --no-headers | wc -l</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>172.20.0.6
+1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>지금은 노드가 하나라 주소도 하나다. <strong>edge에 노드를 추가하면 이 목록을 사람이 고쳐야 한다.</strong> 그리고 그 노드가 빠질 때도 마찬가지다 — 고치지 않으면 트래픽의 일부가 없는 주소로 간다.</div>
+    <p>MCS API가 하는 일이 이것이다. <code>ServiceExport</code>를 만들면 컨트롤러가 <strong>상대 클러스터의 엔드포인트를 계속 따라가며</strong> <code>EndpointSlice</code>를 갱신한다. 우리가 34.5에서 손으로 쓴 두 파일이 자동으로 유지되는 것이고, <strong>그 유지가 이 방식의 전부</strong>다.</p>
+    <p>설치 없이 이 문제를 줄이는 방법도 있다. 노드 IP 대신 <strong>안정된 주소 하나</strong>(내부 로드밸런서, 또는 DNS 이름)를 엔드포인트에 넣으면 노드가 늘고 줄어도 목록이 바뀌지 않는다. 클라우드에서 이 방식을 쓰는 이유이고, kind에서는 그런 주소를 만들 수단이 없어 노드 IP를 썼다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">34.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 상대가 죽어도 클러스터는 모른다</h4>
+    <p class="purpose"><span class="lbl">목적</span>손으로 쓴 엔드포인트의 가장 큰 대가를 장애로 확인한다.</p>
+<pre><code>docker stop ext-redis
+kubectl -n m34 get endpointslice ext-redis-1 \
+  -o jsonpath='{.endpoints[0].addresses[0]}{" ready="}{.endpoints[0].conditions.ready}{"\n"}'
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass -t 4 PING</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>172.20.0.5 ready=true
+Could not connect to Redis at ext-redis:6379: Operation timed out</code></div>
+    <div class="verdict"><span class="lbl">판정</span>레디스는 죽었는데 <strong>엔드포인트는 <code>ready=true</code>라고 말한다.</strong> 파드가 붙는 서비스였다면 프로브가 실패해 엔드포인트에서 빠졌겠지만, 여기서는 <code>ready</code>가 <strong>우리가 쓴 문자열</strong>일 뿐이다. 쿠버네티스는 이 주소를 검사하지 않는다.</div>
+    <p>증상이 <strong>타임아웃</strong>이라는 점도 중요하다. M25에서 본 것과 같은 형태라, "네트워크 정책 때문인가" "DNS 문제인가"로 시간을 쓰기 쉽다. 셀렉터 없는 서비스를 쓰는 곳에서는 <strong>진단 순서에 "그 주소가 살아 있는가"를 앞에 둔다.</strong></p>
+<pre><code>docker start ext-redis
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass PING</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>PONG</code></div>
+    <p>대응은 셋이다. <strong>주소를 관리하는 컨트롤러를 두거나</strong>(MCS나 External DNS 계열), <strong>상대 쪽에 로드밸런서를 두어</strong> 헬스 체크를 그쪽에 맡기거나, <strong>앱이 재시도와 타임아웃을 제대로 다루게</strong> 한다. 셋 다 하지 않으면 <strong>주소 하나가 죽었을 때 조용히 느려지는</strong> 시스템이 된다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 라벨 하나로 서비스와 슬라이스가 갈라진다</h4>
+    <p class="purpose"><span class="lbl">목적</span>연결 고리가 <strong>라벨 문자열</strong>이라는 것을 확인한다. M20의 3단 라벨 사슬과 같은 부류의 사고다.</p>
+<pre><code># 라벨을 일부러 틀리게 쓴다
+metadata:
+  labels:
+    kubernetes.io/service-name: ext-redis-typo</code></pre>
+    <p>결과는 오류가 아니라 <strong>침묵</strong>이다. 슬라이스는 만들어지고, 서비스도 만들어지고, 둘이 붙지 않는다.</p>
+<pre><code>kubectl -n m34 get endpointslice -l kubernetes.io/service-name=ext-redis
+kubectl -n m34 describe svc ext-redis | grep -i endpoints</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>확인 방법이 정해져 있다. <strong>서비스 이름으로 슬라이스를 조회</strong>해서 나오는지 보고, <code>describe svc</code>의 엔드포인트 줄이 비어 있는지 본다. 비어 있으면 라벨이 틀렸거나 포트 이름이 안 맞는 것이다.</div>
+    <p>포트 이름도 같은 부류다. 서비스가 <code>name: redis</code>인데 슬라이스가 <code>name: tcp</code>면 <strong>슬라이스는 붙지만 그 포트로는 트래픽이 가지 않는다.</strong> 이름을 아예 쓰지 않는 단일 포트 서비스에서는 이 문제가 없으므로, <strong>포트가 하나면 이름을 생략하는 것</strong>도 방법이다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">34.8</span>운영 관점 — 어디까지 연결할 것인가</h2>
+
+  <h3>연결이 늘면 장애가 전파된다</h3>
+  <p>이 모듈의 기법은 클러스터의 경계를 <strong>투명하게</strong> 만든다. 그것이 편리한 만큼 위험하다 — 앱이 상대가 다른 클러스터에 있다는 것을 모르면, <strong>그 클러스터가 죽었을 때의 대응도 준비하지 않는다.</strong></p>
+  <p>실무의 기준은 <strong>"이 호출이 실패해도 우리 서비스가 응답할 수 있는가"</strong>다. 그렇다면 연결해도 된다 — 타임아웃을 짧게 잡고 폴백을 준비한다. 아니라면 <strong>클러스터를 나눈 의미가 없다</strong>. 리전을 나눠 놓고 모든 요청이 다른 리전을 부르면 가용성은 오히려 떨어진다(두 클러스터가 모두 살아 있어야 동작한다).</p>
+
+  <h3>멀티클러스터를 하는 이유부터</h3>
+  <p>클러스터를 여럿 두는 이유는 대체로 넷이다. <strong>지연</strong>(사용자 가까이), <strong>장애 격리</strong>(한 클러스터가 죽어도 다른 곳은 산다), <strong>규제</strong>(데이터가 특정 지역을 벗어나면 안 된다), <strong>규모</strong>(한 클러스터의 한계). 이유마다 <strong>클러스터 사이의 통신을 얼마나 허용할지</strong>가 달라진다.</p>
+  <p>장애 격리가 이유라면 클러스터 간 호출을 <strong>최소로</strong> 해야 한다 — 연결이 많을수록 격리가 사라진다. 규모가 이유라면 자유롭게 연결해도 되지만, 그때는 지연과 네트워크 비용이 새 제약이 된다. <strong>"왜 나눴는지"가 "얼마나 연결할지"를 정한다.</strong></p>
+
+  <h3>주소를 어디에 둘 것인가</h3>
+  <p>이 모듈은 IP를 매니페스트에 박았다. 실습이라 그렇고, 운영에서는 세 가지 중 하나를 쓴다.</p>
+  <p><strong>DNS 이름을 엔드포인트에 넣을 수 없다</strong>는 점이 먼저 걸린다 — <code>EndpointSlice</code>는 IP만 받는다. 그래서 DNS로 관리하고 싶으면 <code>ExternalName</code>을 쓰거나(34.4의 한계를 감수), <strong>이름을 IP로 풀어 <code>EndpointSlice</code>를 갱신하는 컨트롤러</strong>를 둔다. 관리형 데이터베이스처럼 주소가 바뀌는 대상에서는 후자가 사실상 필수다.</p>
+  <p>둘째는 <strong>고정 IP를 받아 두는 것</strong>이다. 클라우드의 내부 로드밸런서에 고정 IP를 붙이면 이 모듈의 방식이 그대로 안정적으로 동작한다. 셋째는 <strong>MCS나 메시에 맡기는 것</strong>이고, 클러스터 수가 늘어나면 결국 이쪽으로 간다.</p>
+
+  <h3>보안 경계가 함께 넓어진다</h3>
+  <p>M25에서 <code>journal</code> 네임스페이스를 화이트리스트로 만들었다. 이 모듈의 기법은 그 경계에 <strong>구멍을 하나 내는 일</strong>이다 — 클러스터 밖으로 나가는 이그레스가 필요하고, 상대 클러스터는 NodePort를 열어야 한다.</p>
+  <p>그래서 짝으로 해야 할 일이 있다. 내보내는 쪽에서는 <strong>NodePort를 아무나 못 부르게</strong> 네트워크 정책이나 방화벽으로 출발지를 제한하고, 가져오는 쪽에서는 <strong>그 주소로만</strong> 나가게 이그레스를 좁힌다. M25의 <code>ipBlock</code>이 그 자리에 쓰인다 — 이 모듈에서는 실습 편의로 하지 않았고, <strong>실제로는 하지 않으면 안 되는 작업</strong>이다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">34.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>docker ps --filter name=ext-redis --format '{{.Status}}'</code> → <code>Up</code>으로 시작한다</li>
+      <li><code>kubectl -n m34 get svc ext-redis -o jsonpath='{.spec.selector}'</code> → 빈 값 (셀렉터가 없다)</li>
+      <li><code>kubectl -n m34 get endpointslice ext-redis-1 -o jsonpath='{.endpoints[0].addresses[0]}'</code> → 외부 컨테이너의 IP</li>
+      <li><code>kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass PING</code> → <code>PONG</code></li>
+      <li><code>kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass GET greeting</code> → <code>클러스터 밖에서 왔다</code></li>
+      <li><code>kubectl -n m34 get svc alias-redis -o jsonpath='{.spec.clusterIP}'</code> → 빈 값</li>
+      <li><code>kubectl -n m34 get endpointslice -l kubernetes.io/service-name=alias-redis --no-headers | wc -l</code> → <code>0</code></li>
+      <li><code>kubectl -n m34 exec probe -- redis-cli -h alias-port -p 16379 -a extpass PING</code> → <code>Connection refused</code></li>
+      <li><code>kubectl --context kind-edge -n shared get svc greeter -o jsonpath='{.spec.ports[0].nodePort}'</code> → <code>31080</code></li>
+      <li><code>kubectl --context kind-study -n m34 exec probe -- sh -c 'wget -qO- http://greeter-edge:8080/healthz'</code> → <code>"version":"edge-greeter"</code></li>
+      <li><code>kubectl api-resources | grep -c serviceimport</code> → <code>0</code></li>
+      <li><code>docker stop ext-redis; kubectl -n m34 get endpointslice ext-redis-1 -o jsonpath='{.endpoints[0].conditions.ready}'</code> → <code>true</code> (죽었는데도)</li>
+      <li>(이해 확인) <code>ExternalName</code>과 셀렉터 없는 서비스 중 어느 것을 언제 쓰는지 각각 한 문장으로 적는다</li>
+      <li>(이해 확인) 상대 클러스터의 노드가 늘었을 때 무엇을 고쳐야 하는지, 그것을 자동화하는 방법 둘을 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/external/10-selectorless.yaml</code> — 셀렉터 없는 서비스 + 손으로 쓴 EndpointSlice</li>
+      <li><code>course/labs/k8s/external/20-externalname.yaml</code> — DNS 별칭</li>
+      <li><code>course/labs/k8s/external/30-export-edge.yaml</code> — 내보내는 쪽 (NodePort 고정)</li>
+      <li><code>course/labs/k8s/external/40-import-study.yaml</code> — 가져오는 쪽</li>
+      <li>클러스터: 없음 — 이 모듈의 리소스는 전부 정리한다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 두 번째 클러스터와 외부 컨테이너를 지운다 (Part 8 에서 메모리가 필요하다)
+kind delete cluster --name edge
+docker rm -f ext-redis
+
+# 실습 네임스페이스
+kubectl --context kind-study delete ns m34 --ignore-not-found
+
+# 원래 앱이 그대로인지 확인
+kubectl --context kind-study -n journal get deploy,sts --no-headers</code></pre>
+  <p>M36의 카오스 실험과 M37의 부하 시험은 <strong>메모리를 많이 쓴다.</strong> 두 번째 클러스터와 외부 컨테이너를 여기서 정리하고 넘어간다.</p>
+  <p><code>k8s/external/</code>의 매니페스트는 남는다. M38 캡스톤에서 "외부 의존을 어떻게 연결했는가"를 설명할 때 이 파일들을 근거로 쓴다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m33-k8s-crd-operator.html">← M33 CRD와 오퍼레이터 구현</a>
+  <a href="m35-k8s-platform-ml.html">M35 플랫폼 패턴과 ML 워크로드 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>M33에서 CRD를, 이 모듈에서 서비스 확장을 다뤘다. 쿠버네티스를 확장하는 지점은 그 둘만이 아니다 — 어드미션 웹훅(M26), 스케줄러, CSI 드라이버, 디바이스 플러그인이 각각 다른 층을 연다. <strong>어느 것을 언제 쓰는지</strong>가 플랫폼 팀의 실질적인 판단이다.</p>
+  <p>M35에서 그 지도를 그리고, 지금까지 다루지 않은 워크로드 종류 — <strong>배치 작업</strong> — 를 실습한다. <code>Job</code>·<code>CronJob</code>·<code>Indexed Job</code>으로 분산 훈련의 형태를 흉내 내고, 재시도 정책과 특수 하드웨어 요청이 어떻게 표현되는지 본다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>셀렉터 없는 서비스: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors</li>
+    <li>EndpointSlice: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/</li>
+    <li>ExternalName: https://kubernetes.io/docs/concepts/services-networking/service/#externalname</li>
+    <li>NodePort: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport</li>
+    <li>Multi-Cluster Services API (KEP-1645): https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api</li>
+    <li>DNS for Services and Pods: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 12장 멀티클러스터 · 13장 서비스 임포트와 익스포트</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 (클러스터 2개) · Kubernetes 1.37.0 · redis 8.2-alpine</p>
+</footer>
+
+</div>
+</body>
+</html>

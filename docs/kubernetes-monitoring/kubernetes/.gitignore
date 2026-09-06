@@ -141,23 +141,3 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
-
-# ── 이 교재 전용 ─────────────────────────────────────────────
-# 빌드 산출물 — 저장소에 넣지 않는다. npm ci 로 복원한다.
-course/labs/apps/journal-api/node_modules/
-course/labs/apps/journal-api/dist/
-# Go 오퍼레이터 빌드물 (kubebuilder 뼈대는 README 의 절차로 다시 만든다)
-course/labs/operator/journalsite/bin/
-course/labs/operator/journalsite/testbin/
-# 맥 파인더
-.DS_Store
-# 실습에서 만드는 키 — 절대 커밋하지 않는다 (M31)
-*.key
-age.key
-kubeconfig-*.yaml
-# 임시
-*.log
-/tmp/
-# 이 디렉터리에 있던 별도 git 저장소를 본문에 합쳤다(내용 140개는 그쪽에서도 미추적이었다).
-# 원래 .git 은 되돌릴 수 있게 .git.bak 으로 남겨 두고 커밋에서만 뺀다.
-docs/kubernetes-monitoring/kubernetes/.git.bak/

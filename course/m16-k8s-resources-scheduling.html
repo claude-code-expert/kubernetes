@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 3 · 운영 기초] M16 리소스 · QoS · 스케줄링 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터(노드 3개, 각 14 CPU)에서 실제로 얻은 값이다.
+  그림은 인라인 SVG — figures/m16-fig1-two-rulers.svg 에 같은 파일을 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 16 / 38 · PART 3 운영 기초</div>
+  <h1>리소스 · QoS · 스케줄링</h1>
+  <p class="ch-desc">M15까지 만든 저널 애플리케이션의 모든 파드는 <code>BestEffort</code>다. 스케줄러는 이 파드에 얼마가 필요한지 모르고, 노드가 빠듯해지면 가장 먼저 쫓겨난다. 이 모듈에서 <code>requests</code>를 붙여 <strong>Pending을 일부러 만들고</strong> 이벤트에서 원인을 읽은 뒤, 파드를 어느 노드에 놓을지 통제하고, 노드를 안전하게 비운다.</p>
+  <div class="meta">
+    <span class="tag">중반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m15-k8s-probes-lifecycle.html">M15</a> 완료 — <code>journal-api</code>에 프로브 3종과 <code>preStop</code>이 들어 있다. 확인: <code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].startupProbe.failureThreshold}'</code>가 <code>30</code></li>
+    <li>metrics-server가 떠 있다 (<a href="m01-setup-environment.html">M01</a>). 확인: <code>kubectl top nodes</code>가 수치를 돌려준다. <code>error: Metrics API not available</code>이 나오면 M01 1.5로 돌아간다</li>
+    <li>워커 노드가 2개 이상이다. 확인: <code>kubectl get nodes</code>에 <code>study-worker</code>, <code>study-worker2</code></li>
+    <li>고칠 파일: <code>course/labs/k8s/journal/</code>의 <code>20-redis.yaml</code> · <code>30-journal-api.yaml</code> · <code>40-web-static.yaml</code> · <code>kustomization.yaml</code></li>
+    <li>새로 쓰는 파일: <code>course/labs/k8s/journal/60-pdb.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 노드가 텅 비어 있는데도 파드가 <code>Pending</code>이 되는 상황을 만들고, <code>describe</code>의 이벤트 한 줄에서 원인을 읽어낸다.</p>
+  <p>2. <code>nodeSelector</code> · 테인트 · <code>topologySpreadConstraints</code>로 파드를 어디에 놓을지 정하고, 실패했을 때 스케줄러가 남기는 메시지가 원인마다 어떻게 다른지 구분한다.</p>
+  <p>3. PDB를 걸고 노드를 비워 본다. 값을 잘못 잡으면 노드를 영원히 못 비운다는 것을 교착 상태로 직접 확인한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">16.1</span>왜 BestEffort가 문제인가</a>
+  <a href="#s2"><span class="num">16.2</span>이론 — 두 개의 자, 그리고 세 등급</a>
+  <a href="#s3"><span class="num">16.3</span>따라하기 ① requests가 자리를 정한다</a>
+  <a href="#s4"><span class="num">16.4</span>따라하기 ② 어느 노드에 놓을지 고른다</a>
+  <a href="#s5"><span class="num">16.5</span>따라하기 ③ 고르게 편다</a>
+  <a href="#s6"><span class="num">16.6</span>따라하기 ④ 네임스페이스 단위로 막는다</a>
+  <a href="#s7"><span class="num">16.7</span>따라하기 ⑤ 노드를 비운다</a>
+  <a href="#s8"><span class="num">16.8</span>일부러 실패시키기</a>
+  <a href="#s9"><span class="num">16.9</span>운영 관점 — limits를 걸 것인가</a>
+  <a href="#s10"><span class="num">16.10</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">16.1</span>왜 BestEffort가 문제인가</h2>
+  <p class="lead">M15를 마친 상태에서 저널 네임스페이스의 QoS 등급을 본다.</p>
+<pre><code>kubectl -n journal get pods -o custom-columns='NAME:.metadata.name,QOS:.status.qosClass,NODE:.spec.nodeName'</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>NAME                           QOS          NODE
+journal-api-76db5cfb9f-gw9fz   BestEffort   study-worker2
+journal-api-76db5cfb9f-kwwt8   BestEffort   study-worker2
+journal-api-76db5cfb9f-p5vkw   BestEffort   study-worker
+redis-0                        BestEffort   study-worker2
+web-static-74cfbb9764-krnjh    BestEffort   study-worker2
+web-static-74cfbb9764-pcnsf    BestEffort   study-worker</code></div>
+  <p>전부 <code>BestEffort</code>다. 그리고 노드 배치를 보면 <code>study-worker2</code>에 넷, <code>study-worker</code>에 둘이 몰려 있다. 둘 다 우연이 아니라 우리가 아무것도 지시하지 않은 결과다.</p>
+  <p><code>BestEffort</code>는 "이 파드가 얼마를 쓸지 모른다"는 뜻이다. 결과가 두 갈래로 나타난다. 첫째, <strong>스케줄러가 이 파드를 무게 없는 것으로 취급한다</strong> — 노드에 몇 개를 넣든 계산상 늘 자리가 있다. 둘째, <strong>노드에 메모리가 부족해지면 축출 대상 1순위</strong>가 된다. 데이터베이스든 프론트엔드든 가리지 않는다.</p>
+  <p>레디스가 <code>BestEffort</code>인 것이 특히 위험하다. 노드가 빠듯해지면 상태를 들고 있는 파드가 먼저 죽는다. M14에서 PVC를 붙여 데이터는 살렸지만, 축출 순서까지 고려하지는 않았다.</p>
+  <p>그런데 <code>requests</code>를 붙이는 순간 새로운 문제가 생긴다. 노드가 텅 비어 있는데도 파드가 뜨지 않는 상황이다. 왜 그런지가 이 모듈의 절반이다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">16.2</span>이론 — 두 개의 자, 그리고 세 등급</h2>
+  <p>책 8.1은 리소스 관리를 클러스터 운영자의 관점에서 다룬다. 실습에서 마주칠 개념만 추리면 셋이다 — 스케줄러가 무엇을 보고 결정하는가, <code>requests</code>와 <code>limits</code>가 각각 무엇을 하는가, 부족할 때 누가 먼저 밀려나는가.</p>
+
+  <h3>스케줄러가 파드 하나를 놓기까지</h3>
+  <p>스케줄러는 두 단계로 일한다. 먼저 <dfn class="term">필터링 <span class="en">filtering</span></dfn> 단계에서 <strong>불가능한 노드를 걸러낸다</strong> — <code>requests</code>를 감당할 여유가 없는 노드, 테인트를 견디지 못하는 노드, <code>nodeSelector</code>에 맞지 않는 노드가 여기서 탈락한다. 남은 노드가 하나도 없으면 파드는 <code>Pending</code>이 되고, <strong>탈락 이유가 이벤트에 그대로 적힌다.</strong> 이 모듈에서 반복해 읽을 문장이 그것이다.</p>
+  <p>살아남은 노드가 있으면 <dfn class="term">점수 매기기 <span class="en">scoring</span></dfn> 단계에서 그중 가장 나은 곳을 고른다. 자원이 고르게 퍼지는 쪽, 이미지가 이미 있는 노드, 같은 서비스의 파드가 덜 몰린 곳에 점수를 준다. 필터링은 가부를 정하고 점수는 선호를 정한다 — 이 구분이 <code>requiredDuringScheduling</code>과 <code>preferredDuringScheduling</code>이라는 이름으로 매니페스트에도 그대로 나온다.</p>
+  <p>중요한 것은 <strong>스케줄러가 배치 시점에만 관여한다</strong>는 점이다. 한번 노드에 올라간 파드는 그 노드가 한가해지든 붐비든 스스로 옮겨 가지 않는다. 16.7에서 노드를 비운 뒤 되돌려도 파드가 돌아오지 않는 것을 직접 보게 된다.</p>
+
+  <h3>requests와 limits — 서로 다른 두 사람이 읽는다</h3>
+  <p><code>requests</code>는 <strong>스케줄러가 읽는 예약값</strong>이다. "이만큼은 확보돼야 한다"는 선언이고, 노드에 남은 예약 가능량을 계산하는 데만 쓰인다. <code>limits</code>는 <strong>커널이 읽는 상한</strong>이다. cgroup에 그대로 내려가 런타임에 강제된다. 둘은 다른 층에서 다른 목적으로 동작하며, 그래서 같은 노드를 두고 정반대의 보고를 하는 일이 생긴다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <pattern id="resv" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#2456c4" stroke-width="1" opacity="0.5"/>
+        </pattern>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .resv { fill:url(#resv); stroke:#2456c4; stroke-width:1.2; }
+        .used { fill:#e8e8e6; stroke:#777777; stroke-width:1; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="390" rx="6"/>
+      <text class="t-h" x="40" y="46">같은 노드를 두 개의 자로 잰다 — 어느 쪽도 틀리지 않았다</text>
+      <text class="t-sub" x="40" y="66">study-worker · 14 CPU · 파드 3개가 각각 requests cpu 4</text>
+
+      <!-- 자 1 : 스케줄러 -->
+      <text class="t-title" x="40" y="108">스케줄러의 자</text>
+      <text class="t-mono" x="40" y="125">describe node</text>
+      <text class="t-sub" x="40" y="142">Allocated resources</text>
+      <rect class="node" x="200" y="92" width="640" height="46" rx="4"/>
+      <rect class="resv" x="200" y="92" width="602" height="46" rx="4"/>
+      <text class="t-acc" x="501" y="120" text-anchor="middle">requests 합계 13250m — 94% 예약됨</text>
+      <text class="t-sub" x="812" y="120">여유</text>
+      <text class="t-sub" x="200" y="156">파드를 하나 더 넣을 자리가 있는가를 이 자로만 판단한다. 실제로 쓰는지는 보지 않는다.</text>
+
+      <!-- 자 2 : 커널 -->
+      <text class="t-title" x="40" y="212">커널의 자</text>
+      <text class="t-mono" x="40" y="229">top node</text>
+      <text class="t-sub" x="40" y="246">CPU(cores)</text>
+      <rect class="node" x="200" y="196" width="640" height="46" rx="4"/>
+      <rect class="used" x="200" y="196" width="16" height="46" rx="4"/>
+      <text class="t-sub" x="228" y="224">실제 사용 34m — 0%</text>
+      <text class="t-sub" x="200" y="260">cgroup 이 실제로 소비된 시간을 잰다. 스케줄링에는 쓰이지 않는다.</text>
+
+      <line class="tick" x1="200" y1="272" x2="840" y2="272"/>
+
+      <!-- 결론 -->
+      <rect class="warnbox" x="200" y="288" width="640" height="44" rx="4"/>
+      <text class="t-warn" x="520" y="308" text-anchor="middle">새 파드는 Pending 이 된다 — 0/3 nodes are available: 2 Insufficient cpu</text>
+      <text class="t-sub" x="520" y="325" text-anchor="middle">노드는 비어 있는데 스케줄러는 자리가 없다고 말한다. 둘 다 맞는 말이다.</text>
+
+      <!-- QoS -->
+      <text class="t-title" x="40" y="366">QoS 등급</text>
+      <rect class="box" x="200" y="348" width="200" height="42" rx="3"/>
+      <text class="t-title" x="300" y="366" text-anchor="middle">BestEffort</text>
+      <text class="t-sub" x="300" y="382" text-anchor="middle">requests 없음 · 먼저 쫓겨난다</text>
+      <rect class="accent" x="412" y="348" width="200" height="42" rx="3"/>
+      <text class="t-title" x="512" y="366" text-anchor="middle">Burstable</text>
+      <text class="t-sub" x="512" y="382" text-anchor="middle">requests &lt; limits · 그다음</text>
+      <rect class="box" x="624" y="348" width="216" height="42" rx="3"/>
+      <text class="t-title" x="732" y="366" text-anchor="middle">Guaranteed</text>
+      <text class="t-sub" x="732" y="382" text-anchor="middle">requests == limits · 마지막까지 남는다</text>
+    </svg>
+    <figcaption>그림 16.1 — <code>describe node</code>는 예약량을, <code>top node</code>는 실제 사용량을 보여준다. 실사용 0%인 노드가 스케줄링상으로는 94% 차 있을 수 있다.</figcaption>
+  </figure>
+
+  <p>초과했을 때의 처리도 자원에 따라 다르다. <strong>메모리는 압축할 수 없으므로</strong> 상한을 넘으면 컨테이너를 죽인다(<code>OOMKilled</code>). <strong>CPU는 압축할 수 있으므로</strong> 죽이지 않고 조인다 — 주어진 몫을 다 쓰면 다음 주기까지 기다리게 한다. 이것을 <dfn class="term">스로틀링 <span class="en">throttling</span></dfn>이라고 한다. 증상이 전혀 다르다. 메모리 초과는 재시작으로 드러나고 CPU 초과는 조용히 느려지기만 한다. 16.9에서 둘 다 확인한다.</p>
+
+  <h3>QoS 세 등급 — 스스로 정하지 않는다</h3>
+  <p>QoS 등급은 필드로 지정하는 것이 아니라 <code>requests</code>와 <code>limits</code>를 어떻게 적었는지에 따라 <strong>자동으로 결정된다</strong>.</p>
+  <table>
+    <tr><th>등급</th><th>조건</th><th>메모리 부족 시</th></tr>
+    <tr><td><code>Guaranteed</code></td><td>모든 컨테이너에서 <code>requests == limits</code> (cpu·memory 둘 다)</td><td>마지막까지 남는다</td></tr>
+    <tr><td><code>Burstable</code></td><td><code>requests</code>가 있고 <code>Guaranteed</code> 조건은 아니다</td><td>두 번째로 밀린다. 예약을 많이 초과해 쓰고 있는 파드가 먼저</td></tr>
+    <tr><td><code>BestEffort</code></td><td><code>requests</code>도 <code>limits</code>도 없다</td><td><strong>가장 먼저 쫓겨난다</strong></td></tr>
+  </table>
+  <p>등급을 올리는 방법은 매니페스트를 고치는 것뿐이다. <code>Guaranteed</code>가 늘 정답은 아니다 — <code>requests == limits</code>로 묶으면 여유가 있어도 더 쓸 수 없고, 노드의 자원이 예약만 채운 채 놀게 된다. 이 트레이드오프는 16.9에서 다시 본다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">16.3</span>따라하기 ① requests가 자리를 정한다</h2>
+
+  <div class="step">
+    <h4>1단계 — 세 등급을 한 번에 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>QoS가 매니페스트의 어떤 차이에서 갈리는지 눈으로 확인한다.</p>
+    <p>실험용 네임스페이스를 따로 쓴다. <code>journal</code>을 건드리지 않기 위해서다.</p>
+<pre><code>kubectl create ns m16
+
+cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: qos-besteffort, labels: {demo: qos}}
+spec:
+  containers: [{name: c, image: nginx:1.29-alpine}]
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: qos-burstable, labels: {demo: qos}}
+spec:
+  containers:
+    - name: c
+      image: nginx:1.29-alpine
+      resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: qos-guaranteed, labels: {demo: qos}}
+spec:
+  containers:
+    - name: c
+      image: nginx:1.29-alpine
+      resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 100m, memory: 128Mi}}
+EOF</code></pre>
+    <span class="out-lbl">확인</span>
+<pre><code>kubectl -n m16 get pods -l demo=qos \
+  -o custom-columns='NAME:.metadata.name,QOS:.status.qosClass,STATUS:.status.phase'</code></pre>
+    <div class="out"><code>NAME             QOS          STATUS
+qos-besteffort   BestEffort   Running
+qos-burstable    Burstable    Running
+qos-guaranteed   Guaranteed   Running</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 등급이 그대로 나온다. <code>qosClass</code>는 우리가 적은 적이 없는 필드다 — apiserver가 <code>resources</code>를 보고 채운 것이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 노드 용량을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>다음 단계에서 얼마를 요청해야 자리가 모자라는지 계산할 근거를 얻는다.</p>
+<pre><code>kubectl get nodes -o custom-columns='NAME:.metadata.name,CPU:.status.capacity.cpu,ALLOC-CPU:.status.allocatable.cpu'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME                  CPU   ALLOC-CPU
+study-control-plane   14    14
+study-worker          14    14
+study-worker2         14    14</code></div>
+    <table>
+      <tr><th>필드</th><th>뜻</th></tr>
+      <tr><td><code>capacity</code></td><td>노트북이 이 노드에 준 전체 자원</td></tr>
+      <tr><td><code>allocatable</code></td><td>그중 파드에 나눠 줄 수 있는 몫. kubelet과 시스템 데몬 몫을 뺀 값이다</td></tr>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>워커 한 대에 14 CPU다. 이 값은 <strong>노트북 사양에 따라 다르다</strong> — 자기 환경의 숫자를 적어 두고 다음 단계에서 그 값을 기준으로 요청량을 정한다. 아래 예시는 14 기준이므로, 8 CPU 노트북이라면 <code>13</code> 대신 <code>7</code>을 쓴다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 자리가 모자라게 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Pending을 재현하고, 스케줄러가 남기는 이벤트를 읽는 연습을 한다.</p>
+    <p>워커 한 대가 14 CPU이고 워커는 두 대다. 파드 하나가 13 CPU를 요구하면 두 개까지만 들어간다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: hungry}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: hungry}}
+  template:
+    metadata: {labels: {app: hungry}}
+    spec:
+      containers:
+        - name: c
+          image: nginx:1.29-alpine
+          resources:
+            requests: {cpu: "13", memory: 256Mi}
+EOF</code></pre>
+<pre><code>kubectl -n m16 get pods -l app=hungry -o wide</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME                      READY   STATUS    RESTARTS   AGE   IP             NODE            NOMINATED NODE
+hungry-75bc79769c-2984x   1/1     Running   0          15s   10.244.2.113   study-worker2   &lt;none&gt;
+hungry-75bc79769c-9vdtp   1/1     Running   0          15s   10.244.1.117   study-worker    &lt;none&gt;
+hungry-75bc79769c-k2dbb   0/1     Pending   0          15s   &lt;none&gt;         &lt;none&gt;          &lt;none&gt;</code></div>
+    <p>IP와 파드 접미사는 환경마다 다르다.</p>
+    <div class="verdict"><span class="lbl">판정</span>둘은 떴고 하나는 <code>Pending</code>이다. <code>NODE</code>가 <code>&lt;none&gt;</code>이면 아직 어느 노드에도 배정되지 않았다는 뜻이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 왜 못 떴는지 이벤트에서 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>추측하지 않고 스케줄러가 남긴 문장을 그대로 읽는다. 이 모듈에서 가장 자주 쓸 명령이다.</p>
+<pre><code>POD=$(kubectl -n m16 get po -l app=hungry --field-selector=status.phase=Pending \
+        -o jsonpath='{.items[0].metadata.name}')
+kubectl -n m16 describe pod $POD | tail -n 4</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Events:
+  Type     Reason            Age   From               Message
+  ----     ------            ----  ----               -------
+  Warning  FailedScheduling  15s   default-scheduler  0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 Insufficient cpu. preemption: 0/3 nodes are available: 1 Preemption is not helpful for scheduling, 2 No preemption victims found for incoming pod.</code></div>
+    <p>한 줄에 세 가지가 들어 있다. <code>0/3 nodes are available</code>은 세 노드 전부 탈락했다는 뜻이고, 이어지는 절이 <strong>노드를 이유별로 묶은 것</strong>이다 — <code>1 node(s) had untolerated taint(s)</code>는 컨트롤 플레인(테인트가 걸려 있다), <code>2 Insufficient cpu</code>는 워커 둘이다. 뒤쪽 <code>preemption:</code> 절은 "우선순위가 낮은 파드를 밀어내서라도 자리를 만들 수 있는가"를 따져 본 결과이고, 여기서는 밀어낼 대상이 없다.</p>
+    <div class="verdict"><span class="lbl">판정</span><code>Reason</code>이 <code>FailedScheduling</code>이고 메시지에 <code>Insufficient cpu</code>가 보이면 <code>requests</code>가 노드 여유보다 크다는 뜻이다. 16.4·16.5에서 <strong>같은 자리에 다른 문구가 나오는 경우</strong>를 보게 되는데, 그 문구가 곧 원인이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — 같은 노드를 두 개의 자로 잰다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>requests</code>가 사용량이 아니라 예약이라는 것을 두 명령의 출력 차이로 확인한다.</p>
+<pre><code>kubectl top node study-worker
+kubectl describe node study-worker | sed -n '/Allocated resources/,/hugepages-1Gi/p'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME           CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)
+study-worker   34m          0%       452Mi           5%
+
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests      Limits
+  --------           --------      ------
+  cpu                13250m (94%)  300m (2%)
+  memory             498Mi (6%)    256Mi (3%)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 노드가 <strong>실사용 0%, 예약 94%</strong>다. 둘 다 맞는 값이다. 새 파드를 받을지 말지는 아래 자로만 판단하므로, 노드가 놀고 있어도 <code>Pending</code>이 난다. 운영에서 "노드가 한가한데 파드가 안 뜬다"는 신고가 들어오면 이 두 명령을 나란히 쳐 보는 것이 첫 진단이다.</div>
+    <p>여기서 정리해 둔다 — <code>requests</code>를 실제 사용량보다 크게 잡으면 노드가 놀면서도 파드를 못 받고, 작게 잡으면 노드가 초과 할당돼 실제로 자원이 모자랄 때 축출이 일어난다. 적정값을 정하는 근거는 실측이며, 그 실측 도구가 M19~M21에서 세우는 관측 스택이다.</p>
+<pre><code>kubectl -n m16 delete deploy hungry</code></pre>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">16.4</span>따라하기 ② 어느 노드에 놓을지 고른다</h2>
+  <p>지금까지는 "자리가 있느냐"만 봤다. 이제 자리가 있어도 <strong>거기에 놓지 말라</strong>거나 <strong>거기에만 놓으라</strong>고 지시한다. 방향이 반대인 두 장치가 있다 — <code>nodeSelector</code>는 파드가 노드를 고르고, 테인트는 노드가 파드를 거른다.</p>
+
+  <div class="step">
+    <h4>6단계 — 라벨을 붙이고 그 노드만 고르게 한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>가장 단순한 배치 지시인 <code>nodeSelector</code>의 동작과, 맞는 노드가 없을 때의 메시지를 확인한다.</p>
+<pre><code>kubectl label node study-worker2 disktype=ssd
+
+cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: pinned}
+spec:
+  nodeSelector: {disktype: ssd}
+  containers: [{name: c, image: nginx:1.29-alpine, resources: {requests: {cpu: 10m}}}]
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: pinned-nowhere}
+spec:
+  nodeSelector: {disktype: nvme}
+  containers: [{name: c, image: nginx:1.29-alpine, resources: {requests: {cpu: 10m}}}]
+EOF</code></pre>
+<pre><code>kubectl -n m16 get po pinned pinned-nowhere \
+  -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME             STATUS    NODE
+pinned           Running   study-worker2
+pinned-nowhere   Pending   &lt;none&gt;</code></div>
+<pre><code>kubectl -n m16 describe pod pinned-nowhere | tail -n 3</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  Warning  FailedScheduling  10s  default-scheduler  0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 node(s) didn't match Pod's node affinity/selector. preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.</code></div>
+    <div class="verdict"><span class="lbl">판정</span>4단계와 같은 <code>FailedScheduling</code>이지만 문구가 <code>didn't match Pod's node affinity/selector</code>로 바뀌었다. <strong>자원이 아니라 조건이 안 맞은 것</strong>이다. 두 문구를 구분할 줄 알면 <code>Pending</code> 진단의 절반이 끝난다.</div>
+    <p><code>nodeSelector</code>는 "정확히 일치, 아니면 배치 불가"밖에 표현하지 못한다. "가능하면 A에, 안 되면 아무 데나"처럼 선호를 표현하려면 <code>affinity</code>의 <code>preferredDuringSchedulingIgnoredDuringExecution</code>을 쓴다. 이름이 긴 이유는 16.2에서 말한 필터링(<code>required</code>)과 점수(<code>preferred</code>)의 구분을 이름에 담았기 때문이고, 뒤의 <code>IgnoredDuringExecution</code>은 <strong>이미 실행 중인 파드에는 소급 적용하지 않는다</strong>는 뜻이다 — 조건이 깨져도 쫓아내지 않는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>7단계 — 노드가 파드를 거르게 한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>테인트와 톨러레이션이 <code>nodeSelector</code>와 방향이 반대라는 것을 확인한다.</p>
+    <p><code>nodeSelector</code>는 파드가 "나는 저기로 가겠다"고 말하는 것이고, 테인트는 노드가 "나는 아무나 받지 않는다"고 말하는 것이다. 컨트롤 플레인에 사용자 파드가 뜨지 않는 것도 이 장치 때문이다.</p>
+<pre><code>kubectl taint node study-worker2 tier=batch:NoSchedule
+
+cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: no-toleration}
+spec:
+  nodeSelector: {kubernetes.io/hostname: study-worker2}
+  containers: [{name: c, image: nginx:1.29-alpine, resources: {requests: {cpu: 10m}}}]
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: with-toleration}
+spec:
+  nodeSelector: {kubernetes.io/hostname: study-worker2}
+  tolerations: [{key: tier, operator: Equal, value: batch, effect: NoSchedule}]
+  containers: [{name: c, image: nginx:1.29-alpine, resources: {requests: {cpu: 10m}}}]
+EOF</code></pre>
+    <table>
+      <tr><th>값</th><th>뜻</th></tr>
+      <tr><td><code>NoSchedule</code></td><td>새 파드를 받지 않는다. 이미 떠 있는 파드는 그대로 둔다</td></tr>
+      <tr><td><code>NoExecute</code></td><td>새 파드도 안 받고, 톨러레이션 없는 기존 파드는 <strong>쫓아낸다</strong></td></tr>
+      <tr><td><code>PreferNoSchedule</code></td><td>되도록 받지 않는다. 다른 자리가 없으면 받는다</td></tr>
+    </table>
+<pre><code>kubectl -n m16 get po no-toleration with-toleration \
+  -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME              STATUS    NODE
+no-toleration     Pending   &lt;none&gt;
+with-toleration   Running   study-worker2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 <code>nodeSelector</code>를 가진 두 파드의 운명이 톨러레이션 유무로 갈렸다. <code>describe pod no-toleration</code>의 이벤트에는 <code>2 node(s) had untolerated taint(s)</code>가 나온다 — 이번에는 컨트롤 플레인과 <code>study-worker2</code> 둘 다 테인트 때문에 탈락했다.</div>
+    <p>톨러레이션은 <strong>허가일 뿐 배치 지시가 아니다.</strong> 테인트를 견딜 수 있게 될 뿐, 그 노드로 가라는 뜻은 아니다. "전용 노드에만 보내고 싶다"면 테인트(다른 파드 차단)와 <code>nodeSelector</code>(이 파드를 그쪽으로)를 <strong>함께</strong> 써야 한다.</p>
+<pre><code>kubectl taint node study-worker2 tier-
+kubectl -n m16 delete pod no-toleration with-toleration pinned pinned-nowhere</code></pre>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">16.5</span>따라하기 ③ 고르게 편다</h2>
+  <p>16.1에서 본 것처럼 <code>journal-api</code> 파드 셋이 2:1로 몰려 있다. 노드 하나가 빠지면 용량의 3분의 2가 한꺼번에 사라진다는 뜻이다. 이제 저널 애플리케이션 자체를 고친다.</p>
+
+  <div class="step">
+    <h4>8단계 — requests를 붙이고 고르게 펴라고 지시한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>실습용 파드가 아니라 실제 애플리케이션에 <code>resources</code>와 분산 제약을 넣는다.</p>
+    <p><code>course/labs/k8s/journal/30-journal-api.yaml</code>의 파드 스펙에 두 곳을 더한다.</p>
+<pre><code>    spec:
+      terminationGracePeriodSeconds: 30
+      # 파드를 노드에 고르게 편다 (M16). 한 노드에 몰려 있으면 그 노드가 빠질 때 전부 같이 빠진다.
+      # nodeTaintsPolicy: Honor 가 없으면 테인트 걸린 control-plane 도 도메인으로 세어
+      # 어디에 놓아도 skew 가 1 을 넘게 되고, 스케줄이 통째로 막힌다. 기본값은 Ignore 다.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: journal-api
+      containers:
+        - name: api
+          # ... 생략: image · ports · env 는 그대로 ...
+          # requests 가 스케줄링을 결정하고 limits 가 런타임을 제한한다 (M16).
+          # cpu limit 을 걸지 않는 이유: 초과하면 죽는 것이 아니라 조여진다(스로틀링).
+          # 여유가 있을 때 더 쓰게 두는 편이 낫다. memory 는 초과하면 OOMKilled 이므로 건다.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 192Mi</code></pre>
+    <table>
+      <tr><th>필드</th><th>뜻</th></tr>
+      <tr><td><code>maxSkew: 1</code></td><td>도메인 사이 파드 수 차이가 1을 넘지 않게 한다</td></tr>
+      <tr><td><code>topologyKey</code></td><td>무엇을 도메인으로 볼지. <code>kubernetes.io/hostname</code>이면 노드 단위, <code>topology.kubernetes.io/zone</code>이면 가용 영역 단위다</td></tr>
+      <tr><td><code>whenUnsatisfiable: DoNotSchedule</code></td><td>지킬 수 없으면 배치하지 않는다. <code>ScheduleAnyway</code>로 두면 선호로만 작동한다</td></tr>
+      <tr><td><code>nodeTaintsPolicy: Honor</code></td><td>톨러레이션 없이 갈 수 없는 노드는 도메인에서 제외한다. <strong>기본값은 <code>Ignore</code>이고, 그것이 16.8 실패 ①의 원인이다</strong></td></tr>
+    </table>
+    <p><code>redis</code>와 <code>web-static</code>에도 <code>requests</code>를 넣어 네임스페이스 전체를 <code>Burstable</code>로 맞춘다. 값은 <code>kubectl top pod</code>로 잰 실제 사용량(각각 10Mi·11Mi 안팎)에 여유를 얹은 것이다.</p>
+<pre><code># 20-redis.yaml 의 컨테이너에
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {memory: 128Mi}
+
+# 40-web-static.yaml 의 컨테이너에
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}</code></pre>
+<pre><code>kubectl apply -k course/labs/k8s/journal
+kubectl -n journal rollout status deploy/journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/journal-api configured
+deployment.apps/web-static configured
+statefulset.apps/redis configured
+deployment "journal-api" successfully rolled out</code></div>
+    <div class="verdict"><span class="lbl">판정</span>롤아웃이 끝나면 QoS와 배치가 함께 바뀐다.</div>
+<pre><code>kubectl -n journal get po -o custom-columns='NAME:.metadata.name,QOS:.status.qosClass,NODE:.spec.nodeName' --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-599bf98c7-jgs98   Burstable   study-worker
+journal-api-599bf98c7-npq44   Burstable   study-worker
+journal-api-599bf98c7-w9wzf   Burstable   study-worker2
+redis-0                       Burstable   study-worker2
+web-static-fc76c78dc-djd77    Burstable   study-worker2
+web-static-fc76c78dc-ww9x6    Burstable   study-worker</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>BestEffort</code>가 하나도 없다. <code>journal-api</code>는 2:1인데, 도메인이 둘이고 파드가 셋이므로 <code>maxSkew: 1</code>을 만족하는 최선의 배치다. 3:0이나 1:2가 나오면 제약이 적용되지 않은 것이니 매니페스트를 다시 확인한다.</div>
+  </div>
+
+  <p><code>topologySpreadConstraints</code>도 <strong>배치 시점에만</strong> 작동한다. 이미 몰려 있는 파드를 지금 펴 주지는 않는다 — 위에서 분산이 바뀐 것은 롤아웃으로 파드가 <strong>새로 만들어졌기</strong> 때문이다. 운영 중에 쏠림을 재조정하려면 별도의 도구(descheduler)가 필요하고, 이 과정에서는 다루지 않는다.</p>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">16.6</span>따라하기 ④ 네임스페이스 단위로 막는다</h2>
+  <p>지금까지는 파드 하나하나에 적는 값이었다. 팀이 여럿인 클러스터에서는 <strong>한 팀이 클러스터 전체를 먹지 않게</strong> 네임스페이스 단위로 총량을 건다.</p>
+
+  <div class="step">
+    <h4>9단계 — 총량과 기본값을 함께 건다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>ResourceQuota</code>(총량 상한)와 <code>LimitRange</code>(개별 파드의 기본값·상한)가 어떻게 다른지 확인한다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: team-quota}
+spec:
+  hard:
+    requests.cpu: "500m"
+    requests.memory: 512Mi
+    limits.memory: 1Gi
+    pods: "5"
+---
+apiVersion: v1
+kind: LimitRange
+metadata: {name: team-defaults}
+spec:
+  limits:
+    - type: Container
+      default: {cpu: 200m, memory: 128Mi}
+      defaultRequest: {cpu: 50m, memory: 64Mi}
+      max: {cpu: "1", memory: 512Mi}
+EOF</code></pre>
+    <table>
+      <tr><th>필드</th><th>뜻</th></tr>
+      <tr><td><code>default</code></td><td><code>limits</code>를 안 적은 컨테이너에 넣어 줄 값</td></tr>
+      <tr><td><code>defaultRequest</code></td><td><code>requests</code>를 안 적은 컨테이너에 넣어 줄 값</td></tr>
+      <tr><td><code>max</code></td><td>이 값을 넘는 <code>limits</code>는 아예 거부한다</td></tr>
+    </table>
+    <p><code>ResourceQuota</code>에 <code>requests.cpu</code>가 들어 있으면 그 네임스페이스에서는 <strong><code>requests</code>를 안 적은 파드를 만들 수 없다</strong>. 총량을 셀 수 없기 때문이다. 그래서 쿼터는 보통 <code>LimitRange</code>와 짝으로 건다 — 한쪽이 총량을 막고 다른 쪽이 빈칸을 채운다.</p>
+  </div>
+
+  <div class="step">
+    <h4>10단계 — 아무것도 안 적고 파드를 만들어 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>LimitRange</code>가 실제로 값을 채워 넣는지 확인한다.</p>
+<pre><code>kubectl -n m16 run defaulted --image=nginx:1.29-alpine --restart=Never
+kubectl -n m16 get pod defaulted -o jsonpath='{.spec.containers[0].resources}{"\n"}{.status.qosClass}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}
+Burstable</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>kubectl run</code>은 <code>resources</code>를 적을 자리가 없는 명령인데도 값이 들어 있고 QoS가 <code>Burstable</code>이다. 어드미션 단계에서 <code>LimitRange</code>가 채운 것이다. 요청이 apiserver를 지나며 변형되는 이 지점은 M26에서 어드미션 컨트롤로 다시 다룬다.</div>
+  </div>
+
+  <div class="step">
+    <h4>11단계 — 한도를 넘겨 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>거부 메시지 두 종류를 구분한다. 총량 초과와 개별 상한 초과는 다른 장치가 막는다.</p>
+<pre><code>kubectl -n m16 run toobig --image=nginx:1.29-alpine --restart=Never \
+  --overrides='{"spec":{"containers":[{"name":"toobig","image":"nginx:1.29-alpine","resources":{"requests":{"cpu":"600m"},"limits":{"cpu":"600m","memory":"128Mi"}}}]}}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (Forbidden): pods "toobig" is forbidden: exceeded quota: team-quota, requested: requests.cpu=600m, used: requests.cpu=50m, limited: requests.cpu=500m</code></div>
+<pre><code>kubectl -n m16 run overmax --image=nginx:1.29-alpine --restart=Never \
+  --overrides='{"spec":{"containers":[{"name":"overmax","image":"nginx:1.29-alpine","resources":{"requests":{"cpu":"2"},"limits":{"cpu":"2"}}}]}}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (Forbidden): pods "overmax" is forbidden: maximum cpu usage per Container is 1, but limit is 2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>둘 다 <code>Forbidden</code>이지만 뒤 문장이 다르다. <code>exceeded quota</code>는 네임스페이스 총량이고, <code>maximum cpu usage per Container</code>는 개별 컨테이너 상한이다. 그리고 <strong>이 거부는 스케줄링 전에 일어난다</strong> — 3단계의 <code>Pending</code>과 달리 파드 오브젝트 자체가 만들어지지 않는다. <code>kubectl -n m16 describe quota team-quota</code>로 현재 사용량을 확인할 수 있다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">16.7</span>따라하기 ⑤ 노드를 비운다</h2>
+  <p>노드를 교체하거나 클러스터를 업그레이드하려면 노드를 비워야 한다. 그냥 비우면 그 노드에 있던 파드가 한꺼번에 사라진다. <dfn class="term">파드 중단 예산 <span class="en">PodDisruptionBudget</span></dfn>은 "이런 작업 중에도 최소 몇 개는 살아 있어야 한다"를 선언해 둔다.</p>
+
+  <div class="step">
+    <h4>12단계 — PDB를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>노드를 비우는 동안 지켜야 할 최소 가용 파드 수를 선언한다.</p>
+    <p><code>course/labs/k8s/journal/60-pdb.yaml</code>로 저장하고 <code>kustomization.yaml</code>의 <code>resources</code>에 추가한다.</p>
+<pre><code>apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: journal-api
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: journal-api</code></pre>
+<pre><code>kubectl apply -k course/labs/k8s/journal
+kubectl -n journal get pdb</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME          MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+journal-api   2               N/A               1                     5s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ALLOWED DISRUPTIONS</code>가 <code>1</code>이다. 지금 한 개까지는 비켜 줘도 된다는 뜻이고, 이 값이 <code>0</code>이면 아무것도 못 옮긴다. 16.8 실패 ②가 그 상황이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>13단계 — 노드를 비운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>PDB가 축출을 조절하는 것을 실시간으로 본다.</p>
+<pre><code>kubectl drain study-worker --ignore-daemonsets --pod-selector app=journal-api --timeout=120s</code></pre>
+    <table>
+      <tr><th>옵션</th><th>뜻</th></tr>
+      <tr><td><code>--ignore-daemonsets</code></td><td>데몬셋 파드는 어차피 모든 노드에 하나씩 있어야 하므로 옮기지 않는다. 없으면 drain이 거부된다</td></tr>
+      <tr><td><code>--pod-selector</code></td><td>이 실습에서는 <code>journal-api</code>만 옮긴다. 레디스는 노드 로컬 PVC를 쓰고 있어 옮기면 데이터에 닿지 못한다 — 스테이트풀 워크로드의 drain은 M18에서 다룬다</td></tr>
+      <tr><td><code>--timeout</code></td><td>이 시간 안에 못 비우면 포기한다. 없으면 무한정 재시도한다</td></tr>
+    </table>
+    <span class="out-lbl">출력 (일부)</span>
+    <div class="out"><code>node/study-worker cordoned
+evicting pod journal/journal-api-6486566f5b-n9p4q
+error when evicting pods/"journal-api-6486566f5b-n9p4q" -n "journal" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+evicting pod journal/journal-api-6486566f5b-n9p4q
+pod/journal-api-6486566f5b-n9z44 evicted
+pod/journal-api-6486566f5b-n9p4q evicted
+node/study-worker drained</code></div>
+    <div class="verdict"><span class="lbl">판정</span>중간에 <code>Cannot evict pod as it would violate the pod's disruption budget</code>이 한 번 나왔다가 <strong>재시도 뒤 성공</strong>했다. 이것이 PDB가 제대로 일한 모습이다 — 막은 것이 아니라 <strong>기다리게 한 것</strong>이다. 첫 파드가 다른 노드에서 Ready가 되고 나서야 두 번째가 비켜났다.</div>
+    <p>첫 줄의 <code>cordoned</code>는 <code>drain</code>이 가장 먼저 하는 일이다. 노드에 <code>node.kubernetes.io/unschedulable</code> 테인트를 걸어 <strong>새 파드가 들어오지 못하게</strong> 막는다. 이것을 하지 않으면 방금 쫓아낸 파드가 같은 노드로 되돌아온다.</p>
+  </div>
+
+  <div class="step">
+    <h4>14단계 — 되돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>노드를 다시 스케줄 가능하게 만들고, 파드가 자동으로 돌아오지 않는다는 것을 확인한다.</p>
+<pre><code>kubectl uncordon study-worker
+kubectl -n journal get po -l app=journal-api --no-headers -o custom-columns='N:.spec.nodeName' | sort | uniq -c</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>node/study-worker uncordoned
+   3 study-worker2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>노드는 다시 <code>Ready</code>이고 스케줄도 가능한데 <strong>파드 셋은 전부 <code>study-worker2</code>에 남아 있다.</strong> <code>topologySpreadConstraints</code>가 있는데도 그렇다 — 16.2에서 말한 대로 스케줄러는 배치 시점에만 관여한다. 균형을 되찾으려면 파드를 새로 만들어야 한다.</div>
+<pre><code>kubectl -n journal rollout restart deploy/journal-api
+kubectl -n journal rollout status deploy/journal-api
+kubectl -n journal get po -l app=journal-api --no-headers -o custom-columns='N:.spec.nodeName' | sort | uniq -c</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment "journal-api" successfully rolled out
+   2 study-worker
+   1 study-worker2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>2:1로 돌아왔다. 노드 유지보수 뒤에 <code>rollout restart</code>로 균형을 되찾는 것은 실무에서 자주 하는 마무리다.</div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">16.8</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① topologySpreadConstraints를 넣었더니 아무것도 안 뜬다</h4>
+    <p>8단계에서 <code>nodeTaintsPolicy: Honor</code>를 뺀 채로 적용하면 어떻게 되는지 본다. 문서를 보고 그대로 따라 쓰면 대개 이 상태가 된다 — 이 필드는 필수가 아니고 예제에도 잘 나오지 않기 때문이다.</p>
+    <span class="lbl">재현</span>
+<pre><code>kubectl -n journal patch deploy journal-api --type=json -p='[
+ {"op":"replace","path":"/spec/template/spec/topologySpreadConstraints",
+  "value":[{"maxSkew":1,"topologyKey":"kubernetes.io/hostname",
+            "whenUnsatisfiable":"DoNotSchedule",
+            "labelSelector":{"matchLabels":{"app":"journal-api"}}}]}]'
+kubectl -n journal rollout status deploy/journal-api --timeout=60s</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Waiting for deployment "journal-api" rollout to finish: 1 out of 3 new replicas have been updated...
+error: timed out waiting for the condition</code></div>
+    <p>롤아웃이 첫 파드에서 멈춘다. 그 파드를 들여다본다.</p>
+<pre><code>kubectl -n journal describe pod -l app=journal-api | grep -A3 'Warning  FailedScheduling' | head -4</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  Warning  FailedScheduling  20s (x3 over 3m32s)  default-scheduler  0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 node(s) didn't match pod topology spread constraints. preemption: 0/3 nodes are available: 1 Preemption is not helpful for scheduling, 2 No preemption victims found for incoming pod.</code></div>
+    <span class="lbl">원인</span>
+    <p><code>didn't match pod topology spread constraints</code>. 노드는 넉넉하고 라벨도 맞는데 분산 제약이 막았다. 이유는 <strong>도메인을 세는 방식</strong>에 있다. <code>nodeTaintsPolicy</code>의 기본값은 <code>Ignore</code>이고, 이는 <strong>톨러레이션이 없어 갈 수도 없는 노드까지 도메인으로 센다</strong>는 뜻이다. 컨트롤 플레인을 파드 0개짜리 도메인으로 세면 계산은 이렇게 된다.</p>
+    <table>
+      <tr><th>도메인</th><th>현재 파드 수</th><th>여기에 하나 더 놓으면</th><th>가장 적은 도메인과의 차이</th></tr>
+      <tr><td>study-control-plane</td><td>0 (테인트로 갈 수 없다)</td><td>—</td><td>—</td></tr>
+      <tr><td>study-worker</td><td>3</td><td>4</td><td>4 − 0 = 4 &gt; 1 ✗</td></tr>
+      <tr><td>study-worker2</td><td>2</td><td>3</td><td>3 − 0 = 3 &gt; 1 ✗</td></tr>
+    </table>
+    <p>어디에 놓아도 <code>maxSkew: 1</code>을 어긴다. 균형을 맞출 유일한 방법은 컨트롤 플레인에 놓는 것인데 거기는 테인트가 막는다. 그래서 교착이다. <code>whenUnsatisfiable: ScheduleAnyway</code>였다면 경고 없이 아무 데나 놓였을 것이므로 이 함정은 <code>DoNotSchedule</code>에서만 드러난다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>kubectl -n journal patch deploy journal-api --type=json -p='[
+ {"op":"add","path":"/spec/template/spec/topologySpreadConstraints/0/nodeTaintsPolicy",
+  "value":"Honor"}]'
+kubectl -n journal rollout status deploy/journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment "journal-api" successfully rolled out</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Honor</code>를 넣으면 컨트롤 플레인이 도메인 계산에서 빠지고, 워커 둘 사이에서만 균형을 맞추면 되므로 배치가 성립한다. 매니페스트에도 이 필드를 반드시 남긴다 — 이것이 8단계 주석에 그 이유를 적어 둔 까닭이다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② PDB를 안전하게 잡았더니 노드를 영원히 못 비운다</h4>
+    <p>레플리카가 3개이니 3개를 다 지키면 가장 안전하겠다고 생각해 <code>minAvailable: 3</code>으로 잡는다.</p>
+    <span class="lbl">재현</span>
+<pre><code>kubectl -n journal patch pdb journal-api --type=json \
+  -p='[{"op":"replace","path":"/spec/minAvailable","value":3}]'
+kubectl -n journal get pdb journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME          MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+journal-api   3               N/A               0                     33s</code></div>
+<pre><code>kubectl drain study-worker --ignore-daemonsets --pod-selector app=journal-api --timeout=45s</code></pre>
+    <span class="out-lbl">출력 (반복되는 부분을 줄였다)</span>
+    <div class="out"><code>node/study-worker cordoned
+evicting pod journal/journal-api-6486566f5b-n9z44
+error when evicting pods/"journal-api-6486566f5b-n9z44" -n "journal" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+evicting pod journal/journal-api-6486566f5b-n9z44
+error when evicting pods/"journal-api-6486566f5b-n9z44" -n "journal" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+...
+There was an error when evicting pods. error: timed out waiting for the condition</code></div>
+    <span class="lbl">원인</span>
+    <p><code>ALLOWED DISRUPTIONS</code>가 <code>0</code>이다. 파드가 3개인데 3개를 지키라고 했으니 <strong>하나도 옮길 수 없다.</strong> 13단계에서는 같은 메시지가 한 번 나왔다가 성공했지만 여기서는 영원히 반복된다. 차이는 예산이 남아 있느냐다.</p>
+    <p>더 나쁜 점은 <strong>노드가 <code>cordoned</code> 상태로 남는다</strong>는 것이다. drain은 실패했는데 스케줄 금지는 걸려 있으므로, 알아채지 못하면 그 노드는 계속 새 파드를 못 받는다. 클러스터 업그레이드 스크립트가 이 상태에서 멈춰 있는 것을 발견하는 일이 실제로 흔하다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>kubectl -n journal patch pdb journal-api --type=json \
+  -p='[{"op":"replace","path":"/spec/minAvailable","value":2}]'
+kubectl uncordon study-worker
+kubectl -n journal get pdb journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>node/study-worker uncordoned
+NAME          MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+journal-api   2               N/A               1                     2m</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ALLOWED DISRUPTIONS</code>가 <code>1</code>로 바뀌면 노드를 비울 수 있다. PDB는 <strong>지킬 값이 아니라 내줄 여유를 선언하는 것</strong>이라고 읽는 편이 실수를 줄인다. 레플리카를 늘리지 않은 채 <code>minAvailable</code>만 올리면 안전해지는 것이 아니라 운영이 막힌다.</div>
+    <p>참고로 PDB는 <strong>자발적 중단에만</strong> 적용된다. 노드가 갑자기 죽거나 커널이 파드를 축출하는 것은 막지 못한다. 그쪽 대비는 파드를 여러 노드에 펴 두는 것, 즉 8단계의 <code>topologySpreadConstraints</code>다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ 메모리를 넘겨도 OOM이 나지 않는다</h4>
+    <p>M02에서 <code>docker run --memory</code>로 본 종료 코드 137을 쿠버네티스에서 재현한다. 그런데 처음 시도는 실패한다.</p>
+    <span class="lbl">재현</span>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: oomtest}
+spec:
+  restartPolicy: Never
+  containers:
+    - name: c
+      image: node:22-alpine
+      resources:
+        requests: {cpu: 50m, memory: 64Mi}
+        limits: {cpu: 200m, memory: 96Mi}
+      command: ["node","-e","const a=[];setInterval(()=&gt;{a.push(Buffer.alloc(8*1024*1024));console.log('할당',a.length*8,'MiB')},200)"]
+EOF</code></pre>
+<pre><code>kubectl -n m16 get pod oomtest
+kubectl -n m16 logs oomtest | tail -2</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME      READY   STATUS    RESTARTS   AGE
+oomtest   1/1     Running   0          26s
+
+할당 824 MiB
+할당 832 MiB</code></div>
+    <p>96Mi 제한인데 832 MiB를 "할당"하고도 멀쩡하다. 제한이 안 걸린 것인지부터 확인한다.</p>
+<pre><code>kubectl -n m16 exec oomtest -- sh -c 'cat /sys/fs/cgroup/memory.max; cat /sys/fs/cgroup/memory.current'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>100663296
+13766656</code></div>
+    <span class="lbl">원인</span>
+    <p><code>memory.max</code>는 100663296바이트 = 96Mi로 제대로 걸려 있다. 그런데 <code>memory.current</code>는 13MB뿐이다. <strong>832 MiB를 할당했다고 믿었지만 실제로 쓴 메모리는 13MB였다.</strong></p>
+    <p>커널은 익명 메모리를 요청받으면 주소 공간만 내주고 물리 페이지는 <strong>처음 쓰는 순간</strong>에 붙인다. <code>Buffer.alloc()</code>은 0으로 채워 주는 API인데, 갓 받아 온 익명 페이지는 이미 0이므로 굳이 쓸 일이 없다. 그래서 물리 페이지가 붙지 않고 cgroup 사용량도 오르지 않는다. 메모리 한계 테스트가 통과했다고 안심하는 흔한 오해가 여기서 나온다.</p>
+    <span class="lbl">고친다 — 실제로 페이지를 만진다</span>
+<pre><code>kubectl -n m16 delete pod oomtest
+
+cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: oomtest}
+spec:
+  restartPolicy: Never
+  containers:
+    - name: c
+      image: node:22-alpine
+      resources:
+        requests: {cpu: 50m, memory: 64Mi}
+        limits: {cpu: 200m, memory: 96Mi}
+      # allocUnsafe + fill 로 실제로 페이지를 만진다.
+      command: ["node","-e","const a=[];setInterval(()=&gt;{const b=Buffer.allocUnsafe(8*1024*1024);b.fill(1);a.push(b);console.log('touched',a.length*8,'MiB')},200)"]
+EOF</code></pre>
+<pre><code>kubectl -n m16 get pod oomtest
+kubectl -n m16 describe pod oomtest | sed -n '/    State:/,/    Ready:/p'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME      READY   STATUS      RESTARTS   AGE
+oomtest   0/1     OOMKilled   0          20s
+
+    State:          Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+      Started:      Sat, 05 Sep 2026 18:50:00 +0900
+      Finished:     Sat, 05 Sep 2026 18:50:02 +0900
+    Ready:          False</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Reason: OOMKilled</code>, <code>Exit Code: 137</code>. M02에서 <code>docker run --memory=32m</code>으로 본 그 숫자다 — 컨테이너 런타임이 바뀌어도 커널이 하는 일은 같다. 로그의 마지막 줄은 <code>touched 80 MiB</code>였고, 96Mi에 닿기 직전에 죽었다.</div>
+    <p><code>restartPolicy: Never</code>가 아니었다면 이 파드는 재시작을 반복하며 <code>CrashLoopBackOff</code>가 된다. M15 실패 ①과 겉모습이 같지만 원인이 다르다 — 그때는 종료 코드가 <code>0</code>이었고 여기서는 <code>137</code>이다. <strong>종료 코드가 진단의 갈림길</strong>이다.</p>
+  </div>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">16.9</span>운영 관점 — limits를 걸 것인가</h2>
+  <p>8단계의 매니페스트에서 <code>memory</code>에는 <code>limits</code>를 걸었지만 <code>cpu</code>에는 걸지 않았다. 의도적인 비대칭이고, 그 근거는 두 자원의 초과 처리 방식이 다르다는 데 있다.</p>
+
+  <div class="step">
+    <h4>15단계 — CPU 제한이 무엇을 하는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>CPU limit이 죽이지 않고 조인다는 것을 cgroup 수치로 확인한다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m16 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: throttled}
+spec:
+  containers:
+    - name: c
+      image: node:22-alpine
+      resources:
+        requests: {cpu: 100m, memory: 64Mi}
+        limits: {cpu: 100m, memory: 128Mi}   # 0.1 코어 = 100ms 주기마다 10ms
+      command: ["node","-e","let n=0;const t=Date.now();while(Date.now()-t&lt;60000){n++};console.log(n)"]
+EOF</code></pre>
+<pre><code>kubectl -n m16 exec throttled -- cat /sys/fs/cgroup/cpu.max
+kubectl -n m16 exec throttled -- cat /sys/fs/cgroup/cpu.stat | head -6
+kubectl top pod throttled -n m16</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>10000 100000
+
+usage_usec 1971540
+user_usec 1927173
+system_usec 44366
+nice_usec 0
+nr_periods 197
+nr_throttled 197
+
+NAME        CPU(cores)   MEMORY(bytes)
+throttled   100m         10Mi</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>cpu.max</code>의 <code>10000 100000</code>은 100ms 주기마다 10ms만 쓸 수 있다는 뜻이고, 그것이 <code>limits.cpu: 100m</code>의 실체다. <code>nr_periods 197</code> 중 <code>nr_throttled 197</code> — <strong>모든 주기에서 조여졌다.</strong> 이 프로세스는 한 코어를 다 쓰려 했지만 매번 10ms 만에 멈춰 다음 주기를 기다렸다. 파드는 죽지 않았고 <code>kubectl top</code>은 정확히 <code>100m</code>을 보고한다 — 겉으로는 아무 문제가 없어 보인다.</div>
+  </div>
+
+  <p>여기가 CPU limit의 함정이다. <strong>증상이 지표에 드러나지 않는다.</strong> 파드는 <code>Running</code>이고 재시작도 없고 CPU 사용률은 한도에 딱 붙어 "잘 쓰고 있는 것"처럼 보인다. 실제로는 응답 시간이 길어지고 있는데, 그것을 알려면 <code>nr_throttled</code>를 봐야 하고 그러려면 메트릭 수집이 필요하다. M19에서 세우는 프로메테우스가 이 값을 <code>container_cpu_cfs_throttled_seconds_total</code>로 수집하고, M37에서 부하를 걸며 스로틀링과 응답 시간의 관계를 잰다.</p>
+
+  <p>그래서 이 교재는 <strong>메모리에는 limit을 걸고 CPU에는 걸지 않는</strong> 쪽을 기본으로 삼는다. 메모리는 압축할 수 없어 상한이 없으면 노드 전체를 위협하지만, CPU는 남는 것을 나눠 쓰게 두는 편이 낫다. 다만 이것이 모든 상황의 정답은 아니다.</p>
+  <table>
+    <tr><th>상황</th><th>선택</th><th>근거</th></tr>
+    <tr><td>일반 웹 애플리케이션</td><td>cpu limit 없음, memory limit 있음</td><td>여유가 있을 때 더 빨리 응답하는 편이 낫다. 메모리 누수는 노드를 위협한다</td></tr>
+    <tr><td>지연에 민감한 서비스</td><td><code>Guaranteed</code> (requests == limits)</td><td>다른 파드의 변동에 영향받지 않는 대신, 남는 자원을 못 쓴다</td></tr>
+    <tr><td>배치·크론 작업</td><td>cpu limit 있음</td><td>야간 배치가 온라인 서비스의 CPU를 다 먹는 것을 막는다</td></tr>
+    <tr><td>여러 팀이 공유하는 클러스터</td><td>네임스페이스 쿼터 + LimitRange</td><td>파드별 판단에 맡기면 결국 누군가 다 먹는다</td></tr>
+  </table>
+
+  <p>마지막으로 값을 정하는 방법이다. <code>requests</code>는 <strong>평상시 사용량</strong>에 여유를 얹어 잡고, <code>limits</code>는 <strong>정상 범위의 최대치</strong>에 잡는다. 둘 다 짐작이 아니라 실측이어야 하는데, 지금은 <code>kubectl top</code>이 보여 주는 순간값뿐이라 근거가 약하다. 시간에 걸친 분포(평균이 아니라 P95·P99)를 보려면 메트릭을 저장해야 하고, 그것이 Part 4에서 관측 스택을 세우는 이유 중 하나다.</p>
+</section>
+
+<section id="s10">
+  <h2 class="sec"><span class="num">16.10</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n journal get po -o jsonpath='{.items[*].status.qosClass}' | tr ' ' '\n' | sort -u</code> → <code>Burstable</code> 한 줄만 (<code>BestEffort</code>가 없다)</li>
+      <li><code>kubectl -n journal get po -l app=journal-api --no-headers -o custom-columns='N:.spec.nodeName' | sort | uniq -c</code> → 두 줄, 개수 차이가 <code>1</code> 이하</li>
+      <li><code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].nodeTaintsPolicy}'</code> → <code>Honor</code></li>
+      <li><code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}'</code> → <code>50m</code></li>
+      <li><code>kubectl -n journal get pdb journal-api -o jsonpath='{.status.disruptionsAllowed}'</code> → <code>1</code></li>
+      <li><code>kubectl top nodes</code> → 세 노드 모두 수치가 나온다 (<code>&lt;unknown&gt;</code>이 아니다)</li>
+      <li><code>kubectl describe node study-worker | grep -A2 'Allocated resources' | tail -1</code>의 cpu Requests 백분율이 <code>kubectl top node study-worker</code>의 CPU(%)보다 크다</li>
+      <li><code>kubectl get ns m16</code> → <code>NotFound</code> (실험 네임스페이스를 지웠다)</li>
+      <li><code>kubectl get nodes</code> → 세 노드 모두 <code>Ready</code>, <code>SchedulingDisabled</code> 표시가 없다</li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}' -H 'Host: journal.local' http://localhost:18080/api/entries</code> → <code>200</code></li>
+      <li>(이해 확인) 3단계에서 노드 CPU 사용률은 0%였는데 파드가 <code>Pending</code>이었다. 왜인지 한 문장으로 적어 본다</li>
+      <li>(이해 확인) 실패 ②에서 <code>minAvailable: 3</code>이 왜 "더 안전한" 설정이 아닌지 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/journal/30-journal-api.yaml</code> — <code>resources</code> + <code>topologySpreadConstraints</code>(<code>nodeTaintsPolicy: Honor</code> 포함). M17 HPA가 이 <code>requests.cpu</code>를 기준으로 목표 사용률을 계산한다</li>
+      <li><code>course/labs/k8s/journal/20-redis.yaml</code> · <code>40-web-static.yaml</code> — <code>resources</code> 추가</li>
+      <li><code>course/labs/k8s/journal/60-pdb.yaml</code> — 새 파일. <code>kustomization.yaml</code>의 <code>resources</code>에도 등록했다</li>
+      <li><code>labs/charts/journal/</code>은 여전히 고치지 않았다. M15 변경분과 함께 M28에서 따라잡는다</li>
+      <li>클러스터: <code>journal</code> 네임스페이스 전체가 <code>Burstable</code>, <code>journal-api</code>가 두 노드에 2:1로 분산</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 실험 네임스페이스를 통째로 지운다 (그 안의 파드 · 쿼터 · 리밋레인지가 함께 사라진다)
+kubectl delete ns m16
+
+# 실습에서 붙인 노드 라벨과 테인트를 걷는다
+kubectl label node study-worker2 disktype-
+kubectl taint node study-worker2 tier- 2&gt;/dev/null
+
+# cordon 이 남아 있지 않은지 확인한다 — 실패 ② 뒤에 가장 흔히 놓치는 것이다
+kubectl get nodes</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>namespace "m16" deleted
+node/study-worker2 unlabeled
+NAME                  STATUS   ROLES           AGE   VERSION
+study-control-plane   Ready    control-plane   44h   v1.37.0
+study-worker          Ready    &lt;none&gt;          44h   v1.37.0
+study-worker2         Ready    &lt;none&gt;          44h   v1.37.0</code></div>
+  <p><code>STATUS</code>에 <code>SchedulingDisabled</code>가 붙어 있으면 <code>kubectl uncordon &lt;노드&gt;</code>로 푼다. 저널 애플리케이션은 다음 모듈이 쓰므로 지우지 않는다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m15-k8s-probes-lifecycle.html">← M15 프로브와 파드 라이프사이클</a>
+  <a href="m17-k8s-autoscaling.html">M17 오토스케일링 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>이 모듈에서 <code>requests.cpu: 50m</code>을 붙였다. 이 숫자가 M17의 전제다 — HPA는 "현재 CPU 사용량이 <strong>requests의</strong> 몇 퍼센트인가"로 파드 수를 계산하므로, <code>requests</code>가 없으면 오토스케일링 자체가 성립하지 않는다. M17에서 M01에 설치해 둔 metrics-server 위에 HPA를 얹고, M15에서 만든 <code>loadgen.sh</code>로 부하를 걸어 파드가 늘어나는 것을 본다. 그리고 부하를 걷었을 때 왜 바로 줄지 않는지, 안정화 윈도우가 무엇을 막는지 확인한다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>파드와 컨테이너의 리소스 관리: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/</li>
+    <li>QoS 등급과 축출 순서: https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/</li>
+    <li>테인트와 톨러레이션: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/</li>
+    <li>파드 토폴로지 분배 제약: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/</li>
+    <li>파드 중단 예산: https://kubernetes.io/docs/tasks/run-application/configure-pdb/</li>
+    <li>노드 안전하게 비우기: https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/</li>
+    <li>리소스 쿼터와 LimitRange: https://kubernetes.io/docs/concepts/policy/resource-quotas/ · https://kubernetes.io/docs/concepts/policy/limit-range/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 8.1~8.3.6 리소스 관리</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · 노드 3개(각 14 CPU · 7.6Gi) · metrics-server v0.9.0</p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# M16 — 자발적 중단(노드 드레인·업그레이드) 중에도 몇 개는 살아 있어야 하는지 선언한다.
+#
+# minAvailable 을 replicas 와 같은 3 으로 잡으면 ALLOWED DISRUPTIONS 가 0 이 되어
+# 노드를 영원히 비울 수 없다. 안전해 보이지만 클러스터 업그레이드가 막힌다.
+# 2 로 두면 한 번에 하나씩 비켜 주면서 용량은 3분의 2 아래로 내려가지 않는다.
+#
+# PDB 는 자발적 중단에만 적용된다. 노드가 갑자기 죽는 것(비자발적)은 막지 못한다 —
+# 그쪽은 topologySpreadConstraints 로 파드를 여러 노드에 펴 두는 것이 대비책이다.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: journal-api
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: journal-api

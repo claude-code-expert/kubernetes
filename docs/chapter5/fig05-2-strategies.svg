@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow52" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .row { fill: none; stroke: #d8d8d8; stroke-width: 1; }
+    .pod-old { fill: #ffffff; stroke: #999999; stroke-width: 1.2; }
+    .pod-new { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-row { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-stage { font-size: 11px; fill: #555555; }
+    .t-pod { font-size: 9.5px; fill: #555555; }
+    .t-note { font-size: 12px; fill: #2456c4; font-weight: 600; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #999999; stroke-width: 1; }
+  </style>
+
+  <!-- 범례 -->
+  <rect class="pod-old" x="600" y="14" width="18" height="18" rx="2"/>
+  <text class="t-stage" x="624" y="27">기존 버전</text>
+  <rect class="pod-new" x="710" y="14" width="18" height="18" rx="2"/>
+  <text class="t-stage" x="734" y="27">새 버전</text>
+
+  <!-- Row 1: Rolling Update -->
+  <rect class="row" x="20" y="46" width="860" height="140" rx="6"/>
+  <text class="t-row" x="36" y="70">① 롤링 업데이트 — 쿠버네티스 기본값</text>
+  <text class="t-stage" x="36" y="90">t0</text>
+  <g>
+    <rect class="pod-old" x="36" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-old" x="66" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-old" x="96" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-old" x="126" y="98" width="26" height="26" rx="3"/>
+  </g>
+  <line class="line" x1="170" y1="111" x2="200" y2="111" marker-end="url(#arrow52)"/>
+  <text class="t-stage" x="220" y="90">t1</text>
+  <g>
+    <rect class="pod-old" x="220" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-old" x="250" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-new" x="280" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-new" x="310" y="98" width="26" height="26" rx="3"/>
+  </g>
+  <line class="line" x1="354" y1="111" x2="384" y2="111" marker-end="url(#arrow52)"/>
+  <text class="t-stage" x="404" y="90">t2</text>
+  <g>
+    <rect class="pod-new" x="404" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-new" x="434" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-new" x="464" y="98" width="26" height="26" rx="3"/>
+    <rect class="pod-new" x="494" y="98" width="26" height="26" rx="3"/>
+  </g>
+  <text class="t-note" x="560" y="115">전체 트래픽이 계속 어딘가로 간다</text>
+  <text class="t-pod" x="36" y="150">별도 설정 없이 Deployment가 기본 수행. 새 버전에 결함이 있어도</text>
+  <text class="t-pod" x="36" y="166">일부 트래픽은 이미 그쪽으로 간 뒤다 — 세밀한 트래픽 제어가 없다.</text>
+
+  <!-- Row 2: Blue/Green -->
+  <rect class="row" x="20" y="200" width="860" height="150" rx="6"/>
+  <text class="t-row" x="36" y="224">② 블루/그린 — 전환은 한순간</text>
+  <text class="t-stage" x="36" y="244">전환 전</text>
+  <g>
+    <rect class="pod-old" x="36" y="252" width="26" height="26" rx="3"/>
+    <rect class="pod-old" x="66" y="252" width="26" height="26" rx="3"/>
+    <text class="t-pod" x="98" y="270">← 트래픽 전부(Blue)</text>
+  </g>
+  <g>
+    <rect class="pod-new" x="36" y="290" width="26" height="26" rx="3" opacity="0.45"/>
+    <rect class="pod-new" x="66" y="290" width="26" height="26" rx="3" opacity="0.45"/>
+    <text class="t-pod" x="98" y="308">← 대기 중(Green, 트래픽 없음)</text>
+  </g>
+  <line class="line" x1="330" y1="280" x2="380" y2="280" marker-end="url(#arrow52)"/>
+  <text class="t-note" x="300" y="230">Service 셀렉터 전환</text>
+  <text class="t-stage" x="400" y="244">전환 후</text>
+  <g>
+    <rect class="pod-old" x="400" y="252" width="26" height="26" rx="3" opacity="0.45"/>
+    <rect class="pod-old" x="430" y="252" width="26" height="26" rx="3" opacity="0.45"/>
+    <text class="t-pod" x="462" y="270">← 대기 중(롤백 대비 잠시 유지)</text>
+  </g>
+  <g>
+    <rect class="pod-new" x="400" y="290" width="26" height="26" rx="3"/>
+    <rect class="pod-new" x="430" y="290" width="26" height="26" rx="3"/>
+    <text class="t-pod" x="462" y="308">← 트래픽 전부(Green)</text>
+  </g>
+  <text class="t-pod" x="36" y="336">즉시 전량 전환·즉시 롤백이 강점. 대신 순간 두 배 리소스가 필요하다.</text>
+
+  <!-- Row 3: Canary -->
+  <rect class="row" x="20" y="364" width="860" height="150" rx="6"/>
+  <text class="t-row" x="36" y="388">③ 카나리 — 일부에게만 먼저</text>
+  <text class="t-stage" x="36" y="408">90%</text>
+  <g>
+    <rect class="pod-old" x="36" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="64" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="92" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="120" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="148" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="176" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="204" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="232" y="416" width="24" height="24" rx="3"/>
+    <rect class="pod-old" x="260" y="416" width="24" height="24" rx="3"/>
+  </g>
+  <text class="t-stage" x="310" y="408">10%</text>
+  <rect class="pod-new" x="310" y="416" width="24" height="24" rx="3"/>
+  <line class="line" x1="350" y1="428" x2="400" y2="428" marker-end="url(#arrow52)"/>
+  <text class="t-note" x="420" y="410">지표 이상 없으면 비율을</text>
+  <text class="t-note" x="420" y="428">단계적으로 올린다</text>
+  <text class="t-pod" x="36" y="466">쿠버네티스 기본 리소스만으로는 트래픽 비율 제어가 안 된다.</text>
+  <text class="t-pod" x="36" y="482">Argo Rollouts · Flagger 같은 프로그레시브 딜리버리 컨트롤러가 필요하다.</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="540" text-anchor="middle">세 전략의 차이는 "실패했을 때 얼마나 적은 사용자가 영향을 받는가"의 문제다. 아래로 갈수록 안전하지만 구성은 복잡해진다.</text>
+</svg>

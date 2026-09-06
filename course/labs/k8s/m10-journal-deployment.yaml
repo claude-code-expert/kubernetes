@@ -1,0 +1,36 @@
+# M10 — 저널 API 디플로이먼트. 이후 모듈이 이 파일을 확장한다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-api
+  labels:
+    app: journal-api
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: journal-api          # 이 셀렉터가 아래 template.labels 와 같아야 한다
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1               # 목표 개수보다 최대 1개 더 만들 수 있다
+      maxUnavailable: 0         # 사용 불가 파드는 0개 — 무중단
+  template:
+    metadata:
+      labels:
+        app: journal-api
+    spec:
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "v1"
+          readinessProbe:       # 준비되기 전에는 트래픽을 받지 않는다 (M15에서 자세히)
+            httpGet:
+              path: /readyz
+              port: 8080
+            periodSeconds: 2

@@ -1,0 +1,35 @@
+# M26 — 기본값 주입. 아무도 쓰지 않아도 automountServiceAccountToken: false 가 붙는다.
+#
+# 대상이 파드가 아니라 **디플로이먼트**인 것이 핵심이다.
+# 파드에 걸면 필드는 바뀌지만 서비스어카운트 어드미션이 이미 토큰 볼륨을 넣은 뒤라
+# 토큰이 그대로 마운트된다 (M26 실패 ③).
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: default-no-token
+spec:
+  failurePolicy: Fail
+  reinvocationPolicy: Never
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["deployments"]
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: >-
+          Object{ spec: Object.spec{ template: Object.spec.template{
+            spec: Object.spec.template.spec{ automountServiceAccountToken: false } } } }
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: default-no-token-binding
+spec:
+  policyName: default-no-token
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        policy: enforced

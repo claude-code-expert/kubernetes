@@ -1,0 +1,41 @@
+# M35 — 주기 실행. 배치의 대부분은 이 형태다.
+#
+# 헷갈리는 필드가 셋 있고, 셋 다 "지난 실행이 아직 안 끝났을 때" 무슨 일이 일어나는지를 정한다.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nightly-eval
+  namespace: m35
+spec:
+  schedule: "*/1 * * * *"        # 실습용. 실제로는 "0 3 * * *" 같은 값
+  # 지난 실행이 아직 돌고 있으면 새 실행을 건너뛴다.
+  # Allow(기본) 이면 겹쳐서 돌고, Replace 면 지난 것을 죽이고 새로 시작한다.
+  concurrencyPolicy: Forbid
+  # 컨트롤러가 늦게 깨어났을 때 몇 초 지난 것까지 만회할 것인가.
+  # 없으면 100 회를 놓쳤을 때 한꺼번에 100 개가 뜬다.
+  startingDeadlineSeconds: 30
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      # 잡 자체의 시간 상한. 무한 루프에 빠진 배치를 끊는다.
+      activeDeadlineSeconds: 40
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile: {type: RuntimeDefault}
+          automountServiceAccountToken: false
+          containers:
+            - name: eval
+              image: alpine:3.22
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: {drop: ["ALL"]}
+              resources:
+                requests: {cpu: 50m, memory: 32Mi}
+                limits: {memory: 64Mi}
+              command: ["sh","-c","echo \"평가 시작 $(date +%H:%M:%S)\"; sleep 10; echo '정확도 0.91'"]

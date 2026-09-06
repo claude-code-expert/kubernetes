@@ -1,0 +1,47 @@
+# M13 — 같은 값을 두 방식으로 주입한다. 갱신 반영 차이를 보기 위한 실습.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: journal-config
+data:
+  APP_GREETING: "hello from configmap v1"
+  app.properties: |
+    greeting=hello from configmap v1
+    log.level=info
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: journal-secret
+type: Opaque
+stringData:                      # stringData 에 평문을 적으면 저장 시 base64 로 인코딩된다
+  REDIS_PASSWORD: "s3cr3t-pass"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: config-demo
+spec:
+  containers:
+    - name: app
+      image: alpine:3.22
+      command: ["sh", "-c", "while true; do sleep 5; done"]
+      env:
+        - name: APP_GREETING                # ① 환경 변수로 주입 — 시작 시점에 고정
+          valueFrom:
+            configMapKeyRef:
+              name: journal-config
+              key: APP_GREETING
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: journal-secret
+              key: REDIS_PASSWORD
+      volumeMounts:
+        - name: config                      # ② 볼륨으로 주입 — 갱신이 반영된다
+          mountPath: /etc/journal
+          readOnly: true
+  volumes:
+    - name: config
+      configMap:
+        name: journal-config

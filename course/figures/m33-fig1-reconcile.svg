@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+  <text class="t-h" x="40" y="46">조정 루프 — 오퍼레이터가 하는 일은 이 셋이다</text>
+
+  <!-- 루프 -->
+  <rect class="accent" x="40" y="70" width="180" height="66" rx="4"/>
+  <text class="t-title" x="130" y="94" text-anchor="middle">① 원하는 상태</text>
+  <text class="t-mono" x="130" y="112" text-anchor="middle">spec 을 읽는다</text>
+  <text class="t-sub" x="130" y="128" text-anchor="middle">사용자가 쓰는 곳</text>
+  <path class="aline" d="M 220 103 L 258 103" marker-end="url(#ar2)"/>
+
+  <rect class="accent" x="260" y="70" width="200" height="66" rx="4"/>
+  <text class="t-title" x="360" y="94" text-anchor="middle">② 차이를 없앤다</text>
+  <text class="t-mono" x="360" y="112" text-anchor="middle">create / update</text>
+  <text class="t-sub" x="360" y="128" text-anchor="middle">멱등해야 한다</text>
+  <path class="aline" d="M 460 103 L 498 103" marker-end="url(#ar2)"/>
+
+  <rect class="accent" x="500" y="70" width="180" height="66" rx="4"/>
+  <text class="t-title" x="590" y="94" text-anchor="middle">③ status 갱신</text>
+  <text class="t-mono" x="590" y="112" text-anchor="middle">서브리소스</text>
+  <text class="t-sub" x="590" y="128" text-anchor="middle">컨트롤러만 쓰는 곳</text>
+
+  <path class="aline" d="M 590 136 L 590 160 L 130 160 L 130 140" marker-end="url(#ar2)"/>
+  <text class="t-acc" x="360" y="155" text-anchor="middle">이벤트가 오면 처음부터 다시</text>
+
+  <rect class="box" x="700" y="70" width="160" height="66" rx="4"/>
+  <text class="t-mono" x="710" y="92">ownerReferences</text>
+  <text class="t-sub" x="710" y="110">부모를 지우면</text>
+  <text class="t-sub" x="710" y="126">자식도 사라진다</text>
+
+  <!-- 폴링 vs 감시 -->
+  <rect class="soft" x="40" y="180" width="400" height="128" rx="4"/>
+  <text class="t-h" x="56" y="204">폴링과 감시</text>
+  <rect class="box" x="56" y="216" width="368" height="40" rx="3"/>
+  <text class="t-mono" x="66" y="234">셸 오퍼레이터 — 5초마다 전부 다시 본다</text>
+  <text class="t-sub" x="66" y="250">삭제 감지 01:34:52 → 복구 01:34:57</text>
+  <rect class="accent" x="56" y="262" width="368" height="40" rx="3"/>
+  <text class="t-mono" x="66" y="280">Owns() 감시 — 자식이 바뀌면 즉시 깨어난다</text>
+  <text class="t-acc" x="66" y="296">삭제 01:38:48 → 같은 초에 재생성 로그</text>
+
+  <!-- 검증 -->
+  <rect class="soft" x="456" y="180" width="384" height="128" rx="4"/>
+  <text class="t-h" x="472" y="204">검증은 세 층에 걸 수 있다</text>
+  <rect class="box" x="472" y="216" width="352" height="28" rx="3"/>
+  <text class="t-mono" x="482" y="235">스키마 (pattern · enum · minimum)</text>
+  <rect class="accent" x="472" y="248" width="352" height="28" rx="3"/>
+  <text class="t-mono" x="482" y="267">CEL (XValidation) — 메시지를 우리가 쓴다</text>
+  <rect class="box" x="472" y="280" width="352" height="22" rx="3"/>
+  <text class="t-mono" x="482" y="296">어드미션 정책 (M26) — 리소스 종류를 넘나든다</text>
+
+  <!-- 마커 -->
+  <rect class="soft" x="56" y="328" width="784" height="94" rx="4"/>
+  <text class="t-h" x="70" y="352">Go 주석이 CRD 가 된다</text>
+  <text class="t-mono" x="70" y="374">// +kubebuilder:validation:XValidation:rule="!self.endsWith(':latest')"</text>
+  <path class="line" d="M 70 384 L 90 396" marker-end="url(#ar1)"/>
+  <text class="t-mono" x="100" y="400">x-kubernetes-validations: [{rule: "!self.endsWith(':latest')", message: ...}]</text>
+  <text class="t-sub" x="70" y="416">config/crd/bases 는 생성물이다 — 직접 고치면 다음 make manifests 에서 사라진다</text>
+</svg>

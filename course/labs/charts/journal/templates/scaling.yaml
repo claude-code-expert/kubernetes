@@ -1,0 +1,44 @@
+{{- if .Values.autoscaling.enabled }}
+# M17 — HPA. replicas 의 주인이 여기로 넘어온다.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "journal.fullname" . }}-api
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "journal.fullname" . }}-api
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      # 부하가 잠깐 꺼졌다고 바로 줄이지 않는다. 줄였다 늘렸다를 반복하는 것이 더 비싸다.
+      stabilizationWindowSeconds: {{ .Values.autoscaling.behavior.scaleDown.stabilizationWindowSeconds }}
+{{- end }}
+{{- if .Values.pdb.enabled }}
+---
+# M16 — PDB. 드레인 같은 자발적 중단에서 몇 개를 남길지 정한다.
+# 노드 장애 같은 비자발적 중단은 막지 못한다.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "journal.fullname" . }}-api
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "journal.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+{{- end }}

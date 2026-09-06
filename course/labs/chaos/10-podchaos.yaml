@@ -1,0 +1,21 @@
+# M36 실험 ① — 파드가 갑자기 사라진다.
+#
+# 가설: journal-api 파드 하나가 죽어도 실패 요청은 0 이다.
+#       (M15 의 preStop 과 프로브, M17 의 PDB 가 함께 지켜 준다)
+#
+# 폭발 반경: journal 네임스페이스의 journal-api 파드 중 **하나**만.
+#   mode: one 이 그 제한이다. mode: all 로 두면 전부 죽는다 — 실험이 아니라 사고다.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kill-one-api
+  namespace: journal
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces: [journal]
+    labelSelectors:
+      app: journal-api
+  # 한 번만 죽인다. 반복하려면 아래 schedule 을 쓴다.
+  duration: "10s"

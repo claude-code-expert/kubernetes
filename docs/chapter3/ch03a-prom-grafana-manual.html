@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH03 부록 — 프로메테우스 · 그라파나 UI 매뉴얼</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .lab { border: 1px solid var(--line); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; border-radius: 6px; background: var(--bg-soft); }
+  .lab .lbl { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .lab ol { padding-left: 22px; }
+  .lab li { margin-bottom: 5px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 03 — 부록 A</div>
+  <h1>프로메테우스 · 그라파나 UI 매뉴얼</h1>
+  <p class="ch-desc">3장에서 설치한 두 도구를 "화면에서 어떻게 쓰는가" 관점으로 정리한 사용 설명서. 메뉴 하나하나가 무엇이고, 어떤 순서로 눌러 무엇을 확인하는지를 공식 문서 기준으로 담았다. 3.7절(설치)을 마친 상태를 전제로 한다.</p>
+  <div class="meta">기준 버전: 프로메테우스 v3 계열(2024-11 이후 기본 UI) · 그라파나 v12 계열(2025-05 GA) — kube-prometheus-stack 현행 배포 버전과 일치 · 검증일 2026-08-15</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 프로메테우스 UI는 메뉴가 셋뿐이다 — Query(질의 실험), Alerts(알림 상태), Status(수집·서버 상태 점검). 대시보드는 만들지 않는다.</p>
+  <p>2. 그라파나는 좌측 사이드바가 전부의 입구다 — Dashboards(보기), Explore(질의), Drilldown(클릭 탐색), Alerting(알림), Connections(데이터소스), Administration(관리).</p>
+  <p>3. 두 도구의 관계: 프로메테우스에서 쿼리를 다듬고, 그라파나에서 그 쿼리를 패널로 고정한다 — "실험실과 전시실".</p>
+</div>
+
+<nav class="toc">
+  <a href="#a1"><span class="num">A.1</span>프로메테우스 — 접속과 화면 지도</a>
+  <a href="#a2"><span class="num">A.2</span>프로메테우스 — Query 페이지</a>
+  <a href="#a3"><span class="num">A.3</span>프로메테우스 — Alerts · Status</a>
+  <a href="#a4"><span class="num">A.4</span>프로메테우스 — 10분 따라하기</a>
+  <a href="#b1"><span class="num">B.1</span>그라파나 — 접속과 메뉴 지도</a>
+  <a href="#b2"><span class="num">B.2</span>그라파나 — 대시보드 보기·조작</a>
+  <a href="#b3"><span class="num">B.3</span>그라파나 — 패널 편집</a>
+  <a href="#b4"><span class="num">B.4</span>그라파나 — 대시보드 가져오기</a>
+  <a href="#b5"><span class="num">B.5</span>그라파나 — Explore와 Drilldown</a>
+  <a href="#b6"><span class="num">B.6</span>그라파나 — 데이터소스 · Alerting · 관리</a>
+  <a href="#b7"><span class="num">B.7</span>그라파나 — 15분 따라하기</a>
+</nav>
+
+<section id="a1">
+  <h2 class="sec"><span class="num">A.1</span>프로메테우스 — 접속과 화면 지도</h2>
+<pre><code># 접속 터널 (3.7절 릴리스 이름 mon 기준)
+kubectl port-forward svc/mon-kube-prometheus-stack-prometheus 9090:9090 -n monitoring
+# 브라우저: http://localhost:9090</code></pre>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .frame { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .bar { fill: #f7f7f5; stroke: #c8c8c8; stroke-width: 1; }
+    .ui { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .ui-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-logo { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-menu { font-size: 13px; fill: #555555; }
+    .t-menu-on { font-size: 13px; font-weight: 700; fill: #2456c4; }
+    .t-ui { font-size: 12.5px; fill: #555555; }
+    .t-ui-b { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-note { font-size: 12px; fill: #444444; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- 브라우저 프레임 -->
+  <rect class="frame" x="20" y="20" width="860" height="352" rx="6"/>
+
+  <!-- 상단 메뉴 바 -->
+  <rect class="bar" x="21" y="21" width="858" height="44"/>
+  <text class="t-logo" x="44" y="48">Prometheus</text>
+  <text class="t-menu-on" x="210" y="48">Query</text>
+  <text class="t-menu" x="300" y="48">Alerts</text>
+  <text class="t-menu" x="380" y="48">Status ▾</text>
+  <text class="t-ui" x="700" y="48">(v3 기본 UI)</text>
+
+  <!-- 쿼리 입력창 + 실행 버튼 -->
+  <rect class="ui" x="44" y="86" width="692" height="40" rx="4"/>
+  <text class="t-ui" x="58" y="111">PromQL 입력 — 타이핑하면 메트릭·함수 자동완성</text>
+  <rect class="ui-accent" x="748" y="86" width="108" height="40" rx="4"/>
+  <text class="t-ui-b" x="802" y="111" text-anchor="middle">Execute</text>
+
+  <!-- 결과 탭 -->
+  <rect class="ui" x="44" y="142" width="90" height="30" rx="4"/>
+  <text class="t-ui" x="89" y="162" text-anchor="middle">Table</text>
+  <rect class="ui-accent" x="144" y="142" width="90" height="30" rx="4"/>
+  <text class="t-ui-b" x="189" y="162" text-anchor="middle">Graph</text>
+  <rect class="ui" x="244" y="142" width="90" height="30" rx="4"/>
+  <text class="t-ui" x="289" y="162" text-anchor="middle">Explain</text>
+  <text class="t-note" x="356" y="162">← Table: 현재값 목록 · Graph: 시계열 그래프 · Explain: 쿼리 구조 해설(v3 신규)</text>
+
+  <!-- 그래프 영역 -->
+  <rect class="ui" x="44" y="188" width="812" height="110" rx="4"/>
+  <text class="t-ui" x="450" y="238" text-anchor="middle">그래프 영역 — 마우스 드래그로 구간 확대, 상단에서 시간 범위·해상도 조절</text>
+  <text class="t-ui" x="450" y="262" text-anchor="middle">＋ Add query panel 버튼으로 쿼리 패널을 여러 개 쌓아 비교</text>
+
+  <!-- 주석 영역 -->
+  <text class="t-note" x="44" y="326">Status ▾ 하위: Targets(수집 대상 up/down) · Rules · Service Discovery · Configuration · TSDB Status · Flags</text>
+  <text class="t-note" x="44" y="350">입력창 옆 메트릭 탐색기 버튼: 전체 메트릭 목록과 레이블을 훑어보며 클릭으로 쿼리 시작</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="404" text-anchor="middle">프로메테우스 v3 UI 화면 지도. 메뉴는 셋뿐이다 — 질의(Query), 알림 상태(Alerts), 서버 자체 상태(Status).</text>
+  <text class="t-cap" x="450" y="426" text-anchor="middle">대시보드는 여기서 만들지 않는다. 이 UI는 쿼리 실험과 수집 상태 점검용이고, 시각화는 그라파나의 몫이다.</text>
+</svg>
+    <figcaption>그림 A-1. 프로메테우스 v3 UI 화면 지도. 상단 메뉴 세 개와 Query 페이지 구성.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    프로메테우스 3.0(2024-11)에서 UI가 전면 재작성됐다. 구버전 자료와 다른 점: "Graph" 메뉴가 <strong>"Query"로 개명</strong>됐고, 쿼리를 하위 표현식 트리로 펼쳐 보는 <strong>트리 뷰</strong>와 쿼리 구조를 해설하는 <strong>Explain 탭</strong>, 개선된 메트릭 탐색기가 추가됐다. 옛 화면 캡처 기반 튜토리얼과 화면이 다르니 당황하지 말 것(구 UI는 <code>--enable-feature=old-ui</code> 플래그로만 접근 가능).
+    <span class="src">출처: prometheus.io/blog/2024/11/14/prometheus-3-0 (공식 릴리스 발표) · promlabs.com/blog/2024/09/11/a-look-at-the-new-prometheus-3-0-ui (신 UI 상세 해설)</span>
+  </div>
+  <table>
+    <tr><th>메뉴</th><th>무엇을 하는 곳</th><th>언제 여는가</th></tr>
+    <tr><td><strong>Query</strong></td><td>PromQL을 실행하고 표/그래프로 확인하는 실험실</td><td>쿼리를 다듬을 때, 지표 존재를 확인할 때</td></tr>
+    <tr><td><strong>Alerts</strong></td><td>정의된 알림 룰과 현재 상태(Inactive / Pending / Firing) 목록</td><td>"지금 뭐가 울리고 있나", "룰이 제대로 들어갔나"</td></tr>
+    <tr><td><strong>Status ▾</strong></td><td>프로메테우스 자신과 수집 파이프라인의 상태 하위 메뉴 묶음</td><td>수집이 안 될 때, 설정을 확인할 때 (A.3 참고)</td></tr>
+  </table>
+</section>
+
+<section id="a2">
+  <h2 class="sec"><span class="num">A.2</span>프로메테우스 — Query 페이지</h2>
+  <p class="lead">사용 동선은 네 단계다: 입력 → 실행 → 탭 선택 → 시간 조절.</p>
+  <ol class="tight">
+    <li><strong>입력창</strong> — 타이핑을 시작하면 메트릭 이름·함수·레이블이 자동완성된다. 입력창 옆 <strong>메트릭 탐색기</strong> 버튼을 누르면 전체 메트릭 목록과 레이블·<dfn class="term">카디널리티 <span class="en">(Cardinality)</span></dfn>(레이블 값 조합의 가짓수 — 많을수록 저장·질의 비용 증가)를 훑어보고 클릭으로 쿼리를 시작할 수 있다. 뭘 쳐야 할지 모를 때 여기부터.</li>
+    <li><strong>Execute</strong> — 실행. Enter로도 된다.</li>
+    <li><strong>결과 탭</strong> — <strong>Table</strong>은 이 순간의 값 목록(레이블 조합별 한 줄), <strong>Graph</strong>는 시간축 그래프, <strong>Explain</strong>은 쿼리가 어떤 구조로 평가되는지 해설한다. 복잡한 쿼리는 트리 뷰로 하위 표현식을 펼쳐 부분별 결과를 확인할 수 있다 — PromQL 학습에 특히 유용.</li>
+    <li><strong>시간 조절</strong> — 그래프 위 컨트롤에서 조회 범위와 해상도를 바꾸고, 그래프를 드래그하면 그 구간으로 확대된다. <strong>Add query panel</strong>로 쿼리 패널을 여러 개 쌓아 나란히 비교한다.</li>
+  </ol>
+  <p>익혀 둘 조작 습관 하나: 새 메트릭을 만나면 먼저 메트릭 이름만 실행해 Table 탭에서 <strong>레이블 구조부터</strong> 본다. 어떤 레이블이 있는지 알아야 <code>sum by (...)</code>로 접을 축이 보인다.</p>
+</section>
+
+<section id="a3">
+  <h2 class="sec"><span class="num">A.3</span>프로메테우스 — Alerts · Status</h2>
+  <h3>Alerts 페이지</h3>
+  <p>모든 알림 룰이 세 상태로 표시된다. <strong>Inactive</strong>(조건 미충족 — 평상시), <strong>Pending</strong>(조건은 충족했지만 <code>for:</code> 지속 시간을 아직 못 채움), <strong>Firing</strong>(발화 — 얼럿매니저로 전송됨). 3장에서 만든 PrometheusRule이 목록에 보이면 배선이 된 것이다. 룰 이름을 펼치면 원본 PromQL과 현재 값을 확인할 수 있다.</p>
+  <h3>Status 하위 메뉴</h3>
+  <table>
+    <tr><th>하위 메뉴</th><th>보는 것 / 쓰는 순간</th></tr>
+    <tr><td><strong>Targets</strong></td><td>모든 <dfn class="term">스크레이프 <span class="en">(Scrape)</span></dfn>(프로메테우스가 대상의 /metrics를 주기적으로 긁어오는 수집 행위) 대상의 UP/DOWN과 마지막 수집 시각·에러. <strong>"지표가 안 보여요"의 첫 확인 지점.</strong> DOWN이면 에러 메시지에 원인이 적혀 있다.</td></tr>
+    <tr><td><strong>Rules</strong></td><td>로드된 레코딩 룰·알림 룰 전체와 평가 소요 시간</td></tr>
+    <tr><td><strong>Service Discovery</strong></td><td>쿠버네티스 API에서 발견한 원본 대상과, 레이블 재작성(relabeling) 후 실제 수집 대상의 대비. ServiceMonitor가 안 먹을 때 여기서 "발견은 됐는데 걸러졌는지"를 본다.</td></tr>
+    <tr><td><strong>Configuration</strong></td><td>현재 적용 중인 설정 전문(읽기 전용)</td></tr>
+    <tr><td><strong>TSDB Status</strong></td><td><dfn class="term">TSDB <span class="en">(Time Series Database)</span></dfn>(프로메테우스 내장 시계열 저장소) 통계 — 시리즈 수, 카디널리티 상위 메트릭·레이블. 저장 공간이 폭증할 때 범인을 여기서 찾는다.</td></tr>
+    <tr><td><strong>Flags / Runtime &amp; Build Info</strong></td><td>기동 플래그, 버전, 가동 시간</td></tr>
+  </table>
+</section>
+
+<section id="a4">
+  <h2 class="sec"><span class="num">A.4</span>프로메테우스 — 10분 따라하기</h2>
+  <div class="lab">
+    <span class="lbl">실습 시나리오 — 0장 hello 앱을 프로메테우스에서 추적한다</span>
+    <ol>
+      <li>Status → Targets에서 전체 대상이 UP인지 확인한다. DOWN이 있으면 에러 문구를 읽는다.</li>
+      <li>Query에서 <code>up</code>을 실행하고 Table 탭으로 대상별 1/0을 본다 — 가장 단순하고 가장 중요한 메트릭.</li>
+      <li>메트릭 탐색기에서 <code>kube_deployment</code>를 검색해 kube-state-metrics 계열 지표를 훑는다.</li>
+      <li><code>kube_deployment_status_replicas_available{deployment="hello"}</code> 실행 → Graph 탭 → 다른 터미널에서 <code>kubectl scale deployment hello --replicas=4</code> 실행 → 그래프가 계단으로 오르는 것을 관찰한다.</li>
+      <li>같은 쿼리를 Explain 탭으로 열어 구조 해설을 읽는다 — PromQL 문법이 눈에 붙기 시작한다.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="b1">
+  <h2 class="sec"><span class="num">B.1</span>그라파나 — 접속과 메뉴 지도</h2>
+<pre><code># 접속 터널 (3.7절 릴리스 이름 mon 기준)
+kubectl port-forward svc/mon-grafana 3000:80 -n monitoring
+# 브라우저: http://localhost:3000  ·  기본 계정 admin / prom-operator</code></pre>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .frame { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .side { fill: #f7f7f5; stroke: #c8c8c8; stroke-width: 1; }
+    .ui { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .t-item { font-size: 13px; fill: #555555; }
+    .t-item-on { font-size: 13px; font-weight: 700; fill: #2456c4; }
+    .t-sub { font-size: 11px; fill: #888888; }
+    .t-ui { font-size: 12px; fill: #555555; }
+    .t-ui-b { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-note { font-size: 12px; fill: #444444; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- 브라우저 프레임 -->
+  <rect class="frame" x="20" y="20" width="860" height="408" rx="6"/>
+
+  <!-- 좌측 내비게이션 -->
+  <rect class="side" x="21" y="21" width="198" height="406"/>
+  <text class="t-item" x="44" y="56">Home</text>
+  <text class="t-item" x="44" y="90">Bookmarks</text>
+  <text class="t-item-on" x="44" y="124">Dashboards</text>
+  <text class="t-item" x="44" y="158">Explore</text>
+  <text class="t-item" x="44" y="192">Drilldown</text>
+  <text class="t-sub" x="60" y="212">Metrics · Logs · Traces</text>
+  <text class="t-item" x="44" y="246">Alerting</text>
+  <text class="t-item" x="44" y="280">Connections</text>
+  <text class="t-sub" x="60" y="300">Data sources</text>
+  <text class="t-item" x="44" y="334">Administration</text>
+  <text class="t-sub" x="44" y="392">← 좌측 사이드바가</text>
+  <text class="t-sub" x="52" y="410">모든 기능의 입구</text>
+
+  <!-- 상단 바: 제목 + 시간 피커 + 새로고침 -->
+  <text class="t-ui-b" x="240" y="52">Kubernetes / Compute Resources / Namespace</text>
+  <rect class="ui" x="632" y="32" width="152" height="28" rx="4"/>
+  <text class="t-ui" x="708" y="51" text-anchor="middle">최근 1시간 ▾</text>
+  <rect class="ui" x="796" y="32" width="66" height="28" rx="4"/>
+  <text class="t-ui" x="829" y="51" text-anchor="middle">30s ▾</text>
+
+  <!-- 변수 드롭다운 행 -->
+  <rect class="ui" x="240" y="72" width="180" height="28" rx="4"/>
+  <text class="t-ui" x="330" y="91" text-anchor="middle">datasource ▾</text>
+  <rect class="ui" x="432" y="72" width="200" height="28" rx="4"/>
+  <text class="t-ui" x="532" y="91" text-anchor="middle">namespace: default ▾</text>
+  <text class="t-note" x="648" y="91">← 대시보드 변수</text>
+
+  <!-- 패널 2x2 -->
+  <rect class="ui" x="240" y="116" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="256" y="140">CPU Usage</text>
+  <text class="t-ui" x="524" y="140" text-anchor="end">⋮</text>
+  <text class="t-ui" x="390" y="182" text-anchor="middle">시계열 그래프</text>
+  <text class="t-sub" x="390" y="204" text-anchor="middle">범례 클릭 = 해당 시리즈만 표시</text>
+
+  <rect class="ui" x="560" y="116" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="576" y="140">Memory Usage</text>
+  <text class="t-ui" x="710" y="182" text-anchor="middle">시계열 그래프</text>
+  <text class="t-sub" x="710" y="204" text-anchor="middle">드래그로 구간 확대(전 패널 동기화)</text>
+
+  <rect class="ui" x="240" y="252" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="256" y="276">Pods 상태</text>
+  <text class="t-ui" x="390" y="318" text-anchor="middle">스탯 / 테이블</text>
+
+  <rect class="ui" x="560" y="252" width="300" height="118" rx="4"/>
+  <text class="t-ui-b" x="576" y="276">네트워크 I/O</text>
+  <text class="t-ui" x="710" y="318" text-anchor="middle">시계열 그래프</text>
+
+  <!-- 주석 -->
+  <text class="t-note" x="240" y="402">패널 우상단 ⋮ 메뉴: Edit · Explore로 열기 · Metrics drilldown · New alert rule · Duplicate</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="462" text-anchor="middle">그라파나 v12 화면 지도. 왼쪽 사이드바에서 기능을 고르고, 대시보드 안에서는 시간 피커·변수·패널 메뉴 세 가지만 알면 조작의 대부분이 된다.</text>
+  <text class="t-cap" x="450" y="486" text-anchor="middle">Drilldown(구 Explore Apps)은 쿼리 없이 클릭만으로 메트릭·로그를 탐색하는 v12의 신설 메뉴다.</text>
+</svg>
+    <figcaption>그림 A-2. 그라파나 v12 화면 지도. 좌측 사이드바와 대시보드 화면의 조작 요소.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    그라파나 12(2025-05)에서 알아둘 변화 두 가지. ① 구 "Explore Metrics/Logs/Traces" 앱이 <strong>Drilldown</strong>이라는 이름의 정식(GA) 메뉴로 승격 — 쿼리 없이 클릭만으로 탐색한다. ② 대시보드를 GitHub 리포지터리와 동기화하는 Git Sync, 탭·조건부 표시 같은 동적 대시보드 기능이 추가됐다. 구버전 스크린샷 기반 자료와 메뉴 이름이 다를 수 있다.
+    <span class="src">출처: grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v12-0 (공식 What's new) · grafana.com/blog/grafana-12-release-all-the-new-features</span>
+  </div>
+  <table>
+    <tr><th>사이드바 메뉴</th><th>무엇을 하는 곳</th></tr>
+    <tr><td><strong>Home / Bookmarks</strong></td><td>시작 화면과 즐겨찾기한 대시보드 바로가기</td></tr>
+    <tr><td><strong>Dashboards</strong></td><td>폴더로 정리된 대시보드 목록·검색·생성·가져오기. 일상 사용의 90%</td></tr>
+    <tr><td><strong>Explore</strong></td><td>대시보드 없이 데이터소스에 직접 질의하는 자유 질의 화면 (B.5)</td></tr>
+    <tr><td><strong>Drilldown</strong></td><td>Metrics·Logs·Traces를 쿼리 없이 클릭으로 탐색 (B.5)</td></tr>
+    <tr><td><strong>Alerting</strong></td><td>알림 룰·연락 지점·무음 관리 (B.6)</td></tr>
+    <tr><td><strong>Connections</strong></td><td>데이터소스 추가·설정 — Loki를 붙이는 곳 (B.6)</td></tr>
+    <tr><td><strong>Administration</strong></td><td>사용자·팀·플러그인·기본 환경설정</td></tr>
+  </table>
+</section>
+
+<section id="b2">
+  <h2 class="sec"><span class="num">B.2</span>그라파나 — 대시보드 보기·조작</h2>
+  <p class="lead">kube-prometheus-stack이 이미 수십 개의 대시보드를 넣어 두었다. Dashboards에서 "Kubernetes / Compute Resources / Namespace (Pods)"를 열고 아래 조작을 익힌다.</p>
+  <ul class="tight">
+    <li><strong>시간 피커(우상단)</strong> — 조회 범위 선택. 그 옆 새로고침 버튼으로 자동 갱신 주기(예: 30s)를 켠다. 상황실 모니터에 띄울 때의 기본 설정.</li>
+    <li><strong><dfn class="term">대시보드 변수 <span class="en">(Template Variable)</span></dfn></strong> — 상단 드롭다운 줄. 하나의 대시보드를 네임스페이스·노드별로 갈아 끼우는 매개변수다. <code>namespace</code>를 default로 바꾸면 모든 패널이 그 범위로 다시 그려진다.</li>
+    <li><strong>그래프 드래그</strong> — 구간을 드래그하면 확대되고, 같은 대시보드의 모든 패널이 같은 시간대로 동기화된다. 장애 시각을 좁힐 때의 핵심 조작.</li>
+    <li><strong>범례 클릭</strong> — 시리즈 이름을 클릭하면 그것만 표시(격리), Ctrl/Cmd+클릭으로 추가·제외.</li>
+    <li><strong>패널 메뉴(패널 우상단 ⋮)</strong> — View(전체 화면), Edit, <strong>Explore</strong>(이 패널의 쿼리를 Explore로 가져가 실험), Metrics drilldown, <strong>New alert rule</strong>(이 쿼리 그대로 알림 만들기), Duplicate, Copy.</li>
+  </ul>
+</section>
+
+<section id="b3">
+  <h2 class="sec"><span class="num">B.3</span>그라파나 — 패널 편집</h2>
+  <p><dfn class="term">패널 <span class="en">(Panel)</span></dfn>은 대시보드의 최소 단위다 — 질의 하나(또는 여러 개) + 시각화 하나. 패널 메뉴 → Edit로 들어가면 편집 화면은 세 구역이다.</p>
+  <ol class="tight">
+    <li><strong>Query 탭(하단)</strong> — 데이터소스를 고르고 질의를 작성한다. 프로메테우스 질의 편집기는 <strong>Builder</strong>(드롭다운으로 조립)와 <strong>Code</strong>(PromQL 직접 입력) 두 모드를 오갈 수 있다. A.2에서 다듬은 쿼리를 Code 모드에 붙여 넣는 흐름이 실전 표준.</li>
+    <li><strong>Transform 탭</strong> — 질의 결과를 시각화 전에 가공(정렬, 계산 필드, 조인 등). 쿼리로 안 되는 마지막 정리를 여기서.</li>
+    <li><strong>우측 옵션 패널</strong> — 시각화 유형(Time series, Stat, Gauge, Table, Bar 등)을 고르고, 단위(Unit)·소수점·범례·<strong>Thresholds</strong>(임계값별 색 — 예: 80% 이상 빨강)를 설정한다. 색은 장식이 아니라 임계값 의미 전달에만 쓰는 것이 좋은 대시보드의 관례다.</li>
+  </ol>
+  <p>수정 후 우상단 Save dashboard를 눌러야 저장된다 — 내장 대시보드를 고칠 때는 사본(Save as copy)으로 저장하는 습관을 들이자. 원본은 차트 업그레이드 때 되돌아간다.</p>
+</section>
+
+<section id="b4">
+  <h2 class="sec"><span class="num">B.4</span>그라파나 — 대시보드 가져오기</h2>
+  <p>커뮤니티가 만든 대시보드를 ID 하나로 가져올 수 있다. 공개 저장소는 grafana.com/grafana/dashboards — 예를 들어 노드 지표의 사실상 표준인 "Node Exporter Full"(ID 1860)이 널리 쓰인다.</p>
+  <ol class="tight">
+    <li>Dashboards → New → <strong>Import</strong></li>
+    <li>ID 입력(예: 1860) 후 Load — 또는 JSON 파일 업로드</li>
+    <li>데이터소스 매핑에서 Prometheus를 지정하고 Import</li>
+  </ol>
+  <p>팀 대시보드를 공유할 때도 같은 원리다 — 대시보드 설정(Export)에서 JSON을 내보내 Git에 두고, 받는 쪽은 Import 한다. v12부터는 Git Sync로 이 과정을 자동화할 수도 있다.</p>
+</section>
+
+<section id="b5">
+  <h2 class="sec"><span class="num">B.5</span>그라파나 — Explore와 Drilldown</h2>
+  <h3>Explore — 자유 질의</h3>
+  <p>대시보드를 만들 필요 없이 데이터소스에 직접 묻는 화면이다. 상단에서 데이터소스(Prometheus 또는 Loki)를 고르고 질의를 실행한다. <strong>Split</strong> 버튼으로 화면을 좌우로 갈라 "왼쪽엔 메트릭, 오른쪽엔 같은 시간대 로그"를 나란히 놓는 것이 장애 분석의 정석 동선이다. 질의 히스토리가 자동 저장되어 어제 쓴 쿼리를 다시 꺼낼 수 있다.</p>
+  <h3>Drilldown — 쿼리 없는 탐색</h3>
+  <p><dfn class="term">Drilldown</dfn>은 PromQL·LogQL을 몰라도 데이터를 탐색하게 해주는 v12의 정식 메뉴다(구 명칭 Explore Apps). <strong>Metrics</strong>는 메트릭 목록을 미리 그린 그래프 타일로 보여주고 레이블 필터를 클릭으로 좁혀 간다. <strong>Logs</strong>는 서비스별 로그 볼륨과 패턴을 보여주며 클릭으로 파고든다. 신규 팀원 온보딩과 "쿼리가 막힌" 순간의 우회로로 좋다 — 각 화면에서 Explore로 건너가는 링크가 있어, 클릭으로 좁힌 결과의 실제 쿼리를 열어 학습할 수도 있다.</p>
+</section>
+
+<section id="b6">
+  <h2 class="sec"><span class="num">B.6</span>그라파나 — 데이터소스 · Alerting · 관리</h2>
+  <h3>Connections → Data sources</h3>
+  <p><dfn class="term">데이터소스 <span class="en">(Data Source)</span></dfn>는 그라파나가 질의할 저장소 연결 정보다. kube-prometheus-stack은 Prometheus와 Alertmanager를 자동 등록해 준다. 3.10절의 Loki를 붙이려면: Connections → Data sources → <strong>Add new data source</strong> → Loki 선택 → URL에 <code>http://loki.logging:3100</code> 입력(같은 클러스터의 서비스 DNS) → <strong>Save &amp; test</strong>. 초록 체크가 뜨면 Explore·Drilldown에서 Loki를 선택할 수 있다.</p>
+  <h3>Alerting</h3>
+  <p>알림 룰의 관리 주체는 두 갈래다 — 3장의 PrometheusRule처럼 <strong>데이터소스(프로메테우스) 쪽에서 관리</strong>되는 룰과, 그라파나 자체가 평가하는 <strong>Grafana-managed 룰</strong>. 후자는 패널 메뉴의 New alert rule로 그 쿼리 그대로 만들 수 있어 진입이 쉽다. 스터디에서는 3장 방식(코드로 관리되는 PrometheusRule)을 기본으로 두고, Alerting 메뉴는 발화 현황·무음(silence) 확인 용도로 쓰는 정리를 권한다 — 알림 정의가 두 곳에 흩어지면 "이 알림 어디서 왔지"가 사고의 시작이 된다.</p>
+  <h3>Administration</h3>
+  <p>사용자·팀·권한(폴더 단위로 대시보드 접근 제어), 플러그인 설치, 기본 테마·홈 대시보드 설정이 모여 있다. 스터디 공용 인스턴스라면 기본 admin 비밀번호부터 바꾸는 것이 첫 관리 작업이다.</p>
+</section>
+
+<section id="b7">
+  <h2 class="sec"><span class="num">B.7</span>그라파나 — 15분 따라하기</h2>
+  <div class="lab">
+    <span class="lbl">실습 시나리오 — 쿼리 하나를 "실험 → 패널 → 알림"까지 끌고 간다</span>
+    <ol>
+      <li>Explore에서 Prometheus 선택, Code 모드로 <code>sum(rate(container_cpu_usage_seconds_total{namespace="default"}[5m])) by (pod)</code> 실행.</li>
+      <li>Split을 눌러 오른쪽에 Loki 선택, <code>{namespace="default"}</code> 실행 — 메트릭과 로그를 같은 시간축에서 본다.</li>
+      <li>Dashboards → New → New dashboard → Add visualization → Prometheus 선택 → 1번 쿼리 붙여넣기 → 시각화 Time series, Unit은 CPU 코어로 설정 → Save.</li>
+      <li>만든 패널의 ⋮ → New alert rule — 쿼리가 미리 채워진 알림 편집기가 열리는 것 확인(만들지 않고 나가도 좋다 — 알림 정의는 3장 PrometheusRule 방식이 기본).</li>
+      <li>Drilldown → Metrics를 열어 같은 결론에 클릭만으로 도달해 본다 — 두 경로의 차이를 체감하는 것이 목적.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  출처: prometheus.io/blog/2024/11/14/prometheus-3-0 (v3 릴리스·신 UI) · promlabs.com/blog/2024/09/11/a-look-at-the-new-prometheus-3-0-ui (신 UI 메뉴·기능 해설) · grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v12-0 (v12 변경점) · grafana.com/docs/grafana/latest/visualizations/panels-visualizations/panel-overview (패널 메뉴 항목) · grafana.com/docs/loki/latest/visualize/grafana (데이터소스 추가 절차) — 검증일 2026-08-15<br>
+  화면 그림은 실제 스크린샷이 아니라 구조를 나타낸 도식이며, 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 단독 .svg 파일(fig03a-1, fig03a-2)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

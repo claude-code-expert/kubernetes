@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000" role="img">
+<title>노드 간 파드 통신 — 길은 CNI가 낸다</title>
+<desc>노드마다 다른 파드 대역을 물리망이 모르기 때문에 기본으로는 통신이 안 되고, CNI가 오버레이 또는 라우팅으로 길을 내는 원리를 설명하는 다이어그램</desc>
+<style>
+  text{font-family:'Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif}
+  .mono{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace}
+  .h1{font-size:36px;font-weight:800;fill:#111827}
+  .h2{font-size:23px;font-weight:800}
+  .b1{font-size:21px;font-weight:700}
+  .b2{font-size:17px;font-weight:700}
+  .s1{font-size:16px;fill:#4b5563}
+  .m1{font-size:16px}
+</style>
+<defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+    <path d="M1 1L9 5L1 9Z" fill="#374151"/>
+  </marker>
+  <marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+    <path d="M1 1L9 5L1 9Z" fill="#7c3aed"/>
+  </marker>
+</defs>
+<rect x="0" y="0" width="1440" height="1000" fill="#ffffff"/>
+
+<text class="h1" x="60" y="62">노드 간 파드 통신 — 길은 CNI가 낸다</text>
+<text class="s1" x="62" y="92">쿠버네티스는 "모든 파드는 NAT 없이 통신 가능해야 한다"는 규칙만 정한다. 구현은 CNI 플러그인의 몫이다.</text>
+
+<rect x="60" y="112" width="1320" height="326" rx="14" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+<text class="h2" x="84" y="150" fill="#111827">1. 왜 기본 상태로는 통하지 않는가</text>
+
+<rect x="90" y="172" width="340" height="238" rx="12" fill="#f0f6fe" stroke="#1d6fdc" stroke-width="2"/>
+<text class="b1" x="112" y="204" fill="#0b3d91">Node A</text>
+<text class="m1 mono" x="212" y="204" fill="#38598f">192.168.0.5</text>
+<text class="s1" x="112" y="232" fill="#38598f">파드 대역 10.244.1.0/24</text>
+<rect x="112" y="252" width="296" height="94" rx="10" fill="#eef9f0" stroke="#1a7f37" stroke-width="2"/>
+<text class="b2" x="132" y="284" fill="#14532d">order Pod</text>
+<text class="m1 mono" x="132" y="312" fill="#2f6b3f">IP 10.244.1.5</text>
+<text class="s1" x="112" y="384">패킷 출발: 목적지 10.244.2.7</text>
+
+<line x1="430" y1="291" x2="540" y2="291" stroke="#374151" stroke-width="1.8" marker-end="url(#ar)"/>
+
+<rect x="550" y="196" width="320" height="196" rx="12" fill="#f4f5f7" stroke="#9aa2ad" stroke-width="2"/>
+<text class="b1" x="710" y="230" fill="#374151" text-anchor="middle">물리 네트워크</text>
+<text class="m1 mono" x="710" y="256" fill="#4b5563" text-anchor="middle">192.168.0.0/24</text>
+<rect x="574" y="276" width="272" height="50" rx="8" fill="#fff4e0" stroke="#d97706" stroke-width="1.5"/>
+<text class="m1 mono" x="710" y="307" fill="#92400e" text-anchor="middle">10.244.1.5 → 10.244.2.7</text>
+<text class="b2" x="710" y="362" fill="#b91c1c" text-anchor="middle">10.244.2.7이 어디인지 모른다</text>
+
+<line x1="880" y1="291" x2="988" y2="291" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="7 6"/>
+<line x1="924" y1="278" x2="946" y2="304" stroke="#dc2626" stroke-width="2.5"/>
+<line x1="946" y1="278" x2="924" y2="304" stroke="#dc2626" stroke-width="2.5"/>
+<text class="b2" x="934" y="330" fill="#b91c1c" text-anchor="middle">전달 불가</text>
+
+<rect x="1000" y="172" width="350" height="238" rx="12" fill="#f0f6fe" stroke="#1d6fdc" stroke-width="2"/>
+<text class="b1" x="1022" y="204" fill="#0b3d91">Node B</text>
+<text class="m1 mono" x="1124" y="204" fill="#38598f">192.168.0.6</text>
+<text class="s1" x="1022" y="232" fill="#38598f">파드 대역 10.244.2.0/24</text>
+<rect x="1022" y="252" width="306" height="94" rx="10" fill="#eef9f0" stroke="#1a7f37" stroke-width="2"/>
+<text class="b2" x="1042" y="284" fill="#14532d">payment Pod</text>
+<text class="m1 mono" x="1042" y="312" fill="#2f6b3f">IP 10.244.2.7</text>
+<text class="s1" x="1022" y="384">물리망은 노드 IP만 라우팅한다</text>
+
+<rect x="60" y="466" width="645" height="392" rx="14" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+<text class="h2" x="84" y="504" fill="#5b21b6">2. 방식 ① 오버레이 — 감싸서 보낸다</text>
+<text class="s1" x="85" y="530">파드 패킷을 노드 패킷으로 캡슐화해 터널로 배달한다</text>
+
+<rect x="100" y="552" width="440" height="150" rx="10" fill="#f0f6fe" stroke="#1d6fdc" stroke-width="2"/>
+<text class="b2" x="122" y="582" fill="#0b3d91">노드 패킷 · 겉봉투</text>
+<text class="m1 mono" x="292" y="582" fill="#38598f">192.168.0.5 → 0.6</text>
+<rect x="122" y="600" width="396" height="80" rx="8" fill="#fff4e0" stroke="#d97706" stroke-width="1.5"/>
+<text class="b2" x="142" y="630" fill="#92400e">파드 패킷 · 알맹이</text>
+<text class="m1 mono" x="142" y="660" fill="#92400e">10.244.1.5 → 10.244.2.7</text>
+
+<text class="s1" x="100" y="738">노드 A가 감싼다 → 물리망은 겉봉투만 보고 배달 → 노드 B가 벗긴다</text>
+
+<rect x="100" y="762" width="196" height="40" rx="8" fill="#eef9f0" stroke="#1a7f37" stroke-width="1.5"/>
+<text class="b2" x="198" y="788" fill="#14532d" text-anchor="middle">물리망 수정 불필요</text>
+<rect x="312" y="762" width="196" height="40" rx="8" fill="#fff4e0" stroke="#d97706" stroke-width="1.5"/>
+<text class="b2" x="410" y="788" fill="#92400e" text-anchor="middle">캡슐화 오버헤드</text>
+<text class="m1 mono" x="100" y="836" fill="#6b7280">Flannel VXLAN · Calico VXLAN</text>
+
+<rect x="735" y="466" width="645" height="392" rx="14" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+<text class="h2" x="759" y="504" fill="#5b21b6">3. 방식 ② 라우팅 — 길을 알려 준다</text>
+<text class="s1" x="760" y="530">각 노드가 자기 파드 대역을 광고해 경로를 만든다 (BGP)</text>
+
+<rect x="775" y="552" width="400" height="118" rx="10" fill="#f4f5f7" stroke="#9aa2ad" stroke-width="1.5"/>
+<text class="b2" x="795" y="582" fill="#374151">노드 A의 라우팅 테이블</text>
+<text class="m1 mono" x="795" y="612" fill="#4b5563">10.244.2.0/24 → 192.168.0.6</text>
+<text class="m1 mono" x="795" y="640" fill="#4b5563">10.244.3.0/24 → 192.168.0.7</text>
+
+<rect x="775" y="700" width="272" height="48" rx="8" fill="#fff4e0" stroke="#d97706" stroke-width="1.5"/>
+<text class="m1 mono" x="911" y="730" fill="#92400e" text-anchor="middle">10.244.1.5 → 10.244.2.7</text>
+<line x1="1053" y1="724" x2="1156" y2="724" stroke="#7c3aed" stroke-width="1.8" marker-end="url(#arb)"/>
+<text class="s1" x="1066" y="710" fill="#5b21b6">그대로 이동</text>
+<rect x="1166" y="700" width="164" height="48" rx="8" fill="#f0f6fe" stroke="#1d6fdc" stroke-width="1.5"/>
+<text class="b2" x="1248" y="730" fill="#0b3d91" text-anchor="middle">Node B</text>
+
+<rect x="775" y="774" width="170" height="40" rx="8" fill="#eef9f0" stroke="#1a7f37" stroke-width="1.5"/>
+<text class="b2" x="860" y="800" fill="#14532d" text-anchor="middle">오버헤드 없음</text>
+<rect x="961" y="774" width="196" height="40" rx="8" fill="#fff4e0" stroke="#d97706" stroke-width="1.5"/>
+<text class="b2" x="1059" y="800" fill="#92400e" text-anchor="middle">망 환경 제약 있음</text>
+<text class="m1 mono" x="775" y="842" fill="#6b7280">Calico BGP · AWS VPC CNI · Cilium 네이티브 라우팅</text>
+
+<rect x="60" y="890" width="1320" height="62" rx="10" fill="#fff8e6" stroke="#f0c674" stroke-width="1.5"/>
+<text class="b1" x="720" y="929" fill="#713f12" text-anchor="middle">방식이 달라도 결과는 같다 — 모든 파드는 NAT 없이 서로 통신한다. CNI 설치 전에는 이 길 자체가 없다.</text>
+</svg>

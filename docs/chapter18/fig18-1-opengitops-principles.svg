@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow181" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .circle-bg { fill: none; stroke: #e0e0e0; stroke-width: 1; stroke-dasharray: 3 3; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-num { font-size: 11px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #2456c4; stroke-width: 1.4; fill: none; }
+  </style>
+
+  <text class="t-title" x="450" y="26" text-anchor="middle" font-size="14">OpenGitOps 4대 원칙 (CNCF GitOps Working Group)</text>
+
+  <!-- 순환 배치 4박스 -->
+  <rect class="box" x="60" y="50" width="220" height="90" rx="4"/>
+  <text class="t-num" x="170" y="74" text-anchor="middle">① Declarative</text>
+  <text class="t-title" x="170" y="94" text-anchor="middle">선언적</text>
+  <text class="t-sub" x="170" y="114" text-anchor="middle">원하는 상태를 명령이 아니라</text>
+  <text class="t-sub" x="170" y="128" text-anchor="middle">선언으로 기술 (1.2절 원칙)</text>
+
+  <rect class="box" x="620" y="50" width="220" height="90" rx="4"/>
+  <text class="t-num" x="730" y="74" text-anchor="middle">② Versioned &amp; Immutable</text>
+  <text class="t-title" x="730" y="94" text-anchor="middle">버전 관리 · 불변</text>
+  <text class="t-sub" x="730" y="114" text-anchor="middle">Git에 저장 — 이력·롤백이</text>
+  <text class="t-sub" x="730" y="128" text-anchor="middle">자동으로 따라옴</text>
+
+  <rect class="box" x="620" y="230" width="220" height="90" rx="4"/>
+  <text class="t-num" x="730" y="254" text-anchor="middle">③ Pulled Automatically</text>
+  <text class="t-title" x="730" y="274" text-anchor="middle">자동으로 끌어옴</text>
+  <text class="t-sub" x="730" y="294" text-anchor="middle">사람이 kubectl apply 하지 않음</text>
+  <text class="t-sub" x="730" y="308" text-anchor="middle">에이전트가 Git을 감시</text>
+
+  <rect class="box" x="60" y="230" width="220" height="90" rx="4"/>
+  <text class="t-num" x="170" y="254" text-anchor="middle">④ Continuously Reconciled</text>
+  <text class="t-title" x="170" y="274" text-anchor="middle">지속적 조정</text>
+  <text class="t-sub" x="170" y="294" text-anchor="middle">실제 상태가 어긋나면</text>
+  <text class="t-sub" x="170" y="308" text-anchor="middle">스스로 원상 복구</text>
+
+  <!-- 중앙 -->
+  <circle class="circle-bg" cx="450" cy="185" r="70"/>
+  <text class="t-title" x="450" y="180" text-anchor="middle">Git =</text>
+  <text class="t-title" x="450" y="198" text-anchor="middle">단일 진실 공급원</text>
+
+  <!-- 화살표로 순환 표시 -->
+  <path class="line" d="M 280 95 C 400 60, 500 60, 620 95" marker-end="url(#arrow181)"/>
+  <path class="line" d="M 840 140 C 880 180, 880 190, 840 230" marker-end="url(#arrow181)"/>
+  <path class="line" d="M 620 275 C 500 310, 400 310, 280 275" marker-end="url(#arrow181)"/>
+  <path class="line" d="M 60 230 C 20 190, 20 180, 60 140" marker-end="url(#arrow181)"/>
+
+  <text class="t-cap" x="450" y="358" text-anchor="middle">4개 중 하나라도 빠지면 "그냥 CI/CD"이지 깃옵스가 아니다 — 특히 ③④(자동 풀 + 지속 조정)가 흔히 생략된다.</text>
+</svg>

@@ -1,0 +1,31 @@
+# 실험 2 — order-api 수신 트래픽에 600ms 지연 주입 (5분간)
+#
+# 가설: order-api가 600ms 느려지면 gateway의 P95가 따라 올라가
+#       AppHighLatencyP95 알림(P95 > 0.5s, for: 3m)이 발화하고,
+#       실험 종료 후 저절로 해소된다.
+#
+# 600ms인 이유: 알림 임계값이 0.5s이므로 jitter를 감안해도 확실히 넘긴다.
+# duration 5m인 이유: for: 3m 인 알림이 발화하는 것까지 보려면 3분 이상 유지돼야 한다.
+#
+# 적용:   kubectl apply -f 20-networkchaos-order-api-delay.yaml
+# 관찰:   실험 중 obs-red 대시보드에서 gateway·order-api P95가 같이 오르는지
+# 정리:   duration이 지나면 자동 해제. 즉시 중단하려면 kubectl delete -f <이 파일>
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: order-api-delay
+  namespace: chaos-mesh
+  labels:
+    app.kubernetes.io/part-of: obs-study
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - apps
+    labelSelectors:
+      app.kubernetes.io/name: order-api
+  delay:
+    latency: "600ms"
+    jitter: "100ms"
+  duration: "5m"

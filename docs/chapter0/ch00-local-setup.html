@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH00 로컬 실습 환경 구축 (macOS) — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 14.5px; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 00</div>
+  <h1>로컬 실습 환경 구축 — macOS</h1>
+  <p class="ch-desc">1장을 따라 하려면 명령을 칠 클러스터가 먼저 있어야 한다. 맥 한 대에 쿠버네티스를 띄우고, 첫 애플리케이션을 배포·접속·확장·삭제하는 데까지 약 30분. 이 문서를 끝내면 1장의 모든 명령을 그대로 실행할 수 있다.</p>
+  <div class="meta">2026-08 기준 도구 선택 · 명령 검증 완료</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 설치는 세 층이다: Homebrew → 컨테이너 런타임(OrbStack 권장) → kubectl + kind + helm.</p>
+  <p>2. 클러스터는 <code>kind create cluster</code> 한 줄이면 뜬다 — 노드조차 도커 컨테이너라서 만들고 부수는 비용이 거의 없다.</p>
+  <p>3. 첫 배포 루프(배포 → 확인 → 접속 → 확장 → 자가 복구 관찰 → 정리)를 손으로 한 번 돌리면 1장이 글이 아니라 경험이 된다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s0-1"><span class="num">0.1</span>도구 선택 — 무엇을 왜 쓰나</a>
+  <a href="#s0-2"><span class="num">0.2</span>설치 (10분)</a>
+  <a href="#s0-3"><span class="num">0.3</span>클러스터 생성과 구조 이해</a>
+  <a href="#s0-4"><span class="num">0.4</span>첫 배포 — 15분 실습 루프</a>
+  <a href="#s0-5"><span class="num">0.5</span>1장 실습 연결 — 인그레스 준비 (선택)</a>
+  <a href="#s0-6"><span class="num">0.6</span>자주 막히는 지점</a>
+  <a href="#s0-7"><span class="num">0.7</span>정리와 초기화</a>
+</nav>
+
+<section id="s0-1">
+  <h2 class="sec"><span class="num">0.1</span>도구 선택 — 무엇을 왜 쓰나</h2>
+  <p class="lead">쿠버네티스를 맥에서 돌리려면 두 가지 결정이 필요하다. 컨테이너를 실행할 런타임, 그리고 그 위에 클러스터를 만들 도구.</p>
+  <p>먼저 <dfn class="term">컨테이너 런타임 <span class="en">(Container Runtime)</span></dfn> — 컨테이너 이미지를 받아 실제 프로세스로 실행하는 소프트웨어다. 맥에서는 리눅스 컨테이너를 직접 못 돌리므로 모든 선택지가 내부적으로 경량 리눅스 VM을 쓴다.</p>
+  <table>
+    <tr><th>런타임</th><th>특징</th><th>이런 경우</th></tr>
+    <tr><td><strong>OrbStack</strong> (스터디 권장)</td><td>맥 전용. 시작 2초 수준, 유휴 메모리·배터리 소모가 Docker Desktop 대비 크게 낮음. docker CLI 완전 호환</td><td>개인 맥에서 실습. 개인 사용 무료</td></tr>
+    <tr><td>Docker Desktop</td><td>공식 제품, 크로스 플랫폼, 내장 쿠버네티스 포함</td><td>회사 표준이 이미 이것일 때. 직원 250인 이상 또는 연매출 $10M 이상 기업은 유료 구독 필요</td></tr>
+    <tr><td>Colima</td><td>CLI 전용, 오픈소스 무료</td><td>GUI가 싫고 전부 무료여야 할 때</td></tr>
+  </table>
+  <p>클러스터 도구는 스터디 표준으로 <dfn class="term">kind <span class="en">(Kubernetes IN Docker)</span></dfn>를 쓴다 — 도커 컨테이너 하나하나를 쿠버네티스 노드로 사용해 로컬 클러스터를 만드는 공식 SIG 도구다. 원래 쿠버네티스 자체를 테스트하려고 만들어져 가볍고, 멀티 노드 구성이 설정 파일 몇 줄이며, 만들고 지우는 데 1~2분이면 된다. 대안인 minikube(애드온 풍부), OrbStack/Docker Desktop 내장 쿠버네티스(클릭 한 번, 단일 노드 고정)도 1장 실습에는 문제없지만, 노드 여러 개를 다루는 8장(스케줄링) 이후를 생각하면 kind로 통일하는 편이 스터디 운영에 유리하다.</p>
+</section>
+
+<section id="s0-2">
+  <h2 class="sec"><span class="num">0.2</span>설치 (10분)</h2>
+  <p>맥 패키지 관리자인 <dfn class="term">Homebrew</dfn>가 없다면 그것부터. 터미널을 열고 순서대로 실행한다.</p>
+<pre><code># 1) Homebrew (이미 있으면 건너뛴다)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 2) 컨테이너 런타임 — 하나만 선택
+brew install --cask orbstack        # 권장
+# brew install --cask docker        # Docker Desktop을 쓸 경우
+
+# 3) 쿠버네티스 도구 3종
+brew install kubectl kind helm</code></pre>
+  <p>설치 후 OrbStack(또는 Docker Desktop) 앱을 한 번 실행해 둔다 — 런타임이 떠 있어야 kind가 노드 컨테이너를 만들 수 있다. 확인:</p>
+<pre><code>docker version          # Server 정보까지 나오면 런타임 정상
+kubectl version --client
+kind version
+helm version</code></pre>
+  <div class="check"><span class="lbl">체크포인트</span><code>docker version</code>에서 Server 섹션이 보이고, 나머지 세 명령이 버전을 출력하면 통과.</div>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 주석</span>
+    <code>brew install helm</code>은 이제 <strong>Helm 4</strong>를 설치한다(2025-11-12 출시). 1장 이후의 헬름 실습 명령은 그대로 동작하며, Helm 3 차트 대부분과 호환된다.
+    <span class="src">출처: helm.sh/blog/helm-4-released · formulae.brew.sh/formula/kind (brew install kind)</span>
+  </div>
+</section>
+
+<section id="s0-3">
+  <h2 class="sec"><span class="num">0.3</span>클러스터 생성과 구조 이해</h2>
+  <p>노드 3개짜리 클러스터를 만든다. <dfn class="term">노드 <span class="en">(Node)</span></dfn>는 파드가 실제로 실행되는 워커 머신인데, kind에서는 이 노드가 물리 서버가 아니라 <strong>도커 컨테이너 하나</strong>다. 아래 설정 파일을 <code>kind-config.yaml</code>로 저장한다.</p>
+<pre><code># kind-config.yaml — control-plane 1 + worker 2
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker
+- role: worker</code></pre>
+<pre><code>kind create cluster --name study --config kind-config.yaml
+
+# 생성 확인
+kubectl cluster-info --context kind-study
+kubectl get nodes</code></pre>
+  <p><code>get nodes</code>에 노드 3개가 Ready로 보이면 성공이다. 여기서 <dfn class="term">컨텍스트 <span class="en">(Context)</span></dfn> 개념 하나만 짚자 — kubectl이 "어느 클러스터에, 어떤 사용자로" 명령을 보낼지 정하는 접속 프로필로, <code>~/.kube/config</code>(<dfn class="term">kubeconfig</dfn>) 파일에 저장된다. kind가 클러스터를 만들면 <code>kind-study</code> 컨텍스트를 자동 등록하고 현재 컨텍스트로 전환해 준다. 회사 클러스터를 함께 쓰는 사람은 <code>kubectl config get-contexts</code>로 현재 대상을 반드시 확인하는 습관을 들이자 — <strong>엉뚱한 클러스터에 명령을 쏘는 사고의 90%가 여기서 난다.</strong></p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow01" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .vm { fill: #fafaf8; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .node { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-lbl { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- macOS -->
+  <rect class="outer" x="20" y="20" width="860" height="370" rx="6"/>
+  <text class="t-h" x="40" y="46">macOS (Apple Silicon / Intel)</text>
+
+  <!-- kubectl -->
+  <rect class="box-accent" x="50" y="141" width="150" height="64" rx="4"/>
+  <text class="t-title" x="125" y="167" text-anchor="middle">kubectl</text>
+  <text class="t-sub" x="125" y="185" text-anchor="middle">명령 · YAML 제출</text>
+
+  <!-- 컨테이너 런타임 VM -->
+  <rect class="vm" x="260" y="66" width="590" height="304" rx="6"/>
+  <text class="t-h" x="276" y="92">컨테이너 런타임 VM — OrbStack / Docker Desktop / Colima</text>
+
+  <!-- kind 노드 1: control-plane -->
+  <rect class="node" x="290" y="108" width="530" height="118" rx="4"/>
+  <text class="t-sub" x="302" y="128">kind 노드 ① control-plane — 실체는 도커 컨테이너 1개</text>
+  <rect class="box" x="310" y="142" width="170" height="62" rx="4"/>
+  <text class="t-title" x="395" y="168" text-anchor="middle">API 서버</text>
+  <text class="t-sub" x="395" y="186" text-anchor="middle">모든 요청의 관문</text>
+  <rect class="box" x="500" y="142" width="140" height="62" rx="4"/>
+  <text class="t-title" x="570" y="168" text-anchor="middle">etcd</text>
+  <text class="t-sub" x="570" y="186" text-anchor="middle">상태 저장소</text>
+  <rect class="box" x="660" y="142" width="140" height="62" rx="4"/>
+  <text class="t-title" x="730" y="168" text-anchor="middle">스케줄러 등</text>
+  <text class="t-sub" x="730" y="186" text-anchor="middle">컨트롤 플레인</text>
+
+  <!-- kind 노드 2: worker -->
+  <rect class="node" x="290" y="244" width="530" height="112" rx="4"/>
+  <text class="t-sub" x="302" y="264">kind 노드 ② worker — 역시 도커 컨테이너 1개</text>
+  <rect class="box" x="310" y="278" width="150" height="60" rx="4"/>
+  <text class="t-title" x="385" y="302" text-anchor="middle">파드 hello-1</text>
+  <text class="t-sub" x="385" y="320" text-anchor="middle">nginx 컨테이너</text>
+  <rect class="box" x="480" y="278" width="150" height="60" rx="4"/>
+  <text class="t-title" x="555" y="302" text-anchor="middle">파드 hello-2</text>
+  <text class="t-sub" x="555" y="320" text-anchor="middle">nginx 컨테이너</text>
+  <rect class="box" x="650" y="278" width="150" height="60" rx="4"/>
+  <text class="t-title" x="725" y="302" text-anchor="middle">kubelet</text>
+  <text class="t-sub" x="725" y="320" text-anchor="middle">노드 에이전트</text>
+
+  <!-- kubectl → API 서버 -->
+  <line class="line" x1="200" y1="173" x2="306" y2="173" marker-end="url(#arrow01)"/>
+  <text class="t-lbl" x="228" y="160" text-anchor="middle">API 호출</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="420" text-anchor="middle">kind에서는 "노드"조차 컨테이너다. 클러스터 전체가 도커 컨테이너 몇 개로 내 맥 안에서 돌아간다.</text>
+</svg>
+    <figcaption>그림 0-1. 실습 스택의 실제 구조. 맥 위의 경량 리눅스 VM 안에서 도커 컨테이너들이 쿠버네티스 노드 역할을 한다. kubectl은 control-plane 노드의 API 서버와 통신한다.</figcaption>
+  </figure>
+</section>
+
+<section id="s0-4">
+  <h2 class="sec"><span class="num">0.4</span>첫 배포 — 15분 실습 루프</h2>
+  <p>1장에서 상세히 배울 세 리소스를 몸으로 먼저 만난다. <dfn class="term">파드 <span class="en">(Pod)</span></dfn>는 컨테이너를 묶어 실행하는 최소 단위, <dfn class="term">디플로이먼트 <span class="en">(Deployment)</span></dfn>는 동일한 파드 복제본 개수를 유지·교체해 주는 컨트롤러, <dfn class="term">서비스 <span class="en">(Service)</span></dfn>는 계속 바뀌는 파드들 앞의 고정된 이름과 IP다. 정의는 여기까지 — 지금은 손이 먼저다.</p>
+
+  <h3>① 배포하고 확인한다</h3>
+<pre><code>kubectl create deployment hello --image=nginx:1.27 --replicas=2
+kubectl get pods -o wide</code></pre>
+  <p><code>-o wide</code>로 보면 파드 2개가 서로 다른 worker 노드에 흩어져 뜬 것까지 보인다. STATUS가 Running이 될 때까지 몇 초 걸릴 수 있다.</p>
+
+  <h3>② 서비스로 묶고 접속한다</h3>
+<pre><code>kubectl expose deployment hello --port=80
+kubectl port-forward service/hello 8080:80</code></pre>
+  <p>새 터미널에서 <code>curl http://localhost:8080</code> — nginx 환영 페이지 HTML이 나오면 성공. 방금 쓴 <dfn class="term">포트 포워딩 <span class="en">(Port Forwarding)</span></dfn>은 내 맥의 포트를 클러스터 안 서비스/파드 포트로 잇는 임시 터널이다. 외부 노출 설정 없이 개발 중 접속 확인에 쓰는 표준 수단이고, 터미널을 끄면(Ctrl+C) 터널도 사라진다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow02" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="80" width="160" height="72" rx="4"/>
+  <text class="t-title" x="100" y="110" text-anchor="middle">브라우저 / curl</text>
+  <text class="t-sub" x="100" y="130" text-anchor="middle">localhost:8080</text>
+
+  <line class="line" x1="180" y1="116" x2="246" y2="116" marker-end="url(#arrow02)"/>
+
+  <rect class="box-accent" x="250" y="80" width="210" height="72" rx="4"/>
+  <text class="t-title" x="355" y="110" text-anchor="middle">kubectl port-forward</text>
+  <text class="t-sub" x="355" y="130" text-anchor="middle">로컬 8080 → 클러스터 80 터널</text>
+
+  <line class="line" x1="460" y1="116" x2="526" y2="116" marker-end="url(#arrow02)"/>
+
+  <rect class="box" x="530" y="80" width="170" height="72" rx="4"/>
+  <text class="t-title" x="615" y="110" text-anchor="middle">Service: hello</text>
+  <text class="t-sub" x="615" y="130" text-anchor="middle">고정 이름 · 부하 분산</text>
+
+  <line class="line" x1="700" y1="116" x2="736" y2="116" marker-end="url(#arrow02)"/>
+
+  <rect class="box" x="740" y="80" width="140" height="72" rx="4"/>
+  <text class="t-title" x="810" y="110" text-anchor="middle">파드 hello-…</text>
+  <text class="t-sub" x="810" y="130" text-anchor="middle">nginx :80</text>
+
+  <text class="t-cap" x="450" y="205" text-anchor="middle">인그레스나 로드 밸런서 없이도, 개발 중 접속 확인은 이 터널 하나로 충분하다.</text>
+  <text class="t-cap" x="450" y="227" text-anchor="middle">터널은 명령을 실행한 터미널이 살아 있는 동안만 유지된다 (Ctrl+C로 종료).</text>
+</svg>
+    <figcaption>그림 0-2. port-forward 터널의 경로. 1장의 인그레스는 이 임시 터널을 "정식 출입구"로 바꾸는 작업이라고 보면 된다.</figcaption>
+  </figure>
+
+  <h3>③ 확장하고, 죽여보고, 되살아나는 걸 본다</h3>
+<pre><code># 2개 → 4개로 확장
+kubectl scale deployment hello --replicas=4
+kubectl get pods
+
+# 파드 하나를 일부러 삭제 (이름은 get pods 출력에서 복사)
+kubectl delete pod <파드이름>
+kubectl get pods -w        # -w: 변화를 실시간 관찰, Ctrl+C로 종료</code></pre>
+  <p>삭제하자마자 새 파드가 자동으로 생겨나는 것이 보인다. 이것이 1장 그림 1-1에서 말하는 <strong>조정 루프</strong>다 — 우리는 "replicas: 4"라는 원하는 상태만 선언했고, 실제 상태가 3이 되는 순간 컨트롤러가 되돌렸다. 이 15분이 쿠버네티스 전체의 핵심 아이디어다.</p>
+  <div class="check"><span class="lbl">체크포인트</span>curl 응답 수신 + 파드 삭제 후 자동 재생성 관찰. 둘 다 됐다면 1장을 시작할 준비 완료.</div>
+</section>
+
+<section id="s0-5">
+  <h2 class="sec"><span class="num">0.5</span>1장 실습 연결 — 인그레스 준비 (선택)</h2>
+  <p>1장 1.4절·1.9절의 인그레스 실습까지 로컬에서 하려면 인그레스 컨트롤러가 필요하다. CNCF에서 유지보수 중인 <strong>Contour</strong>(Envoy 기반)를 설치한다 — 표준 Ingress 리소스를 그대로 지원해 1장 YAML을 수정 없이 쓸 수 있다.</p>
+<pre><code># Contour + Envoy 설치
+kubectl apply -f https://projectcontour.io/quickstart/contour.yaml
+kubectl get pods -n projectcontour        # 모두 Running/Completed까지 대기
+
+# 로컬 접속용 터널 (인그레스가 받는 80 포트를 내 맥 8888로)
+kubectl -n projectcontour port-forward service/envoy 8888:80</code></pre>
+  <p>이후 1장에서 인그레스 리소스를 만들면 <code>curl http://localhost:8888/api</code>처럼 경로 라우팅을 확인할 수 있다. 이 단계는 1장 진도에 맞춰 그때 해도 된다.</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 주석</span>
+    검색하면 아직도 상위에 나오는 <strong>ingress-nginx 설치 가이드는 따라 하지 말 것</strong>. 해당 프로젝트는 2026년 3월부로 은퇴해 보안 패치가 중단됐다. 로컬 실습이라도 지금 배우는 도구는 유지보수되는 것으로 — Contour, Traefik, Envoy Gateway 등이 대안이다.
+    <span class="src">출처: kubernetes.io/blog/2026/01/29/ingress-nginx-statement · projectcontour.io/getting-started (설치·port-forward 명령 원 출처)</span>
+  </div>
+</section>
+
+<section id="s0-6">
+  <h2 class="sec"><span class="num">0.6</span>자주 막히는 지점</h2>
+  <table>
+    <tr><th>증상</th><th>원인과 해법</th></tr>
+    <tr><td><code>Cannot connect to the Docker daemon</code></td><td>런타임이 안 떠 있다. OrbStack/Docker Desktop 앱을 실행하고 <code>docker version</code>으로 재확인.</td></tr>
+    <tr><td><code>kind create cluster</code>가 이미지 pull에서 멈춤</td><td>노드 이미지(kindest/node, 수백 MB) 첫 다운로드 중. 네트워크 문제면 잠시 후 <code>kind delete cluster --name study</code> 후 재시도.</td></tr>
+    <tr><td>kubectl이 엉뚱한 클러스터를 바라봄</td><td><code>kubectl config get-contexts</code>로 확인 후 <code>kubectl config use-context kind-study</code>.</td></tr>
+    <tr><td><code>port-forward</code>가 <code>address already in use</code></td><td>로컬 8080을 다른 프로세스가 사용 중. <code>kubectl port-forward service/hello 9090:80</code>처럼 다른 포트로.</td></tr>
+    <tr><td>파드가 <code>ImagePullBackOff</code></td><td>이미지 이름·태그 오타가 대부분. <code>kubectl describe pod &lt;이름&gt;</code>의 Events에 정확한 원인이 찍힌다. Apple Silicon에서 arm64 미지원 이미지일 때도 발생 — nginx 등 공식 이미지는 멀티 아키텍처라 문제없다.</td></tr>
+    <tr><td>맥 재부팅 후 클러스터가 안 보임</td><td>런타임 앱이 아직 안 뜬 것. 앱 실행 후 1분 내 노드 컨테이너가 자동 복귀한다. 그래도 안 되면 지우고 새로 만드는 게 빠르다 — kind 클러스터는 소모품이다.</td></tr>
+  </table>
+</section>
+
+<section id="s0-7">
+  <h2 class="sec"><span class="num">0.7</span>정리와 초기화</h2>
+<pre><code># 실습 리소스만 정리
+kubectl delete service hello
+kubectl delete deployment hello
+
+# 클러스터 통째로 삭제 (다음 스터디 때 다시 만들면 된다)
+kind delete cluster --name study
+
+# 디스크 정리 (선택): 안 쓰는 이미지·컨테이너 제거
+docker system prune -a</code></pre>
+  <p>클러스터를 아끼지 말 것. 꼬였다 싶으면 지우고 새로 만드는 데 2분이다 — 이 부담 없음이 로컬 kind로 실습하는 가장 큰 이유다.</p>
+</section>
+
+<footer>
+  출처: kind.sigs.k8s.io/docs/user/quick-start (설치·클러스터 생성) · formulae.brew.sh (Homebrew 패키지) · projectcontour.io/getting-started (Contour 설치) · kubernetes.io/blog/2026/01/29/ingress-nginx-statement · helm.sh/blog/helm-4-released — 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig00-1, fig00-2)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

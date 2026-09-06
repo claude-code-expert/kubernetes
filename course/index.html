@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도커 &amp; 쿠버네티스 — 이론과 따라하기 (전체 로드맵)</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name">도커 &amp; 쿠버네티스 — 이론과 따라하기</span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">COURSE INDEX</div>
+  <h1>도커 &amp; 쿠버네티스 — 이론과 따라하기</h1>
+  <p class="ch-desc">컨테이너를 한 번도 실행해본 적 없는 사람이 38개 모듈을 순서대로 따라 하면, 노트북 한 대 위에 관측·보안·GitOps·카오스 검증까지 갖춘 클러스터를 스스로 세운다. 클라우드 계정 없이 전 과정을 완주한다.</p>
+  <div class="meta">
+    <span class="tag">Kubernetes 1.37</span><span class="tag">kind v0.33.0</span><span class="tag">Docker Engine 29.x</span><span class="tag">Helm 4.x</span>
+    <br>버전 확인일 2026-09-03 · 이론 축 『쿠버네티스 창시자에게 배우는 모범 사례 2판』(한빛미디어, 2024)
+  </div>
+</header>
+
+<div class="tldr">
+  <h2>이 과정의 규칙</h2>
+  <p>1. 모든 모듈은 앞 모듈이 남긴 파일을 입력으로 받는다. 건너뛰면 다음 실습의 사전 조건이 깨진다.</p>
+  <p>2. 명령에는 실행 결과와 성공 판정 기준이 항상 붙는다. 화면이 문서와 다르면 거기서 멈추고 원인을 찾는다.</p>
+  <p>3. 모듈마다 <strong>일부러 실패시키는 단계</strong>가 하나씩 있다. 고장을 본 적 없는 사람은 고칠 수 없다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#roadmap"><span class="num">1</span>전체 로드맵 — 8개 파트 38개 모듈</a>
+  <a href="#levels"><span class="num">2</span>난이도 5단계 — 같은 것을 세 번 배운다</a>
+  <a href="#versions"><span class="num">3</span>고정 버전 매트릭스</a>
+  <a href="#howto"><span class="num">4</span>문서 읽는 법</a>
+  <a href="#labs"><span class="num">5</span>실습 파일 구조</a>
+  <a href="#schedule"><span class="num">6</span>진행 방식</a>
+</nav>
+
+<section id="roadmap">
+  <h2 class="sec"><span class="num">1</span>전체 로드맵 — 8개 파트 38개 모듈</h2>
+  <p class="lead">파트는 순서대로 쌓인다. 도커에서 이미지를 만들 줄 알아야 쿠버네티스에 배포할 것이 생기고, 배포한 것이 있어야 관측할 대상이 생기며, 관측 스택이 있어야 카오스 실험의 판정 도구가 생긴다.</p>
+
+  <h3>Part 0. 실습 환경</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m01-setup-environment.html">M01</a></td><td>환경 구축과 버전 고정</td><td>노드 3개짜리 kind 클러스터를 만들고 부순다</td></tr>
+  </table>
+
+  <h3>Part 1. 도커 — 초반</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m02-docker-container-basics.html">M02</a></td><td>컨테이너는 프로세스다</td><td>컨테이너를 실행·관찰·삭제하고 호스트에서 같은 프로세스를 찾는다</td></tr>
+    <tr><td><a href="m03-docker-images-layers.html">M03</a></td><td>이미지와 레이어</td><td>태그와 다이제스트를 구분하고 레이어 크기를 읽는다</td></tr>
+    <tr><td><a href="m04-docker-dockerfile-build.html">M04</a></td><td>Dockerfile — 빌드와 최적화</td><td>멀티스테이지로 이미지를 5분의 1로 줄인다</td></tr>
+    <tr><td><a href="m05-docker-data-network.html">M05</a></td><td>데이터와 네트워크</td><td>볼륨으로 데이터를 살리고 컨테이너끼리 이름으로 부른다</td></tr>
+    <tr><td><a href="m06-docker-compose.html">M06</a></td><td>Compose로 다중 서비스</td><td>3개 서비스를 파일 하나로 띄우고 헬스체크로 순서를 강제한다</td></tr>
+    <tr><td><a href="m07-docker-registry-supplychain.html">M07</a></td><td>레지스트리와 이미지 공급망</td><td>이미지를 푸시하고 취약점을 스캔해 베이스를 교체한다</td></tr>
+  </table>
+
+  <h3>Part 2. 쿠버네티스 코어 — 초반→중반</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m08-k8s-cluster-first-deploy.html">M08</a></td><td>클러스터 구조와 첫 배포</td><td>컨트롤 플레인 구성요소를 짚고 명령형으로 배포한다</td></tr>
+    <tr><td><a href="m09-k8s-pod-label-namespace.html">M09</a></td><td>파드 · 레이블 · 네임스페이스</td><td>다중 컨테이너 파드를 쓰고 셀렉터로 골라낸다</td></tr>
+    <tr><td><a href="m10-k8s-deployment-rollout.html">M10</a></td><td>디플로이먼트와 롤아웃</td><td>롤링 업데이트를 관찰하고 실패한 배포를 되돌린다</td></tr>
+    <tr><td><a href="m11-k8s-service-network.html">M11</a></td><td>서비스와 클러스터 네트워크</td><td>서비스 4종을 구분하고 엔드포인트가 비는 원인을 찾는다</td></tr>
+    <tr><td><a href="m12-k8s-ingress-gateway.html">M12</a></td><td>인그레스와 Gateway API</td><td>같은 라우팅을 Ingress와 Gateway API 두 방식으로 쓴다</td></tr>
+    <tr><td><a href="m13-k8s-configmap-secret.html">M13</a></td><td>컨피그맵과 시크릿</td><td>설정을 이미지 밖으로 빼고 갱신 반영 차이를 안다</td></tr>
+    <tr><td><a href="m14-k8s-journal-app-helm.html">M14</a></td><td>종합 — 저널 애플리케이션과 Helm 파라미터화</td><td>책 1장 애플리케이션 전체를 배포하고 차트로 묶는다</td></tr>
+  </table>
+
+  <h3>Part 3. 운영 기초 — 중반</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m15-k8s-probes-lifecycle.html">M15</a></td><td>프로브와 파드 라이프사이클</td><td>롤아웃 중 실패 요청을 세어 0으로 만든다</td></tr>
+    <tr><td><a href="m16-k8s-resources-scheduling.html">M16</a></td><td>리소스 · QoS · 스케줄링</td><td>노드가 비었는데 뜨지 않는 이유를 이벤트에서 읽고 배치를 제어한다</td></tr>
+    <tr><td><a href="m17-k8s-autoscaling.html">M17</a></td><td>오토스케일링</td><td>부하에 따라 파드가 늘고 줄게 만들고 그 지연을 잰다</td></tr>
+    <tr><td><a href="m18-k8s-storage-stateful.html">M18</a></td><td>스토리지와 스테이트풀 애플리케이션</td><td>PVC로 데이터를 살리고 볼륨이 파드를 노드에 묶는 것을 확인한다</td></tr>
+  </table>
+
+  <h3>Part 4. 관측 — 중반 · 책 3장 검증·확장</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m19-k8s-metrics-pipeline.html">M19</a></td><td>메트릭 파이프라인과 프로메테우스 스택</td><td>두 번째 앱을 들여오고 DOWN 타깃 6개를 28/28로 만든다</td></tr>
+    <tr><td><a href="m20-k8s-promql-instrumentation.html">M20</a></td><td>PromQL과 애플리케이션 계측</td><td>타깃이 조용히 사라지는 세 방식을 재현하고 RED를 직접 뽑는다</td></tr>
+    <tr><td><a href="m21-k8s-dashboard-alerting.html">M21</a></td><td>대시보드와 알림</td><td>발화·해소 시각을 재고 각 구간을 무엇이 정하는지 밝힌다</td></tr>
+    <tr><td><a href="m22-k8s-logging-loki.html">M22</a></td><td>로깅</td><td>사라진 파드의 로그를 찾고 라벨 폭발을 직접 만든다</td></tr>
+  </table>
+
+  <h3>Part 5. 보안과 정책 — 중후반</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m23-k8s-rbac-authz.html">M23</a></td><td>RBAC와 인가</td><td>권한 밖 명령이 거부되는 것을 메시지로 확인한다</td></tr>
+    <tr><td><a href="m24-k8s-pod-container-security.html">M24</a></td><td>파드와 컨테이너 보안</td><td>restricted 를 강제하고 두 문지기의 차이를 구분한다</td></tr>
+    <tr><td><a href="m25-k8s-networkpolicy-mesh.html">M25</a></td><td>네트워크 정책과 서비스 메시</td><td>기본 거부부터 걸고 다섯 경로만 연다. DNS 누락 사고와 셀렉터 AND/OR 함정을 재현하고, 정책이 보지 못하는 두 칸에서 서비스 메시의 값을 판단한다.</td></tr>
+    <tr><td><a href="m26-k8s-admission-policy.html">M26</a></td><td>어드미션 컨트롤과 정책 엔진</td><td>CEL 로 조직 규칙을 API 서버에 심는다. Warn 에서 Deny 로 승격하는 순서, 이미 배포된 위반을 서버 드라이런으로 세는 방법, 표현식 오타가 배포 전체를 막는 사고를 재현한다.</td></tr>
+    <tr><td><a href="m27-k8s-cluster-security-posture.html">M27</a></td><td>클러스터 보안 태세</td><td>감사 로깅을 켜서 누가 무엇을 지웠는지 읽고, CIS 진단 지적 10개 중 6개를 고친 뒤 남은 4개에 근거를 남긴다. 노드·클라우드 메타데이터 경로를 막고 이미지 취약점의 출처 층을 나눈다.</td></tr>
+  </table>
+
+  <h3>Part 6. 배포 자동화 — 후반</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m28-k8s-helm-kustomize.html">M28</a></td><td>Helm과 Kustomize</td><td>M15~M27 변경분을 차트에 반영하고 restricted 네임스페이스에서 뜨는 것으로 검증한다. Helm 4 의 --rollback-on-failure 로 실패한 업그레이드를 되돌리고, 같은 앱을 Kustomize 오버레이로 만들며 이름 참조와 env 순서 함정을 재현한다.</td></tr>
+    <tr><td><a href="m29-k8s-ci-pipeline.html">M29</a></td><td>CI — 빌드 · 테스트 · 이미지</td><td>테스트를 Dockerfile 안에 넣어 이미지 생성의 관문으로 만든다. 깨진 테스트가 이미지를 못 만들게 하고, 베이스 이미지의 CRITICAL CVE 가 파이프라인을 세우는 것을 재현한 뒤 베이스를 올려 통과시킨다.</td></tr>
+    <tr><td><a href="m30-k8s-deploy-strategies.html">M30</a></td><td>배포 전략과 롤아웃 판정</td><td>블루/그린을 서비스 셀렉터 교체로 만들고, Argo Rollouts 카나리에 PromQL 판정을 붙인다. 40% 확률로 실패하는 버전이 성공률 0.615 로 자동 롤백되는 것을 측정값과 함께 본다.</td></tr>
+    <tr><td><a href="m31-k8s-gitops.html">M31</a></td><td>GitOps</td><td>클러스터 안에 깃 서버와 Argo CD 를 세우고 커밋 하나가 8초 만에 배포되는 것을 확인한다. kubectl 로 만든 변경이 5초 만에 되돌아가는 것을 측정하고, SOPS 로 시크릿을 커밋 가능한 형태로 만든다.</td></tr>
+    <tr><td><a href="m32-k8s-global-rollout.html">M32</a></td><td>글로벌 롤아웃과 사고 대응</td><td>kind 클러스터 두 개를 리전으로 등록하고 ApplicationSet 으로 리전 수만큼 배포한다. 카나리 리전에 먼저 배포해 검사 스크립트로 판정하고, 존재하지 않는 태그와 리전별 구성요소 편차를 재현해 러너북으로 정리한다.</td></tr>
+  </table>
+
+  <h3>Part 7. 확장 — 후반</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m33-k8s-crd-operator.html">M33</a></td><td>CRD와 오퍼레이터 구현</td><td>JournalSite 라는 리소스 종류를 만들고 조정 루프를 셸과 Go 로 각각 구현한다. 폴링 5초와 Owns 감시의 차이를 초 단위로 비교하고, CEL 검증으로 거부 메시지를 사람이 읽을 수 있게 만든다.</td></tr>
+    <tr><td><a href="m34-k8s-multicluster-external.html">M34</a></td><td>멀티클러스터와 외부 서비스 연동</td><td>셀렉터 없는 서비스와 EndpointSlice 를 손으로 써서 클러스터 밖 레디스와 다른 클러스터의 서비스를 이름으로 부른다. ExternalName 의 포트 매핑 실패와 엔드포인트 부재, 그리고 상대가 죽어도 ready 가 유지되는 한계를 재현한다.</td></tr>
+    <tr><td><a href="m35-k8s-platform-ml.html">M35</a></td><td>플랫폼 패턴과 ML 워크로드</td><td>인덱스 잡으로 분산 훈련의 형태를 만들고, 종료 코드로 실패를 구분해 같은 실패에 파드 4개가 1개가 되는 것을 측정한다. DRA 로 GPU 를 요청해 드라이버 없는 클러스터의 스케줄 실패를 확인하고 확장 지점 여섯 곳을 정리한다.</td></tr>
+  </table>
+
+  <h3>Part 8. 검증 — 후반 · 책 20장 검증·확장</h3>
+  <table>
+    <tr><th>모듈</th><th>제목</th><th>끝나면 할 수 있는 것</th></tr>
+    <tr><td><a href="m36-k8s-chaos-testing.html">M36</a></td><td>카오스 테스팅</td><td>Chaos Mesh 로 파드 킬·지연·CPU 고갈·HTTP 중단을 주입하고 가설과 실측을 시트로 남긴다. 측정 도구가 M24·M25 에 두 번 막히는 것부터 겪고, 알림이 울리는 고장과 울리지 않는 고장을 구분한다.</td></tr>
+    <tr><td><a href="m37-k8s-load-testing.html">M37</a></td><td>로드 테스팅</td><td>k6 로 램프업·정상·스파이크·회복 시나리오를 만들고 cpu limit 하나로 P99 를 3.54ms 에서 14.74초로 만든 뒤 스로틀링 지표로 원인을 찾는다. 에러율 0% 인데 절반이 버려지는 상태와 앱·클라이언트 측정의 22ms 차이를 확인한다.</td></tr>
+    <tr><td><a href="m38-k8s-capstone.html">M38</a></td><td>실험과 최종 캡스톤</td><td>두 구현을 한 서비스 뒤에 두고 변형별 지표로 판정하고, 49개 항목의 통주 점검으로 전체가 서 있는지 확인한다. 장애 세 개를 심어 대시보드와 로그만으로 원인을 규명하는 캡스톤을 만든다.</td></tr>
+  </table>
+</section>
+
+<section id="levels">
+  <h2 class="sec"><span class="num">2</span>난이도 5단계 — 같은 것을 세 번 배운다</h2>
+  <p class="lead">이 과정은 주제를 한 번 훑고 넘어가지 않는다. 같은 오브젝트를 세 번, 매번 다른 깊이로 다시 만난다. 처음에는 눈으로 보기 위해, 두 번째는 고장을 재현하기 위해, 세 번째는 사람이 손대지 않게 만들기 위해서다. 아래 단계는 <strong>파트 경계와 정확히 일치</strong>하며, 각 모듈 첫머리의 난이도 표시가 이 표를 따른다.</p>
+  <table>
+    <tr><th>단계</th><th>모듈</th><th>회당 평균</th><th>명령의 성격</th><th>대표 명령</th></tr>
+    <tr><td>초반</td><td>M01~M07</td><td>55분</td><td>한 줄 명령으로 만들고 눈으로 확인</td><td><code>docker run</code>, <code>docker build</code>, <code>docker compose up</code></td></tr>
+    <tr><td>초반→중반</td><td>M08~M14</td><td>70분</td><td>쿠버네티스 오브젝트를 만들고 YAML로 다시 쓴다</td><td><code>kubectl create deployment</code>, <code>kubectl expose</code>, <code>kubectl apply -k</code>, <code>helm install</code></td></tr>
+    <tr><td>중반</td><td>M15~M22</td><td>90분</td><td>선언형으로 고치고 <strong>실패를 재현</strong>한다</td><td><code>kubectl apply -f</code>, <code>kubectl top</code>, <code>kubectl drain</code>, PromQL <code>rate()</code>, <code>histogram_quantile()</code></td></tr>
+    <tr><td>중후반</td><td>M23~M27</td><td>95분</td><td>권한 · 정책 · 감사로 <strong>사람이 못 하게</strong> 막는다</td><td><code>kubectl auth can-i</code>, PSA 라벨, <code>NetworkPolicy</code>, <code>ValidatingAdmissionPolicy</code>, 감사 로그 질의</td></tr>
+    <tr><td>후반</td><td>M28~M38</td><td>115분</td><td>사람이 apply 하지 않는다. 파이프라인 · 정책 · 실험이 대신한다</td><td><code>kubectl argo rollouts promote</code>, Argo CD <code>Application</code>, <code>kubectl apply -f podchaos.yaml</code>, <code>k6 run</code></td></tr>
+  </table>
+  <p><strong>시간은 읽기 · 명령 실행 · 대기(롤아웃 · 분석 · 부하)를 더해 산정한 값</strong>이고 숙련도에 따라 ±30% 차이가 난다. 전체 합은 약 55시간이다. 한 모듈이 예외적으로 무겁다 — <a href="m14-k8s-journal-app-helm.html">M14</a>는 다른 모듈의 두 배(135분)라 <strong>단독 회차로 잡는다.</strong></p>
+  <p>배포 하나를 예로 들면 이렇게 올라간다. M08에서는 <code>kubectl create deployment web --image=nginx:1.29-alpine</code> 한 줄로 만든다. M10에서는 같은 것을 YAML로 다시 쓰고 이미지를 바꿔 롤링 업데이트를 관찰한 뒤 <code>rollout undo</code>로 되돌린다. M30에서는 아무도 명령을 치지 않는다 — 커밋이 들어오면 카나리가 20%로 나가고, M20에서 만든 에러율 지표가 임계를 넘으면 자동으로 롤백된다.</p>
+</section>
+
+<section id="versions">
+  <h2 class="sec"><span class="num">3</span>고정 버전 매트릭스</h2>
+  <p>버전을 고정하지 않은 실습 문서는 반년이면 쓸 수 없다. 아래 표는 <strong>2026-09-03</strong>에 각 프로젝트 공식 페이지에서 확인한 값이다. 실습 당일 <code>helm search repo</code>나 릴리스 페이지로 한 번 더 확인하고, 차이가 나면 표의 값을 그대로 쓰는 편이 안전하다.</p>
+  <table>
+    <tr><th>구성요소</th><th>버전</th><th>확인처</th><th>함정</th></tr>
+    <tr><td>Kubernetes</td><td>1.37.0 (2026-08-26 릴리스, EOL 2027-10-28)<br>지원 라인: 1.35 · 1.36 · 1.37</td><td>kubernetes.io/releases</td><td>사내 클러스터가 1.35면 API 차이가 나는 부분만 각주로 표시된다</td></tr>
+    <tr><td>kind</td><td>v0.33.0<br>노드 이미지 <code>kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5</code></td><td>github.com/kubernetes-sigs/kind/releases</td><td>다이제스트를 <strong>끝까지</strong> 적어야 재현된다. 줄임표로 적은 값을 복사하면 <code>invalid reference format</code>이 난다. 호스트와 이미지 아키텍처도 일치해야 한다</td></tr>
+    <tr><td>Docker Engine</td><td>29.x (Docker Desktop은 별도 버전 체계)</td><td>docs.docker.com/engine/release-notes/29</td><td>실습 당일 <code>docker version</code>으로 재확인한다. 29.7의 임베디드 containerd는 실험 기능 — 이 과정에서는 쓰지 않는다</td></tr>
+    <tr><td>Helm</td><td>4.x</td><td>helm.sh</td><td>Helm 3은 3.22.0(2026-09-09)이 마지막 기능 릴리스, 보안 지원 2027-02-10 종료. 차이는 M28에서 다룬다</td></tr>
+    <tr><td>Gateway API</td><td>v1.6.1 Standard<br>TCPRoute · UDPRoute GA</td><td>kubernetes.io/blog/2026/08/03</td><td>Ingress는 유지보수 모드다. 신규 설계는 Gateway API로 가르치고 Ingress는 존치 자산으로 다룬다. 실험 리소스는 <code>gateway.networking.x-k8s.io</code> 그룹으로 분리됐다</td></tr>
+    <tr><td>metrics-server</td><td>v0.9.0 (2026-07-13, 호환 1.34+)</td><td>github.com/kubernetes-sigs/metrics-server</td><td>kind에 기본으로 없다. kubelet 인증서에 IP SAN이 없어 <code>--kubelet-insecure-tls</code> 없이는 파드가 Ready가 되지 않는다. M16 <code>kubectl top</code>과 M17 HPA의 전제라 M01에서 미리 설치한다</td></tr>
+    <tr><td>kube-prometheus-stack</td><td>차트 89.2.2 · Prometheus Operator v0.93.1</td><td>prometheus-community</td><td>데이터소스는 이름이 아니라 uid로 참조한다. kind 기본 설정에서는 컨트롤 플레인 타깃 4종이 DOWN이다 — M19에서 고친다</td></tr>
+    <tr><td>로그</td><td>Loki 3.7.x + Grafana Alloy</td><td>grafana-community 저장소</td><td><strong>Promtail은 2026-03-02 EOL.</strong> 검색 결과에 아직 나오지만 쓰지 않는다. <code>loki-stack</code> 차트도 아니다</td></tr>
+    <tr><td>카오스 도구</td><td>Chaos Mesh v2.8.4</td><td>chaos-mesh.org</td><td>책이 쓴 Chaos Toolkit은 0.39.0(2024-04) 이후 릴리스가 없다. kind 에서는 <code>chaosDaemon.runtime: containerd</code> 를 넣지 않으면 데몬이 컨테이너를 찾지 못한다 (M36)</td></tr>
+    <tr><td>부하 도구</td><td>k6</td><td>grafana.com/docs/k6</td><td><code>ab</code>·<code>wrk</code>는 램프업·스파이크·엔드포인트 가중치를 표현하지 못한다. M01에서 미리 설치한다</td></tr>
+    <tr><td>실습 앱 ① <code>journal-api</code></td><td>Node 22 · Express 5 · TypeScript</td><td>course/labs/apps/journal-api</td><td>M04~M18의 대상. 빌드가 빨라야 M04 캐시 실험과 M07 공급망 실습이 성립한다</td></tr>
+    <tr><td>실습 앱 ② <code>order-api</code></td><td>Spring Boot 4.1.0 · JDK 21 · Gradle</td><td>docs/kubernetes-monitoring/kubernetes/labs</td><td>M19~M38의 대상. <code>/actuator/prometheus</code>와 ChaosController를 갖고 있어 관측·카오스 자산을 그대로 쓴다. 빌드에 JDK 21과 Gradle이 필요하다</td></tr>
+  </table>
+  <div class="note-2026">
+    <span class="lbl">이 과정의 반복 교육 포인트</span>
+    이론서는 2024년, 검색 결과는 그보다 더 낡은 경우가 많다. 이 과정은 낡은 정보를 <strong>이름을 박아서</strong> 정정한다. Promtail, <code>loki-stack</code> 차트, <code>charts.helm.sh/stable</code> 저장소, 서비스어카운트 토큰을 <code>secrets[0].name</code>으로 조회하는 명령 — 전부 지금은 동작하지 않거나 권장되지 않는다. 문서에서 이런 표시를 만나면 "왜 낡았는지"까지 읽고 넘어간다.
+    <span class="src">근거: grafana.com/docs/loki (Promtail EOL) · kubernetes.io/docs (SA 토큰 자동 생성은 1.24에서 제거)</span>
+  </div>
+</section>
+
+<section id="howto">
+  <h2 class="sec"><span class="num">4</span>문서 읽는 법</h2>
+  <p>모든 모듈은 같은 순서로 쓰여 있다. 익숙해지면 필요한 블록만 골라 읽을 수 있다.</p>
+  <table>
+    <tr><th>블록</th><th>무엇이 들어 있나</th></tr>
+    <tr><td>사전 조건</td><td>앞 모듈이 남긴 어떤 파일이 있어야 하는지. 없으면 돌아갈 모듈 링크</td></tr>
+    <tr><td>핵심 3줄</td><td>이 모듈이 끝나면 할 수 있는 것</td></tr>
+    <tr><td>왜 이걸 하나</td><td>앞 모듈의 결과가 왜 부족한지. 이 모듈의 존재 이유</td></tr>
+    <tr><td>이론</td><td>실습에서 마주칠 개념만. 책의 해당 절 번호가 붙는다</td></tr>
+    <tr><td>따라하기</td><td>단계마다 <strong>목적 → 명령 → 옵션 설명 → 실행 결과 → 판정</strong></td></tr>
+    <tr><td>일부러 실패시키기</td><td>실제로 겪을 실수를 재현하고 에러 메시지를 읽은 뒤 고친다</td></tr>
+    <tr><td>체크포인트</td><td>무엇이 보이면 성공인지. 판정 가능한 문장으로</td></tr>
+    <tr><td>정리</td><td>리소스 삭제. 부하 루프를 띄웠다면 종료 방법</td></tr>
+  </table>
+  <p>명령 블록에는 프롬프트 기호를 붙이지 않았다. 블록 전체를 복사해 붙여넣으면 된다. 실행 결과는 점선 테두리 블록으로 구분돼 있고, 환경마다 달라지는 값(파드 이름 접미사, IP, 시각)은 그대로 두었다 — 같을 필요가 없는 값이다.</p>
+</section>
+
+<section id="labs">
+  <h2 class="sec"><span class="num">5</span>실습 파일 구조</h2>
+  <p>문서의 코드 블록이 정본이고 <code>labs/</code>는 그 추출본이다. 타이핑이 목적이 아닌 파일(긴 values, 대시보드 JSON)은 여기서 복사해 쓴다.</p>
+<pre><code>course/labs/
+  infra/        kind 클러스터 설정
+  scripts/      preflight.sh · rebuild.sh · 부하 생성
+  apps/         애플리케이션 소스와 Dockerfile
+  k8s/          매니페스트
+  charts/       헬름 차트
+  monitoring/   values 파일 · 대시보드 JSON
+  chaos/        카오스 실험 정의 · 게임 데이 시트</code></pre>
+  <p><code>scripts/rebuild.sh</code>는 빈 클러스터에서 M14 시점 상태까지 한 번에 복구한다. 뒤쪽 모듈에서 실습이 꼬였을 때 처음부터 다시 하지 않아도 되는 탈출구다.</p>
+</section>
+
+<section id="schedule">
+  <h2 class="sec"><span class="num">6</span>진행 방식</h2>
+  <table>
+    <tr><th>형태</th><th>배치</th><th>회당</th></tr>
+    <tr><td>집중 과정</td><td>19회 (모듈 2개씩)</td><td>3시간</td></tr>
+    <tr><td>주 2회 스터디</td><td>19주</td><td>2시간 + 과제</td></tr>
+    <tr><td>자습</td><td>38일</td><td>1~1.5시간</td></tr>
+  </table>
+  <p>스터디로 운영한다면 발표자를 모듈마다 돌리되, 발표자는 <strong>일부러 실패시키기 블록을 미리 실행해 보고</strong> 에러 메시지를 캡처해 오는 것을 준비물로 삼는다. 성공 시연은 문서만 따라 하면 되지만 실패 시연은 환경마다 메시지가 조금씩 다르기 때문이다.</p>
+</section>
+
+<footer>
+  <h3>참고</h3>
+  <ul>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 브렌던 번스 외, 한빛미디어 2024 (원서 Kubernetes Best Practices 2E, O'Reilly)</li>
+    <li>Kubernetes 공식 문서 · 릴리스: https://kubernetes.io/docs · https://kubernetes.io/releases/</li>
+    <li>Docker 공식 문서: https://docs.docker.com</li>
+    <li>kind: https://kind.sigs.k8s.io · Helm: https://helm.sh/docs</li>
+  </ul>
+  <p>버전 확인 2026-09-03 · 제작 규약은 저장소 루트 CLAUDE.md, 모듈 정의는 CURRICULUM.md</p>
+</footer>
+</div>
+</body>
+</html>

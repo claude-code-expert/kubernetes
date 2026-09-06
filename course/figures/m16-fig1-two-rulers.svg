@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <pattern id="resv" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#2456c4" stroke-width="1" opacity="0.5"/>
+    </pattern>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .resv { fill:url(#resv); stroke:#2456c4; stroke-width:1.2; }
+    .used { fill:#e8e8e6; stroke:#777777; stroke-width:1; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:13px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="390" rx="6"/>
+  <text class="t-h" x="40" y="46">같은 노드를 두 개의 자로 잰다 — 어느 쪽도 틀리지 않았다</text>
+  <text class="t-sub" x="40" y="66">study-worker · 14 CPU · 파드 3개가 각각 requests cpu 4</text>
+
+  <!-- 자 1 : 스케줄러 -->
+  <text class="t-title" x="40" y="108">스케줄러의 자</text>
+  <text class="t-mono" x="40" y="125">describe node</text>
+  <text class="t-sub" x="40" y="142">Allocated resources</text>
+  <rect class="node" x="200" y="92" width="640" height="46" rx="4"/>
+  <rect class="resv" x="200" y="92" width="602" height="46" rx="4"/>
+  <text class="t-acc" x="501" y="120" text-anchor="middle">requests 합계 13250m — 94% 예약됨</text>
+  <text class="t-sub" x="812" y="120">여유</text>
+  <text class="t-sub" x="200" y="156">파드를 하나 더 넣을 자리가 있는가를 이 자로만 판단한다. 실제로 쓰는지는 보지 않는다.</text>
+
+  <!-- 자 2 : 커널 -->
+  <text class="t-title" x="40" y="212">커널의 자</text>
+  <text class="t-mono" x="40" y="229">top node</text>
+  <text class="t-sub" x="40" y="246">CPU(cores)</text>
+  <rect class="node" x="200" y="196" width="640" height="46" rx="4"/>
+  <rect class="used" x="200" y="196" width="16" height="46" rx="4"/>
+  <text class="t-sub" x="228" y="224">실제 사용 34m — 0%</text>
+  <text class="t-sub" x="200" y="260">cgroup 이 실제로 소비된 시간을 잰다. 스케줄링에는 쓰이지 않는다.</text>
+
+  <line class="tick" x1="200" y1="272" x2="840" y2="272"/>
+
+  <!-- 결론 -->
+  <rect class="warnbox" x="200" y="288" width="640" height="44" rx="4"/>
+  <text class="t-warn" x="520" y="308" text-anchor="middle">새 파드는 Pending 이 된다 — 0/3 nodes are available: 2 Insufficient cpu</text>
+  <text class="t-sub" x="520" y="325" text-anchor="middle">노드는 비어 있는데 스케줄러는 자리가 없다고 말한다. 둘 다 맞는 말이다.</text>
+
+  <!-- QoS -->
+  <text class="t-title" x="40" y="366">QoS 등급</text>
+  <rect class="box" x="200" y="348" width="200" height="42" rx="3"/>
+  <text class="t-title" x="300" y="366" text-anchor="middle">BestEffort</text>
+  <text class="t-sub" x="300" y="382" text-anchor="middle">requests 없음 · 먼저 쫓겨난다</text>
+  <rect class="accent" x="412" y="348" width="200" height="42" rx="3"/>
+  <text class="t-title" x="512" y="366" text-anchor="middle">Burstable</text>
+  <text class="t-sub" x="512" y="382" text-anchor="middle">requests &lt; limits · 그다음</text>
+  <rect class="box" x="624" y="348" width="216" height="42" rx="3"/>
+  <text class="t-title" x="732" y="366" text-anchor="middle">Guaranteed</text>
+  <text class="t-sub" x="732" y="382" text-anchor="middle">requests == limits · 마지막까지 남는다</text>
+</svg>

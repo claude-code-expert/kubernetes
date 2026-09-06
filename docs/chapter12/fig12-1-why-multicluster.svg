@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <rect class="box-accent" x="20" y="30" width="200" height="150" rx="4"/>
+  <text class="t-title" x="120" y="64" text-anchor="middle">블라스트 반경</text>
+  <text class="t-title" x="120" y="84" text-anchor="middle">제한</text>
+  <text class="t-sub" x="120" y="112" text-anchor="middle">한 클러스터 장애가</text>
+  <text class="t-sub" x="120" y="128" text-anchor="middle">전체로 번지지 않게</text>
+  <text class="t-sub" x="120" y="144" text-anchor="middle">7장의 카나리 리전과</text>
+  <text class="t-sub" x="120" y="160" text-anchor="middle">같은 발상</text>
+
+  <rect class="box-accent" x="240" y="30" width="200" height="150" rx="4"/>
+  <text class="t-title" x="340" y="64" text-anchor="middle">컴플라이언스</text>
+  <text class="t-title" x="340" y="84" text-anchor="middle">분리</text>
+  <text class="t-sub" x="340" y="112" text-anchor="middle">PCI·HIPAA 등 규제</text>
+  <text class="t-sub" x="340" y="128" text-anchor="middle">워크로드를 일반</text>
+  <text class="t-sub" x="340" y="144" text-anchor="middle">워크로드와 물리적으로</text>
+  <text class="t-sub" x="340" y="160" text-anchor="middle">분리</text>
+
+  <rect class="box-accent" x="460" y="30" width="200" height="150" rx="4"/>
+  <text class="t-title" x="560" y="64" text-anchor="middle">특수 워크로드</text>
+  <text class="t-title" x="560" y="84" text-anchor="middle">격리</text>
+  <text class="t-sub" x="560" y="112" text-anchor="middle">HPC·GPU 학습처럼</text>
+  <text class="t-sub" x="560" y="128" text-anchor="middle">요건이 특이한 작업을</text>
+  <text class="t-sub" x="560" y="144" text-anchor="middle">전용 클러스터로</text>
+
+  <rect class="box-accent" x="680" y="30" width="200" height="150" rx="4"/>
+  <text class="t-title" x="780" y="64" text-anchor="middle">지리적 분산</text>
+  <text class="t-sub" x="780" y="112" text-anchor="middle">7장의 글로벌 배포 —</text>
+  <text class="t-sub" x="780" y="128" text-anchor="middle">리전마다 클러스터를</text>
+  <text class="t-sub" x="780" y="144" text-anchor="middle">두고 GSLB로 트래픽</text>
+  <text class="t-sub" x="780" y="160" text-anchor="middle">분산</text>
+
+  <rect class="box" x="20" y="210" width="860" height="80" rx="6"/>
+  <text class="t-title" x="40" y="236" font-size="13">공통점</text>
+  <text class="t-sub" x="40" y="258">넷 다 "하나의 큰 클러스터로 다 해결"이 오히려 더 위험하거나 비효율적인 상황이다.</text>
+  <text class="t-sub" x="40" y="276">멀티클러스터는 기본값이 아니라, 이 네 가지 중 실제로 해당하는 이유가 있을 때 선택하는 것이다.</text>
+
+  <text class="t-cap" x="450" y="320" text-anchor="middle">멀티클러스터를 도입하기 전에 "우리는 이 넷 중 무엇 때문에 필요한가"를 먼저 답할 수 있어야 한다.</text>
+</svg>

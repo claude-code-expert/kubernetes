@@ -1,0 +1,63 @@
+# M31 — 클러스터 안의 깃 서버.
+#
+# 실습을 자기 완결로 만들기 위한 장치다. 깃허브를 쓰면 토큰과 네트워크가 실습의 변수가 된다.
+# `git daemon` 은 git:// 프로토콜을 그대로 말한다 — Argo CD 가 클론할 수 있는 가장 단순한 서버다.
+# (정적 파일로 .git 을 내주는 "dumb HTTP" 는 Argo CD 가 읽지 못한다 — M31 실패 ① 참조)
+apiVersion: v1
+kind: Namespace
+metadata: {name: gitops}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: git-repo, namespace: gitops}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests: {storage: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: gitserver, namespace: gitops}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: gitserver}}
+  strategy: {type: Recreate}      # RWO 볼륨이라 두 파드가 동시에 붙을 수 없다
+  template:
+    metadata: {labels: {app: gitserver}}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: git
+          image: gitserver:1
+          imagePullPolicy: IfNotPresent
+          # PVC 에 넣은 저장소의 소유자가 이 컨테이너의 사용자와 다르면
+          # git 이 "dubious ownership" 으로 거부한다 (M31 실패 ②).
+          # 실습 서버이므로 예외를 전역으로 연다. 운영 서버에서는 소유권을 맞추는 편이 옳다.
+          env:
+            - {name: GIT_CONFIG_COUNT,  value: "1"}
+            - {name: GIT_CONFIG_KEY_0,  value: "safe.directory"}
+            - {name: GIT_CONFIG_VALUE_0, value: "*"}
+          ports: [{name: git, containerPort: 9418}]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: repo, mountPath: /repos}
+      volumes:
+        - name: repo
+          persistentVolumeClaim: {claimName: git-repo}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: gitserver, namespace: gitops}
+spec:
+  selector: {app: gitserver}
+  ports: [{name: git, port: 9418, targetPort: git}]

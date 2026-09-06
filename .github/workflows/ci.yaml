@@ -1,0 +1,130 @@
+# M29 — 커밋 하나가 지나가는 파이프라인.
+#
+# 순서에 이유가 있다: 빠르고 싼 검사를 앞에 둔다.
+# 타입 오류를 5분짜리 이미지 빌드가 끝난 뒤에 알 이유가 없다.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 같은 브랜치에서 새 커밋이 오면 앞의 실행을 취소한다.
+# 이것이 없으면 러너가 이미 낡은 커밋을 검사하느라 붙잡혀 있다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_DIR: course/labs/apps/journal-api
+  IMAGE: ghcr.io/${{ github.repository }}/journal-api
+
+jobs:
+  # ── 1) 코드 검사 — 컨테이너 없이 가장 빨리 깨진다 ──────────────────
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: course/labs/apps/journal-api/package-lock.json
+      # npm ci 는 package-lock.json 을 그대로 설치한다. npm install 과 달리 락을 고치지 않는다.
+      - run: npm ci
+        working-directory: ${{ env.APP_DIR }}
+      - run: npm run typecheck
+        working-directory: ${{ env.APP_DIR }}
+      - run: npm run build
+        working-directory: ${{ env.APP_DIR }}
+      - run: npm test
+        working-directory: ${{ env.APP_DIR }}
+
+  # ── 2) 매니페스트·차트 검사 — 클러스터 없이 되는 것까지 ─────────────
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.4
+      - run: helm lint course/labs/charts/journal
+      - run: helm template ci course/labs/charts/journal -f course/labs/charts/journal/values-prod.yaml > /dev/null
+      - run: kubectl kustomize course/labs/k8s/journal > /dev/null
+      - run: kubectl kustomize course/labs/k8s/overlays/dev > /dev/null
+      - run: kubectl kustomize course/labs/k8s/overlays/prod > /dev/null
+
+  # ── 3) 이미지 — 테스트가 통과한 뒤에만 만들어진다 ────────────────────
+  image:
+    needs: [check, manifests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write        # 서명(cosign)에 필요하다
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 태그는 커밋 SHA. latest 는 쓰지 않는다 —
+      # M26 의 ValidatingAdmissionPolicy 가 클러스터에서 거부한다.
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # 이 빌드 안에서 npm test 가 다시 돈다 (Dockerfile 의 test 스테이지).
+      # check 잡과 중복이지만, 이미지를 만드는 경로에 게이트가 있어야
+      # 다른 데서 docker build 를 해도 같은 보장이 유지된다.
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.APP_DIR }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+          build-args: APP_VERSION=${{ steps.meta.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── 취약점 스캔 — 임계값은 CRITICAL 로 시작한다 ──────────────────
+      # HIGH 까지 내리면 베이스 이미지만으로 빌드가 계속 깨진다 (M27 8절의 숫자).
+      # 베이스를 정리한 뒤 임계값을 내리는 순서로 간다.
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # ── 서명 — 무엇을 배포했는지 나중에 증명한다 (M07 에서 예고) ──────
+      - uses: sigstore/cosign-installer@v3
+      - run: cosign sign --yes ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+
+  # ── 4) 일회용 클러스터에서 실제로 띄운다 ─────────────────────────────
+  # 렌더링과 어드미션을 통과해도 뜨지 않을 수 있다 (M28 7절의 두 실패).
+  e2e:
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: helm/kind-action@v1
+        with:
+          version: v0.33.0
+          node_image: kindest/node:v1.37.0
+          cluster_name: ci
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.4
+      - run: |
+          helm install ci course/labs/charts/journal \
+            -n ci --create-namespace \
+            -f course/labs/charts/journal/values-dev.yaml \
+            --wait --timeout 300s
+      - run: helm test ci -n ci --logs
+      # 정책 검사 — M26 에서 만든 스크립트를 그대로 부른다
+      - run: |
+          kubectl apply -k course/labs/k8s/policy
+          sleep 10
+          bash course/labs/scripts/policy-audit.sh

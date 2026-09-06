@@ -1,0 +1,8 @@
+# M32 — 두 번째 "리전". 노드 하나짜리 최소 구성이다.
+# 실습 머신의 메모리를 아끼려고 워커를 두지 않았다 — 리전 흉내에는 충분하다.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: edge
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5

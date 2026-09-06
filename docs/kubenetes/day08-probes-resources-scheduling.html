@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D8 · 죽었는지 준비됐는지 스스로 말하게 한다 — 프로브와 리소스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D7과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 3단계 운영 품질 · Day 8</p>
+  <h1>죽었는지 준비됐는지 스스로 말하게 한다 — 프로브와 리소스</h1>
+  <p class="lede">D5에서 롤링 재시작 중 요청이 몇 개 실패했다. 새 파드의 컨테이너가 "떴다"와 요청을 "받을 수 있다"는 다르기 때문이다. 오늘은 앱이 그 둘을 스스로 보고하게 하는 프로브 세 종류를 넣어 실패를 0으로 만든다. 그리고 CPU·메모리 요청과 제한이 스케줄러의 배치 결정과 OOM 종료에 어떻게 작용하는지, 실행 중인 파드의 리소스를 재시작 없이 바꾸는 법, 3노드에 파드를 고르게 퍼뜨리는 법을 다룬다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 45분 · 따라하기 75분</b></span>
+    <span>전제 <b>D7 완료 · week1/ 디렉터리 · 3노드 클러스터</b></span>
+    <span>버전 <b>Kubernetes v1.36 (In-Place Pod Resize GA) · Spring Boot 4.1.0 (order-api v4, Actuator)</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>startup·readiness·liveness 프로브의 역할 차이를 말하고, 트래픽을 흘리며 롤링 업데이트를 해도 실패가 0건이게 한다.</li>
+    <li>liveness를 잘못 잡아 재시작 루프에 빠진 파드를 진단하고 고친다.</li>
+    <li>requests·limits로 QoS 클래스가 정해지는 규칙과 OOMKilled를 <code>describe</code>에서 읽는다.</li>
+    <li>실행 중인 파드의 메모리 리소스를 재시작 없이 바꾼다.</li>
+    <li>테인트·톨러레이션·토폴로지 분산으로 파드가 어느 노드에 놓이는지 통제한다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+
+  <h3>1.1 프로브 세 종류</h3>
+  <p>kubelet은 컨테이너 프로세스가 살아 있는지만 안다. 프로세스는 살아 있는데 앱이 멈춘 상태(데드락, 무한 재시도, 초기화 중)는 앱이 말해 줘야 한다. 그 통로가 <dfn title="probe">프로브(probe)</dfn>다. HTTP GET, TCP 연결, 명령 실행, gRPC 네 방식이 있고 결과는 성공/실패뿐이다.</p>
+  <table>
+    <thead><tr><th style="width:130px">프로브</th><th>질문</th><th>실패하면</th><th style="width:220px">전형적 오용</th></tr></thead>
+    <tbody>
+      <tr><td><code>startupProbe</code></td><td>초기화가 끝났나</td><td>계속 기다린다(<code>failureThreshold × periodSeconds</code>까지). 그동안 다른 두 프로브는 쉰다. 한도를 넘으면 컨테이너를 죽인다.</td><td>느린 JVM 앱에 이걸 안 두고 liveness의 initialDelay로 때우기</td></tr>
+      <tr><td><code>readinessProbe</code></td><td>지금 요청을 받을 수 있나</td><td>엔드포인트슬라이스에서 뺀다. 컨테이너는 그대로 둔다. 다시 성공하면 넣는다.</td><td>DB 같은 외부 의존성을 여기서 검사해, DB 장애 때 앱 전체가 트래픽에서 빠지게 만들기</td></tr>
+      <tr><td><code>livenessProbe</code></td><td>다시 시작해야 하나</td><td>컨테이너를 죽이고 <code>restartPolicy</code>대로 다시 띄운다.</td><td>readiness와 같은 검사를 두어 일시적 과부하에 재시작 폭풍 만들기</td></tr>
+    </tbody>
+  </table>
+  <p>세 프로브는 시간 순서로 겹친다. startup이 성공하는 순간부터 readiness와 liveness가 각자 주기로 돈다. readiness는 자주(5초), liveness는 드물게(10~30초) 검사하고, liveness는 "재시작으로 고쳐지는 상태"만 봐야 한다. 외부 의존성은 readiness에서도 신중히 다룬다. DB가 죽었을 때 앱 파드 전부가 트래픽에서 빠지면 상태 페이지조차 못 보여 준다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 260" width="100%" role="img" aria-label="파드 시작 이후 세 프로브의 시간 순서">
+    <line x1="60" y1="200" x2="880" y2="200" stroke="#767676" stroke-width="1.2"/>
+    <polygon points="874,196 882,200 874,204" fill="#767676"/>
+    <text x="60" y="222" font-size="11" fill="#767676">0s</text>
+    <text x="250" y="222" font-size="11" fill="#767676">약 6s · 앱 기동 완료</text>
+    <text x="870" y="222" font-size="11" fill="#767676">시간</text>
+    <!-- container start -->
+    <line x1="60" y1="40" x2="60" y2="200" stroke="#d9d9d9" stroke-width="1"/>
+    <text x="64" y="52" font-size="11" fill="#767676">컨테이너 시작</text>
+    <line x1="270" y1="40" x2="270" y2="200" stroke="#d9d9d9" stroke-width="1" stroke-dasharray="3 3"/>
+    <!-- startup probe -->
+    <rect x="60" y="70" width="210" height="44" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+    <text x="70" y="88" font-size="12" fill="#c2410c">startup · 2초마다 · 최대 30회</text>
+    <g fill="#c2410c"><circle cx="90" cy="104" r="3"/><circle cx="130" cy="104" r="3"/><circle cx="170" cy="104" r="3"/><circle cx="210" cy="104" r="3"/></g>
+    <circle cx="255" cy="104" r="4" fill="#15803d"/>
+    
+    <text x="280" y="88" font-size="11" fill="#4a4a4a">← 성공. 이후 startup은 다시 돌지 않는다</text>
+    <!-- readiness -->
+    <rect x="270" y="110" width="610" height="26" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="280" y="128" font-size="12" fill="#6d28d9">readiness · 5초마다 · 실패하면 엔드포인트에서 제외, 성공하면 복귀</text>
+    <g fill="#6d28d9"><circle cx="700" cy="123" r="3"/><circle cx="740" cy="123" r="3"/></g>
+    <circle cx="780" cy="123" r="4" fill="#c2410c"/><text x="792" y="127" font-size="10" fill="#c2410c">실패</text>
+    <circle cx="850" cy="123" r="3" fill="#6d28d9"/>
+    <!-- liveness -->
+    <rect x="270" y="150" width="610" height="26" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="280" y="168" font-size="12" fill="#1d4ed8">liveness · 10초마다 · 3회 연속 실패하면 컨테이너 재시작</text>
+    <g fill="#1d4ed8"><circle cx="720" cy="163" r="3"/><circle cx="800" cy="163" r="3"/></g>
+    <text x="60" y="250" font-size="11" fill="#767676">startup이 있으면 나머지 둘의 initialDelaySeconds는 필요 없다. 기동 시간이 바뀌어도 failureThreshold만 넉넉하면 된다.</text>
+  </svg>
+  <figcaption>도판 1. 주황=startup(기동 대기), 보라=readiness(트래픽 제어), 파랑=liveness(재시작 제어). 앱 기동 전에 liveness가 돌면 재시작 루프가 된다.</figcaption>
+  </figure>
+
+  <h3>1.2 요청과 제한</h3>
+  <p><code>resources.requests</code>는 스케줄러가 노드를 고를 때 쓰는 <b>예약량</b>이다. 노드의 할당 가능량에서 그 노드에 이미 배치된 파드의 requests 합을 뺀 여유가 있어야 놓인다. 실제 사용량과 무관하다. <code>resources.limits</code>는 cgroup에 쓰이는 <b>상한</b>이다(D1 3단계에서 본 <code>memory.max</code>). 메모리는 넘으면 커널이 프로세스를 죽인다(<code>OOMKilled</code>). CPU는 넘으면 죽이지 않고 스로틀링한다.</p>
+  <p>이 교재는 <b>CPU limit을 걸지 않는다</b>. CPU 스로틀링은 요청 처리 중 프로세스를 강제로 멈추는 것이라 지연 시간을 왜곡하고, D11에서 볼 p95 지표가 스로틀링 때문인지 앱 때문인지 구분하기 어려워진다. requests만 정해 스케줄링을 통제하고, 메모리는 limit을 걸어 한 파드가 노드를 잡아먹지 못하게 한다.</p>
+
+  <h3>1.3 QoS 클래스</h3>
+  <p>노드 메모리가 부족해지면 kubelet이 파드를 쫓아낸다(eviction). 그 순서가 <dfn title="Quality of Service">QoS 클래스</dfn>로 정해진다. 따로 지정하는 것이 아니라 requests·limits 조합에서 자동으로 결정된다.</p>
+  <table>
+    <thead><tr><th style="width:130px">클래스</th><th>조건</th><th style="width:170px">축출 순서</th></tr></thead>
+    <tbody>
+      <tr><td><code>Guaranteed</code></td><td>모든 컨테이너가 CPU·메모리 둘 다 requests = limits</td><td>마지막</td></tr>
+      <tr><td><code>Burstable</code></td><td>requests나 limits가 하나라도 있고 Guaranteed가 아님</td><td>중간</td></tr>
+      <tr><td><code>BestEffort</code></td><td>아무것도 없음</td><td>가장 먼저</td></tr>
+    </tbody>
+  </table>
+  <p>CPU limit을 안 거는 이 교재의 파드는 전부 Burstable이다. 그래도 된다. 축출은 노드 압박 상황의 마지막 수단이고, 메모리 limit이 있으면 노드가 그 지경에 가기 전에 파드 단위로 OOM이 먼저 난다.</p>
+
+  <h3>1.4 실행 중 리소스 변경</h3>
+  <p>파드의 <code>resources</code>는 오랫동안 생성 후 바꿀 수 없는 필드였다. 지금은 <code>resize</code> 서브리소스로 실행 중인 파드의 CPU·메모리 requests·limits를 바꿀 수 있다(In-Place Pod Vertical Scaling, GA). 컨테이너별 <code>resizePolicy</code>가 재시작 여부를 정하며 기본값은 재시작 없음(<code>NotRequired</code>)이다. JVM처럼 시작 시 힙 크기를 정하는 앱은 cgroup 한도가 늘어나도 힙은 안 늘어나므로, 메모리를 늘릴 때는 <code>RestartContainer</code> 정책이 맞을 수 있다. 오늘은 기본값으로 늘려 보고 그 한계를 본다.</p>
+
+  <h3>1.5 어디에 놓을지 정하는 네 가지</h3>
+  <table>
+    <thead><tr><th style="width:200px">수단</th><th>방향</th><th>뜻</th></tr></thead>
+    <tbody>
+      <tr><td><code>nodeSelector</code> / <code>nodeAffinity</code></td><td>파드 → 노드</td><td>"이 라벨이 있는 노드에만(또는 우선)". 하드웨어(GPU, SSD)·존 지정.</td></tr>
+      <tr><td><code>taint</code> + <code>toleration</code></td><td>노드 → 파드</td><td>노드가 "허락 없이 오지 마"라고 표시(taint). 톨러레이션이 있는 파드만 온다. 컨트롤 플레인 노드가 D5에서 이 방식으로 일반 파드를 막았다.</td></tr>
+      <tr><td><code>podAffinity</code> / <code>podAntiAffinity</code></td><td>파드 → 파드</td><td>"저 파드와 같은 노드에(또는 다른 노드에)". 같은 앱의 복제본을 한 노드에 몰리지 않게.</td></tr>
+      <tr><td><code>topologySpreadConstraints</code></td><td>파드 집합 → 토폴로지</td><td>"노드(또는 존)마다 이 라벨의 파드 수 차이가 <code>maxSkew</code> 이하". anti-affinity보다 표현이 정확하다.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.6 곱게 죽이기</h3>
+  <p>파드가 삭제되면 두 가지가 <b>동시에</b> 시작된다. 엔드포인트슬라이스에서 파드를 빼는 일(비동기, 수 초 걸림)과 컨테이너에 <code>SIGTERM</code>을 보내는 일. 앱이 SIGTERM을 받고 즉시 죽으면, 아직 이 파드로 오고 있던 요청이 끊긴다. 그래서 두 가지를 한다. <code>preStop</code> 훅으로 몇 초 기다려 엔드포인트 제거가 퍼지게 하고, 앱은 SIGTERM을 받으면 새 요청을 거절하되 진행 중인 요청은 마치고 종료한다(Spring Boot의 <code>server.shutdown=graceful</code>). <code>terminationGracePeriodSeconds</code>(기본 30초)가 지나면 <code>SIGKILL</code>이다.</p>
+  <p><dfn title="PodDisruptionBudget">PodDisruptionBudget</dfn>은 노드 점검(<code>drain</code>) 같은 자발적 중단에서 "동시에 몇 개까지 내려가도 되나"를 정한다. 오늘 만들어 두고 D14의 drain에서 동작을 본다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · order-api v4 (Actuator)</h2>
+  <p class="sub">프로브가 물어볼 엔드포인트가 필요하다. Spring Boot Actuator가 <code>/actuator/health/liveness</code>·<code>/readiness</code>를 제공한다. 곱게 죽는 설정도 함께 넣는다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/day04/order-api
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='pom.xml'; t=open(p).read()
+dep=('    &lt;dependency&gt;\n'
+     '      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;\n'
+     '      &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;\n'
+     '    &lt;/dependency&gt;\n')
+if 'starter-actuator' not in t:
+    t=t.replace('  &lt;dependencies&gt;\n','  &lt;dependencies&gt;\n'+dep,1)
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> grep -c actuator pom.xml
+<span class="c">1</span>
+
+<span class="p">$</span> cat &gt; src/main/resources/application.properties &lt;&lt;'EOF'
+spring.config.import=optional:configtree:/config/
+management.endpoints.web.exposure.include=health
+management.endpoint.health.probes.enabled=true
+server.shutdown=graceful
+spring.lifecycle.timeout-per-shutdown-phase=20s
+EOF
+
+<span class="p">$</span> docker build --build-arg APP_VERSION=v4 -t order-api:v4 .
+<span class="p">$</span> docker run --rm -d --name oa -p 8080:8080 order-api:v4
+<span class="p">$</span> for i in 1 2 3 4 5 6 7 8; do sleep 1; curl -s -o /dev/null -w "$i: %{http_code}\n" localhost:8080/actuator/health/readiness; done
+<span class="c">1: 000
+2: 000
+3: 000
+4: 000
+5: 200
+6: 200
+7: 200
+8: 200</span>
+<span class="p">$</span> curl -s localhost:8080/actuator/health/liveness; echo
+<span class="c">{"status":"UP"}</span>
+<span class="p">$</span> docker stop oa
+<span class="p">$</span> mkdir -p ~/k8s-study/day08 &amp;&amp; cd ~/k8s-study/day08</code></pre>
+  <p class="expect"><b>확인</b> — 컨테이너가 뜨고 4~5초 동안은 포트가 열리지 않았다(<code>000</code>). D5에서 <code>FAIL</code>이 섞인 시간이 바로 이 구간이다. Actuator의 probes 그룹은 쿠버네티스에서 돌 때 자동으로 켜지지만 로컬 확인을 위해 명시했다. <code>graceful</code>은 SIGTERM 이후 새 요청을 거절하고 진행 중인 요청을 최대 20초 기다린다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>프로브 셋 + 리소스 + preStop을 넣는다</h3>
+    <p class="why"><code>week1/20-order-api-deploy.yaml</code>의 컨테이너 절에 추가한다. 이 파일이 앞으로의 기준이다.</p>
+<pre><code><span class="p">$</span> cat &gt; ~/k8s-study/week1/20-order-api-deploy.yaml &lt;&lt;'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: study
+  labels:
+    app: order-api
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: order-api
+  template:
+    metadata:
+      labels:
+        app: order-api
+      annotations:
+        config-hash: "4d7e2a9b1f3c8e05"
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: app
+        image: order-api:v4
+        ports:
+        - containerPort: 8080
+        env:
+        - name: STORE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: order-api-config
+              key: STORE_NAME
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: order-api-secret
+              key: API_KEY
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=60"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 2
+          failureThreshold: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          periodSeconds: 5
+          failureThreshold: 2
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 10
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sh", "-c", "sleep 5"]
+        volumeMounts:
+        - name: store-config
+          mountPath: /config/store
+          readOnly: true
+      volumes:
+      - name: store-config
+        configMap:
+          name: order-api-store
+EOF
+<span class="p">$</span> kubectl apply -f ~/k8s-study/week1/20-order-api-deploy.yaml &amp;&amp; kubectl rollout status deployment/order-api
+<span class="p">$</span> kubectl get pods -l app=order-api -o custom-columns='POD:.metadata.name,READY:.status.containerStatuses[0].ready,STARTED:.status.containerStatuses[0].started,QOS:.status.qosClass,NODE:.spec.nodeName'
+<span class="c">POD                          READY   STARTED   QOS         NODE
+order-api-8f1a2b3c4-d5e6f    true    true      Burstable   desktop-worker
+order-api-8f1a2b3c4-g7h8i    true    true      Burstable   desktop-worker2
+order-api-8f1a2b3c4-j9k0l    true    true      Burstable   desktop-worker
+order-api-8f1a2b3c4-m1n2o    true    true      Burstable   desktop-worker2</span>
+<span class="p">$</span> kubectl describe pod -l app=order-api | grep -E '^\s+(Liveness|Readiness|Startup):' | sort -u
+<span class="c">    Liveness:   http-get http://:8080/actuator/health/liveness delay=0s timeout=1s period=10s #success=1 #failure=3
+    Readiness:  http-get http://:8080/actuator/health/readiness delay=0s timeout=1s period=5s #success=1 #failure=2
+    Startup:    http-get http://:8080/actuator/health/liveness delay=0s timeout=1s period=2s #success=1 #failure=30</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>started</code>가 startupProbe 통과 여부, <code>ready</code>가 readinessProbe 결과다. QoS는 requests와 limits가 달라 Burstable. <code>MaxRAMPercentage=60</code>은 JVM 힙을 cgroup 한도(512Mi)의 60%로 잡으라는 뜻이다. 이 값이 없으면 기본 25%라 힙이 128Mi에 묶인다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>D5의 숙제: 트래픽을 흘리며 롤링, 실패 0</h3>
+    <p class="why">같은 실험을 프로브가 있는 상태에서 반복한다.</p>
+<pre><code><span class="c"># 터미널 A</span>
+<span class="p">$</span> FAIL=0; for i in $(seq 1 200); do curl -s -m 1 -o /dev/null -w '%{http_code}\n' localhost/orders | grep -qv '^200$' &amp;&amp; FAIL=$((FAIL+1)); sleep 0.2; done; echo "failures=$FAIL"
+<span class="c"># 터미널 B (A가 도는 동안)</span>
+<span class="p">$</span> kubectl rollout restart deployment/order-api &amp;&amp; kubectl rollout status deployment/order-api</code></pre>
+    <p class="expect"><b>터미널 A</b> — 40초 동안 200번 요청한 결과 <code>failures=0</code>이어야 한다. 새 파드는 readiness가 성공한 뒤에야 엔드포인트에 들어가고(D5의 빈틈 제거), 옛 파드는 preStop 5초 동안 엔드포인트에서 빠진 뒤 SIGTERM을 받고, 진행 중인 요청을 마치고 죽는다(1.6절). 1~2건 실패가 나오면 <code>preStop</code>을 8초로 늘려 다시 본다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>고장: liveness를 너무 급하게 잡으면</h3>
+    <p class="why">startupProbe를 빼고 liveness를 1초 주기·1회 실패로 잡는다. JVM이 뜨기도 전에 죽인다.</p>
+<pre><code><span class="p">$</span> cat &gt; bad-liveness.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-liveness
+spec:
+  containers:
+  - name: app
+    image: order-api:v4
+    ports:
+    - containerPort: 8080
+    livenessProbe:
+      httpGet:
+        path: /actuator/health/liveness
+        port: 8080
+      periodSeconds: 1
+      failureThreshold: 1
+EOF
+<span class="p">$</span> kubectl apply -f bad-liveness.yaml
+<span class="p">$</span> sleep 40 &amp;&amp; kubectl get pod bad-liveness
+<span class="c">NAME           READY   STATUS             RESTARTS      AGE
+bad-liveness   0/1     CrashLoopBackOff   4 (10s ago)   40s</span>
+<span class="p">$</span> kubectl describe pod bad-liveness | grep -E 'Liveness|Killing' | head -4
+<span class="c">  Liveness:  http-get http://:8080/actuator/health/liveness delay=0s timeout=1s period=1s #success=1 #failure=1
+  Warning  Unhealthy  ...  kubelet  Liveness probe failed: Get "http://10.244.1.20:8080/actuator/health/liveness": dial tcp 10.244.1.20:8080: connect: connection refused
+  Normal   Killing    ...  kubelet  Container app failed liveness probe, will be restarted</span>
+<span class="p">$</span> kubectl logs bad-liveness --previous 2&gt;/dev/null | tail -2
+<span class="c">(Spring 배너와 기동 로그가 끊겨 있다 — Started 줄이 없다)</span>
+<span class="p">$</span> kubectl delete pod bad-liveness --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — 앱은 멀쩡한데 <code>CrashLoopBackOff</code>다. 기동에 5초가 걸리는 앱을 1초 만에 "죽었다"고 판정해 죽였다. 로그 끝에 <code>Started</code>가 없는 것이 증거다. 이 파드의 문제는 코드가 아니라 프로브 설정이고, D3의 CrashLoop(exit 1)과 겉모습은 같지만 Events의 <code>Killing … failed liveness probe</code>로 구분한다. 해법은 startupProbe다. initialDelaySeconds로 때우면 기동 시간이 늘어날 때마다 다시 고쳐야 한다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>OOMKilled: 메모리 limit을 넘으면</h3>
+    <p class="why">같은 앱에 limit 96Mi를 준다. JVM이 그 안에 못 들어간다.</p>
+<pre><code><span class="p">$</span> cat &gt; oom-demo.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oom-demo
+spec:
+  containers:
+  - name: app
+    image: order-api:v4
+    resources:
+      requests:
+        memory: 64Mi
+      limits:
+        memory: 96Mi
+EOF
+<span class="p">$</span> kubectl apply -f oom-demo.yaml
+<span class="p">$</span> sleep 45 &amp;&amp; kubectl get pod oom-demo
+<span class="c">NAME       READY   STATUS      RESTARTS      AGE
+oom-demo   0/1     OOMKilled   2 (15s ago)   45s</span>
+<span class="p">$</span> kubectl get pod oom-demo -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason} exit={.status.containerStatuses[0].lastState.terminated.exitCode}{"\n"}'
+<span class="c">OOMKilled exit=137</span>
+<span class="p">$</span> kubectl describe pod oom-demo | grep -A2 'Last State'
+<span class="c">    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137</span>
+<span class="p">$</span> kubectl get pod oom-demo -o jsonpath='{.status.qosClass}{"\n"}'
+<span class="c">Burstable</span>
+<span class="p">$</span> kubectl delete pod oom-demo --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>Reason: OOMKilled</code>, exit 137(128 + SIGKILL 9). 커널이 cgroup 한도에서 프로세스를 죽였고 kubelet은 restartPolicy대로 다시 띄웠다. 로그에는 아무것도 없다(죽는 프로세스는 남길 틈이 없다). 앱 로그가 비어 있고 137이면 메모리를 의심한다. STATUS가 <code>CrashLoopBackOff</code>로 보이는 시점도 있는데, 그때는 <code>lastState</code>를 본다. limit을 넉넉히 주면 사라진다. 96Mi에서도 뜬다면(JVM 버전에 따라) 64Mi로 낮춰 본다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>재시작 없이 리소스 바꾸기</h3>
+    <p class="why">실행 중인 order-api 파드 하나의 메모리 requests·limits를 늘린다. restartCount가 그대로인지 본다.</p>
+<pre><code><span class="p">$</span> POD=$(kubectl get pod -l app=order-api -o jsonpath='{.items[0].metadata.name}')
+<span class="p">$</span> kubectl get pod $POD -o jsonpath='requests={.spec.containers[0].resources.requests.memory} limits={.spec.containers[0].resources.limits.memory} restarts={.status.containerStatuses[0].restartCount}{"\n"}'
+<span class="c">requests=256Mi limits=512Mi restarts=0</span>
+
+<span class="p">$</span> kubectl patch pod $POD --subresource resize --type=merge \
+    -p '{"spec":{"containers":[{"name":"app","resources":{"requests":{"memory":"320Mi"},"limits":{"memory":"640Mi"}}}]}}'
+<span class="c">pod/order-api-… patched</span>
+<span class="p">$</span> sleep 3 &amp;&amp; kubectl get pod $POD -o jsonpath='requests={.spec.containers[0].resources.requests.memory} limits={.spec.containers[0].resources.limits.memory} restarts={.status.containerStatuses[0].restartCount} allocated={.status.containerStatuses[0].resources.limits.memory}{"\n"}'
+<span class="c">requests=320Mi limits=640Mi restarts=0 allocated=640Mi</span>
+<span class="p">$</span> kubectl exec $POD -- cat /sys/fs/cgroup/memory.max
+<span class="c">671088640</span>
+<span class="p">$</span> kubectl get pod $POD -o jsonpath='{range .status.conditions[?(@.type=="PodResizeInProgress")]}{.status} {.reason}{end}{"\n"}'</code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>restarts=0</code>인 채로 cgroup 한도가 640Mi(671088640바이트)로 바뀌었다. <code>status.containerStatuses[].resources</code>가 실제로 적용된 값이다. 다만 JVM 힙은 시작 시 정해졌으므로 이 파드의 힙 상한은 여전히 512Mi의 60%다. 한도는 늘었지만 앱이 그만큼 쓰지는 못한다. JVM 앱이라면 <code>resizePolicy: [{resourceName: memory, restartPolicy: RestartContainer}]</code>를 두는 편이 맞고, 그러면 재시작 1회가 따라온다. 이 변경은 파드에만 적용됐고 디플로이먼트 템플릿은 그대로다. 파드가 새로 만들어지면 원래 값으로 돌아간다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>테인트: 노드가 파드를 거부한다</h3>
+    <p class="why">worker2에 테인트를 걸고 롤링 재시작하면 파드가 전부 worker로 몰린다. 톨러레이션을 주면 돌아온다.</p>
+<pre><code><span class="p">$</span> kubectl taint nodes desktop-worker2 dedicated=db:NoSchedule
+<span class="c">node/desktop-worker2 tainted</span>
+<span class="p">$</span> kubectl get pods -l app=order-api -o custom-columns='POD:.metadata.name,NODE:.spec.nodeName'
+<span class="c">(worker2의 파드는 그대로 돌고 있다 — NoSchedule은 새 배치만 막는다)</span>
+<span class="p">$</span> kubectl rollout restart deployment/order-api &amp;&amp; kubectl rollout status deployment/order-api
+<span class="p">$</span> kubectl get pods -l app=order-api -o custom-columns='POD:.metadata.name,NODE:.spec.nodeName'
+<span class="c">POD                          NODE
+order-api-…-a1b2c            desktop-worker
+order-api-…-d3e4f            desktop-worker
+order-api-…-g5h6i            desktop-worker
+order-api-…-j7k8l            desktop-worker</span>
+
+<span class="p">$</span> kubectl scale deployment/order-api --replicas=20 &amp;&amp; sleep 20
+<span class="p">$</span> kubectl get pods -l app=order-api --field-selector status.phase=Pending -o name | wc -l
+<span class="c">4</span>
+<span class="p">$</span> kubectl describe pod -l app=order-api | grep -m1 'FailedScheduling'
+<span class="c">  Warning  FailedScheduling  ...  0/3 nodes are available: 1 node(s) had untolerated taint {dedicated: db}, 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane: }, 1 Insufficient cpu. ...</span>
+<span class="p">$</span> kubectl scale deployment/order-api --replicas=4
+<span class="p">$</span> kubectl taint nodes desktop-worker2 dedicated=db:NoSchedule-
+<span class="c">node/desktop-worker2 untainted</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 넷이 전부 worker에 놓였다. 20개로 늘리자 worker의 CPU requests 합(250m × 20 = 5000m)이 노드 할당 가능량(약 4000m)을 넘어 <code>Pending</code>이 생겼고, 이유가 셋으로 나뉘어 적혔다. 테인트 둘(worker2, 컨트롤 플레인)과 CPU 부족. 이 메시지가 스케줄러 진단의 전부다. 어느 노드가 왜 안 되는지 하나씩 적혀 있다. 톨러레이션은 파드 spec에 <code>tolerations: [{key: dedicated, operator: Equal, value: db, effect: NoSchedule}]</code>로 적는다. D9의 DB 스테이트풀셋에 이 조합을 쓴다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>고르게 퍼뜨리기와 PDB</h3>
+    <p class="why">토폴로지 분산 제약으로 노드당 파드 수 차이를 1 이하로 묶고, PDB를 만들어 둔다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/week1
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+import re
+p='20-order-api-deploy.yaml'; t=open(p).read()
+t=t.replace('''      terminationGracePeriodSeconds: 30
+''','''      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: order-api
+''')
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> grep -A6 topologySpread 20-order-api-deploy.yaml | head -7
+<span class="p">$</span> kubectl apply -f 20-order-api-deploy.yaml &amp;&amp; kubectl rollout status deployment/order-api
+<span class="p">$</span> kubectl get pods -l app=order-api -o custom-columns='NODE:.spec.nodeName' --no-headers | sort | uniq -c
+<span class="c">   2 desktop-worker
+   2 desktop-worker2</span>
+
+<span class="p">$</span> cat &gt; 23-order-api-pdb.yaml &lt;&lt;'EOF'
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-api
+  namespace: study
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: order-api
+EOF
+<span class="p">$</span> kubectl apply -f 23-order-api-pdb.yaml
+<span class="p">$</span> kubectl get pdb
+<span class="c">NAME        MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+order-api   3               N/A               1                     5s</span>
+<span class="p">$</span> kubectl diff -f . ; echo "exit=$?"
+<span class="c">exit=0</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 2:2다. 6단계에서 4:0으로 몰렸던 것이 제약 하나로 고르게 됐다. <code>DoNotSchedule</code>이라 만족할 수 없으면 Pending이 된다. 운영에서는 <code>ScheduleAnyway</code>(최선 노력)를 쓰는 경우도 많다. PDB의 <code>ALLOWED DISRUPTIONS 1</code>은 "지금 4개 중 1개까지는 자발적으로 내려도 된다"는 뜻이다. D14에서 <code>drain</code>이 이 숫자를 보고 멈추는 것을 본다. <code>week1/</code>에 파일이 하나 늘었고 <code>diff</code>는 비어 있다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <div class="check">
+    <ol>
+      <li>트래픽을 흘리며 <code>rollout restart</code>를 해서 200번 요청 중 실패 0건을 보인다.</li>
+      <li>liveness 재시작 루프와 exit 1 CrashLoop를 Events 한 줄로 구분해 말한다.</li>
+      <li>메모리 limit을 넘겨 <code>OOMKilled · 137</code>을 만들고, 로그가 비어 있는 이유를 말한다.</li>
+      <li>실행 중 파드의 memory limit을 늘려 <code>restartCount</code>가 0인 채 cgroup 값이 바뀐 것을 보인다.</li>
+      <li>노드 하나에 테인트를 걸어 Pending을 만들고 <code>FailedScheduling</code> 메시지에서 노드 세 개의 사유를 각각 읽는다.</li>
+      <li>order-api 파드가 워커 두 노드에 2:2로 놓이게 한다.</li>
+    </ol>
+  </div>
+  <p>6개 중 5개 이상이면 D9로 간다. 1번에서 실패가 나오면 preStop 시간과 readiness period를 다시 본다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">테인트가 남아 있지 않은지 확인한다. 실습 파드는 이미 지웠다. <code>week1/</code>이 기준이다.</p>
+<pre><code><span class="p">$</span> kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINTS:.spec.taints[*].key'
+<span class="c">NODE                    TAINTS
+desktop-control-plane   node-role.kubernetes.io/control-plane
+desktop-worker          &lt;none&gt;
+desktop-worker2         &lt;none&gt;</span>
+<span class="p">$</span> kubectl get pods
+<span class="c">(order-api 4 · order-api-canary 1 · gateway 2 — Running)</span>
+<span class="p">$</span> ls ~/k8s-study/week1 | grep -c yaml
+<span class="c">11</span></code></pre>
+  <div class="note">
+    <h5>D9 예고</h5>
+    <p>order-api의 주문 목록은 코드에 박힌 두 줄이다. 내일은 PostgreSQL을 클러스터에 스테이트풀셋으로 올리고 PVC로 데이터를 남긴다. D1에서 볼륨 없이 데이터를 잃었던 실험을 클러스터 규모로 반복한다. DB 파드에는 오늘 본 톨러레이션과 <code>requests = limits</code>(Guaranteed)를 준다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>프로브 설정 — <a href="https://kubernetes.io/ko/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/">kubernetes.io/ko/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/</a></li>
+    <li>컨테이너 리소스 관리 — <a href="https://kubernetes.io/ko/docs/concepts/configuration/manage-resources-containers/">kubernetes.io/ko/docs/concepts/configuration/manage-resources-containers/</a> · QoS — <a href="https://kubernetes.io/ko/docs/concepts/workloads/pods/pod-qos/">kubernetes.io/ko/docs/concepts/workloads/pods/pod-qos/</a></li>
+    <li>실행 중 파드 리소스 변경(In-Place Resize) — <a href="https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/">kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/</a></li>
+    <li>테인트와 톨러레이션 — <a href="https://kubernetes.io/ko/docs/concepts/scheduling-eviction/taint-and-toleration/">kubernetes.io/ko/docs/concepts/scheduling-eviction/taint-and-toleration/</a> · 토폴로지 분산 — <a href="https://kubernetes.io/ko/docs/concepts/scheduling-eviction/topology-spread-constraints/">kubernetes.io/ko/docs/concepts/scheduling-eviction/topology-spread-constraints/</a></li>
+    <li>파드 종료 과정 — <a href="https://kubernetes.io/ko/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination">kubernetes.io/ko/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination</a> · PDB — <a href="https://kubernetes.io/ko/docs/tasks/run-application/configure-pdb/">kubernetes.io/ko/docs/tasks/run-application/configure-pdb/</a></li>
+    <li>Spring Boot Actuator 쿠버네티스 프로브 — <a href="https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes">docs.spring.io/spring-boot/reference/actuator/endpoints.html</a> · 곱게 종료 — <a href="https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html">docs.spring.io/spring-boot/reference/web/graceful-shutdown.html</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day07-configmap-secret-week1-review.html">← D7 컨피그맵·시크릿</a><a href="day09-storage-statefulset.html">D9 스토리지와 스테이트풀셋 →</a></div>
+</div></footer>
+</body>
+</html>

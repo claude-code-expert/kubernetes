@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Journal</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; line-height: 1.7; }
+  input { width: 70%; padding: 6px 8px; }
+  button { padding: 6px 14px; }
+  li { font-family: ui-monospace, monospace; font-size: 13px; }
+  #where { color: #666; font-size: 13px; }
+</style>
+<h1>Journal</h1>
+<p id="where">이 페이지는 web-static 이, <code>/api</code> 는 journal-api 가 처리한다.</p>
+<form id="f">
+  <input id="t" placeholder="한 줄 적기" autocomplete="off">
+  <button type="submit">저장</button>
+</form>
+<ul id="list"></ul>
+<script>
+  const list = document.getElementById('list');
+  async function load() {
+    const r = await fetch('/api/entries');
+    const d = await r.json();
+    list.innerHTML = d.entries.map(e => '<li>' + e + '</li>').join('');
+  }
+  document.getElementById('f').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const t = document.getElementById('t');
+    await fetch('/api/entries', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: t.value }),
+    });
+    t.value = '';
+    load();
+  };
+  load();
+</script>

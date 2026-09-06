@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH02 개발자 워크플로 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 02</div>
+  <h1>개발자 워크플로</h1>
+  <p class="ch-desc">클러스터는 앱을 돌리는 곳이기 이전에 개발자가 일하는 곳이다. 이 장의 질문은 하나 — 팀에 합류한 개발자가 얼마나 빨리, 얼마나 안전하게, 서로 방해 없이 클러스터에서 개발할 수 있는가. 개발 클러스터 전략, 온보딩, 네임스페이스 격리, 그리고 매일 도는 개발 루프를 다룬다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 개발 클러스터는 "개발자별 1개"가 아니라 "공용 1개 + 네임스페이스 격리"가 기본 — 비용·관리·환경 일관성 모두에서 유리하다.</p>
+  <p>2. 온보딩은 인증 → kubeconfig → 네임스페이스(쿼터·TTL) → RoleBinding까지를 스크립트 하나로 자동화하고, "30분 내 첫 배포" 같은 KPI로 측정한다.</p>
+  <p>3. 개발자 경험은 온보딩·개발·테스팅 3단계로 나눠 각각을 설계한다 — 느린 단계가 곧 팀 전체의 병목이다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s2-1"><span class="num">2.1</span>목표</a>
+  <a href="#s2-2"><span class="num">2.2</span>개발 클러스터 구축</a>
+  <a href="#s2-3"><span class="num">2.3</span>여러 개발자가 사용할 공용 클러스터 구축</a>
+  <a href="#s2-4"><span class="num">2.4</span>개발자 워크플로 활성화</a>
+  <a href="#s2-5"><span class="num">2.5</span>개발 환경 설정 모범 사례</a>
+</nav>
+
+<section id="s2-1">
+  <h2 class="sec"><span class="num">2.1</span>목표</h2>
+  <p class="lead">개발 환경의 품질은 감이 아니라 단계별 KPI로 측정한다. 개발자 경험은 세 단계로 쪼개진다.</p>
+  <table>
+    <tr><th>단계</th><th>내용</th><th>KPI 예시</th></tr>
+    <tr><td>① 온보딩</td><td>신규 개발자에게 계정을 발급하고 첫 배포까지 이끄는 과정</td><td>아무것도 모르는 신입이 30분 안에 최신 앱을 실행</td></tr>
+    <tr><td>② 개발</td><td>매일 하는 일 — 코드를 짜서 클러스터에 반복 반영</td><td>코드 수정이 클러스터에 반영되기까지 수 분 이내</td></tr>
+    <tr><td>③ 테스팅</td><td>변경 검증과 결함 원인 추적</td><td>결함 재현부터 원인 파악까지의 소요 시간</td></tr>
+  </table>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow23" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow23b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .t-title { font-size: 15px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-kpi { font-size: 11.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-loop { stroke: #2456c4; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 1 온보딩 -->
+  <rect class="box" x="40" y="70" width="240" height="118" rx="4"/>
+  <text class="t-title" x="160" y="100" text-anchor="middle">① 온보딩</text>
+  <text class="t-sub" x="160" y="124" text-anchor="middle">계정 · 네임스페이스 · kubeconfig</text>
+  <text class="t-kpi" x="160" y="146" text-anchor="middle">KPI 예: 30분 내 첫 배포</text>
+
+  <line class="line" x1="280" y1="129" x2="336" y2="129" marker-end="url(#arrow23)"/>
+
+  <!-- 2 개발 -->
+  <rect class="box" x="340" y="70" width="240" height="118" rx="4"/>
+  <text class="t-title" x="460" y="100" text-anchor="middle">② 개발</text>
+  <text class="t-sub" x="460" y="124" text-anchor="middle">코드 → 이미지 빌드·푸시 → 롤아웃</text>
+  <text class="t-kpi" x="460" y="146" text-anchor="middle">KPI 예: 수정 반영까지 수 분 이내</text>
+
+  <line class="line" x1="580" y1="129" x2="636" y2="129" marker-end="url(#arrow23)"/>
+
+  <!-- 3 테스팅·디버깅 -->
+  <rect class="box" x="640" y="70" width="240" height="118" rx="4"/>
+  <text class="t-title" x="760" y="100" text-anchor="middle">③ 테스팅 · 디버깅</text>
+  <text class="t-sub" x="760" y="124" text-anchor="middle">logs · exec · port-forward · debug</text>
+  <text class="t-kpi" x="760" y="146" text-anchor="middle">KPI 예: 결함 원인 파악 소요 시간</text>
+
+  <!-- 이터레이션 루프: ③ → ② -->
+  <polyline class="line-loop" points="760,188 760,226 460,226 460,192" marker-end="url(#arrow23b)"/>
+  <text class="t-kpi" x="610" y="248" text-anchor="middle">이터레이션 루프 — 개발자는 하루 종일 ②↔③을 돈다</text>
+
+  <text class="t-cap" x="450" y="284" text-anchor="middle">개발 환경 설계는 이 세 단계 각각에 KPI를 정하고 측정하는 일이다. 느린 곳이 곧 개선 대상이다.</text>
+</svg>
+    <figcaption>그림 2-1. 개발자 경험 3단계. ②와 ③ 사이의 이터레이션 루프가 하루 중 가장 많이 도는 구간이므로, 이 루프의 속도가 곧 생산성이다.</figcaption>
+  </figure>
+  <p>중요한 전제 하나. 개발 클러스터는 프로덕션과 반드시 분리한다. 개발자의 실험이 실사용자에게 닿아서는 안 되고, 반대로 프로덕션 수준의 잠금이 개발 속도를 죽여서도 안 된다.</p>
+</section>
+
+<section id="s2-2">
+  <h2 class="sec"><span class="num">2.2</span>개발 클러스터 구축</h2>
+  <p>첫 결정: 개발자마다 클러스터를 하나씩 줄 것인가, 큰 클러스터 하나를 함께 쓸 것인가.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .cluster { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .ns { fill: #fafaf8; stroke: #c8c8c8; stroke-width: 1; }
+    .t-h { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .t-accent { fill: #2456c4; }
+  </style>
+
+  <!-- 전략 A: 개발자별 클러스터 -->
+  <text class="t-h" x="220" y="44" text-anchor="middle">전략 A — 개발자마다 클러스터</text>
+
+  <rect class="cluster" x="50" y="66" width="340" height="70" rx="4"/>
+  <text class="t-title" x="220" y="95" text-anchor="middle">클러스터 — 개발자 A 전용</text>
+  <text class="t-sub" x="220" y="115" text-anchor="middle">컨트롤 플레인 + 노드 전부 별도</text>
+
+  <rect class="cluster" x="50" y="156" width="340" height="70" rx="4"/>
+  <text class="t-title" x="220" y="185" text-anchor="middle">클러스터 — 개발자 B 전용</text>
+  <text class="t-sub" x="220" y="205" text-anchor="middle">완전 격리, 그러나 비용도 N배</text>
+
+  <rect class="cluster" x="50" y="246" width="340" height="70" rx="4"/>
+  <text class="t-title" x="220" y="275" text-anchor="middle">클러스터 — 개발자 C 전용</text>
+  <text class="t-sub" x="220" y="295" text-anchor="middle">버전·설정이 제각각 어긋나기 쉬움</text>
+
+  <!-- 전략 B: 공용 클러스터 + 네임스페이스 -->
+  <text class="t-h t-accent" x="680" y="44" text-anchor="middle">전략 B — 공용 클러스터 + 네임스페이스 (권장)</text>
+
+  <rect class="cluster" x="480" y="66" width="400" height="250" rx="4" style="stroke:#2456c4; stroke-width:1.5"/>
+  <text class="t-sub" x="496" y="90">공용 클러스터 1개 — 프로덕션과 유사한 환경 유지</text>
+
+  <rect class="ns" x="510" y="104" width="340" height="56" rx="4"/>
+  <text class="t-title" x="680" y="127" text-anchor="middle">네임스페이스 dev-A</text>
+  <text class="t-sub" x="680" y="145" text-anchor="middle">RBAC + 리소스쿼터로 격리</text>
+
+  <rect class="ns" x="510" y="172" width="340" height="56" rx="4"/>
+  <text class="t-title" x="680" y="195" text-anchor="middle">네임스페이스 dev-B</text>
+  <text class="t-sub" x="680" y="213" text-anchor="middle">서로의 서비스가 간섭하지 않음</text>
+
+  <rect class="ns" x="510" y="240" width="340" height="56" rx="4"/>
+  <text class="t-title" x="680" y="263" text-anchor="middle">네임스페이스 dev-C</text>
+  <text class="t-sub" x="680" y="281" text-anchor="middle">TTL로 만료 시 자동 정리</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="356" text-anchor="middle">A는 격리가 완벽하지만 비용·관리 부담이 개발자 수에 비례해 늘고, 환경이 서로 어긋난다.</text>
+  <text class="t-cap" x="450" y="378" text-anchor="middle">B는 클러스터 하나를 네임스페이스 + RBAC + 쿼터로 나눈다 — 이 장의 기본 전제.</text>
+</svg>
+    <figcaption>그림 2-2. 두 전략의 비교. 이 장의 나머지는 전략 B(공용 클러스터)를 전제로 진행된다.</figcaption>
+  </figure>
+  <p>개발자별 클러스터는 격리가 완벽하고 남을 망가뜨릴 걱정이 없다. 대신 비용이 인원수에 비례해 늘고, 클러스터마다 버전·애드온이 어긋나며, 운영팀이 관리할 대상이 N개가 된다. 공용 클러스터는 그 반대다 — 자원을 공유해 싸고, 환경이 하나로 통일되며, 모니터링·로깅 같은 공용 서비스를 한 번만 깔면 된다. 남는 문제는 "서로 간섭하지 않게 만드는 것"이고, 그 해법이 다음 절의 네임스페이스다.</p>
+  <p>참고로 0장에서 만든 kind 클러스터는 "개발자별 클러스터"의 초경량 버전이다. 개인 학습엔 그것으로 충분하지만, 팀 스케일에서는 이 장의 공용 클러스터 설계가 필요해진다.</p>
+</section>
+
+<section id="s2-3">
+  <h2 class="sec"><span class="num">2.3</span>여러 개발자가 사용할 공용 클러스터 구축</h2>
+  <p>공용 클러스터의 목표는 여러 사용자가 <strong>서로의 존재를 느끼지 못하게</strong> 만드는 것이다. 격리 단위는 <dfn class="term">네임스페이스 <span class="en">(Namespace)</span></dfn> — 클러스터를 논리적으로 나누는 가상 구획으로, 이름 충돌을 막고 권한과 자원 한도의 적용 경계가 된다. 내 네임스페이스의 <code>frontend</code> 서비스와 옆 사람의 <code>frontend</code> 서비스는 다른 이름 공간에 살기 때문에 충돌하지 않는다.</p>
+
+  <h3>2.3.1 유저 온보딩</h3>
+  <p>네임스페이스를 주기 전에 사용자가 클러스터에 로그인부터 할 수 있어야 한다. 방법은 두 갈래다.</p>
+  <ul class="tight">
+    <li><strong>인증서 기반</strong> — 사용자별 클라이언트 인증서를 발급하고 그것이 담긴 <dfn class="term">kubeconfig</dfn>(kubectl의 접속 프로필 파일)를 건넨다. 외부 시스템 없이 되지만, 인증서는 만료 전까지 <strong>폐기할 방법이 없다</strong>는 치명적 약점이 있다.</li>
+    <li><strong>외부 아이덴티티 연동</strong> — Microsoft Entra ID, AWS IAM 같은 회사의 기존 신원 시스템으로 클러스터 인증을 위임한다. 퇴사·권한 회수가 신원 시스템에서 한 번에 처리된다.</li>
+  </ul>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    쿠버네티스 공식 하드닝 가이드는 클라이언트 인증서 방식의 한계를 명시한다 — <strong>개별 폐기 불가</strong>(유출돼도 만료까지 유효), 그룹 변경 불가, 키 암호 보호 불가. 사람 사용자 인증의 실무 표준은 <dfn class="term">OIDC <span class="en">(OpenID Connect)</span></dfn> — 외부 신원 제공자가 발급한 토큰으로 로그인하는 개방형 인증 표준 — 또는 클라우드 IAM 연동이다. 인증서는 학습·시스템 컴포넌트용으로만 이해하자.
+    <span class="src">출처: kubernetes.io/docs/concepts/security/hardening-guide/authentication-mechanisms · kubernetes.io/docs/reference/access-authn-authz/authentication (폐기 미지원 명시)</span>
+  </div>
+
+  <h3>2.3.2 네임스페이스 생성과 보안</h3>
+  <p>생성 자체는 <code>kubectl create namespace dev-kim</code> 한 줄이다. 실무의 요점은 그 위에 얹는 세 가지다. 첫째, 담당자·팀 같은 메타데이터를 <dfn class="term">애너테이션 <span class="en">(Annotation)</span></dfn> — 셀렉터 조회용이 아닌 보관용 키-값 메타데이터 — 으로 붙여 "이 네임스페이스는 누구 것인가"에 항상 답할 수 있게 한다(수십 개가 되면 템플릿으로 찍어낸다). 둘째, 권한. 셋째, 자원 한도.</p>
+<pre><code>apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev-kim
+  annotations:
+    team: journal-squad
+    contact: kim@example.com
+    dev-ns/expiry: "2026-08-22"</code></pre>
+  <p>권한은 <dfn class="term">RBAC <span class="en">(Role-Based Access Control)</span></dfn> — "누가(subject) 무엇을(verb) 어떤 리소스에" 할 수 있는지 역할 단위로 묶어 부여하는 인가 체계 — 로 건다. 권한 묶음이 <dfn class="term">롤 <span class="en">(Role)</span></dfn>, 그 묶음을 사용자에게 연결하는 것이 <dfn class="term">롤바인딩 <span class="en">(RoleBinding)</span></dfn>이다. 개발자에게는 롤을 새로 짜기보다 쿠버네티스 내장 ClusterRole인 <code>edit</code>을 자기 네임스페이스 범위로 바인딩하는 것이 정석이다.</p>
+<pre><code>apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-kim-edit
+  namespace: dev-kim
+subjects:
+- kind: User
+  name: kim@example.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io</code></pre>
+  <p>자원 한도는 <dfn class="term">리소스쿼터 <span class="en">(ResourceQuota)</span></dfn> — 네임스페이스 하나가 쓸 수 있는 CPU·메모리·오브젝트 개수의 총량 상한 — 로 건다. 한 사람이 클러스터를 통째로 먹는 사고를 막는 안전핀이다.</p>
+<pre><code>apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: dev-kim
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    pods: "20"</code></pre>
+  <p>온보딩이 끝난 사용자는 <code>kubectl auth can-i create pods -n dev-kim</code>으로 자기 권한을 직접 확인할 수 있다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 270" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow22" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-step { font-size: 11.5px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-step" x="115" y="58" text-anchor="middle">STEP 1</text>
+  <rect class="box" x="20" y="70" width="190" height="86" rx="4"/>
+  <text class="t-title" x="115" y="100" text-anchor="middle">신원 인증</text>
+  <text class="t-sub" x="115" y="120" text-anchor="middle">인증서 발급, 또는</text>
+  <text class="t-sub" x="115" y="137" text-anchor="middle">OIDC · 클라우드 IAM 연동</text>
+
+  <line class="line" x1="210" y1="113" x2="246" y2="113" marker-end="url(#arrow22)"/>
+
+  <text class="t-step" x="345" y="58" text-anchor="middle">STEP 2</text>
+  <rect class="box" x="250" y="70" width="190" height="86" rx="4"/>
+  <text class="t-title" x="345" y="100" text-anchor="middle">kubeconfig 전달</text>
+  <text class="t-sub" x="345" y="120" text-anchor="middle">접속 프로필(컨텍스트)</text>
+  <text class="t-sub" x="345" y="137" text-anchor="middle">사용자 로컬에 설치</text>
+
+  <line class="line" x1="440" y1="113" x2="476" y2="113" marker-end="url(#arrow22)"/>
+
+  <text class="t-step" x="575" y="58" text-anchor="middle">STEP 3</text>
+  <rect class="box" x="480" y="70" width="190" height="86" rx="4"/>
+  <text class="t-title" x="575" y="100" text-anchor="middle">네임스페이스 생성</text>
+  <text class="t-sub" x="575" y="120" text-anchor="middle">담당자 애너테이션 부착</text>
+  <text class="t-sub" x="575" y="137" text-anchor="middle">리소스쿼터 · TTL 지정</text>
+
+  <line class="line" x1="670" y1="113" x2="706" y2="113" marker-end="url(#arrow22)"/>
+
+  <text class="t-step" x="795" y="58" text-anchor="middle">STEP 4</text>
+  <rect class="box-accent" x="710" y="70" width="170" height="86" rx="4"/>
+  <text class="t-title" x="795" y="100" text-anchor="middle">권한 부여</text>
+  <text class="t-sub" x="795" y="120" text-anchor="middle">RoleBinding으로 해당</text>
+  <text class="t-sub" x="795" y="137" text-anchor="middle">네임스페이스만 edit</text>
+
+  <text class="t-cap" x="450" y="210" text-anchor="middle">네 단계를 스크립트 하나로 묶는다. "신입이 30분 안에 첫 배포" 같은 온보딩 KPI는 자동화 없이는 지킬 수 없다.</text>
+  <text class="t-cap" x="450" y="232" text-anchor="middle">권한은 클러스터 전체가 아니라 자기 네임스페이스 범위로만 — 격리가 곧 안전이다.</text>
+</svg>
+    <figcaption>그림 2-3. 온보딩 파이프라인 4단계. 이 그림 전체가 스크립트 하나여야 한다.</figcaption>
+  </figure>
+
+  <h3>2.3.3 네임스페이스 관리</h3>
+  <p>네임스페이스를 어떻게 나눠줄 것인가에는 두 방식이 있고, 갈림길은 <strong>수명</strong>이다.</p>
+  <ul class="tight">
+    <li><strong>영구 개인 워크스페이스</strong> — 온보딩 때 개발자마다 하나씩. 단순하지만 시간이 지나면 아무도 안 쓰는 리소스가 쌓여 클러스터가 쓰레기장이 된다.</li>
+    <li><strong>목적별 임시 네임스페이스 + <dfn class="term">TTL <span class="en">(Time To Live)</span></dfn></strong> — 기능 개발·테스트 단위로 만들고, 만료 시각을 애너테이션으로 박아 기한이 지나면 자동 정리한다(쿠버네티스에 내장된 기능이 아니라 만료 애너테이션을 훑어 지우는 간단한 정리 잡을 직접 돌리는 패턴이다). 개발 환경을 늘 "새로 만들 수 있는 소모품"으로 유지시키는 부수 효과가 크다.</li>
+  </ul>
+  <p>어느 쪽이든 원칙은 같다 — 네임스페이스는 셀프서비스로 즉시 발급되고, 소유자가 명확하며, 방치되면 사라진다.</p>
+
+  <h3>2.3.4 클러스터 수준 서비스</h3>
+  <p>네임스페이스 격리 위에, 모든 개발자가 공유하는 서비스를 클러스터 차원에서 한 번만 깔아준다. 대표가 중앙 로깅(LaaS, Logging as a Service)이다 — 앱이 표준 출력에 찍은 로그를 한곳에 모아두면, 파드가 죽어 사라진 뒤에도 로그가 남고 <code>kubectl logs</code>의 길이 제한에도 걸리지 않는다. 여기에 모니터링, 공용 인그레스 정도가 개발 클러스터의 기본 패키지다. 개별 개발자가 각자 깔게 두면 N벌의 중복과 N가지 버전이 생긴다.</p>
+</section>
+
+<section id="s2-4">
+  <h2 class="sec"><span class="num">2.4</span>개발자 워크플로 활성화</h2>
+  <p>온보딩된 개발자가 실제로 굴러가게 만드는 단계다. 그림 2-1의 ②·③에 해당한다.</p>
+
+  <h3>2.4.1 초기 설치</h3>
+  <p>애플리케이션 배포에서 정말 어려운 건 앱이 아니라 <strong>의존성</strong>이다. 마이크로서비스 하나를 개발하려 해도 데이터베이스와 이웃 서비스들이 먼저 떠 있어야 한다. 해법은 의존성 전체를 코드로 기술해 한 명령으로 세우는 것 — 1장에서 배운 헬름 차트가 여기서 힘을 쓴다. <code>helm install deps ./our-app-deps</code> 한 줄로 개발에 필요한 주변 세계가 서는 상태를 만들고, 이 차트를 팀이 함께 최신으로 유지한다. 문서로만 관리되는 설치 절차는 반드시 썩는다.</p>
+
+  <h3>2.4.2 액티브한 개발 환경</h3>
+  <p>하루 종일 도는 루프다: 코드 수정 → 컨테이너 이미지 빌드 → 레지스트리 푸시 → 클러스터 롤아웃 → 확인. 프로덕션과 달리 개발에서는 이 한 바퀴의 <strong>속도</strong>가 전부다. 그래서 개발용 이미지에는 커밋 해시나 타임스탬프처럼 매번 달라지는 태그를 붙여 교체를 강제하고(같은 태그 재사용은 캐시 때문에 "고쳤는데 안 바뀌는" 미스터리를 만든다), 롤아웃은 <code>kubectl set image</code>나 <code>helm upgrade</code>로 짧게 끝낸다. 루프가 분 단위를 넘는다면 그 자체가 KPI 위반 — 빌드 캐시, 로컬 레지스트리, 파일 동기화 도구 등으로 줄일 대상이다.</p>
+
+  <h3>2.4.3 테스팅과 디버깅</h3>
+  <p>클러스터 안에서 도는 앱을 들여다보는 기본기 네 가지. 전부 kubectl에 들어 있다.</p>
+<pre><code># 1) 로그 — 표준 출력 확인 (-f 실시간, --previous 직전 죽은 컨테이너)
+kubectl logs -f deployment/frontend -n dev-kim
+kubectl logs --previous <파드이름> -n dev-kim
+
+# 2) 셸 진입 — 컨테이너 내부에서 직접 확인
+kubectl exec -it <파드이름> -n dev-kim -- sh
+
+# 3) 터널 — 로컬에서 서비스 직접 호출 (0장에서 익힌 그것)
+kubectl port-forward service/frontend 8080:8080 -n dev-kim
+
+# 4) 임시 컨테이너 — exec이 안 될 때의 디버깅
+kubectl debug -it <파드이름> -n dev-kim --image=busybox:1.36 --target=frontend</code></pre>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    4번 <code>kubectl debug</code>는 알아둘 가치가 커졌다. 보안상 셸조차 없는 <strong>distroless 이미지</strong>가 표준이 되면서 <code>kubectl exec</code>이 통하지 않는 컨테이너가 흔해졌기 때문이다. <dfn class="term">임시 컨테이너 <span class="en">(Ephemeral Container)</span></dfn> — 실행 중인 파드에 진단 도구를 담아 잠깐 덧붙이는 일회용 컨테이너 — 를 파드에 주입해 같은 프로세스 공간을 들여다보는 방식이며, 현재 정식(GA) 기능이다.
+    <span class="src">출처: kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod (distroless 등 exec 불가 상황의 공식 해법으로 명시)</span>
+  </div>
+  <p>테스트 데이터도 설계 대상이다. 스키마와 유사 데이터를 채워주는 시딩(seeding) 스크립트를 의존성 차트와 함께 제공하면, "내 환경에선 되는데" 문제의 절반이 사라진다.</p>
+</section>
+
+<section id="s2-5">
+  <h2 class="sec"><span class="num">2.5</span>개발 환경 설정 모범 사례</h2>
+  <p>이 장을 한 표로 접으면 다음과 같다. 오른쪽 열이 스터디에서 서로 물어볼 질문이다.</p>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>개발자 경험을 온보딩·개발·테스팅 3단계로 설계</td><td>세 단계 각각의 KPI가 있고 실제로 측정되는가?</td></tr>
+    <tr><td>공용 클러스터 + 네임스페이스 격리를 기본으로</td><td>개발자마다 클러스터를 파고 있진 않은가? 격리는 RBAC·쿼터로 걸었는가?</td></tr>
+    <tr><td>온보딩은 스크립트 한 방</td><td>신입이 문서 없이 30분 안에 첫 배포를 하는가?</td></tr>
+    <tr><td>사람 인증은 신원 시스템 연동으로</td><td>퇴사자 접근을 지금 즉시 끊을 수 있는가? (인증서만 쓰면 답은 '아니오')</td></tr>
+    <tr><td>네임스페이스는 소모품 — TTL로 자동 정리</td><td>6개월 전에 만든 유령 네임스페이스가 지금 몇 개인가?</td></tr>
+    <tr><td>의존성·시드 데이터는 코드(차트)로 제공</td><td>새 기능 개발을 시작할 때 주변 서비스를 손으로 세우고 있진 않은가?</td></tr>
+    <tr><td>로깅·모니터링은 클러스터 수준에서 한 번만</td><td>개발자들이 각자 로깅 스택을 깔고 있진 않은가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: kubernetes.io/docs/concepts/security/hardening-guide/authentication-mechanisms · kubernetes.io/docs/reference/access-authn-authz/authentication · kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod — 세부 출처는 각 절의 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig02-1 ~ fig02-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

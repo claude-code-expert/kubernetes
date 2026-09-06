@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 2 · 쿠버네티스 코어] M10 디플로이먼트와 롤아웃 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 10 / 38 · PART 2 쿠버네티스 코어</div>
+  <h1>디플로이먼트와 롤아웃</h1>
+  <p class="ch-desc">버전을 바꾸는 동안 서비스가 끊기지 않는지 실제로 측정한다. 40초 동안 11,754건 성공, 17건 실패 — 무중단 설정을 했는데도 0이 아니었다. 그 17건이 어디서 왔는지가 이 모듈의 핵심이다.</p>
+  <div class="meta">
+    <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 · journal-api:v1 · v2 · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m09-k8s-pod-label-namespace.html">M09</a> 완료 — <code>kubectl apply -f</code>로 매니페스트를 적용하고 <code>-l</code>로 골라낼 수 있다. 9.5절 7단계에서 컨텍스트 네임스페이스를 <code>default</code>로 되돌렸다</li>
+    <li><code>journal-api:v1</code>과 <code>journal-api:v2</code> 이미지가 kind 노드에 적재돼 있다 (<a href="m07-docker-registry-supplychain.html">M07</a> 산출물. 10.3절 1단계에서 확인하고, 없으면 그 자리에서 만든다)</li>
+    <li>매니페스트: <code>course/labs/k8s/m10-journal-deployment.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 디플로이먼트는 버전마다 레플리카셋을 하나씩 만든다. 롤아웃은 <strong>새 레플리카셋을 늘리고 옛 것을 줄이는 일</strong>이다.</p>
+  <p>2. <code>maxSurge</code>와 <code>maxUnavailable</code>이 교체 속도와 안전 마진을 정한다. <code>maxUnavailable: 0</code>이면 용량이 줄지 않는다.</p>
+  <p>3. 그래도 요청이 몇 건 실패한다. <strong>파드가 종료될 때 엔드포인트에서 빠지는 것과 실제로 죽는 것이 동시에 일어나지 않기 때문</strong>이다 — M15에서 해결한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">10.1</span>왜 파드 YAML만으로는 안 되는가</a>
+  <a href="#s2"><span class="num">10.2</span>이론 — 롤아웃은 무엇을 하는가</a>
+  <a href="#s3"><span class="num">10.3</span>따라하기 ① 무중단 측정</a>
+  <a href="#s4"><span class="num">10.4</span>따라하기 ② 이력과 되돌리기</a>
+  <a href="#s5"><span class="num">10.5</span>일부러 실패시키기</a>
+  <a href="#s6"><span class="num">10.6</span>남은 17건의 정체</a>
+  <a href="#s7"><span class="num">10.7</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">10.1</span>왜 파드 YAML만으로는 안 되는가</h2>
+  <p class="lead">M09에서 파드 매니페스트를 직접 써서 <code>apply</code>했다. 컨테이너 둘을 한 파드에 넣고 init 컨테이너로 순서까지 강제했으니 파드 하나를 정의하는 일은 끝났다. 그런데 그 파드의 <code>journal-api:v1</code>을 <code>v2</code>로 바꾸려면 어떻게 하나.</p>
+  <p>파드의 <code>spec.containers[].image</code>는 만든 뒤에도 바꿀 수 있는 몇 안 되는 필드다. 하지만 바꾸는 순간 kubelet이 그 컨테이너를 <strong>그 자리에서</strong> 죽이고 새 이미지로 다시 띄운다 — 그 사이 요청은 받을 수 없다. 파드가 여럿이면 하나씩 손으로 바꿔야 하고, 잘못됐을 때 되돌리는 방법은 다시 손으로 <code>v1</code>을 적는 것뿐이다. 무엇을 언제 바꿨는지는 어디에도 남지 않는다. 그리고 M08 실패 ①에서 봤듯, 직접 만든 파드는 노드가 죽으면 돌아오지 않는다.</p>
+  <p>필요한 것은 "이 템플릿의 파드를 N개 유지하고, 템플릿이 바뀌면 <strong>순서대로</strong> 교체하고, 바뀐 이력을 기억하는" 오브젝트다. M08에서 명령 한 줄로 만들었던 디플로이먼트가 그것이고, 이 모듈에서는 그것을 파일로 쓰고 버전을 바꿔 본다. 한 가지를 더 한다 — "무중단"이라는 말을 믿지 않고, 교체가 진행되는 동안 요청을 계속 보내 <strong>실패 건수를 센다</strong>.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">10.2</span>이론 — 롤아웃은 무엇을 하는가</h2>
+  <p class="lead">M08에서 디플로이먼트가 레플리카셋을 만들고, 레플리카셋이 파드를 만든다고 했다. 왜 두 겹인지는 버전을 바꿔볼 때 드러난다. 책 1.3.2가 디플로이먼트 오브젝트의 정의를, 6.3이 롤아웃 절차를 다룬다.</p>
+  <p>디플로이먼트의 파드 템플릿이 바뀌면(이미지·환경변수·리소스 등) 그 템플릿의 해시가 달라지고, 디플로이먼트는 <strong>새 해시의 레플리카셋을 새로 만든다</strong>. 그리고 새 레플리카셋의 개수를 늘리면서 옛 레플리카셋의 개수를 줄인다. 이 교체 과정 전체가 <dfn class="term">롤아웃 <span class="en">(Rollout)</span></dfn>이고, 한 번에 전부가 아니라 몇 개씩 늘리고 줄이는 방식이 <dfn class="term">롤링 업데이트 <span class="en">(Rolling Update)</span></dfn>다. 템플릿이 바뀔 때마다 번호가 하나 올라가는 것이 <dfn class="term">리비전 <span class="en">(Revision)</span></dfn>이며, 레플리카셋 하나가 리비전 하나에 대응한다. 다 끝나면 옛 레플리카셋은 <code>0</code>개인 채로 남는다 — 이것이 롤백의 재료다.</p>
+  <table>
+    <tr><th>파라미터</th><th>의미</th><th>기본값</th></tr>
+    <tr><td><code>maxSurge</code></td><td>목표 개수보다 <strong>더</strong> 만들 수 있는 파드 수(또는 %)</td><td>25%</td></tr>
+    <tr><td><code>maxUnavailable</code></td><td>사용 불가 상태를 허용할 파드 수(또는 %)</td><td>25%</td></tr>
+  </table>
+  <p>둘의 조합이 성격을 정한다. <code>maxUnavailable: 0</code>에 <code>maxSurge: 1</code>이면 <strong>용량을 절대 줄이지 않는다</strong> — 새 파드가 준비된 뒤에야 옛 파드를 빼므로 느리지만 안전하고, 대신 노드에 파드 하나 분량의 여유가 있어야 한다. 기본값인 <code>25% / 25%</code>는 빠르지만 롤아웃 중 용량이 최대 25% 줄어들어, 부하가 높은 시간대에는 남은 파드가 몰린 트래픽을 감당해야 한다. <code>maxSurge: 0</code>은 추가 파드를 만들지 않으므로 클러스터에 여유가 없을 때 쓰지만 반드시 용량이 줄어든다. 이 모듈의 매니페스트는 첫 번째 조합을 쓴다.</p>
+  <p>여기서 <strong>레디니스 프로브가 전제 조건</strong>이라는 점이 중요하다. "새 파드가 준비됐다"를 판단할 방법이 없으면 쿠버네티스는 컨테이너가 시작된 것만으로 준비됐다고 보고 옛 파드를 뺀다. 애플리케이션이 아직 초기화 중이면 그 순간 요청이 실패한다. 책 5.7이 롤링 업데이트의 필수 장치로 레디니스 프로브와 <code>preStop</code> 훅 두 가지를 꼽는 이유다. 레디니스 프로브와 서비스의 엔드포인트 목록은 이 모듈에서 "준비된 파드만 트래픽을 받게 하는 장치"로만 쓴다 — 프로브의 종류와 임계값은 M15에서, 엔드포인트가 어떻게 갱신되는지는 M11에서 제대로 다룬다.</p>
+  <h3>매니페스트</h3>
+  <p>M08 8.7절의 뼈대에 롤아웃 전략과 레디니스 프로브를 채운 것이다. 주석이 붙은 줄이 이 모듈에서 건드리는 부분이다.</p>
+<pre><code># course/labs/k8s/m10-journal-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-api
+  labels:
+    app: journal-api
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: journal-api          # 이 셀렉터가 아래 template.labels 와 같아야 한다
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1               # 목표 개수보다 최대 1개 더 만들 수 있다
+      maxUnavailable: 0         # 사용 불가 파드는 0개 — 무중단
+  template:
+    metadata:
+      labels:
+        app: journal-api
+    spec:
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "v1"
+          readinessProbe:       # 준비되기 전에는 트래픽을 받지 않는다 (M15에서 자세히)
+            httpGet:
+              path: /readyz
+              port: 8080
+            periodSeconds: 2</code></pre>
+  <div class="note-2026">
+    <span class="lbl">selector 와 template.labels 는 반드시 일치해야 한다</span>
+    <code>spec.selector.matchLabels</code>는 "내가 관리할 파드"의 조건이고, <code>spec.template.metadata.labels</code>는 "내가 만들 파드"에 붙일 꼬리표다. 둘이 어긋나면 만든 파드를 자기 것으로 인식하지 못해 무한히 파드를 만든다. 1.16부터는 apiserver가 이 불일치를 거부하지만, 셀렉터는 <strong>생성 후 변경이 불가능</strong>하다는 제약이 남아 있다 — 레이블 체계를 처음에 잘 정해야 하는 이유(M09).
+  </div>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">10.3</span>따라하기 ① 무중단 측정</h2>
+
+  <div class="step">
+    <h4>1단계. 버전이 다른 이미지 두 개를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>롤아웃을 관찰하려면 구분되는 버전이 필요하다. M07에서 v1·v2를 이미 적재했다면 이 단계는 확인만 하면 된다.</p>
+    <p>M04의 Dockerfile 마지막 스테이지에는 버전을 새기는 두 줄이 들어 있다. 빌드 인자 하나로 같은 소스에서 다른 버전의 이미지를 만드는 장치이며, M10은 그것을 이용해 v2를 굽는다.</p>
+<pre><code># course/labs/apps/journal-api/Dockerfile 마지막 스테이지 (M04에서 넣어 둔 것)
+ARG APP_VERSION=v1
+ENV NODE_ENV=production APP_VERSION=${APP_VERSION}</code></pre>
+<pre><code>cd course/labs/apps/journal-api
+docker build --build-arg APP_VERSION=v1 -t journal-api:v1 .
+docker build --build-arg APP_VERSION=v2 -t journal-api:v2 .
+docker run --rm journal-api:v2 node -e "console.log(process.env.APP_VERSION)"</code></pre>
+    <span class="out-lbl">실행 결과 (마지막 명령)</span>
+    <div class="out"><code>v2</code></div>
+<pre><code>kind load docker-image journal-api:v1 journal-api:v2 --name study</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Image: "journal-api:v1" with ID "sha256:4920f5e816ae..." not yet present on node "study-worker", loading...
+Image: "journal-api:v1" with ID "sha256:4920f5e816ae..." not yet present on node "study-worker2", loading...
+Image: "journal-api:v1" with ID "sha256:4920f5e816ae..." not yet present on node "study-control-plane", loading...
+Image: "journal-api:v2" with ID "sha256:01d00533618f..." not yet present on node "study-worker", loading...
+Image: "journal-api:v2" with ID "sha256:01d00533618f..." not yet present on node "study-worker2", loading...
+Image: "journal-api:v2" with ID "sha256:01d00533618f..." not yet present on node "study-control-plane", loading...</code></div>
+    <div class="verdict"><span class="lbl">판정</span>노드 3개 × 이미지 2개 = 6줄. M07에서 적재한 것과 이미지 ID가 같으면 그 이미지는 <code>found to be already present on all nodes.</code> 한 줄로 끝난다. 방금 다시 빌드했다면 ID가 달라져 위처럼 다시 적재된다. ID 값은 환경마다 다르다(여기서는 줄여 적었다).</div>
+    <p><code>ARG</code>는 빌드 중에만 존재하고, <code>ENV</code>로 옮겨야 실행 시점에 남는다. 이 방식으로 커밋 해시나 빌드 번호를 이미지에 새기면 나중에 "이 파드가 어느 커밋인가"를 이미지에 물어볼 수 있다(M29).</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 배포하고 부하를 준비한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>매니페스트로 디플로이먼트를 만들고, 롤아웃 중 요청을 계속 보낼 도구를 클러스터 안에 마련한다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/m10-journal-deployment.yaml
+sleep 10
+kubectl get deploy,rs,pods -l app=journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/journal-api created
+
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/journal-api   4/4     4            4           10s
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/journal-api-55c87ff598   4         4         4       10s
+
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/journal-api-55c87ff598-hsg7f   1/1     Running   0          10s
+pod/journal-api-55c87ff598-kmsq5   1/1     Running   0          10s
+...</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>READY 4/4</code>, 레플리카셋 해시가 <code>55c87ff598</code>. 이 해시는 파드 템플릿에서 계산되므로 같은 버전의 클러스터에서 같은 매니페스트를 쓰면 같은 값이 나온다 — 이 문서와 M11의 출력에서 <code>55c87ff598</code>은 v1 템플릿을 뜻한다. 파드 4행 중 뒤 2행은 <code>...</code>로 줄였다. 파드 이름 뒤 다섯 글자는 환경마다 다르다.</div>
+    <p>측정하려면 클러스터 안에서 계속 요청을 보낼 무언가가 필요하다. 서비스와 요청용 파드를 만든다. 서비스는 M11의 주제지만 여기서는 "파드들 앞에 놓는 안정적인 이름" 정도로만 쓴다.</p>
+<pre><code>kubectl expose deploy journal-api --port=8080 --name=journal-api
+kubectl run curlbox --image=alpine:3.22 --restart=Never -- sh -c "sleep infinity"
+sleep 5
+kubectl exec curlbox -- apk add --no-cache curl</code></pre>
+    <ul class="tight">
+      <li><code>expose</code> — 디플로이먼트의 셀렉터를 그대로 가져와 서비스를 만든다. M11에서 파일로 다시 쓴다</li>
+      <li><code>--restart=Never</code> — 디플로이먼트 없이 파드 하나만 만든다. 디버깅용 도구 파드는 이렇게 만든다(M08 실패 ①에서 말한 예외)</li>
+      <li><code>sleep infinity</code> — 이 파드는 M11까지 살아 있어야 한다. <code>sleep 3600</code>으로 두면 60분 뒤 <code>Completed</code>로 끝나 다음 모듈에서 <code>exec</code>가 실패한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service/journal-api exposed
+pod/curlbox created
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/main/aarch64/APKINDEX.tar.gz
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/community/aarch64/APKINDEX.tar.gz
+(1/9) Installing brotli-libs (1.1.0-r2)
+...
+(9/9) Installing curl (8.14.1-r3)
+Executing busybox-1.37.0-r20.trigger
+OK: 13 MiB in 25 packages</code></div>
+    <div class="verdict"><span class="lbl">판정</span>마지막 줄이 <code>OK: ...</code>. <code>aarch64</code>는 이 맥이 arm64라서 나온 값이며 인텔 맥이나 리눅스 PC에서는 <code>x86_64</code>다. 패키지 버전은 실습 당일 다를 수 있다. 설치 목록 가운데는 <code>...</code>로 줄였다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 부하를 걸어둔 채 롤아웃한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"무중단"을 말이 아니라 숫자로 확인한다.</p>
+<pre><code># 터미널 1 — 40초 동안 계속 요청하며 성공/실패를 센다
+kubectl exec curlbox -- sh -c 'ok=0; err=0; end=$(( $(date +%s) + 40 ));
+  while [ $(date +%s) -lt $end ]; do
+    if curl -sf -m 2 http://journal-api:8080/healthz &gt;/dev/null; then ok=$((ok+1)); else err=$((err+1)); fi
+  done; echo "성공=$ok 실패=$err"'
+
+# 터미널 2 — 부하가 도는 동안 이미지를 교체한다
+kubectl set image deploy/journal-api api=journal-api:v2
+kubectl rollout status deploy/journal-api</code></pre>
+    <span class="out-lbl">실행 결과 — 터미널 2 (롤아웃 진행. 같은 줄이 여러 번 반복되는 것은 한 번씩만 남겼다)</span>
+    <div class="out"><code>deployment.apps/journal-api image updated
+Waiting for deployment "journal-api" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "journal-api" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "journal-api" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "journal-api" rollout to finish: 1 old replicas are pending termination...
+deployment "journal-api" successfully rolled out</code></div>
+    <p>진행 방식을 읽는다. <code>maxSurge: 1</code>이므로 새 파드를 <strong>한 번에 하나씩</strong> 만들고, 그것이 레디니스를 통과하면 옛 파드 하나를 뺀다. 4개를 교체하는 데 네 번 반복한다. 마지막의 <code>old replicas are pending termination</code>은 옛 파드가 종료 중이라는 뜻이다.</p>
+    <span class="out-lbl">실행 결과 — 터미널 1 (부하 집계)</span>
+    <div class="out"><code>성공=11754 실패=17</code></div>
+    <div class="verdict"><span class="lbl">판정</span>실패율 0.14%. <strong>0이 아니다.</strong> <code>maxUnavailable: 0</code>에 레디니스 프로브까지 붙였는데도 17건이 실패했다. 원인은 10.6절에서 다룬다 — 이 숫자가 M15의 출발점이다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">10.4</span>따라하기 ② 이력과 되돌리기</h2>
+
+  <div class="step">
+    <h4>4단계. 레플리카셋이 남아 있는 것을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>롤아웃이 "새 레플리카셋을 늘리고 옛 것을 줄이는 일"이라는 10.2절의 설명을 오브젝트로 확인한다.</p>
+<pre><code>kubectl get rs -l app=journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME                     DESIRED   CURRENT   READY   AGE
+journal-api-55c87ff598   0         0         0       41s
+journal-api-975dd69b9    4         4         4       4s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>레플리카셋 2개. v1(<code>55c87ff598</code>)은 <code>0 0 0</code>, v2(<code>975dd69b9</code>)는 <code>4 4 4</code>. AGE는 환경마다 다르다.</div>
+    <p>옛 레플리카셋이 <code>0</code>개로 남아 있다. 파드는 없지만 <strong>정의는 보존된다</strong> — 되돌릴 때 이 정의를 다시 4개로 늘리기만 하면 된다. 몇 개까지 보관할지는 <code>revisionHistoryLimit</code>(기본 10)가 정한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>5단계. 이력을 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>리비전 번호와 레플리카셋의 대응을 확인하고, 이력에 사유를 남기는 방법과 그 한계를 본다.</p>
+<pre><code>kubectl rollout history deploy/journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/journal-api 
+REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+2         &lt;none&gt;</code></div>
+    <p><code>CHANGE-CAUSE</code>가 비어 있다. 무엇을 왜 바꿨는지 클러스터는 모른다. 어노테이션으로 남길 수 있다.</p>
+<pre><code>kubectl annotate deploy/journal-api kubernetes.io/change-cause="v2 로 업그레이드" --overwrite
+kubectl rollout history deploy/journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/journal-api annotated
+deployment.apps/journal-api 
+REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+2         v2 로 업그레이드</code></div>
+    <div class="verdict"><span class="lbl">판정</span>리비전 번호는 그대로 <code>1</code>과 <code>2</code>이고, <code>2</code>의 <code>CHANGE-CAUSE</code>만 채워졌다.</div>
+    <p>어노테이션은 <strong>새 리비전을 만들지 않는다</strong>. 파드 템플릿이 바뀐 것이 아니므로 롤아웃이 일어나지 않고, 디플로이먼트 컨트롤러가 현재(최신) 리비전의 레플리카셋에 그 어노테이션을 옮겨 적는다. 그래서 <code>change-cause</code>는 <strong>이미지를 바꾸기 전에</strong> 적어두는 것이 맞다 — 바꾼 뒤에 적어도 위처럼 최신 리비전에 붙기는 하지만, 그 사이에 또 롤아웃이 있었다면 엉뚱한 리비전에 붙는다. "<code>annotate</code>를 치면 리비전이 하나 는다"고 적힌 자료가 검색되는데, 틀렸다.</p>
+    <p>다만 이것을 사람이 매번 적는 것은 현실적이지 않다. 실무의 답은 <strong>매니페스트를 깃에 두고 커밋 메시지를 이력으로 삼는 것</strong>이다 — 그것이 M31 GitOps다. <code>rollout history</code>는 사고 상황에서 "몇 번으로 되돌릴지" 고를 때 쓰는 도구로 남는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계. 되돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이전 리비전으로 되돌리고, 그때 리비전 번호에 무슨 일이 생기는지 본다.</p>
+<pre><code>kubectl rollout undo deploy/journal-api
+kubectl get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}'; echo</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Warning: resource deployments/journal-api was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/journal-api rolled back
+journal-api:v1</code></div>
+    <p>경고는 원문이 한 줄이다(터미널 폭에 맞춰 접혀 보인다). 마지막 줄 <code>journal-api:v1</code>이 두 번째 명령의 출력 — 템플릿의 이미지가 v1로 돌아갔다.</p>
+<pre><code>kubectl rollout status deploy/journal-api
+kubectl rollout history deploy/journal-api</code></pre>
+    <span class="out-lbl">실행 결과 (status 의 진행 줄은 생략)</span>
+    <div class="out"><code>deployment "journal-api" successfully rolled out
+deployment.apps/journal-api 
+REVISION  CHANGE-CAUSE
+2         v2 로 업그레이드
+3         &lt;none&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span>리비전 <code>1</code>이 사라지고 <code>3</code>이 생겼다. <code>undo</code>는 "1로 돌아가기"가 아니라 <strong>"1의 템플릿으로 새 리비전 3을 만들기"</strong>다. 레플리카셋은 새로 만들지 않고 <code>55c87ff598</code>을 다시 4개로 늘리지만, 번호는 새로 받는다. <code>--to-revision=N</code>을 쓸 때 이 번호 이동을 모르면 엉뚱한 리비전을 고른다.</div>
+    <p>경고를 그냥 넘기지 않는다. <code>undo</code>는 클러스터의 상태만 되돌리고 <strong>파일은 그대로</strong>다. 다음에 누군가 원래 파일로 <code>kubectl apply</code>를 하면 방금 되돌린 것이 도로 적용된다. 그래서 실무의 롤백 순서는 이렇다.</p>
+    <ol class="tight">
+      <li>급하면 <code>rollout undo</code>로 먼저 불을 끈다</li>
+      <li>곧바로 매니페스트(또는 깃 저장소)를 같은 상태로 되돌린다</li>
+    </ol>
+    <p>2번을 잊으면 다음 배포나 GitOps 동기화 때 장애가 그대로 재현된다 — 실제로 자주 일어나는 사고다.</p>
+    <p><code>--to-revision=2</code>처럼 특정 리비전을 지정할 수도 있다(위 이력에서 <code>2</code>가 v2다). 인자가 없으면 바로 이전 리비전으로 간다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">10.5</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 존재하지 않는 이미지로 배포한다</span>
+    <p>가장 흔한 배포 사고를 재현한다. 태그 오타나 CI가 이미지를 아직 안 올린 상태에서 배포하는 경우다.</p>
+<pre><code>kubectl set image deploy/journal-api api=journal-api:v99
+sleep 12
+kubectl get pods -l app=journal-api
+kubectl rollout status deploy/journal-api --timeout=10s; echo "exit=$?"</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/journal-api image updated
+
+NAME                           READY   STATUS         RESTARTS   AGE
+journal-api-544b4499df-wcl96   0/1     ErrImagePull   0          12s
+journal-api-55c87ff598-4fb2b   1/1     Running        0          41s
+journal-api-55c87ff598-52xh5   1/1     Running        0          40s
+journal-api-55c87ff598-mr9c2   1/1     Running        0          38s
+journal-api-55c87ff598-w2qss   1/1     Running        0          39s
+
+Waiting for deployment "journal-api" rollout to finish: 1 out of 4 new replicas have been updated...
+error: timed out waiting for the condition
+exit=1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>여기서 봐야 할 것은 <strong>기존 파드 4개(v1, <code>55c87ff598</code>)가 그대로 살아 있다는 사실</strong>이다. 6단계에서 되돌린 직후라 AGE가 40초 안팎이다. 서비스는 멀쩡히 동작한다. 새 파드 하나(<code>544b4499df</code>)만 <code>ErrImagePull</code>에 갇혀 있다 — 보는 시점에 따라 <code>ImagePullBackOff</code>로 보일 수도 있다. kubelet이 재시도 간격을 늘리는 중이라는 뜻이며 같은 상태다.</div>
+    <p><code>maxUnavailable: 0</code>이 여기서 값을 한다. 새 파드가 준비되지 않았으므로 옛 파드를 하나도 빼지 않았다. 기본값(25%)이었다면 파드 1개를 미리 뺀 뒤 새 파드를 기다렸을 것이고, 용량이 75%로 떨어진 채 멈춰 있었을 것이다.</p>
+    <p><code>rollout status</code>의 종료 코드 1도 중요하다. CI/CD 파이프라인은 이 코드를 보고 배포 실패를 판정한다(M29 · M30). <code>--timeout</code>을 주지 않으면 <code>progressDeadlineSeconds</code>(기본 600초)까지 기다린다.</p>
+<pre><code>kubectl rollout undo deploy/journal-api
+sleep 5
+kubectl get pods -l app=journal-api
+kubectl get rs -l app=journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Warning: resource deployments/journal-api was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/journal-api rolled back
+
+NAME                           READY   STATUS    RESTARTS   AGE
+journal-api-55c87ff598-4fb2b   1/1     Running   0          58s
+journal-api-55c87ff598-52xh5   1/1     Running   0          57s
+journal-api-55c87ff598-mr9c2   1/1     Running   0          55s
+journal-api-55c87ff598-w2qss   1/1     Running   0          56s
+
+NAME                     DESIRED   CURRENT   READY   AGE
+journal-api-544b4499df   0         0         0       29s
+journal-api-55c87ff598   4         4         4       99s
+journal-api-975dd69b9    0         0         0       62s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ErrImagePull</code> 파드가 사라지고 v1 파드 4개는 <strong>재시작 없이 그대로</strong>다(AGE가 이어진다). 레플리카셋은 3개 — v1(<code>55c87ff598</code>) 4개, v2(<code>975dd69b9</code>) 0개, v99(<code>544b4499df</code>) 0개 — 가 이력으로 남았다. M11은 이 상태에서 시작한다. AGE는 3단계의 부하 측정 시간에 따라 다르다.</div>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 셀렉터를 바꾸려 한다</span>
+    <p>매니페스트의 <code>spec.selector.matchLabels</code>만 <code>app: journal</code>로 바꾸고 적용해 본다. 원본을 건드리지 않도록 <code>sed</code>로 사본을 만든다 — 셀렉터 줄은 들여쓰기가 6칸이고 템플릿 레이블 줄은 8칸이라 앞의 공백 6칸으로 구분된다.</p>
+<pre><code>sed 's/^      app: journal-api .*/      app: journal/' \
+  course/labs/k8s/m10-journal-deployment.yaml &gt; /tmp/m10-selector-typo.yaml
+grep -n 'app:' /tmp/m10-selector-typo.yaml
+kubectl apply -f /tmp/m10-selector-typo.yaml</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>7:    app: journal-api
+12:      app: journal
+21:        app: journal-api
+
+The Deployment "journal-api" is invalid: 
+* spec.template.metadata.labels: Invalid value: {"app":"journal-api"}: `selector` does not match template `labels`
+* spec.selector: Invalid value: {"matchLabels":{"app":"journal"}}: field is immutable</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>grep</code>에서 12행(셀렉터)만 바뀌었고 7행(디플로이먼트 자체의 레이블)·21행(템플릿 레이블)은 그대로다. <code>apply</code>는 두 줄로 거부된다 — 첫 줄은 셀렉터와 템플릿 레이블이 어긋났다는 것, 둘째 줄은 셀렉터 자체가 불변이라는 것. 템플릿 레이블도 함께 <code>app: journal</code>로 바꾸면 첫 줄은 사라지고 <code>field is immutable</code> 한 줄만 남는다. 어느 쪽이든 클러스터의 디플로이먼트는 바뀌지 않았다(<code>kubectl describe deploy journal-api | grep Selector</code> → <code>Selector: app=journal-api</code>). <code>kubectl patch</code>로 셀렉터만 고쳐도 같은 두 줄이 나온다.</div>
+    <p><code>field is immutable</code> — 생성 후 바꿀 수 없는 필드다. 정말 바꿔야 한다면 디플로이먼트를 지우고 다시 만들어야 하고, 그동안 서비스가 끊긴다. 다행히 방법이 있다.</p>
+<pre><code># 기존 디플로이먼트를 지우되 파드는 남긴다
+kubectl delete deploy journal-api --cascade=orphan
+# 새 셀렉터로 만든 뒤, 남은 옛 파드를 정리한다</code></pre>
+    <p><code>--cascade=orphan</code>은 M18 스테이트풀셋에서도 같은 목적으로 쓴다. 다만 이 작업이 필요해진 시점에 이미 레이블 설계가 잘못된 것이므로, 처음 정할 때 신중해야 한다는 결론은 그대로다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">10.6</span>남은 17건의 정체</h2>
+  <p class="lead">실패 17건은 어디서 왔을까. 파드가 종료될 때 <strong>두 가지 일이 병렬로</strong> 일어나기 때문이다.</p>
+  <ol class="tight">
+    <li>엔드포인트 컨트롤러가 그 파드를 서비스 대상 목록에서 뺀다 → 각 노드의 kube-proxy가 라우팅 규칙을 갱신한다</li>
+    <li>kubelet이 그 파드의 컨테이너에 <code>SIGTERM</code>을 보낸다</li>
+  </ol>
+  <p>두 경로는 서로를 기다리지 않는다. 그래서 <strong>이미 죽기 시작한 파드로 트래픽이 몇 밀리초 더 들어온다</strong>. 클러스터가 클수록 라우팅 규칙 전파가 늦어져 이 창이 넓어진다.</p>
+  <p>해결책은 파드를 <strong>일부러 천천히 죽이는 것</strong>이다. <code>preStop</code> 훅으로 몇 초 기다린 뒤 종료 절차를 시작하면, 그 사이에 라우팅에서 빠지므로 새 요청이 오지 않는다. 그다음 애플리케이션이 처리 중이던 요청을 마무리하고 종료한다(M04에서 넣어둔 <code>SIGTERM</code> 핸들러의 역할).</p>
+<pre><code>          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          terminationGracePeriodSeconds: 30</code></pre>
+  <p>M15에서 이 설정을 넣고 같은 측정을 반복해 실패 건수가 어떻게 달라지는지 비교한다. 지금은 <strong>"무중단 배포"라는 말이 설정 하나로 완성되지 않는다</strong>는 사실만 확인하고 넘어간다 — 롤아웃 전략, 레디니스 프로브, 종료 훅, 애플리케이션의 시그널 처리, 네 가지가 다 맞아야 0에 가까워진다.</p>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">10.7</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get deploy journal-api</code> → <code>READY 4/4</code></li>
+      <li><code>kubectl get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>journal-api:v1</code> (실패 ①의 <code>undo</code>까지 마친 상태)</li>
+      <li><code>kubectl get rs -l app=journal-api --no-headers | wc -l</code> → <code>3</code> (v1 · v2 · v99 레플리카셋. <code>DESIRED</code>가 4인 것은 <code>55c87ff598</code> 하나)</li>
+      <li><code>kubectl rollout history deploy/journal-api</code> → 리비전 행 3개, 그중 하나의 <code>CHANGE-CAUSE</code>가 <code>v2 로 업그레이드</code></li>
+      <li><code>kubectl exec curlbox -- curl -s -o /dev/null -w '%{http_code}\n' http://journal-api:8080/healthz</code> → <code>200</code> (아래 정리 블록에서 서비스를 지우기 <strong>전에</strong> 확인한다)</li>
+      <li><code>kubectl get pod curlbox -o jsonpath='{.spec.containers[0].command}'</code> → 출력에 <code>sleep infinity</code>가 들어 있다. <code>3600</code>이면 M11 전에 <code>Completed</code>로 죽는다</li>
+      <li>(이해 확인) <code>maxUnavailable: 0</code>이 실패 ①에서 무엇을 지켰는가 — 기본값 25%였다면 파드 몇 개가 먼저 사라졌을지 답한다</li>
+      <li>(이해 확인) <code>rollout undo</code> 뒤에 매니페스트(또는 깃)를 왜 같이 되돌려야 하는가 — 6단계의 경고문으로 답한다</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/m10-journal-deployment.yaml</code> — M11 · M12 · M13이 그대로 쓴다. M14가 <code>labs/k8s/journal/</code>에 저널 앱 전체를 새로 쓰면서 이 디플로이먼트를 지운다</li>
+      <li>클러스터의 <code>journal-api</code> 디플로이먼트(v1, 파드 4개)와 레플리카셋 3개 — M11의 입력</li>
+      <li><code>journal-api:v2</code> 이미지 — M15 · M30에서 다시 쓴다</li>
+      <li><code>curlbox</code> 파드 — 클러스터 안에서 요청을 보내는 도구. <strong>M11에서 계속 쓰므로 지우지 않는다</strong></li>
+      <li>3단계의 <code>성공=N 실패=M</code> 두 숫자 — M15에서 같은 측정을 반복해 비교하는 기준이다. 어딘가에 적어 둔다</li>
+    </ul>
+  </div>
+<pre><code># 서비스만 정리한다 (M11에서 파일로 다시 만든다).
+# journal-api 디플로이먼트와 curlbox 파드는 M11에서 계속 쓰므로 지우지 않는다.
+kubectl delete svc journal-api</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>service "journal-api" deleted from default namespace</code></div>
+</section>
+
+<div class="navlinks">
+  <a href="m09-k8s-pod-label-namespace.html">← M09 파드 · 레이블 · 네임스페이스</a>
+  <a href="m11-k8s-service-network.html">M11 서비스와 클러스터 네트워크 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>이 모듈에서 <code>kubectl expose</code>로 서비스를 급하게 하나 만들어 썼다. M11에서 그것을 제대로 다룬다 — 서비스 4종의 차이, 엔드포인트가 실제로 어떻게 갱신되는지, 그리고 셀렉터 오타로 엔드포인트가 비었을 때 어떻게 보이는지.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
+  <ul>
+    <li>디플로이먼트: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/</li>
+    <li>롤아웃 전략과 파라미터: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy</li>
+    <li>파드 종료 절차: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.3.2(디플로이먼트 — 1.3 복제 서비스 생성의 하위 절), 5.7 배포 전략, 6.3 롤아웃, 6.4 종합 예제</li>
+  </ul>
+  <p>검증 환경: kind v0.33.0 · Kubernetes 1.37.0 · 노드 3개</p>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 7 · 확장] M33 CRD와 오퍼레이터 구현 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 33 / 38 · PART 7 확장</div>
+  <h1>CRD와 오퍼레이터 구현</h1>
+  <p class="ch-desc">여기까지 쓴 것은 전부 <strong>쿠버네티스가 이미 아는 리소스</strong>였다 — 디플로이먼트·서비스, 그리고 남이 만든 CRD(M30의 <code>Rollout</code>, M31의 <code>Application</code>). 우리 조직에만 있는 개념을 표현하려면 <strong>리소스 종류 자체를 새로 만들어야</strong> 한다. 이 모듈에서 <code>JournalSite</code>라는 종류를 정의하고, 그것을 지켜보며 실제 리소스를 만드는 조정 루프를 <strong>셸로 한 번, Go로 한 번</strong> 만든다. 두 번 만드는 이유는 <strong>둘의 차이가 컨트롤러의 본질</strong>이기 때문이다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">125분</span><span class="tag">kubebuilder v4.15.0</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · Go 1.27.1) · 버전은 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m26-k8s-admission-policy.html">M26</a>의 CEL을 봤다. CRD 검증에서 같은 언어를 쓴다</li>
+    <li><a href="m30-k8s-deploy-strategies.html">M30</a>·<a href="m31-k8s-gitops.html">M31</a>에서 남이 만든 CRD를 썼다. 이 모듈은 그 안쪽이다</li>
+    <li>Go와 kubebuilder가 있다: <code>brew install go kubebuilder</code>. 확인: <code>go version</code> · <code>kubebuilder version</code></li>
+    <li><code>journal-api:v1</code> 이미지가 kind에 적재돼 있다</li>
+    <li>새로 만들 파일: <code>course/labs/k8s/crd/00-journalsite-crd.yaml</code> · <code>scripts/shell-operator.sh</code> · <code>operator/journalsite/</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. CRD를 손으로 써서 <strong>스키마 검증·기본값·printer column·status 서브리소스</strong>가 각각 무엇을 하는지 거부 메시지로 확인한다.</p>
+  <p>2. 조정 루프를 <strong>셸 스크립트로</strong> 만들어 오퍼레이터가 하는 일이 세 단계뿐임을 확인하고, <code>ownerReferences</code>로 삭제가 전파되는 것을 본다.</p>
+  <p>3. 같은 것을 kubebuilder로 만들어, <strong>폴링과 감시의 차이</strong>를 초 단위로 비교한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">33.1</span>우리 개념을 담을 그릇이 없다</a>
+  <a href="#s2"><span class="num">33.2</span>이론 — API 오브젝트와 조정 루프</a>
+  <a href="#s3"><span class="num">33.3</span>따라하기 ① CRD를 손으로 쓴다</a>
+  <a href="#s4"><span class="num">33.4</span>따라하기 ② 셸로 만드는 조정 루프</a>
+  <a href="#s5"><span class="num">33.5</span>따라하기 ③ kubebuilder로 뼈대를</a>
+  <a href="#s6"><span class="num">33.6</span>따라하기 ④ 조정 함수를 쓴다</a>
+  <a href="#s7"><span class="num">33.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">33.8</span>운영 관점 — 만들 것인가 쓸 것인가</a>
+  <a href="#s9"><span class="num">33.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">33.1</span>우리 개념을 담을 그릇이 없다</h2>
+  <p class="lead">M28에서 저널 앱 한 벌을 배포하려고 매니페스트 여섯 개를 썼다. 컨피그맵, 시크릿, 스테이트풀셋, 디플로이먼트 둘, HPA, PDB. 그 여섯 개가 <strong>함께 있어야 의미가 있는 한 덩어리</strong>인데, 쿠버네티스는 그것을 한 덩어리로 보지 않는다.</p>
+  <p>결과는 몇 가지 불편으로 나타난다. 이 덩어리를 <strong>하나의 이름으로 부를 수 없고</strong>, 덩어리 전체가 준비됐는지 <strong>한 줄로 물어볼 수 없으며</strong>, 지울 때 여섯 개를 각각 지워야 한다. 헬름 차트가 이 문제의 절반을 푼다 — 배포 단위를 묶어 준다. 그런데 차트는 <strong>클러스터 안에 존재하지 않는다.</strong> <code>kubectl get</code>으로 조회할 수 없고, 다른 컨트롤러가 참조할 수도 없다.</p>
+  <p>남은 방법이 <strong>리소스 종류를 새로 만드는 것</strong>이다. <code>JournalSite</code>라는 종류를 정의하면 <code>kubectl get journalsites</code>로 목록을 보고, <code>status</code>로 준비 상태를 묻고, 지우면 딸린 것이 함께 사라진다. 이 모듈에서 만들 것이 그것이다.</p>
+  <p>그리고 이것은 이미 여러 번 써 온 구조다. M30의 <code>Rollout</code>도, M31의 <code>Application</code>도 같은 방식으로 만들어졌다. <strong>그것들이 어떻게 동작하는지가 이 모듈에서 안쪽에서 보인다.</strong></p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">33.2</span>이론 — API 오브젝트와 조정 루프</h2>
+  <p><span class="lbl">책 매핑</span>21.1~21.7 API 오브젝트·리소스·그룹·버전·카인드, 조정 루프, 검증, 오퍼레이터 라이프사이클</p>
+
+  <h3>이름이 네 겹이다</h3>
+  <p>새 리소스를 정의할 때 적어야 하는 이름이 여럿이라 헷갈린다. 각각 다른 것을 가리킨다.</p>
+  <table>
+    <thead><tr><th>이름</th><th>예</th><th>무엇</th></tr></thead>
+    <tbody>
+      <tr><td>그룹</td><td><code>study.example.com</code></td><td>이름 충돌을 막는 네임스페이스. 조직 도메인을 거꾸로 쓴다</td></tr>
+      <tr><td>버전</td><td><code>v1alpha1</code></td><td>같은 종류의 다른 스키마. 여러 버전이 동시에 제공될 수 있다</td></tr>
+      <tr><td>카인드</td><td><code>JournalSite</code></td><td>YAML의 <code>kind:</code>에 쓰는 이름. 대문자로 시작한다</td></tr>
+      <tr><td>리소스</td><td><code>journalsites</code></td><td>URL 경로와 <code>kubectl get</code>에 쓰는 복수형</td></tr>
+    </tbody>
+  </table>
+  <p>CRD 자체의 이름은 <code>&lt;복수형&gt;.&lt;그룹&gt;</code>으로 <strong>강제된다</strong> — <code>journalsites.study.example.com</code>이 아니면 거부당한다. 이 규칙 덕분에 남의 CRD와 절대 겹치지 않는다.</p>
+
+  <h3>spec과 status는 다른 사람이 쓴다</h3>
+  <p>모든 쿠버네티스 오브젝트의 구조가 같다. <strong><code>spec</code>은 원하는 상태이고 사용자가 쓴다. <code>status</code>는 실제 상태이고 컨트롤러가 쓴다.</strong> 이 분리를 CRD에서 <code>subresources: {status: {}}</code>로 선언하면 API가 둘을 <strong>다른 엔드포인트로</strong> 다룬다.</p>
+  <p>분리하지 않으면 사고가 난다. 사용자가 <code>kubectl apply</code>로 <code>spec</code>을 바꾸는 순간 <strong>컨트롤러가 방금 쓴 <code>status</code>가 지워지고</strong>, 컨트롤러가 <code>status</code>를 쓸 때 <strong>사용자가 방금 고친 <code>spec</code>을 덮는다.</strong> 서브리소스로 나누면 각자 자기 것만 쓴다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+      <text class="t-h" x="40" y="46">조정 루프 — 오퍼레이터가 하는 일은 이 셋이다</text>
+
+      <!-- 루프 -->
+      <rect class="accent" x="40" y="70" width="180" height="66" rx="4"/>
+      <text class="t-title" x="130" y="94" text-anchor="middle">① 원하는 상태</text>
+      <text class="t-mono" x="130" y="112" text-anchor="middle">spec 을 읽는다</text>
+      <text class="t-sub" x="130" y="128" text-anchor="middle">사용자가 쓰는 곳</text>
+      <path class="aline" d="M 220 103 L 258 103" marker-end="url(#ar2)"/>
+
+      <rect class="accent" x="260" y="70" width="200" height="66" rx="4"/>
+      <text class="t-title" x="360" y="94" text-anchor="middle">② 차이를 없앤다</text>
+      <text class="t-mono" x="360" y="112" text-anchor="middle">create / update</text>
+      <text class="t-sub" x="360" y="128" text-anchor="middle">멱등해야 한다</text>
+      <path class="aline" d="M 460 103 L 498 103" marker-end="url(#ar2)"/>
+
+      <rect class="accent" x="500" y="70" width="180" height="66" rx="4"/>
+      <text class="t-title" x="590" y="94" text-anchor="middle">③ status 갱신</text>
+      <text class="t-mono" x="590" y="112" text-anchor="middle">서브리소스</text>
+      <text class="t-sub" x="590" y="128" text-anchor="middle">컨트롤러만 쓰는 곳</text>
+
+      <path class="aline" d="M 590 136 L 590 160 L 130 160 L 130 140" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="360" y="155" text-anchor="middle">이벤트가 오면 처음부터 다시</text>
+
+      <rect class="box" x="700" y="70" width="160" height="66" rx="4"/>
+      <text class="t-mono" x="710" y="92">ownerReferences</text>
+      <text class="t-sub" x="710" y="110">부모를 지우면</text>
+      <text class="t-sub" x="710" y="126">자식도 사라진다</text>
+
+      <!-- 폴링 vs 감시 -->
+      <rect class="soft" x="40" y="180" width="400" height="128" rx="4"/>
+      <text class="t-h" x="56" y="204">폴링과 감시</text>
+      <rect class="box" x="56" y="216" width="368" height="40" rx="3"/>
+      <text class="t-mono" x="66" y="234">셸 오퍼레이터 — 5초마다 전부 다시 본다</text>
+      <text class="t-sub" x="66" y="250">삭제 감지 01:34:52 → 복구 01:34:57</text>
+      <rect class="accent" x="56" y="262" width="368" height="40" rx="3"/>
+      <text class="t-mono" x="66" y="280">Owns() 감시 — 자식이 바뀌면 즉시 깨어난다</text>
+      <text class="t-acc" x="66" y="296">삭제 01:38:48 → 같은 초에 재생성 로그</text>
+
+      <!-- 검증 -->
+      <rect class="soft" x="456" y="180" width="384" height="128" rx="4"/>
+      <text class="t-h" x="472" y="204">검증은 세 층에 걸 수 있다</text>
+      <rect class="box" x="472" y="216" width="352" height="28" rx="3"/>
+      <text class="t-mono" x="482" y="235">스키마 (pattern · enum · minimum)</text>
+      <rect class="accent" x="472" y="248" width="352" height="28" rx="3"/>
+      <text class="t-mono" x="482" y="267">CEL (XValidation) — 메시지를 우리가 쓴다</text>
+      <rect class="box" x="472" y="280" width="352" height="22" rx="3"/>
+      <text class="t-mono" x="482" y="296">어드미션 정책 (M26) — 리소스 종류를 넘나든다</text>
+
+      <!-- 마커 -->
+      <rect class="soft" x="56" y="328" width="784" height="94" rx="4"/>
+      <text class="t-h" x="70" y="352">Go 주석이 CRD 가 된다</text>
+      <text class="t-mono" x="70" y="374">// +kubebuilder:validation:XValidation:rule="!self.endsWith(':latest')"</text>
+      <path class="line" d="M 70 384 L 90 396" marker-end="url(#ar1)"/>
+      <text class="t-mono" x="100" y="400">x-kubernetes-validations: [{rule: "!self.endsWith(':latest')", message: ...}]</text>
+      <text class="t-sub" x="70" y="416">config/crd/bases 는 생성물이다 — 직접 고치면 다음 make manifests 에서 사라진다</text>
+    </svg>
+    <figcaption>그림 33.1 — 조정 함수는 세 단계이고, 이벤트가 올 때마다 처음부터 다시 계산한다. 아래는 폴링과 감시의 실측 차이, 그리고 검증을 걸 수 있는 세 층.</figcaption>
+  </figure>
+
+  <h3>조정 함수가 지켜야 할 세 가지</h3>
+  <p><strong>멱등하다.</strong> 같은 입력으로 몇 번을 불러도 결과가 같아야 한다. 컨트롤러는 같은 오브젝트에 대해 조정을 여러 번 부르고, 그 횟수는 보장되지 않는다.</p>
+  <p><strong>전체를 다시 계산한다.</strong> 조정 함수는 "무엇이 바뀌었는지"를 인자로 받지 않는다. 오브젝트 이름만 받고, <strong>현재 상태를 처음부터 읽어</strong> 원하는 상태와 비교한다. 이 설계 덕분에 이벤트를 놓쳐도 다음 조정에서 복구된다 — M08에서 본 컨트롤 루프의 성질 그대로다.</p>
+  <p><strong>빨리 끝난다.</strong> 오래 걸리는 일은 나눠서 <code>requeue</code>로 다시 부르게 한다. 조정 함수 안에서 몇 분을 기다리면 그동안 다른 오브젝트가 처리되지 않는다.</p>
+
+  <h3>소유권이 삭제를 전파한다</h3>
+  <p><code>ownerReferences</code>는 "이 오브젝트는 저 오브젝트에 딸린 것"이라는 표시다. 부모가 사라지면 <strong>가비지 컬렉터가 자식을 지운다</strong> — 컨트롤러가 삭제 로직을 쓰지 않아도 된다. 33.4에서 이것을 확인한다.</p>
+  <p>삭제 전에 무언가를 해야 한다면(외부 리소스 정리 같은) <code>finalizers</code>를 쓴다. 다만 파이널라이저를 붙인 컨트롤러가 죽으면 <strong>오브젝트가 영원히 지워지지 않는</strong> 상태가 되므로, 꼭 필요할 때만 쓴다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">33.3</span>따라하기 ① CRD를 손으로 쓴다</h2>
+  <p>생성기를 쓰기 전에 <strong>손으로 한 번</strong> 쓴다. 33.5에서 마커가 무엇으로 번역되는지 알아보려면 번역 결과를 먼저 알아야 한다.</p>
+
+  <div class="step">
+    <h4>1단계 — 정의를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>스키마·기본값·검증·표시 열·서브리소스를 한 파일에 담는다.</p>
+<pre><code># 핵심만 (전문은 course/labs/k8s/crd/00-journalsite-crd.yaml)
+spec:
+  group: study.example.com
+  names: {plural: journalsites, kind: JournalSite, shortNames: [js]}
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - {name: Replicas, type: integer, jsonPath: .spec.replicas}
+        - {name: Ready,    type: string,  jsonPath: .status.readyReplicas}
+        - {name: Phase,    type: string,  jsonPath: .status.phase}
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  pattern: '^[a-z0-9./-]+:[a-zA-Z0-9._-]+$'
+                  not: {pattern: ':latest$'}
+                replicas: {type: integer, minimum: 1, maximum: 10, default: 2}
+                logLevel: {type: string, enum: [debug, info, warn, error], default: info}</code></pre>
+    <table>
+      <thead><tr><th>필드</th><th>없으면</th></tr></thead>
+      <tbody>
+        <tr><td><code>subresources.status</code></td><td><code>spec</code>과 <code>status</code>가 한 엔드포인트라 서로 덮어쓴다</td></tr>
+        <tr><td><code>additionalPrinterColumns</code></td><td><code>kubectl get</code>에 <code>NAME</code>과 <code>AGE</code>만 나온다</td></tr>
+        <tr><td><code>default</code></td><td>쓰지 않은 필드가 없는 채로 저장된다. 컨트롤러가 <code>nil</code> 처리를 해야 한다</td></tr>
+        <tr><td><code>served</code>/<code>storage</code></td><td>여러 버전을 둘 때 어느 것을 제공하고 어느 것으로 저장할지. 정확히 하나만 <code>storage: true</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 검증이 실제로 거부하는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>스키마가 <strong>API 서버에서</strong> 걸린다는 것을 확인한다. 컨트롤러는 아직 없다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/crd/00-journalsite-crd.yaml
+kubectl create ns m33
+
+cat &lt;&lt;'EOF' | kubectl -n m33 apply -f -
+apiVersion: study.example.com/v1alpha1
+kind: JournalSite
+metadata: {name: bad-latest}
+spec: {image: "journal-api:latest"}
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The JournalSite "bad-latest" is invalid: &lt;nil&gt;: Invalid value: "": "spec.image" must not validate the schema (not)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>거부는 됐는데 <strong>메시지가 사람에게 쓸모없다.</strong> <code>not</code> 키워드는 "이 스키마를 만족하면 안 된다"만 말하고 이유를 담을 자리가 없다. 33.6에서 CEL로 바꾸면 우리가 쓴 문장이 나온다.</div>
+<pre><code># 태그 없음
+spec: {image: "journal-api"}
+# 범위 초과
+spec: {image: "journal-api:v1", replicas: 50}</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The JournalSite "bad-notag" is invalid: spec.image: Invalid value: "journal-api": spec.image in body should match '^[a-z0-9./-]+:[a-zA-Z0-9._-]+$'
+
+The JournalSite "bad-replicas" is invalid: spec.replicas: Invalid value: 50: spec.replicas in body should be less than or equal to 10</code></div>
+    <div class="verdict"><span class="lbl">판정</span>이 둘은 메시지가 쓸 만하다. <strong>필드 경로와 실제 값과 어긴 규칙</strong>이 다 들어 있다. 검증을 스키마에 두면 <strong>컨트롤러가 없어도</strong> 잘못된 오브젝트가 저장되지 않는다는 점이 중요하다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 기본값과 표시 열을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>쓰지 않은 필드가 어떻게 되는지 본다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m33 apply -f -
+apiVersion: study.example.com/v1alpha1
+kind: JournalSite
+metadata: {name: demo}
+spec: {image: "journal-api:v1", replicas: 3}
+EOF
+kubectl -n m33 get js
+kubectl -n m33 get js demo -o jsonpath='{.spec}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME   REPLICAS   IMAGE            READY   PHASE   AGE
+demo   3          journal-api:v1                   0s
+
+{"image":"journal-api:v1","logLevel":"info","replicas":3}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>logLevel</code>을 쓰지 않았는데 <code>info</code>가 들어 있다 — <strong>기본값이 저장 시점에 채워진다.</strong> <code>READY</code>와 <code>PHASE</code> 열은 비어 있다. <code>status</code>를 쓰는 것이 없기 때문이고, <strong>지금 이 오브젝트는 아무 일도 하지 않는 데이터일 뿐</strong>이다. 다음 절에서 그것을 움직이는 것을 만든다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">33.4</span>따라하기 ② 셸로 만드는 조정 루프</h2>
+  <p>Go를 쓰기 전에 <strong>셸로 한 번</strong> 만든다. 오퍼레이터의 개념과 도구를 분리해서 보기 위해서다.</p>
+
+  <div class="step">
+    <h4>1단계 — 세 단계를 그대로 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>조정이 무엇인지 30줄로 확인한다.</p>
+<pre><code># course/labs/scripts/shell-operator.sh 의 뼈대
+while true; do
+  for NAME in $(kubectl -n "$NS" get journalsites -o jsonpath='{.items[*].metadata.name}'); do
+    # ① 원하는 상태
+    SPEC=$(kubectl -n "$NS" get js "$NAME" -o json)
+    IMAGE=$(...)  WANT=$(...)  OWNER_UID=$(...)
+
+    # ② 차이를 없앤다 — apply 는 그 자체로 멱등하다
+    cat &lt;&lt;YAML | kubectl -n "$NS" apply -f - &gt;/dev/null
+    ... ownerReferences 에 JournalSite 를 박은 디플로이먼트 ...
+YAML
+
+    # ③ status 를 갱신한다 — --subresource=status 가 없으면 spec 을 덮어쓴다
+    READY=$(kubectl -n "$NS" get deploy "${NAME}-api" -o jsonpath='{.status.readyReplicas}')
+    kubectl -n "$NS" patch js "$NAME" --subresource=status --type=merge -p ...
+  done
+  sleep "$INTERVAL"
+done</code></pre>
+    <p>진짜 컨트롤러와 다른 점은 <strong>성능과 정확성이지 개념이 아니다.</strong> watch 대신 폴링, 캐시 없음, 동시성 제어 없음, 재시도 백오프 없음 — 이 넷이 프레임워크가 해 주는 일이다.</p>
+    <div class="note-2026">
+      <p><code>--subresource=status</code>를 빼면 <strong>패치가 <code>spec</code>에 적용된다.</strong> 그러면 스키마 검증에 걸려 거부되거나(운이 좋은 경우), <code>spec</code>에 없는 필드가 조용히 무시된다. 서브리소스를 선언했으면 쓸 때도 명시해야 한다.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 돌려 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>데이터였던 오브젝트가 <strong>실제 리소스를 만드는 것</strong>을 확인한다.</p>
+<pre><code>bash course/labs/scripts/shell-operator.sh m33 5</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>조정 루프 시작 — 네임스페이스 m33, 간격 5초 (Ctrl+C 로 종료)
+01:33:42  demo       want=3 ready=0 phase=Progressing
+01:33:47  demo       want=3 ready=3 phase=Ready</code></div>
+<pre><code>kubectl -n m33 get js,deploy --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journalsite.study.example.com/demo   3   journal-api:v1   3   Ready   2m1s
+deployment.apps/demo-api   3/3   3   3   40s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>READY</code>와 <code>PHASE</code> 열이 채워졌다. 33.3에서 비어 있던 그 열이다 — <strong>status를 쓰는 것이 생겼기 때문</strong>이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 세 가지 상황을 만들어 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>조정 루프가 <strong>어느 방향의 차이든</strong> 없애는지 확인한다.</p>
+<pre><code>kubectl -n m33 patch js demo --type=merge -p '{"spec":{"replicas":1}}'   # 원하는 상태가 바뀜
+kubectl -n m33 delete deploy demo-api                                    # 실제 상태가 사라짐
+kubectl -n m33 delete js demo                                            # 부모가 사라짐</code></pre>
+    <span class="out-lbl">출력 (루프 로그)</span>
+    <div class="out"><code>01:34:36  demo       want=3 ready=3 phase=Ready
+01:34:41  demo       want=1 ready=1 phase=Ready      &lt;- spec 변경 반영
+01:34:52  demo       want=1 ready=0 phase=Progressing &lt;- 디플로이먼트 삭제 감지
+01:34:57  demo       want=1 ready=1 phase=Ready      &lt;- 재생성</code></div>
+<pre><code>kubectl -n m33 get deploy,po --no-headers</code></pre>
+    <span class="out-lbl">출력 (JournalSite 삭제 후)</span>
+    <div class="out"><code>No resources found in m33 namespace.</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 번째가 특히 중요하다. <strong>스크립트에는 삭제 로직이 한 줄도 없다.</strong> <code>ownerReferences</code>를 박아 뒀기 때문에 가비지 컬렉터가 알아서 치웠다. 삭제 전파를 직접 구현하려 들면 <strong>경합과 누락이 반드시 생긴다</strong> — 쿠버네티스가 제공하는 이 장치를 쓴다.</div>
+    <p>다만 삭제 감지가 <strong>5초 뒤 다음 주기</strong>였다는 점을 기억해 둔다. 33.6에서 이 숫자가 바뀐다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">33.5</span>따라하기 ③ kubebuilder로 뼈대를</h2>
+
+  <div class="step">
+    <h4>1단계 — 프로젝트와 API를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>손으로 쓸 것과 생성될 것을 나눈다.</p>
+<pre><code>mkdir -p /tmp/operator &amp;&amp; cd /tmp/operator
+kubebuilder init --domain example.com --repo example.com/journalsite-operator
+kubebuilder create api --group study --version v1alpha1 --kind JournalSite --resource --controller
+ls api/v1alpha1/ internal/controller/</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>api/v1alpha1/:
+groupversion_info.go
+journalsite_types.go
+zz_generated.deepcopy.go
+
+internal/controller/:
+journalsite_controller.go
+journalsite_controller_test.go
+suite_test.go</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>--domain example.com</code> + <code>--group study</code>가 합쳐져 <strong><code>study.example.com</code></strong> 그룹이 된다. 33.3에서 손으로 쓴 것과 같은 그룹이어야 같은 CRD를 다루므로, 이 조합을 맞추는 것이 중요하다.</div>
+    <p>고칠 파일은 둘이다. <code>journalsite_types.go</code>(타입과 검증)와 <code>journalsite_controller.go</code>(조정 함수). <strong><code>zz_generated.deepcopy.go</code>와 <code>config/crd/bases/</code>는 생성물</strong>이라 직접 고치지 않는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 타입과 검증을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>33.3의 YAML을 <strong>Go 주석</strong>으로 다시 쓴다.</p>
+<pre><code>type JournalSiteSpec struct {
+	// +kubebuilder:validation:Pattern=`^[a-z0-9./-]+:[a-zA-Z0-9._-]+$`
+	Image string `json:"image"`
+
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=10
+	// +kubebuilder:default=2
+	Replicas int32 `json:"replicas,omitempty"`
+
+	// +kubebuilder:validation:Enum=debug;info;warn;error
+	// +kubebuilder:default=info
+	LogLevel string `json:"logLevel,omitempty"`
+}
+
+type JournalSiteStatus struct {
+	ReadyReplicas int32  `json:"readyReplicas"`
+	Phase         string `json:"phase,omitempty"`
+	// 어느 세대의 spec 을 반영한 status 인지
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}</code></pre>
+<pre><code>// 오브젝트 타입 위의 마커
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=js
+// +kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`</code></pre>
+    <p><code>ObservedGeneration</code>이 왜 필요한지 짚어 둔다. <code>metadata.generation</code>은 <strong><code>spec</code>이 바뀔 때만</strong> 올라간다. 컨트롤러가 조정을 마치고 그 값을 <code>status</code>에 적으면, <strong>둘을 비교해 "status가 최신 spec을 반영했는가"</strong>를 알 수 있다. 이것이 없으면 낡은 <code>status</code>를 보고 "준비됐다"고 판단하는 사고가 난다.</p>
+    <p><code>Conditions</code>의 <code>+listType=map</code>도 형식적인 것이 아니다. 이 마커가 있어야 서버 사이드 어플라이가 <strong>조건을 <code>type</code>별로 병합</strong>한다. 없으면 두 컨트롤러가 서로의 조건을 통째로 덮어쓴다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 생성하고 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>마커가 무엇으로 번역되는지 결과물로 확인한다.</p>
+<pre><code>make manifests generate
+kubectl delete crd journalsites.study.example.com   # 손으로 쓴 것을 치운다
+make install
+kubectl get crd journalsites.study.example.com \
+  -o jsonpath='{.spec.versions[0].additionalPrinterColumns[*].name}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>customresourcedefinition.apiextensions.k8s.io/journalsites.study.example.com created
+Replicas Image Ready Phase Age</code></div>
+    <div class="verdict"><span class="lbl">판정</span>주석에 쓴 열 이름이 CRD로 나왔다. <code>config/crd/bases/study.example.com_journalsites.yaml</code>을 열어 보면 33.3에서 손으로 쓴 것과 <strong>거의 같은 YAML</strong>이다 — 다른 점은 생성기가 훨씬 꼼꼼하다는 것뿐이다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">33.6</span>따라하기 ④ 조정 함수를 쓴다</h2>
+
+  <div class="step">
+    <h4>1단계 — 33.4의 세 단계를 Go로 옮긴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 논리를 프레임워크 위에서 쓴다. 구조가 셸과 같다는 것을 확인한다.</p>
+<pre><code>func (r *JournalSiteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// ① 원하는 상태
+	var site studyv1alpha1.JournalSite
+	if err := r.Get(ctx, req.NamespacedName, &amp;site); err != nil {
+		// 이미 지워졌으면 할 일이 없다. 딸린 것은 가비지 컬렉터가 치운다.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// ② 차이를 없앤다
+	want := r.desiredDeployment(&amp;site)
+	if err := ctrl.SetControllerReference(&amp;site, want, r.Scheme); err != nil {
+		return ctrl.Result{}, err
+	}
+	...
+
+	// ③ status 를 갱신한다
+	site.Status.ObservedGeneration = site.Generation
+	if err := r.Status().Update(ctx, &amp;site); err != nil { ... }
+	return ctrl.Result{}, nil
+}</code></pre>
+    <p><code>SetControllerReference</code>가 셸에서 손으로 쓴 <code>ownerReferences</code> 블록을 대신한다. <code>client.IgnoreNotFound</code>는 <strong>"이미 지워짐"을 오류가 아니라 정상 종료로</strong> 다루는 관용구다 — 이것을 빼면 삭제할 때마다 오류 로그가 쌓인다.</p>
+    <p>기존 디플로이먼트를 고칠 때 <strong>전체를 덮지 않고 우리가 관리하는 필드만</strong> 맞추는 것에 주의한다. 통째로 덮으면 HPA가 정한 <code>replicas</code>를 지우고, M17에서 본 "필드의 주인이 둘인" 상황이 된다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 감시 대상을 선언한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>셸의 폴링을 대신하는 부분이다. <strong>이 한 줄이 33.4와의 가장 큰 차이</strong>다.</p>
+<pre><code>func (r *JournalSiteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&amp;studyv1alpha1.JournalSite{}).
+		// 우리가 만든 디플로이먼트가 바뀌어도 조정이 돈다
+		Owns(&amp;appsv1.Deployment{}).
+		Named("journalsite").
+		Complete(r)
+}</code></pre>
+    <p><code>For</code>는 "이 종류를 지켜본다", <code>Owns</code>는 "이 종류가 바뀌면 <strong>소유자</strong>의 조정을 부른다"이다. <code>Owns</code>가 없으면 누가 디플로이먼트를 지워도 컨트롤러가 모르고, 다음 <code>JournalSite</code> 변경 때까지 방치된다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>make run</code>은 컨트롤러를 <strong>로컬 프로세스로</strong> 돌린다. 개발 중에는 클러스터에 배포하지 않는다.</p>
+<pre><code>make run &amp;
+cat &lt;&lt;'EOF' | kubectl -n m33 apply -f -
+apiVersion: study.example.com/v1alpha1
+kind: JournalSite
+metadata: {name: site-a}
+spec:
+  image: journal-api:v1
+  replicas: 2
+  logLevel: debug
+EOF
+kubectl -n m33 get js,deploy --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journalsite.study.example.com/site-a   2   journal-api:v1   2   Ready   25s
+deployment.apps/site-a-api   2/2   2   2   25s</code></div>
+    <span class="out-lbl">컨트롤러 로그</span>
+    <div class="out"><code>INFO 디플로이먼트를 만든다 {"controller": "journalsite", "JournalSite": {"name":"site-a","namespace":"m33"}, "name": "site-a-api"}</code></div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 폴링과 감시를 재 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>33.4의 5초와 비교한다. <strong>같은 실험, 다른 구현.</strong></p>
+<pre><code>date +%H:%M:%S
+kubectl -n m33 delete deploy site-a-api
+sleep 6
+kubectl -n m33 get deploy --no-headers
+grep "디플로이먼트를 만든다" /tmp/operator.log | tail -1</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>01:38:48
+site-a-api   3/3   3   3   6s
+2026-09-06T01:38:48+09:00	INFO	디플로이먼트를 만든다 ...</code></div>
+    <div class="verdict"><span class="lbl">판정</span>삭제한 시각과 재생성 로그의 시각이 <strong>같은 초</strong>다. 셸 오퍼레이터는 <code>01:34:52</code>에 감지해 <code>01:34:57</code>에 복구했다 — 최대 5초를 기다린다. 폴링 간격을 줄이면 되지 않느냐고 생각하기 쉬운데, 그러면 <strong>오브젝트 수 × 초당 요청</strong>만큼 API 서버 부하가 늘어난다. 감시는 <strong>변화가 있을 때만</strong> 깨어나므로 그 비용이 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — status를 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨트롤러가 남긴 정보로 <strong>사람이 판단할 수 있는지</strong> 확인한다.</p>
+<pre><code>kubectl -n m33 patch js site-a --type=merge -p '{"spec":{"replicas":3}}'
+kubectl -n m33 get js site-a -o jsonpath='{.status}' | python3 -m json.tool</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{
+    "conditions": [
+        {
+            "lastTransitionTime": "2026-09-05T16:38:50Z",
+            "message": "3/3 준비됨",
+            "reason": "AllReplicasReady",
+            "status": "True",
+            "type": "Available"
+        }
+    ],
+    "observedGeneration": 2,
+    "phase": "Ready",
+    "readyReplicas": 3
+}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>observedGeneration: 2</code>가 핵심이다 — <code>spec</code>을 두 번 고쳤고 <code>status</code>가 <strong>그 두 번째를 반영했다</strong>는 뜻이다. 이 값이 <code>metadata.generation</code>보다 작으면 아직 조정이 끝나지 않은 것이고, <strong>그때의 <code>phase: Ready</code>는 옛 정보</strong>다. 자동화가 이 오브젝트를 보고 판단한다면 두 값을 함께 봐야 한다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">33.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 셸 변수 이름이 시스템 것과 겹친다</h4>
+    <p class="purpose"><span class="lbl">목적</span>33.4를 처음 돌렸을 때 실제로 난 오류다. 원인이 스크립트 논리와 무관하다.</p>
+<pre><code>bash course/labs/scripts/shell-operator.sh m33 5</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>조정 루프 시작 — 네임스페이스 m33, 간격 5초 (Ctrl+C 로 종료)
+scripts/shell-operator.sh: line 27: UID: readonly variable</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>UID</code>는 셸이 미리 정해 둔 <strong>읽기 전용 변수</strong>(현재 사용자의 uid)다. 오브젝트의 <code>metadata.uid</code>를 담으려고 같은 이름을 썼다가 대입이 거부됐다. 루프는 계속 돌았지만 <code>ownerReferences</code>의 <code>uid</code>가 비어 디플로이먼트가 만들어지지 않았다 — <strong>오류 한 줄이 지나가고 아무것도 되지 않는</strong> 형태라 원인을 찾기까지 시간이 걸린다.</div>
+    <p><code>OWNER_UID</code>로 바꿔 해결했다. 셸에서 예약된 이름은 <code>UID</code>·<code>PATH</code>·<code>HOME</code>·<code>PWD</code>·<code>IFS</code> 등이고, <strong>스크립트 변수는 접두사를 붙이는 습관</strong>이 이 부류의 사고를 막는다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — <code>not: pattern</code>의 거부 메시지를 사람이 못 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>검증을 어디에 어떻게 쓸지 고르는 기준을 만든다.</p>
+    <p>33.3에서 본 메시지를 다시 본다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>The JournalSite "bad-latest" is invalid: &lt;nil&gt;: Invalid value: "": "spec.image" must not validate the schema (not)</code></div>
+    <p>필드 이름은 있지만 <strong>어떤 값이 왜 안 되는지가 없다.</strong> CEL로 바꾼다 — M26에서 어드미션 정책에 쓴 그 언어다.</p>
+<pre><code>// +kubebuilder:validation:XValidation:rule="!self.endsWith(':latest')",message="latest 태그는 쓸 수 없다"
+Image string `json:"image"`</code></pre>
+    <span class="out-lbl">생성된 CRD</span>
+    <div class="out"><code>x-kubernetes-validations:
+- message: latest 태그는 쓸 수 없다
+  rule: '!self.endsWith('':latest'')'</code></div>
+    <span class="out-lbl">거부 메시지</span>
+    <div class="out"><code>The JournalSite "bad-latest" is invalid: spec.image: Invalid value: "journal-api:latest": latest 태그는 쓸 수 없다</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 규칙, 같은 거부, <strong>완전히 다른 사용자 경험</strong>이다. 값과 우리가 쓴 문장이 함께 나온다. 검증 규칙을 만들 때는 <strong>거부당한 사람이 무엇을 고쳐야 하는지 알 수 있는가</strong>를 기준으로 방식을 고른다.</div>
+    <p>세 층 중 어디에 걸 것인지도 정리해 둔다. <strong>스키마</strong>는 형식(타입·범위·열거)에, <strong>CEL</strong>은 한 오브젝트 안에서 판단되는 규칙에, <strong>어드미션 정책</strong>(M26)은 <strong>여러 종류의 리소스에 걸쳐</strong> 적용할 규칙에 쓴다. <code>latest</code> 금지는 우리 CRD만이 아니라 모든 디플로이먼트에도 필요하므로, 실제로는 <strong>둘 다</strong> 있는 것이 맞다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">33.8</span>운영 관점 — 만들 것인가 쓸 것인가</h2>
+
+  <h3>CRD를 만들지 말아야 할 때</h3>
+  <p>새 리소스 종류를 만드는 것은 <strong>API를 하나 더 운영하는 일</strong>이다. 버전을 올려야 하고, 스키마를 바꿀 때 기존 오브젝트를 변환해야 하고, 컨트롤러가 죽으면 그 종류의 오브젝트가 전부 멈춘다.</p>
+  <p>그래서 먼저 물어볼 것이 있다. <strong>헬름 차트로 충분한가.</strong> 배포를 묶는 것이 목적이라면 차트가 더 싸다. <strong>기존 리소스의 조합으로 표현되는가.</strong> 잡·크론잡·컨피그맵으로 되는 일에 CRD를 만들 이유가 없다.</p>
+  <p>CRD가 값을 내는 경우는 대체로 셋이다. <strong>지속적인 조정이 필요할 때</strong>(누가 바꿔도 되돌아와야 한다), <strong>상태를 관측 가능한 형태로 노출해야 할 때</strong>(다른 시스템이 <code>status</code>를 읽는다), <strong>도메인 개념이 실제로 새로울 때</strong>(우리 조직에만 있는 "고객사 환경" 같은 것).</p>
+
+  <h3>버전을 올릴 때가 진짜 시험이다</h3>
+  <p><code>v1alpha1</code>으로 시작한 것이 언젠가 <code>v1beta1</code>이 되고 <code>v1</code>이 된다. 그때 <strong>이미 저장된 오브젝트들</strong>을 어떻게 할 것인가가 오퍼레이터 운영의 가장 어려운 부분이다.</p>
+  <p>필드를 <strong>추가</strong>하는 것은 대체로 안전하다. <strong>이름을 바꾸거나 제거</strong>하는 것은 안전하지 않고, 두 버전을 동시에 제공하면서 <strong>변환 웹훅</strong>을 두거나, 새 필드를 추가하고 옛 필드를 한동안 함께 유지하는 방식을 쓴다. <code>alpha</code> 버전에는 <strong>호환성 약속이 없다</strong>는 관례가 이 어려움 때문에 있다 — 그러니 알파일 때 스키마를 충분히 흔들어 보는 편이 낫다.</p>
+
+  <h3>컨트롤러를 어디서 돌릴 것인가</h3>
+  <p>이 모듈은 <code>make run</code>으로 <strong>로컬 프로세스</strong>에서 돌렸다. 개발 중에는 이 방식이 압도적으로 빠르다 — 코드를 고치고 다시 돌리면 끝이고, 이미지 빌드도 배포도 없다.</p>
+  <p>실제 운영에서는 클러스터 안의 디플로이먼트로 돌린다(<code>make deploy</code>). 그때 새로 생기는 것이 <strong>RBAC</strong>이다. 컨트롤러가 쓰는 권한이 <code>+kubebuilder:rbac</code> 마커에서 생성되는데, <strong>마커를 빠뜨리면 배포한 뒤에야 <code>Forbidden</code>으로 알게 된다</strong> — 로컬에서는 개발자의 관리자 권한으로 돌아서 아무 문제가 없기 때문이다. M23에서 본 인가 오류가 여기서 다시 나온다.</p>
+  <p>고가용성도 생각할 거리다. 컨트롤러를 여러 개 띄우면 <strong>같은 오브젝트를 동시에 조정</strong>할 수 있어서, 프레임워크의 리더 선출을 켜고 <strong>한 번에 하나만 일하게</strong> 한다. kubebuilder 뼈대에 그 옵션이 이미 들어 있다.</p>
+
+  <h3>이 교재가 만든 것과 쓴 것</h3>
+  <p>M30의 Argo Rollouts와 M31의 Argo CD는 <strong>남이 만든 오퍼레이터</strong>다. 둘 다 이 모듈에서 만든 구조와 정확히 같다 — CRD로 종류를 정의하고, 컨트롤러가 조정하고, <code>status</code>로 결과를 알린다. <strong>M30에서 <code>Rollout</code>의 <code>status</code>를 읽어 판정한 것</strong>이 이 모듈의 <code>observedGeneration</code>·<code>conditions</code>와 같은 구조다.</p>
+  <p>다음 모듈에서 클러스터를 넘나드는 서비스를 다룰 때도 같은 패턴이 나온다 — 표준이 없는 자리를 <strong>컨트롤러가 채운다.</strong></p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">33.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl api-resources --api-group=study.example.com --no-headers | wc -l</code> → <code>1</code></li>
+      <li><code>kubectl get crd journalsites.study.example.com -o jsonpath='{.spec.names.shortNames[0]}'</code> → <code>js</code></li>
+      <li><code>kubectl get crd journalsites.study.example.com -o jsonpath='{.spec.versions[0].subresources.status}'</code> → <code>{}</code></li>
+      <li><code>kubectl get crd journalsites.study.example.com -o jsonpath='{.spec.versions[0].additionalPrinterColumns[*].name}'</code> → <code>Replicas Image Ready Phase Age</code></li>
+      <li><code>kubectl -n m33 create -f - &lt;&lt;&lt; '{"apiVersion":"study.example.com/v1alpha1","kind":"JournalSite","metadata":{"name":"t"},"spec":{"image":"journal-api:latest"}}'</code> → 거부되고 메시지에 <code>latest</code>가 보인다</li>
+      <li><code>kubectl -n m33 get js site-a -o jsonpath='{.spec.logLevel}'</code> → 값이 있다 (기본값 또는 지정값)</li>
+      <li><code>kubectl -n m33 get js site-a -o jsonpath='{.status.phase}'</code> → <code>Ready</code></li>
+      <li><code>kubectl -n m33 get js site-a -o jsonpath='{.status.observedGeneration}'</code> → <code>.metadata.generation</code>과 같은 값</li>
+      <li><code>kubectl -n m33 get deploy site-a-api -o jsonpath='{.metadata.ownerReferences[0].kind}'</code> → <code>JournalSite</code></li>
+      <li><code>kubectl -n m33 delete deploy site-a-api; sleep 8; kubectl -n m33 get deploy --no-headers | wc -l</code> → <code>1</code> (되살아난다)</li>
+      <li><code>kubectl -n m33 delete js site-a; sleep 10; kubectl -n m33 get deploy --no-headers | wc -l</code> → <code>0</code></li>
+      <li><code>grep -c 'Owns(&amp;appsv1.Deployment{})' course/labs/operator/journalsite/internal/controller/journalsite_controller.go</code> → <code>1</code></li>
+      <li><code>grep -c 'XValidation' course/labs/operator/journalsite/api/v1alpha1/journalsite_types.go</code> → <code>1</code></li>
+      <li>(이해 확인) <code>status</code>를 서브리소스로 나누지 않으면 어떤 사고가 나는지 두 방향으로 적는다</li>
+      <li>(이해 확인) 폴링 간격을 1초로 줄여 감시를 흉내 내면 안 되는 이유를 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/crd/00-journalsite-crd.yaml</code> — 손으로 쓴 CRD (생성물과 비교용)</li>
+      <li><code>course/labs/scripts/shell-operator.sh</code> — 셸로 만든 조정 루프</li>
+      <li><code>course/labs/operator/journalsite/api/v1alpha1/journalsite_types.go</code> — 타입과 마커</li>
+      <li><code>course/labs/operator/journalsite/internal/controller/journalsite_controller.go</code> — 조정 함수</li>
+      <li><code>course/labs/operator/journalsite/config/crd/bases/</code> — 마커에서 생성된 CRD</li>
+      <li><code>course/labs/operator/journalsite/README.md</code> — 프로젝트를 다시 만드는 절차</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 컨트롤러 프로세스를 끈다 (make run 을 백그라운드로 돌렸다면)
+pkill -f 'go run ./cmd/main.go' 2&gt;/dev/null
+
+# 실습 네임스페이스와 CRD 를 지운다
+# CRD 를 지우면 그 종류의 오브젝트가 전부 함께 사라진다
+kubectl delete ns m33 --ignore-not-found
+kubectl delete crd journalsites.study.example.com --ignore-not-found
+
+kubectl api-resources --api-group=study.example.com</code></pre>
+  <p>CRD 삭제가 <strong>그 종류의 모든 오브젝트를 지운다</strong>는 점을 확인하고 넘어간다. 운영에서 CRD를 지우는 것은 <strong>네임스페이스를 지우는 것보다 위험하다</strong> — 여러 네임스페이스에 걸쳐 있고, 되돌릴 방법이 백업뿐이다.</p>
+  <p>오퍼레이터 소스는 남긴다. M35에서 확장 지점을 정리할 때 이 코드를 근거로 이야기하고, M38 캡스톤의 선택 과제에 들어간다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m32-k8s-global-rollout.html">← M32 글로벌 롤아웃과 사고 대응</a>
+  <a href="m34-k8s-multicluster-external.html">M34 멀티클러스터와 외부 서비스 연동 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>M32에서 클러스터를 둘로 늘렸을 때 배포는 나눴지만 <strong>서비스는 나누지 않았다.</strong> 각 리전의 앱은 자기 클러스터 안에서만 통신했고, 클러스터 밖의 데이터베이스나 다른 클러스터의 서비스를 부르는 방법은 다루지 않았다.</p>
+  <p>M34에서 그 경로를 만든다. <strong>셀렉터 없는 서비스</strong>와 엔드포인트를 손으로 써서 클러스터 밖 주소를 서비스처럼 쓰고, <code>ExternalName</code>이 무엇을 하고 무엇을 못 하는지 확인한다. 그리고 클러스터 사이에 서비스를 공유할 때 표준이 어디까지 왔는지 정리한다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>커스텀 리소스: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/</li>
+    <li>CRD 정의: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/</li>
+    <li>CRD 검증 규칙(CEL): https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules</li>
+    <li>오퍼레이터 패턴: https://kubernetes.io/docs/concepts/extend-kubernetes/operator/</li>
+    <li>가비지 컬렉션과 소유자 참조: https://kubernetes.io/docs/concepts/architecture/garbage-collection/</li>
+    <li>kubebuilder 책: https://book.kubebuilder.io/</li>
+    <li>controller-runtime: https://pkg.go.dev/sigs.k8s.io/controller-runtime</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 21.1~21.7 API 확장과 오퍼레이터</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · kubebuilder v4.15.0 · Go 1.27.1</p>
+</footer>
+
+</div>
+</body>
+</html>

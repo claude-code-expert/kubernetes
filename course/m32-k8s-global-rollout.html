@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 6 · 배포 자동화] M32 글로벌 롤아웃과 사고 대응 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 32 / 38 · PART 6 배포 자동화</div>
+  <h1>글로벌 롤아웃과 사고 대응</h1>
+  <p class="ch-desc">M31까지 클러스터는 하나였다. 실제 서비스는 지역마다 클러스터가 따로 있고, 같은 변경을 여러 클러스터에 순서대로 내보내면서 <strong>중간에 멈출 수 있어야</strong> 한다. 이 모듈에서 kind 클러스터를 하나 더 만들어 리전 둘을 흉내 내고, <strong>카나리 리전 → 판정 → 확산</strong>의 순서를 만든다. 그리고 그 판정이 나쁜 배포를 실제로 막는 것과, <strong>매니페스트가 같아도 클러스터가 다르면 다르게 동작하는 것</strong>을 확인한다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">125분</span><span class="tag">kind 클러스터 2개</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · Argo CD v3.5.2) · 메모리 8GiB 이상 권장
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m31-k8s-gitops.html">M31</a> 완료 — <code>argocd</code> 네임스페이스의 컨트롤러가 살아 있다</li>
+    <li>도커에 <strong>1.5GiB 이상 여유</strong>가 있다. 확인: <code>docker stats --no-stream</code>의 합계와 <code>docker info --format '{{.MemTotal}}'</code></li>
+    <li><a href="m28-k8s-helm-kustomize.html">M28</a>의 오버레이 문법을 안다. 리전 차이를 오버레이로 표현한다</li>
+    <li>새로 만들 파일: <code>course/labs/infra/kind-edge.yaml</code> · <code>k8s/multi/</code> 전체 · <code>scripts/region-check.sh</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 클러스터 둘을 <strong>라벨이 붙은 리전</strong>으로 등록하고, ApplicationSet 하나가 리전 수만큼 배포를 만들게 한다.</p>
+  <p>2. 카나리 리전에만 먼저 커밋하고 <strong>종료 코드로 판정하는 검사 스크립트</strong>를 통과해야 확산한다 — 존재하지 않는 태그를 배포해 그 관문이 실제로 막는 것을 본다.</p>
+  <p>3. 롤백을 <code>git revert</code>로 하고, <strong>리전마다 전제 구성요소가 다를 때</strong> 생기는 문제를 진단해 고친다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">32.1</span>클러스터가 둘이 되는 순간 달라지는 것</a>
+  <a href="#s2"><span class="num">32.2</span>이론 — 리전 타입과 롤아웃 순서</a>
+  <a href="#s3"><span class="num">32.3</span>따라하기 ① 두 번째 리전을 만든다</a>
+  <a href="#s4"><span class="num">32.4</span>따라하기 ② 리전 수만큼 배포한다</a>
+  <a href="#s5"><span class="num">32.5</span>따라하기 ③ 카나리 리전 먼저</a>
+  <a href="#s6"><span class="num">32.6</span>따라하기 ④ 검사와 롤백</a>
+  <a href="#s7"><span class="num">32.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">32.8</span>운영 관점 — 러너북과 리전 편차</a>
+  <a href="#s9"><span class="num">32.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">32.1</span>클러스터가 둘이 되는 순간 달라지는 것</h2>
+  <p class="lead">M31에서 만든 구조는 클러스터 하나를 가정한다. 저장소가 바뀌면 컨트롤러가 당겨가고, 그것으로 배포가 끝난다. <strong>클러스터가 둘이 되면 질문이 하나 늘어난다 — 어느 쪽부터 갈 것인가.</strong></p>
+  <p>둘을 동시에 배포하면 클러스터가 하나일 때와 위험이 같다. 나쁜 버전이 두 곳 모두에서 동시에 터지고, 되돌릴 곳도 두 곳이 된다. <strong>여러 클러스터를 가지는 값어치는 그것들을 순서대로 다룰 때 나온다</strong> — 한 곳에서 확인하고 다음으로 가면, 나쁜 버전이 영향을 주는 범위가 <strong>클러스터 하나</strong>로 묶인다.</p>
+  <p>M30의 카나리와 구조가 같다. 다른 것은 단위다. 거기서는 파드의 비율로 나눴고 여기서는 클러스터로 나눈다. 그리고 클러스터 단위이기 때문에 <strong>M30에서는 없던 문제</strong>가 생긴다 — 같은 매니페스트가 클러스터마다 다르게 동작할 수 있다. 32.7에서 그것을 실제로 만난다.</p>
+  <p>이 모듈에서 만드는 것은 세 가지다. <strong>리전을 선언으로 등록하는 방법</strong>, <strong>확산 전에 통과해야 하는 검사</strong>, 그리고 <strong>새벽에 읽을 러너북</strong>이다. 마지막 것이 실제로는 가장 자주 쓰인다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">32.2</span>이론 — 리전 타입과 롤아웃 순서</h2>
+  <p><span class="lbl">책 매핑</span>7.1 이미지 분산 · 7.2 배포 파라미터화 · 7.3 사전 롤아웃 검사 · 7.4 카나리 리전 · 7.5 리전 타입 식별과 문제 발생 시 대처</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+        <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+      <text class="t-h" x="40" y="46">한 저장소, 여러 리전 — 순서가 안전장치다</text>
+
+      <!-- 저장소 구조 -->
+      <rect class="soft" x="40" y="66" width="300" height="150" rx="4"/>
+      <text class="t-title" x="56" y="90">저장소</text>
+      <rect class="box" x="56" y="100" width="268" height="34" rx="3"/>
+      <text class="t-mono" x="66" y="122">base/            공통 정의</text>
+      <rect class="accent" x="56" y="140" width="268" height="34" rx="3"/>
+      <text class="t-mono" x="66" y="162">regions/edge/    카나리</text>
+      <rect class="box" x="56" y="180" width="268" height="28" rx="3"/>
+      <text class="t-mono" x="66" y="199">regions/primary/ 주 리전</text>
+
+      <path class="aline" d="M 340 140 L 380 140" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="360" y="132" text-anchor="middle">clusters 생성기</text>
+
+      <!-- 리전들 -->
+      <rect class="soft" x="384" y="66" width="456" height="150" rx="4"/>
+      <text class="t-title" x="400" y="90">ApplicationSet 이 리전 수만큼 만든다</text>
+      <rect class="accent" x="400" y="100" width="200" height="46" rx="3"/>
+      <text class="t-mono" x="410" y="120">journal-edge</text>
+      <text class="t-sub" x="410" y="137">노드 1 · HPA 1~2 · v2</text>
+      <rect class="box" x="616" y="100" width="208" height="46" rx="3"/>
+      <text class="t-mono" x="626" y="120">journal-primary</text>
+      <text class="t-sub" x="626" y="137">노드 3 · HPA 3~8 · v2</text>
+      <text class="t-sub" x="400" y="168">클러스터 시크릿의 라벨(region)이 경로를 정한다</text>
+      <text class="t-sub" x="400" y="188">리전을 더하려면 시크릿 하나와 디렉터리 하나만 있으면 된다</text>
+      <text class="t-acc" x="400" y="208">배포 정의는 고치지 않는다</text>
+
+      <!-- 순서 -->
+      <text class="t-h" x="56" y="250">순서</text>
+      <rect class="accent" x="56" y="262" width="150" height="52" rx="4"/>
+      <text class="t-mono" x="131" y="282" text-anchor="middle">카나리에만 커밋</text>
+      <text class="t-sub" x="131" y="299" text-anchor="middle">8초 뒤 반영</text>
+      <path class="line" d="M 206 288 L 238 288" marker-end="url(#ar1)"/>
+      <rect class="accent" x="240" y="262" width="176" height="52" rx="4"/>
+      <text class="t-mono" x="328" y="282" text-anchor="middle">region-check.sh</text>
+      <text class="t-sub" x="328" y="299" text-anchor="middle">종료 코드가 관문이다</text>
+      <path class="line" d="M 416 276 L 448 264" marker-end="url(#ar1)"/>
+      <path class="wline" d="M 416 300 L 448 314" marker-end="url(#ar3)"/>
+      <rect class="box" x="450" y="240" width="176" height="46" rx="4"/>
+      <text class="t-mono" x="460" y="260">통과 → base 커밋</text>
+      <text class="t-sub" x="460" y="277">나머지 리전으로 확산</text>
+      <rect class="warnbox" x="450" y="292" width="176" height="46" rx="4"/>
+      <text class="t-mono" x="460" y="312">실패 → git revert</text>
+      <text class="t-warn" x="460" y="329">확산하지 않는다</text>
+
+      <rect class="box" x="642" y="262" width="198" height="76" rx="4"/>
+      <text class="t-h" x="654" y="284">검사가 놓친 자리</text>
+      <text class="t-mono" x="654" y="304">준비 개수는 통과했다</text>
+      <text class="t-sub" x="654" y="322">maxUnavailable 0 이면 옛 파드가 남는다</text>
+
+      <!-- 리전 편차 -->
+      <rect class="soft" x="56" y="352" width="784" height="72" rx="4"/>
+      <text class="t-h" x="70" y="376">매니페스트가 같아도 클러스터가 다르면 다르게 동작한다</text>
+      <text class="t-mono" x="70" y="396">edge 에 metrics-server 가 없다  →  HPA cpu:&lt;unknown&gt;  →  앱 전체가 Degraded</text>
+      <text class="t-sub" x="70" y="414">개별 리소스는 전부 Healthy 였다. 리전 편차는 리소스가 아니라 클러스터 수준에서 찾는다</text>
+    </svg>
+    <figcaption>그림 32.1 — 저장소 하나가 리전 여럿을 정의하고, 순서가 안전장치다. 아래 두 줄이 이 모듈에서 실제로 걸린 문제다.</figcaption>
+  </figure>
+
+  <h3>리전은 세 종류로 나뉜다</h3>
+  <p>모든 리전을 똑같이 다루면 순서를 정할 수 없다. 실무에서 쓰는 구분은 대개 셋이다.</p>
+  <p><strong>카나리 리전</strong>은 가장 먼저 받는 곳이다. 트래픽이 적고, 문제가 생겨도 영향이 작으며, 그럼에도 <strong>실제 사용자가 있어야</strong> 한다 — 아무도 안 쓰는 리전은 카나리가 아니라 그냥 스테이징이다. <strong>주 리전</strong>은 트래픽의 대부분이 있는 곳이고 마지막에 받는다. <strong>특수 리전</strong>은 규제·데이터 주권·다른 클라우드 사업자 같은 이유로 <strong>구성이 다른</strong> 곳이고, 별도 순서와 별도 검증이 필요하다.</p>
+  <p>이 구분을 <strong>어디에 적을 것인가</strong>가 실제 설계다. 문서에 적으면 코드가 모르고, 코드에 하드코딩하면 리전을 늘릴 때마다 코드를 고친다. 이 모듈은 <strong>클러스터 등록 정보의 라벨</strong>에 적는다 — 그러면 리전을 더할 때 시크릿 하나와 디렉터리 하나만 추가하면 된다.</p>
+
+  <h3>파라미터화의 경계</h3>
+  <p>리전마다 다른 것과 같은 것을 나누는 기준이 필요하다. 실용적인 규칙은 <strong>"같아야 하는 것이 기본이고, 다른 것은 이유를 적는다"</strong>이다.</p>
+  <p>이 모듈의 두 리전에서 다른 것은 셋뿐이다. <strong>규모</strong>(노드 수가 달라서), <strong><code>REGION</code> 값</strong>(로그와 메트릭에 어느 리전인지 남기려고), <strong>토폴로지 분산</strong>(노드가 하나뿐인 리전에서는 제약이 스케줄을 막아서). 이미지 태그는 <strong>일시적으로만</strong> 달라진다 — 카나리가 앞서 있는 동안이고, 확산이 끝나면 다시 같아진다.</p>
+  <p>반대로 리전마다 달라지기 쉬운데 <strong>같게 유지해야 하는 것</strong>도 있다. 리소스 요청, 프로브 설정, 보안 컨텍스트가 그렇다. 이것들이 리전마다 다르면 <strong>한 리전에서 재현되지 않는 문제</strong>가 생기고, 카나리 리전의 판정이 의미를 잃는다.</p>
+
+  <h3>사전 검사는 종료 코드여야 한다</h3>
+  <p>"확인하고 넘어간다"를 사람의 눈으로 하면 새벽 3시에는 하지 않는다. 검사는 <strong>스크립트</strong>여야 하고, 결과는 <strong>종료 코드</strong>여야 한다 — 그래야 파이프라인에 넣을 수 있고, 사람이 실행해도 판단이 개입하지 않는다.</p>
+  <p>무엇을 검사할지가 이 스크립트의 전부다. 32.7에서 보듯 <strong>"파드가 준비된 개수"만 보면 나쁜 배포를 통과시킨다.</strong> 롤아웃이 끝났는지, 기대한 이미지가 도는지, 실제로 응답하는지를 각각 봐야 하고, 사고가 날 때마다 항목이 하나씩 늘어난다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">32.3</span>따라하기 ① 두 번째 리전을 만든다</h2>
+
+  <div class="step">
+    <h4>1단계 — 여유 메모리를 먼저 센다</h4>
+    <p class="purpose"><span class="lbl">목적</span>클러스터를 하나 더 띄우면 기존 클러스터가 죽을 수 있다. <strong>죽이고 나서 알면 늦다.</strong></p>
+<pre><code>docker stats --no-stream --format '{{.Name}} {{.MemUsage}}'
+docker info --format '{{.MemTotal}}'</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>실측 환경에서는 컨테이너 합계 <strong>5.83GiB / 7.65GiB</strong>였다. 노드 하나짜리 kind 클러스터가 대략 0.3~1GiB를 쓰므로 가능하다고 판단했고, 만든 뒤 <strong>6.13GiB</strong>가 됐다. 여유가 1GiB 미만이면 이 모듈은 <strong>기존 클러스터를 위험에 빠뜨린다</strong> — 그때는 32.4의 오버레이 구조만 렌더링으로 확인하고 넘어간다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 최소 구성으로 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>리전 흉내에 필요한 최소만 띄운다. 워커 노드는 두지 않는다.</p>
+<pre><code>cat &gt; course/labs/infra/kind-edge.yaml &lt;&lt;'EOF'
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: edge
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+EOF
+kind create cluster --config course/labs/infra/kind-edge.yaml
+kubectl config get-contexts -o name</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>kind-edge kind-study</code></div>
+    <p>이 모듈부터는 <strong>모든 명령에 <code>--context</code>를 붙인다.</strong> 컨텍스트를 바꿔 놓고 잊는 것이 멀티 클러스터 작업에서 가장 흔한 사고이고, <code>kubectl config use-context</code>로 전환하는 습관은 <strong>어느 클러스터에 명령을 쳤는지 나중에 알 수 없게</strong> 만든다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 두 클러스터가 서로 닿는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Argo CD가 edge의 API 서버에 접속할 수 있어야 한다. <strong>안 되면 뒤의 모든 것이 무의미하다.</strong></p>
+<pre><code>EDGE_IP=$(docker inspect edge-control-plane \
+  --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
+echo $EDGE_IP
+
+kubectl --context kind-study run netcheck --image=curlimages/curl:8.19.0 \
+  --restart=Never --command -- sleep 60
+kubectl --context kind-study exec netcheck -- \
+  curl -sk -o /dev/null -m 6 -w 'edge API: %{http_code}\n' https://$EDGE_IP:6443/version</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>172.20.0.5
+edge API: 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>kind가 만드는 클러스터는 <strong>같은 도커 네트워크(<code>kind</code>)</strong>를 공유하므로 노드끼리 직접 통신한다. 실제 환경이라면 이 자리가 VPC 피어링이나 공인 엔드포인트가 되고, <strong>거기서 막히는 경우가 실무에서는 대부분</strong>이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — Argo CD가 쓸 계정을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>다른 클러스터에 들어갈 자격 증명을 만든다. M23의 문법을 그대로 쓴다.</p>
+<pre><code># edge 클러스터에서
+kubectl --context kind-edge apply -f course/labs/k8s/multi/00-edge-rbac.yaml</code></pre>
+<pre><code>apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-manager-token
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: argocd-manager
+type: kubernetes.io/service-account-token</code></pre>
+    <p>토큰을 <code>kubectl create token</code>이 아니라 <strong>시크릿</strong>으로 만드는 것에 주의한다. M23에서 본 대로 <code>create token</code>은 수명이 짧아 <strong>컨트롤러가 쓰기에 맞지 않는다</strong> — 만료되면 동기화가 조용히 멈춘다. 이 방식의 토큰은 만료가 없고, 대신 <strong>유출되면 회수할 방법이 시크릿 삭제뿐</strong>이다.</p>
+    <div class="note-2026">
+      <p>실습이라 <code>cluster-admin</code>을 줬다. 실제로는 배포할 네임스페이스에 한정한 <code>Role</code>과 <code>RoleBinding</code>으로 좁힌다 — GitOps 컨트롤러가 클러스터 전체 관리자 권한을 갖는 것은 M23의 관점에서 큰 위험이고, <strong>저장소에 커밋할 수 있는 사람이 곧 클러스터 관리자</strong>가 된다는 뜻이다.</p>
+    </div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">32.4</span>따라하기 ② 리전 수만큼 배포한다</h2>
+
+  <div class="step">
+    <h4>1단계 — 클러스터를 라벨과 함께 등록한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>리전 메타데이터를 <strong>오브젝트에</strong> 적는다. 문서가 아니라.</p>
+<pre><code>apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-edge
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    region: edge
+    tier: canary
+type: Opaque
+stringData:
+  name: edge
+  server: https://172.20.0.5:6443
+  config: |
+    {"bearerToken": "...", "tlsClientConfig": {"insecure": false, "caData": "..."}}</code></pre>
+    <p>로컬 클러스터도 <strong>명시적으로 등록한다.</strong> Argo CD는 자기가 사는 클러스터를 <code>in-cluster</code>로 자동 인식하지만, <strong>그 항목에는 라벨을 붙일 수 없어서</strong> 다음 단계의 클러스터 생성기가 고르지 못한다.</p>
+<pre><code>kubectl --context kind-study -n argocd get secret \
+  -l argocd.argoproj.io/secret-type=cluster \
+  -o custom-columns=NAME:.metadata.name,REGION:.metadata.labels.region,TIER:.metadata.labels.tier</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME              REGION    TIER
+cluster-edge      edge      canary
+cluster-primary   primary   prod</code></div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 저장소를 리전 구조로 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>공통과 차이를 디렉터리로 나눈다. M28의 base·오버레이 구조 그대로다.</p>
+<pre><code>base/                    공통 정의 (매니페스트 + kustomization)
+regions/edge/            카나리 — 규모를 줄이고 REGION=edge
+regions/primary/         주 리전 — REGION=primary</code></pre>
+<pre><code># regions/edge/kustomization.yaml 의 차이 부분
+patches:
+  - target: {kind: HorizontalPodAutoscaler}
+    patch: |-
+      - {op: replace, path: /spec/minReplicas, value: 1}
+      - {op: replace, path: /spec/maxReplicas, value: 2}
+  # 노드가 하나뿐이라 분산 제약이 스케줄을 막는다
+  - target: {kind: Deployment, name: journal-api}
+    patch: |-
+      - {op: remove, path: /spec/template/spec/topologySpreadConstraints}
+configMapGenerator:
+  - name: journal-config
+    behavior: merge
+    literals: [REGION=edge]</code></pre>
+    <p>차이가 셋뿐이라는 점을 확인하고 넘어간다. <strong>차이가 늘어나면 카나리 리전의 판정이 약해진다</strong> — 거기서 통과한 것이 주 리전에서도 통과하리라는 보장이 그만큼 줄어든다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — ApplicationSet 하나로 리전 전체를 덮는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>리전을 더할 때 <strong>배포 정의를 고치지 않아도 되게</strong> 만든다.</p>
+<pre><code>apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata: {name: journal-regions, namespace: argocd}
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: 'journal-{{.metadata.labels.region}}'
+    spec:
+      source:
+        repoURL: git://gitserver.gitops.svc/repo.git
+        targetRevision: main
+        path: 'regions/{{.metadata.labels.region}}'
+      destination:
+        server: '{{.server}}'
+        namespace: 'journal'
+      syncPolicy:
+        automated: {prune: true, selfHeal: true}</code></pre>
+    <p><code>missingkey=error</code>가 중요하다. 이것이 없으면 <code>region</code> 라벨이 없는 클러스터에서 <strong>경로가 <code>regions/&lt;no value&gt;</code>가 되어</strong> 조용히 실패한다. 템플릿의 값이 비었을 때 <strong>에러로 만드는 것</strong>이 디버깅 시간을 크게 줄인다.</p>
+<pre><code>kubectl --context kind-study apply -f course/labs/k8s/multi/20-applicationset.yaml
+kubectl --context kind-study -n argocd get applications \
+  -o custom-columns=NAME:.metadata.name,SERVER:.spec.destination.server,PATH:.spec.source.path,SYNC:.status.sync.status</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME              SERVER                           PATH              SYNC
+journal-edge      https://172.20.0.5:6443          regions/edge      Synced
+journal-primary   https://kubernetes.default.svc   regions/primary   Synced</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Application</code> 둘이 <strong>자동으로 만들어졌다.</strong> 이름·경로·대상 서버가 전부 클러스터 라벨에서 나왔다. 리전을 세 번째로 추가하려면 <strong>시크릿 하나와 디렉터리 하나</strong>만 만들면 되고, 이 파일은 그대로다.</div>
+<pre><code>kubectl --context kind-edge  -n journal         get deploy,sts --no-headers
+kubectl --context kind-study -n journal-primary get deploy,sts --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/journal-api   1/1   1   1
+deployment.apps/web-static    1/1   1   1
+statefulset.apps/redis   1/1
+
+deployment.apps/journal-api   3/3   3   3
+deployment.apps/web-static    2/2   2   2
+statefulset.apps/redis   1/1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 <code>base</code>에서 나왔는데 규모가 다르다. edge는 1개, primary는 3개다. <strong>차이는 오버레이에만 있고 저장소의 공통 정의는 하나</strong>다.</div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">32.5</span>따라하기 ③ 카나리 리전 먼저</h2>
+
+  <div class="step">
+    <h4>1단계 — 카나리 리전에만 새 버전을 커밋한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>영향 범위를 <strong>클러스터 하나</strong>로 묶는다.</p>
+<pre><code>kind load docker-image journal-api:v2 --name edge   # 리전에 이미지가 있어야 한다
+
+# regions/edge/kustomization.yaml 에만 추가
+images:
+  - name: journal-api
+    newTag: v2
+
+git commit -m "카나리 리전에 v2 배포" &amp;&amp; bash course/labs/scripts/gitops-push.sh ...</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  01:18:53  edge=journal-api:v1  primary=journal-api:v1
+  01:19:01  edge=journal-api:v2  primary=journal-api:v1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>8초 만에 edge만 바뀌었고 primary는 그대로다. <strong>같은 저장소, 같은 커밋인데 한 리전만 움직였다</strong> — 디렉터리를 나눈 것이 이 효과를 만든다.</div>
+    <p><code>kind load</code>를 먼저 한 것에 주의한다. 실제 환경에서는 <strong>레지스트리 복제</strong>가 이 자리에 온다. 리전에 이미지가 도착하지 않은 채로 매니페스트만 가면 <code>ImagePullBackOff</code>가 되고, 그것이 32.7의 재현이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 검사 스크립트를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"확인했다"를 사람의 판단이 아니라 <strong>종료 코드</strong>로 만든다.</p>
+<pre><code># course/labs/scripts/region-check.sh — 다섯 가지를 본다
+# ① 워크로드가 원하는 수만큼 준비됐는가
+# ② 재시작이 5회 이상 쌓이지 않았는가
+# ②-b 진행 중인 롤아웃이 멈춰 있지 않은가   &lt;- 32.7 이후 추가한 항목
+# ③ 기대한 이미지가 돌고 있는가
+# ④ /readyz 가 응답하는가</code></pre>
+<pre><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v2
+echo "종료코드=$?"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  워크로드 준비                 OK
+  최대 재시작 수                0
+  롤아웃 journal-api            완료
+  롤아웃 web-static             완료
+  이미지                        journal-api:v2
+  readyz                        {"status":"ready"}
+판정: 통과 — 다음 리전으로 확산해도 된다
+종료코드=0</code></div>
+    <div class="verdict"><span class="lbl">판정</span>종료 코드 <code>0</code>이 확산의 조건이다. 파이프라인에서는 이 스크립트 뒤에 확산 단계를 두면 <strong>실패 시 자동으로 멈춘다.</strong> 사람이 돌릴 때도 판단이 개입하지 않는다는 점이 같은 값어치를 낸다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 확산한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>공통 정의를 올려 나머지 리전이 따라오게 한다.</p>
+<pre><code># base/kustomization.yaml 의 newTag 를 v2 로
+git commit -m "확산: 전 리전 v2" &amp;&amp; bash course/labs/scripts/gitops-push.sh ...</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  01:19:40  primary=journal-api:v1
+  01:19:48  primary=journal-api:v2</code></div>
+    <p>이제 <code>regions/edge</code>의 <code>newTag: v2</code>는 <strong>중복</strong>이다. 확산이 끝나면 지우는 것이 좋다 — 남겨 두면 다음 배포 때 base를 올려도 edge가 따라오지 않고, <strong>왜 한 리전만 옛 버전인지</strong>를 찾느라 시간을 쓴다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">32.6</span>따라하기 ④ 검사와 롤백</h2>
+
+  <div class="step">
+    <h4>1단계 — 나쁜 배포를 카나리에 보낸다</h4>
+    <p class="purpose"><span class="lbl">목적</span>검사가 실제로 막는지 확인한다. <strong>확인하지 않은 관문은 관문이 아니다.</strong></p>
+<pre><code># regions/edge 의 태그를 존재하지 않는 v99 로 바꿔 커밋·푸시
+kubectl --context kind-edge -n journal get po --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api-798f987f5b-jnhlf   0/1   ImagePullBackOff   0   45s
+journal-api-7cb7597d96-2749k   1/1   Running            0   111s
+redis-0                        1/1   Running            0   2m47s
+web-static-88f866755-9kmt7     1/1   Running            0   2m47s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>새 파드는 못 뜨는데 <strong>옛 파드가 살아 있어 서비스는 정상이다.</strong> <code>maxUnavailable: 0</code>이 만든 상황이고, 이것 때문에 "준비된 파드 수" 검사는 통과한다 — 32.7의 실패 ①이 바로 이 지점이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 검사가 잡는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>확산이 멈추는 것을 종료 코드로 확인한다.</p>
+<pre><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v99
+echo "종료코드=$?"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  워크로드 준비                 OK
+  최대 재시작 수                0
+  롤아웃 journal-api            실패: 20초 안에 끝나지 않음
+  롤아웃 web-static             완료
+  이미지                        journal-api:v99
+  readyz                        실패: 응답 없음
+판정: 실패 — 확산하지 않는다
+종료코드=1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>첫 줄이 <code>OK</code>인데 종료 코드는 <code>1</code>이다. <strong>다섯 검사 중 둘이 잡았다</strong> — <code>rollout status</code>가 20초 안에 끝나지 않았고, 새 파드에 대한 <code>readyz</code>가 응답하지 않았다. 검사를 여러 각도로 두는 이유가 이것이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 되돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>GitOps 클러스터에서 롤백이 무엇인지 확인한다. <strong><code>kubectl</code>로 고치면 5초 뒤 되돌아온다</strong>(M31).</p>
+<pre><code>git revert --no-edit HEAD
+bash course/labs/scripts/gitops-push.sh ...</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>cd9b843 Revert "카나리 리전에 v99 (존재하지 않는 태그)"
+04d6eda 카나리 리전에 v99 (존재하지 않는 태그)
+
+  01:21:29  edge=journal-api:v99
+  01:21:37  edge=journal-api:v2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>8초. <code>git reset</code>이 아니라 <code>git revert</code>를 쓴 것이 요점이다 — <strong>무슨 일이 있었는지가 이력에 남는다.</strong> 사고 회고에서 "언제 무엇을 되돌렸나"를 저장소에서 읽을 수 있어야 하고, 되돌린 커밋을 지우면 그 기록이 사라진다.</div>
+<pre><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v2</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>판정: 통과 — 다음 리전으로 확산해도 된다</code></div>
+    <p>롤백 뒤에도 <strong>같은 검사를 다시 돌린다.</strong> 되돌렸다고 정상이라는 보장이 없다 — 되돌리는 과정에서 다른 것이 깨졌을 수 있다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">32.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — "준비된 파드 수"만 보면 나쁜 배포를 통과시킨다</h4>
+    <p class="purpose"><span class="lbl">목적</span>검사 항목을 고르는 것이 왜 어려운지 확인한다.</p>
+    <p>32.6의 상황을 다시 본다. <code>v99</code> 배포로 새 파드가 <code>ImagePullBackOff</code>인데 <strong>디플로이먼트의 <code>readyReplicas</code>는 여전히 기대값과 같다.</strong></p>
+<pre><code>kubectl --context kind-edge -n journal get deploy journal-api \
+  -o jsonpath='{.spec.replicas} / {.status.readyReplicas}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>1 / 1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>롤링 업데이트가 <code>maxUnavailable: 0</code>이라 <strong>새 파드가 준비될 때까지 옛 파드를 내리지 않는다.</strong> 그래서 "원하는 만큼 준비됨"은 계속 참이다. M15에서 이 설정을 무중단을 위해 넣었는데, 그 성질이 <strong>여기서는 검사를 무력화</strong>한다.</div>
+    <p>처음 쓴 <code>region-check.sh</code>에는 이 항목이 없었고, 그래서 <strong>실패한 배포에 "통과"를 줬다.</strong> 고친 방법은 <code>rollout status</code>를 타임아웃과 함께 보는 것이다.</p>
+<pre><code>for D in journal-api web-static; do
+  if ! kubectl --context "$CTX" -n "$NS" rollout status "deploy/$D" --timeout=20s &gt;/dev/null 2&gt;&amp;1; then
+    say "롤아웃 $D" "실패: 20초 안에 끝나지 않음"; FAIL=1
+  fi
+done</code></pre>
+    <p><strong>"원하는 개수만큼 준비됨"과 "롤아웃이 끝남"은 다른 조건이다.</strong> 사전 검사를 쓸 때 이 둘을 모두 넣는다.</p>
+    <div class="note-2026">
+      <p>검사 스크립트를 처음 만들 때 또 하나 걸렸다. 셸 안의 파이썬에서 <strong>따옴표 이스케이프를 잘못 써서 <code>SyntaxError</code>가 났는데</strong>, 스크립트는 그대로 진행해 <code>OK</code>를 출력했다. <strong>검사 도구 자체가 실패했는데 검사는 통과한 것</strong>이라 가장 위험한 형태다. 파이프에 <code>|| { echo 오류; exit 2; }</code>를 붙여 <strong>도구 실패와 검사 실패를 구분</strong>한다.</p>
+    </div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 매니페스트가 같아도 클러스터가 다르면 다르게 동작한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>멀티 클러스터에서만 생기는 문제를 직접 만난다. <strong>이 모듈에서 실제로 걸렸다.</strong></p>
+    <p>롤백을 마치고 모든 파드가 정상인데 한 리전만 상태가 나빴다.</p>
+<pre><code>kubectl --context kind-study -n argocd get applications \
+  -o custom-columns=NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>NAME              SYNC     HEALTH
+journal-edge      Synced   Degraded
+journal-primary   Synced   Healthy</code></div>
+    <p>개별 리소스를 훑어도 <code>Degraded</code>인 것이 없었다. 워크로드로 내려가서 본다.</p>
+<pre><code>kubectl --context kind-edge -n journal get hpa
+kubectl --context kind-edge -n journal describe hpa journal-api | sed -n '/Conditions/,/Events/p'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>journal-api   Deployment/journal-api   cpu: &lt;unknown&gt;/50%   1   2   1
+
+  Type           Status  Reason                   Message
+  ScalingActive  False   FailedGetResourceMetric  the HPA was unable to compute the replica count: failed to get cpu utilization: unable to get metrics for resource cpu: unable to fetch metrics from resource metrics API: the server could not find the requested resource (get pods.metrics.k8s.io)</code></div>
+<pre><code>kubectl --context kind-edge get apiservice v1beta1.metrics.k8s.io</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (NotFound): apiservices.apiregistration.k8s.io "v1beta1.metrics.k8s.io" not found</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>edge 클러스터에 metrics-server가 없다.</strong> M01에서 study 클러스터에는 설치했지만 새로 만든 클러스터에는 없었고, 같은 매니페스트의 HPA가 한 리전에서만 동작하지 않았다. 증상이 <strong>애플리케이션이 아니라 클러스터 수준</strong>에 있어서, 리소스를 아무리 들여다봐도 원인이 보이지 않는다.</div>
+<pre><code>kubectl --context kind-edge apply -f \
+  https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml
+kubectl --context kind-edge -n kube-system patch deploy metrics-server --type=json \
+  -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'</code></pre>
+    <span class="out-lbl">출력 (설치 후)</span>
+    <div class="out"><code>kubectl --context kind-edge top nodes
+edge-control-plane   158m   1%   848Mi   10%
+
+journal-api   Deployment/journal-api   cpu: 8%/50%   1   2   1
+journal-edge      Synced   Healthy
+journal-primary   Synced   Healthy</code></div>
+    <p>여기서 얻는 규칙은 하나다. <strong>리전을 추가할 때 애플리케이션보다 먼저 전제 구성요소를 맞춘다.</strong> metrics-server, 인그레스 컨트롤러, CRD, 스토리지클래스가 그 목록이고, 이것을 <strong>클러스터 부트스트랩</strong>이라고 부른다. 애플리케이션 배포와는 다른 층이며 다른 순서로 관리한다 — 32.8에 그 이야기를 적는다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">32.8</span>운영 관점 — 러너북과 리전 편차</h2>
+
+  <h3>러너북은 설명이 아니라 순서다</h3>
+  <p>이 모듈의 산출물 중 실무에서 가장 자주 쓰이는 것은 <code>k8s/multi/RUNBOOK.md</code>다. 새벽 3시에 읽는 문서이므로 <strong>설명을 쓰지 않고 순서를 쓴다.</strong> 체크박스, 복사해서 붙일 명령, 판단 기준 표가 전부다.</p>
+  <p>러너북에서 가장 중요한 항목은 마지막 절이다 — <strong>"이번에 사전 검사가 잡지 못한 것을 <code>region-check.sh</code>에 추가한다."</strong> 32.7의 실패 ①이 그 과정을 실제로 보여 준다. 검사 항목은 처음부터 완전할 수 없고, <strong>사고 하나가 항목 하나</strong>가 되면서 자란다.</p>
+
+  <h3>리전 편차를 관리하는 두 층</h3>
+  <p>32.7의 실패 ②는 층이 나뉘어 있지 않아서 생긴 문제다. 실무에서는 배포를 두 층으로 나눈다.</p>
+  <p><strong>부트스트랩 층</strong>은 클러스터가 갖춰야 할 것 — metrics-server, 인그레스, 관측 스택, CRD, 정책 — 이고, 클러스터가 만들어질 때 한 번 적용된다. <strong>애플리케이션 층</strong>이 이 모듈에서 다룬 것이다. 부트스트랩이 끝나지 않은 클러스터에 애플리케이션을 배포하면 32.7이 재현된다.</p>
+  <p>Argo CD로 두 층을 모두 관리할 수 있다 — <strong>부트스트랩용 ApplicationSet을 따로 두는 것</strong>이 흔한 구성이고, 새 클러스터를 등록하면 그것이 먼저 동기화된다. 이 교재는 부트스트랩을 <code>rebuild.sh</code>와 각 모듈의 수동 설치로 해 왔는데, <strong>클러스터가 여럿이 되는 순간 그 방식은 유지되지 않는다.</strong></p>
+
+  <h3>이미지 분산이 먼저다</h3>
+  <p>32.5에서 <code>kind load</code>를 먼저 했다. 실제 환경에서 이 자리는 <strong>레지스트리 복제</strong>이고, 여기가 글로벌 롤아웃에서 가장 자주 병목이 된다. 리전이 다섯이면 이미지가 다섯 곳에 도착해야 하고, <strong>도착 확인 없이 매니페스트만 보내면</strong> 그 리전은 <code>ImagePullBackOff</code>가 된다.</p>
+  <p>러너북 A절에 "모든 리전의 클러스터에 그 이미지가 있는가"를 넣은 이유다. 확인 방법은 환경마다 다르지만(레지스트리 API 조회, 복제 상태 확인), <strong>확인 없이 넘어가지 않는다</strong>는 원칙은 같다.</p>
+
+  <h3>되돌릴 수 없는 변경</h3>
+  <p>이 모듈의 롤백은 <code>git revert</code> 한 줄이었다. 그것이 통하는 이유는 <strong>변경이 되돌릴 수 있는 것이었기 때문</strong>이다 — 이미지 태그를 바꾼 것뿐이다.</p>
+  <p>되돌릴 수 없는 변경이 섞이면 이야기가 달라진다. 데이터베이스 스키마를 바꾸는 마이그레이션, 메시지 형식 변경, 저장된 데이터의 구조 변경이 그렇다. 옛 코드로 되돌려도 <strong>데이터는 새 형식으로 남아 있다.</strong> 이런 변경은 <strong>두 단계로 나눈다</strong> — 먼저 두 형식을 모두 읽을 수 있는 버전을 배포하고, 그 배포가 안정된 뒤에 형식을 바꾼다. 러너북 A절의 마지막 체크 항목이 이것을 묻는다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">32.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl config get-contexts -o name | wc -l</code> → <code>2</code></li>
+      <li><code>kubectl --context kind-study -n argocd get secret -l argocd.argoproj.io/secret-type=cluster --no-headers | wc -l</code> → <code>2</code></li>
+      <li><code>kubectl --context kind-study -n argocd get applications --no-headers | wc -l</code> → <code>2</code></li>
+      <li><code>kubectl --context kind-study -n argocd get applications -o jsonpath='{.items[*].status.sync.status}'</code> → <code>Synced Synced</code></li>
+      <li><code>kubectl --context kind-study -n argocd get applications -o jsonpath='{.items[*].status.health.status}'</code> → <code>Healthy Healthy</code></li>
+      <li><code>kubectl --context kind-edge -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>journal-api:v2</code></li>
+      <li><code>kubectl --context kind-study -n journal-primary get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>journal-api:v2</code></li>
+      <li><code>kubectl --context kind-edge -n journal get cm journal-config -o jsonpath='{.data.REGION}'</code> → <code>edge</code></li>
+      <li><code>kubectl --context kind-study -n journal-primary get cm journal-config -o jsonpath='{.data.REGION}'</code> → <code>primary</code></li>
+      <li><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v2; echo $?</code> → <code>0</code></li>
+      <li><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v99; echo $?</code> → <code>1</code></li>
+      <li><code>kubectl --context kind-edge get apiservice v1beta1.metrics.k8s.io -o jsonpath='{.status.conditions[0].status}'</code> → <code>True</code></li>
+      <li><code>kubectl --context kind-study -n journal get deploy --no-headers | wc -l</code> → <code>2</code> (기존 배포가 그대로다)</li>
+      <li><code>grep -c 'rollout status' course/labs/scripts/region-check.sh</code> → <code>1</code></li>
+      <li>(이해 확인) <code>readyReplicas</code>가 기대값과 같은데도 배포가 실패한 상태일 수 있는 이유를 적는다</li>
+      <li>(이해 확인) 리전을 세 번째로 추가할 때 무엇을 만들어야 하는지 목록으로 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/infra/kind-edge.yaml</code> — 두 번째 클러스터</li>
+      <li><code>course/labs/k8s/multi/00-edge-rbac.yaml</code> — edge에 만드는 서비스어카운트와 토큰</li>
+      <li><code>course/labs/k8s/multi/10-cluster-secrets.yaml</code> — 리전 등록(라벨 포함)</li>
+      <li><code>course/labs/k8s/multi/20-applicationset.yaml</code> — 리전 수만큼 Application 생성</li>
+      <li><code>course/labs/k8s/multi/RUNBOOK.md</code> — <strong>롤아웃 체크리스트와 사고 대응 러너북</strong></li>
+      <li><code>course/labs/scripts/region-check.sh</code> — 리전 건강 판정(5개 검사, 종료 코드)</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 두 번째 클러스터를 지운다 (메모리를 되돌려 받는다)
+kubectl --context kind-study -n argocd delete applicationset journal-regions
+kubectl --context kind-study -n argocd delete secret cluster-edge cluster-primary
+kind delete cluster --name edge
+
+# study 쪽 실습 네임스페이스도 정리
+kubectl --context kind-study delete ns journal-primary gitops --ignore-not-found
+
+# 원래 앱이 그대로인지 확인
+kubectl --context kind-study -n journal get deploy,sts --no-headers</code></pre>
+  <p>Part 8(M36~M38)에서 메모리를 많이 쓰므로 <strong>두 번째 클러스터는 지운다.</strong> 파일은 남아 있으니 필요할 때 <code>kind create cluster --config infra/kind-edge.yaml</code>로 다시 만들 수 있다.</p>
+  <p>Argo CD는 남긴다. <code>RUNBOOK.md</code>와 <code>region-check.sh</code>는 M38 캡스톤의 산출물 목록에 그대로 들어간다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m31-k8s-gitops.html">← M31 GitOps</a>
+  <a href="m33-k8s-crd-operator.html">M33 CRD와 오퍼레이터 구현 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>Part 6이 끝났다. 여기까지 쓴 것은 전부 <strong>쿠버네티스가 이미 아는 리소스</strong>였다 — 디플로이먼트, 서비스, 인그레스, 그리고 남이 만든 CRD(Rollout, Application). 우리 조직에만 있는 개념 — "저널 서비스 한 벌"이나 "고객사 하나의 환경" — 을 표현하려면 <strong>리소스 종류 자체를 새로 만들어야</strong> 한다.</p>
+  <p>M33에서 CRD로 새 리소스 종류를 정의하고, 그것을 지켜보며 실제 리소스를 만드는 <strong>오퍼레이터</strong>를 쓴다. M30의 Argo Rollouts와 M31의 Argo CD가 어떻게 동작하는지가 그때 안쪽에서 보인다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>ApplicationSet: https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/</li>
+    <li>클러스터 생성기: https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Cluster/</li>
+    <li>클러스터 등록: https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#clusters</li>
+    <li>kind 여러 클러스터: https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster</li>
+    <li>서비스어카운트 토큰 시크릿: https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets</li>
+    <li>metrics-server: https://github.com/kubernetes-sigs/metrics-server</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 7.1~7.5 글로벌 배포</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 (클러스터 2개) · Kubernetes 1.37.0 · Argo CD v3.5.2 · metrics-server v0.9.0</p>
+</footer>
+
+</div>
+</body>
+</html>

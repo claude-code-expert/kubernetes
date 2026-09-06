@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "관측 스택 아키텍처 — kind 클러스터",
+    "output": "arch-observability-stack.html",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "request-path", "label": "요청 경로", "focus": ["user", "gateway", "orderapi"], "note": "실습자의 주문 요청이 게이트웨이를 거쳐 주문 API에 닿는 경로." },
+      { "id": "metric-pull", "label": "메트릭 수집", "focus": ["prometheus", "orderapi", "nodeexp", "ksm", "alertmanager"], "note": "프로메테우스가 타깃을 직접 긁는 풀 모델과 알림 전달." },
+      { "id": "log-path", "label": "로그 경로", "focus": ["alloy", "loki", "grafana"], "note": "Alloy가 노드에서 걷은 로그가 Loki를 거쳐 그라파나에 표시된다." }
+    ]
+  },
+  "components": [
+    { "id": "user", "type": "external", "label": "실습자", "sublabel": "curl · 브라우저", "pos": [40, 300], "size": [120, 60] },
+    { "id": "gateway", "type": "backend", "label": "gateway", "sublabel": "Spring Cloud Gateway", "pos": [250, 300], "size": [130, 60], "tag": ":30080" },
+    { "id": "orderapi", "type": "backend", "label": "order-api", "sublabel": "Spring MVC :8080", "pos": [460, 300], "size": [130, 60], "tag": "replicas 2" },
+    { "id": "nodeexp", "type": "backend", "label": "node-exporter", "sublabel": "노드 메트릭 · 데몬셋", "pos": [460, 130], "size": [130, 60] },
+    { "id": "grafana", "type": "frontend", "label": "Grafana", "sublabel": "대시보드 :30300", "pos": [700, 130], "size": [130, 60] },
+    { "id": "prometheus", "type": "database", "label": "Prometheus", "sublabel": "시계열 저장 :30900", "pos": [700, 300], "size": [130, 60] },
+    { "id": "alertmanager", "type": "messagebus", "label": "Alertmanager", "sublabel": "알림 라우팅", "pos": [910, 300], "size": [130, 60] },
+    { "id": "ksm", "type": "backend", "label": "kube-state-metrics", "sublabel": "오브젝트 상태", "pos": [460, 470], "size": [130, 60] },
+    { "id": "alloy", "type": "backend", "label": "Alloy", "sublabel": "로그 수집 · 데몬셋", "pos": [700, 470], "size": [130, 60] },
+    { "id": "loki", "type": "database", "label": "Loki", "sublabel": "로그 저장", "pos": [910, 470], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "kind 클러스터 (obs)", "wraps": ["gateway", "orderapi", "nodeexp", "grafana", "prometheus", "alertmanager", "ksm", "alloy", "loki"] },
+    { "kind": "security-group", "label": "apps 네임스페이스", "wraps": ["gateway", "orderapi"] }
+  ],
+  "connections": [
+    { "id": "user-to-gateway", "from": "user", "to": "gateway", "label": "HTTP :30080", "variant": "emphasis" },
+    { "id": "gateway-to-orderapi", "from": "gateway", "to": "orderapi", "label": "라우팅 /api/**", "variant": "emphasis" },
+    { "id": "scrape-orderapi", "from": "prometheus", "to": "orderapi", "label": "scrape 15s", "labelDy": 14 },
+    { "id": "scrape-nodeexp", "from": "prometheus", "to": "nodeexp", "label": "scrape", "variant": "dashed" },
+    { "id": "scrape-ksm", "from": "prometheus", "to": "ksm", "label": "scrape", "variant": "dashed" },
+    { "id": "alerts-out", "from": "prometheus", "to": "alertmanager", "label": "발화한 알림", "variant": "security" },
+    { "id": "grafana-promql", "from": "grafana", "to": "prometheus", "label": "PromQL", "labelDy": 24 },
+    { "id": "grafana-logql", "from": "grafana", "to": "loki", "label": "LogQL", "variant": "dashed", "fromSide": "right", "toSide": "right", "via": [[1068, 160], [1068, 500]] },
+    { "id": "alloy-push", "from": "alloy", "to": "loki", "label": "로그 push" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "풀 모델", "items": ["프로메테우스가 타깃의 /actuator/prometheus를 직접 긁는다", "gateway도 같은 방식의 타깃이다 (선은 생략)", "타깃 발견은 ServiceMonitor 라벨 연결로 이뤄진다"] },
+    { "dot": "emerald", "title": "라벨 세 겹", "items": ["Service 라벨 → ServiceMonitor 셀렉터 → Prometheus 타깃", "한 겹이라도 어긋나면 타깃 0개, 오류는 없다", "M4의 의도적 실패 실습이 이 지점을 다룬다"] },
+    { "dot": "violet", "title": "같은 시간축", "items": ["그라파나가 메트릭(PromQL)과 로그(LogQL)를 함께 질의한다", "P95가 튄 시각의 로그를 같은 화면에서 본다", "M6의 목적지가 이 구성이다"] }
+  ]
+}

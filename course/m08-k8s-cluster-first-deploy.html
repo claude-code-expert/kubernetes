@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 2 · 쿠버네티스 코어] M08 클러스터 구조와 첫 배포 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 08 / 38 · PART 2 쿠버네티스 코어</div>
+  <h1>클러스터 구조와 첫 배포</h1>
+  <p class="ch-desc">Compose에서는 컨테이너가 죽으면 도커가 같은 자리에 다시 띄웠다. 쿠버네티스는 다르다 — 파드를 지우면 <strong>다른 파드가</strong> 생긴다. 이 한 문장의 차이가 선언형 시스템의 전부이고, 이 모듈에서 그것을 눈으로 확인한다.</p>
+  <div class="meta">
+    <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 · kind 3노드 클러스터 · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m01-setup-environment.html">M01</a>의 kind 클러스터가 떠 있다 — <code>course/labs/scripts/preflight.sh</code> 실패 0</li>
+    <li><a href="m07-docker-registry-supplychain.html">M07</a>에서 <code>journal-api:v1</code>을 노드에 적재했다 (이 모듈에서는 nginx를 쓰지만 M09부터 필요하다)</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 모든 명령은 <strong>apiserver</strong>로 가고, 상태는 etcd에 적히며, 컨트롤러가 그 상태에 현실을 맞춘다. <code>kubectl</code>은 그 흐름의 입력 도구일 뿐이다.</p>
+  <p>2. 파드를 지워도 개수는 유지된다. 되살아나는 것이 아니라 <strong>새로 만들어진다</strong> — 이름도 IP도 다르다.</p>
+  <p>3. <code>describe</code>의 <code>Events</code>가 1차 진단 도구다. 무엇이 언제 왜 일어났는지 시간순으로 적혀 있다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">8.1</span>왜 Compose로는 안 되는가</a>
+  <a href="#s2"><span class="num">8.2</span>이론 — 명령 하나가 지나가는 길</a>
+  <a href="#s3"><span class="num">8.3</span>따라하기 ① 첫 배포</a>
+  <a href="#s4"><span class="num">8.4</span>따라하기 ② 들여다보기</a>
+  <a href="#s5"><span class="num">8.5</span>따라하기 ③ 죽여보기</a>
+  <a href="#s6"><span class="num">8.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">8.7</span>운영 관점 — 명령형에서 선언형으로</a>
+  <a href="#s8"><span class="num">8.8</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">8.1</span>왜 Compose로는 안 되는가</h2>
+  <p class="lead">M06의 Compose 구성은 잘 동작했다. 3서비스가 순서대로 뜨고, 헬스체크가 붙고, <code>--scale api=3</code>으로 복제까지 됐다. 그런데 그 전부가 <strong>머신 한 대</strong> 이야기다.</p>
+  <p>그 머신이 죽으면 서비스도 죽는다. 부하가 늘어 머신을 한 대 더 붙이면, 어느 컨테이너를 어느 머신에 둘지 사람이 정해야 한다. 컨테이너가 죽었을 때 그 머신에 자리가 없으면 도커는 다른 머신으로 옮겨주지 않는다. 배포할 때는 <code>compose up</code>이 컨테이너를 지우고 새로 만드는 동안 서비스가 끊긴다.</p>
+  <p>쿠버네티스는 이 네 가지를 자동화한다 — <strong>배치</strong>(어느 노드에 둘지), <strong>자가 복구</strong>(죽으면 다시 만들기), <strong>확장</strong>(개수 조절), <strong>무중단 교체</strong>(롤아웃). 대신 배워야 할 개념이 늘어난다. 이 모듈에서 그 개념들이 어디에 있는지 지도를 먼저 그린다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">8.2</span>이론 — 명령 하나가 지나가는 길</h2>
+  <p>M01에서 컨트롤 플레인 컴포넌트 네 개를 봤다. 이제 그것들이 <strong>순서대로</strong> 무엇을 하는지 본다. <code>kubectl create deployment web --image=nginx --replicas=3</code> 한 줄이 실행될 때의 흐름이다. 책 1.3(디플로이먼트를 이용한 복제 서비스 생성)이 이 명령으로 만들어지는 오브젝트를 설명하고, 이 절은 그 명령이 클러스터 안에서 어떤 경로로 처리되는지를 본다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 330" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .b { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .acc { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .t { font-size:13px; font-weight:600; fill:#111111; }
+        .s { font-size:11px; fill:#555555; }
+        .n { font-size:11.5px; font-weight:700; fill:#2456c4; }
+        .l { stroke:#444444; stroke-width:1.2; fill:none; }
+        .d { stroke:#999999; stroke-width:1; fill:none; stroke-dasharray:4 3; }
+      </style>
+      <rect class="acc" x="20" y="130" width="120" height="58" rx="4"/>
+      <text class="t" x="80" y="154" text-anchor="middle">kubectl</text>
+      <text class="s" x="80" y="172" text-anchor="middle">사용자</text>
+
+      <rect class="b" x="185" y="120" width="140" height="78" rx="4"/>
+      <text class="t" x="255" y="146" text-anchor="middle">kube-apiserver</text>
+      <text class="s" x="255" y="164" text-anchor="middle">인증 · 인가</text>
+      <text class="s" x="255" y="181" text-anchor="middle">어드미션 · 검증</text>
+
+      <rect class="b" x="370" y="30" width="120" height="56" rx="4"/>
+      <text class="t" x="430" y="54" text-anchor="middle">etcd</text>
+      <text class="s" x="430" y="72" text-anchor="middle">의도한 상태 저장</text>
+
+      <rect class="b" x="370" y="130" width="120" height="78" rx="4"/>
+      <text class="t" x="430" y="156" text-anchor="middle">controller</text>
+      <text class="s" x="430" y="173" text-anchor="middle">Deployment →</text>
+      <text class="s" x="430" y="190" text-anchor="middle">ReplicaSet → Pod</text>
+
+      <rect class="b" x="370" y="240" width="120" height="60" rx="4"/>
+      <text class="t" x="430" y="264" text-anchor="middle">scheduler</text>
+      <text class="s" x="430" y="282" text-anchor="middle">노드 선택</text>
+
+      <rect class="b" x="560" y="130" width="130" height="78" rx="4"/>
+      <text class="t" x="625" y="156" text-anchor="middle">kubelet</text>
+      <text class="s" x="625" y="173" text-anchor="middle">해당 노드에서</text>
+      <text class="s" x="625" y="190" text-anchor="middle">컨테이너 실행</text>
+
+      <rect class="b" x="735" y="130" width="130" height="78" rx="4"/>
+      <text class="t" x="800" y="156" text-anchor="middle">containerd</text>
+      <text class="s" x="800" y="173" text-anchor="middle">이미지 풀</text>
+      <text class="s" x="800" y="190" text-anchor="middle">프로세스 시작</text>
+
+      <path class="l" d="M 140 159 L 178 159" marker-end="url(#a8)"/>
+      <text class="n" x="159" y="150" text-anchor="middle">①</text>
+      <path class="l" d="M 300 120 L 380 90" marker-end="url(#a8)"/>
+      <text class="n" x="333" y="99" text-anchor="middle">②</text>
+      <path class="d" d="M 325 150 L 365 150" marker-end="url(#a8)"/>
+      <text class="n" x="345" y="142" text-anchor="middle">③</text>
+      <path class="d" d="M 325 178 L 372 258" marker-end="url(#a8)"/>
+      <text class="n" x="341" y="216" text-anchor="middle">④</text>
+      <path class="l" d="M 490 169 L 553 169" marker-end="url(#a8)"/>
+      <text class="n" x="521" y="160" text-anchor="middle">⑤</text>
+      <path class="l" d="M 690 169 L 728 169" marker-end="url(#a8)"/>
+      <text class="n" x="709" y="160" text-anchor="middle">⑥</text>
+    </svg>
+    <figcaption>그림 8.1 — ① kubectl이 apiserver에 요청 ② apiserver가 검증 후 etcd에 기록 ③ 디플로이먼트 컨트롤러가 변화를 감지해 레플리카셋과 파드를 만든다 ④ 스케줄러가 노드가 정해지지 않은 파드에 노드를 배정 ⑤ 해당 노드의 kubelet이 자기 몫을 받아 ⑥ 컨테이너 런타임에 실행을 지시. ③④는 apiserver를 계속 지켜보다 반응하는 감시(watch) 구조다.</figcaption>
+  </figure>
+  <p>흐름의 성격이 중요하다. <code>kubectl</code>은 "파드를 만들어라"라고 <strong>지시하지 않는다</strong>. "이런 상태였으면 좋겠다"를 기록할 뿐이고, 그 뒤는 각 컨트롤러가 알아서 현실을 그 상태에 맞춘다. 이것을 <dfn class="term">조정 루프 <span class="en">(Reconciliation Loop)</span></dfn>라고 하며, 쿠버네티스의 모든 동작이 이 패턴이다. M33에서 직접 하나 만든다.</p>
+  <h3>오브젝트 세 겹</h3>
+  <p>배포 하나에 오브젝트가 세 종류 생긴다. 이름이 헷갈리기 쉬우니 역할로 구분한다.</p>
+  <table>
+    <tr><th>오브젝트</th><th>역할</th><th>사람이 직접 다루나</th></tr>
+    <tr><td><dfn class="term">디플로이먼트 <span class="en">(Deployment)</span></dfn></td><td>"이 이미지를 3개 돌려라, 버전이 바뀌면 이렇게 교체해라"</td><td><strong>그렇다.</strong> 사람이 쓰는 단위</td></tr>
+    <tr><td><dfn class="term">레플리카셋 <span class="en">(ReplicaSet)</span></dfn></td><td>특정 버전의 파드 개수를 유지</td><td>아니다. 디플로이먼트가 버전마다 하나씩 만든다</td></tr>
+    <tr><td><dfn class="term">파드 <span class="en">(Pod)</span></dfn></td><td>실제로 실행되는 컨테이너 묶음. 스케줄링 단위</td><td>아니다. 직접 만들면 자가 복구가 없다</td></tr>
+  </table>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">8.3</span>따라하기 ① 첫 배포</h2>
+
+  <div class="step">
+    <h4>1단계. 배포한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>명령 한 줄로 세 겹의 오브젝트가 생기는 것을 확인한다.</p>
+<pre><code>kubectl create deployment web --image=nginx:1.29-alpine --replicas=3</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/web created</code></div>
+    <p>만들어진 것은 디플로이먼트 하나뿐이다. 나머지는 컨트롤러가 만든다.</p>
+<pre><code>kubectl get deploy,rs,pods -l app=web</code></pre>
+    <ul class="tight">
+      <li><code>-l app=web</code> — 레이블 셀렉터. <code>create deployment</code>가 <code>app=web</code> 레이블을 자동으로 붙였다. 레이블이 모든 연결의 기반이라는 것은 M09의 주제다</li>
+      <li>쉼표로 여러 종류를 한 번에 조회할 수 있다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 (8초 시점)</span>
+    <div class="out"><code>NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/web   3/3     3            3           8s
+
+NAME                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/web-587bcb4dcb   3         3         3       8s
+
+NAME                       READY   STATUS    RESTARTS   AGE
+pod/web-587bcb4dcb-sxkmn   1/1     Running   0          8s
+pod/web-587bcb4dcb-w4sgl   1/1     Running   0          8s
+pod/web-587bcb4dcb-zpgcp   1/1     Running   0          8s</code></div>
+    <p>파드 이름 뒤의 다섯 글자(<code>sxkmn</code> 같은)는 환경마다 다르다. 이 문서의 나머지 출력은 전부 이 세 파드를 기준으로 이어진다.</p>
+    <p>이름 구조를 읽는다. 레플리카셋 이름 <code>web-587bcb4dcb</code>의 뒤쪽은 파드 템플릿의 해시다 — 이미지나 설정을 바꾸면 다른 해시의 레플리카셋이 새로 생긴다(M10 롤아웃의 원리). 파드 이름은 그 뒤에 임의 문자열이 하나 더 붙는다.</p>
+    <div class="verdict"><span class="lbl">판정</span>디플로이먼트 <code>READY 3/3</code>, 파드 3개가 <code>Running</code> · <code>1/1</code>. <code>1/1</code>은 파드 안 컨테이너 1개 중 1개가 준비됐다는 뜻이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 어느 노드에 갔는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>스케줄러가 한 일을 확인한다. Compose에는 없던 단계다.</p>
+<pre><code>kubectl get pods -l app=web -o wide</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE            NOMINATED NODE   READINESS GATES
+web-587bcb4dcb-sxkmn   1/1     Running   0          8s    10.244.1.38   study-worker    &lt;none&gt;           &lt;none&gt;
+web-587bcb4dcb-w4sgl   1/1     Running   0          8s    10.244.1.39   study-worker    &lt;none&gt;           &lt;none&gt;
+web-587bcb4dcb-zpgcp   1/1     Running   0          8s    10.244.2.37   study-worker2   &lt;none&gt;           &lt;none&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>NODE</code> 열에 노드 이름이 둘 이상 나오고, <code>IP</code> 열이 파드마다 다르다. 어느 파드가 어느 노드에 가는지는 환경마다 다르다. 마지막 두 열(<code>NOMINATED NODE</code>, <code>READINESS GATES</code>)은 <code>-o wide</code>가 항상 붙이는 열이며 지금은 <code>&lt;none&gt;</code>이면 정상이다.</div>
+    <p><code>NODE</code> 열에 <code>study-worker</code>와 <code>study-worker2</code>가 섞여 나온다. 사람이 지정하지 않았는데 스케줄러가 나눠 배치했다. 컨트롤 플레인 노드에는 기본적으로 일반 파드가 가지 않는다 — <code>node-role.kubernetes.io/control-plane</code> 테인트가 걸려 있기 때문이며 M16에서 다룬다.</p>
+    <p><code>IP</code> 열의 <code>10.244.x.x</code>가 파드 IP다. 노드 IP(<code>kubectl get nodes -o wide</code>의 <code>INTERNAL-IP</code>, 이 클러스터에서는 <code>172.20.x.x</code>)와 다른 대역이며, 클러스터 안에서만 의미가 있다. 노드 IP 대역은 도커가 비어 있는 대역을 골라 kind 네트워크에 배정하므로 환경마다 다르다 — <code>172.18.x.x</code>가 흔하다. 이 IP로 직접 접속하는 코드를 쓰면 안 되는 이유는 8.5절에서 확인한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 접속한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Service를 만들기 전에 임시로 접속하는 방법을 익힌다. 디버깅에서 계속 쓴다.</p>
+<pre><code>kubectl port-forward deploy/web 8091:80</code></pre>
+    <span class="out-lbl">실행 결과 (터미널이 붙잡힌다)</span>
+    <div class="out"><code>Forwarding from 127.0.0.1:8091 -&gt; 80
+Forwarding from [::1]:8091 -&gt; 80</code></div>
+    <p>다른 터미널에서:</p>
+<pre><code>curl -s -o /dev/null -w 'HTTP %{http_code}\n' localhost:8091/</code></pre>
+    <span class="out-lbl">실행 결과 (양쪽 터미널)</span>
+    <div class="out"><code>HTTP 200
+
+Handling connection for 8091</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>HTTP 200</code>. 포워딩 쪽 터미널에 <code>Handling connection</code>이 찍힌다. <code>Ctrl+C</code>로 종료한다.</div>
+    <p><code>port-forward</code>는 <strong>디버깅용</strong>이다. 내 <code>kubectl</code> 세션이 살아 있는 동안만 유효하고, 디플로이먼트를 지정하면 파드 하나만 골라 연결한다(로드밸런싱이 아니다). 실제 접속 경로는 M11의 Service, M12의 인그레스로 만든다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">8.4</span>따라하기 ② 들여다보기</h2>
+  <p>여기서 익히는 네 명령이 앞으로 30개 모듈에서 계속 쓰인다.</p>
+
+  <div class="step">
+    <h4>4단계. describe — 이벤트를 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>오브젝트 하나의 상태와 그 오브젝트에 일어난 일을 시간순으로 읽는다. 앞으로 모든 장애 조사의 첫 명령이다.</p>
+<pre><code>kubectl describe deploy web | head -12
+kubectl describe deploy web | grep -A5 "Events:"</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Name:                   web
+Namespace:              default
+CreationTimestamp:      Sat, 05 Sep 2026 17:22:35 +0900
+Labels:                 app=web
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=web
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=web
+
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  8s    deployment-controller  Scaled up replica set web-587bcb4dcb from 0 to 3</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Replicas</code> 줄이 <code>3 desired | ... | 3 available</code>, <code>Events</code>에 <code>ScalingReplicaSet</code> 한 건. <code>CreationTimestamp</code>는 환경마다 다르다.</div>
+    <p>읽을 곳은 <code>Replicas</code> 줄과 <code>Events</code>다. <code>3 desired | 3 available</code>이면 정상이고, <code>desired</code>와 <code>available</code>이 다르면 문제가 진행 중이라는 뜻이다. <code>Events</code>의 <code>From</code> 열은 <strong>누가</strong> 그 일을 했는지 알려준다 — <code>deployment-controller</code>, <code>default-scheduler</code>, <code>kubelet</code>. 장애가 났을 때 이 열을 보면 어느 단계에서 멈췄는지 바로 좁혀진다.</p>
+    <p><code>RollingUpdateStrategy: 25% max unavailable, 25% max surge</code>는 지정하지 않은 기본값이다. M10에서 이 숫자를 바꿔가며 롤아웃 동작을 관찰한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>5단계. logs와 exec</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨테이너의 표준 출력을 읽고 컨테이너 안에서 명령을 실행한다. 대상을 이름이 아니라 레이블로 고르는 것이 M02와 다른 점이다.</p>
+<pre><code># 디플로이먼트의 파드 하나에서 로그 (여러 개면 하나만 고른다)
+kubectl logs deploy/web | tail -3</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Found 3 pods, using pod/web-587bcb4dcb-sxkmn
+2026/09/05 08:22:35 [notice] 1#1: start worker process 45
+2026/09/05 08:22:35 [notice] 1#1: start worker process 46
+2026/09/05 08:22:35 [notice] 1#1: start worker process 47</code></div>
+    <p>첫 줄 <code>Found 3 pods, using pod/...</code>이 중요하다. 디플로이먼트를 지정하면 <code>kubectl</code>이 파드 하나를 <strong>임의로</strong> 고른다. 나머지 두 파드의 로그는 보이지 않는다.</p>
+<pre><code># 레이블로 여러 파드의 로그를 한 번에
+kubectl logs -l app=web --tail=2 --prefix</code></pre>
+    <ul class="tight">
+      <li><code>--tail=2</code> — 파드마다 마지막 2줄만</li>
+      <li><code>--prefix</code> — 줄 앞에 <code>[pod/이름/컨테이너]</code>를 붙여 어느 파드의 줄인지 구분한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>[pod/web-587bcb4dcb-sxkmn/nginx] 2026/09/05 08:22:35 [notice] 1#1: start worker process 46
+[pod/web-587bcb4dcb-sxkmn/nginx] 2026/09/05 08:22:35 [notice] 1#1: start worker process 47
+[pod/web-587bcb4dcb-w4sgl/nginx] 2026/09/05 08:22:35 [notice] 1#1: start worker process 46
+[pod/web-587bcb4dcb-w4sgl/nginx] 2026/09/05 08:22:35 [notice] 1#1: start worker process 47
+[pod/web-587bcb4dcb-zpgcp/nginx] 2026/09/05 08:22:35 [notice] 1#1: start worker process 46
+[pod/web-587bcb4dcb-zpgcp/nginx] 2026/09/05 08:22:35 [notice] 1#1: start worker process 47</code></div>
+<pre><code># 컨테이너 안에서 명령 실행
+POD=$(kubectl get pod -l app=web -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $POD -- nginx -v</code></pre>
+    <ul class="tight">
+      <li><code>-o jsonpath='{.items[0].metadata.name}'</code> — 목록의 첫 파드 이름만 뽑는다. 파드 이름은 매번 바뀌므로 이렇게 변수에 담아 쓴다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>nginx version: nginx/1.29.8</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>--prefix</code> 출력에 파드 이름 세 개가 모두 보이고, <code>nginx -v</code>가 <code>nginx/1.29.x</code>를 돌려준다. 타임스탬프는 환경마다 다르다.</div>
+    <p>M02의 <code>docker logs</code> · <code>docker exec</code>와 같은 도구다. 달라진 점은 대상을 <strong>이름이 아니라 레이블로</strong> 고를 수 있다는 것 — 파드 이름은 매번 바뀌므로 스크립트에 박을 수 없다. 셸로 들어가려면 <code>kubectl exec -it $POD -- sh</code>.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계. explain과 api-resources — 문서를 클러스터에 묻는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>필드 이름이 기억나지 않을 때 검색 대신 클러스터에 직접 묻는 습관을 만든다.</p>
+<pre><code>kubectl explain deployment.spec.replicas
+kubectl api-resources --namespaced=true | head -8</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>GROUP:      apps
+KIND:       Deployment
+VERSION:    v1
+
+FIELD: replicas &lt;integer&gt;
+
+DESCRIPTION:
+  ...
+
+NAME                        SHORTNAMES                        APIVERSION                     NAMESPACED   KIND
+bindings                                                      v1                             true         Binding
+configmaps                  cm                                v1                             true         ConfigMap
+endpoints                   ep                                v1                             true         Endpoints
+events                      ev                                v1                             true         Event
+limitranges                 limits                            v1                             true         LimitRange
+persistentvolumeclaims      pvc                               v1                             true         PersistentVolumeClaim
+pods                        po                                v1                             true         Pod</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>explain</code>은 <code>FIELD: replicas &lt;integer&gt;</code>를, <code>api-resources</code>는 헤더 포함 8행을 출력한다(<code>head -8</code>). <code>DESCRIPTION</code> 아래는 길어서 <code>...</code>로 줄였다.</div>
+    <p><code>explain</code>이 보여주는 것은 <strong>이 클러스터 버전의</strong> 스키마다. 블로그의 예제가 안 되는 이유가 필드 이름이 바뀌었기 때문인 경우가 많은데, <code>explain</code>은 절대 틀리지 않는다. <code>--recursive</code>를 붙이면 하위 필드를 전부 펼친다.</p>
+    <p><code>api-resources</code>의 <code>SHORTNAMES</code>도 알아둔다 — <code>kubectl get po</code>, <code>kubectl get svc</code>, <code>kubectl get pvc</code>처럼 줄여 쓸 수 있다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">8.5</span>따라하기 ③ 죽여보기</h2>
+
+  <div class="step">
+    <h4>7단계. 파드를 지운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이 과정에서 가장 중요한 관찰. 자가 복구가 <strong>어떤 방식으로</strong> 일어나는지 본다.</p>
+<pre><code>POD=$(kubectl get pod -l app=web -o jsonpath='{.items[0].metadata.name}')
+echo "지울 파드: $POD"
+kubectl delete pod $POD
+sleep 5
+kubectl get pods -l app=web</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>지울 파드: web-587bcb4dcb-sxkmn
+pod "web-587bcb4dcb-sxkmn" deleted from default namespace
+
+NAME                   READY   STATUS    RESTARTS   AGE
+web-587bcb4dcb-mshk4   1/1     Running   0          6s
+web-587bcb4dcb-w4sgl   1/1     Running   0          24s
+web-587bcb4dcb-zpgcp   1/1     Running   0          24s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>여전히 3개다. 그런데 <strong>지운 파드는 돌아오지 않았다</strong> — <code>-sxkmn</code>은 사라지고 <code>-mshk4</code>라는 새 파드가 생겼다. <code>AGE</code>도 6초로 다르다.</div>
+    <p>이 차이가 핵심이다. 도커는 같은 컨테이너를 다시 시작했지만, 쿠버네티스는 <strong>규격에 맞는 새 파드를 만든다</strong>. 이름도 IP도 다르고, 심지어 다른 노드일 수 있다. 그래서 파드 IP를 어딘가에 적어두는 설계는 반드시 깨진다(M11에서 Service가 필요한 이유).</p>
+  </div>
+
+  <div class="step">
+    <h4>8단계. 이벤트로 누가 무엇을 했는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>7단계에서 파드가 바뀌는 동안 클러스터 안에서 어떤 컴포넌트가 무엇을 했는지 이벤트 목록으로 되짚는다.</p>
+<pre><code>kubectl get events --sort-by=.lastTimestamp \
+  -o custom-columns='TIME:.lastTimestamp,TYPE:.type,REASON:.reason,OBJECT:.involvedObject.name,MSG:.message' | tail -8</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>2026-09-05T08:22:35Z   Normal   SuccessfulCreate    web-587bcb4dcb         Created pod: web-587bcb4dcb-sxkmn
+2026-09-05T08:22:35Z   Normal   SuccessfulCreate    web-587bcb4dcb         Created pod: web-587bcb4dcb-zpgcp
+2026-09-05T08:22:53Z   Normal   SuccessfulCreate    web-587bcb4dcb         Created pod: web-587bcb4dcb-mshk4
+2026-09-05T08:22:53Z   Normal   Scheduled           web-587bcb4dcb-mshk4   Successfully assigned default/web-587bcb4dcb-mshk4 to study-worker2
+2026-09-05T08:22:53Z   Normal   Killing             web-587bcb4dcb-sxkmn   Stopping container nginx
+2026-09-05T08:22:54Z   Normal   Started             web-587bcb4dcb-mshk4   Container started
+2026-09-05T08:22:54Z   Normal   Created             web-587bcb4dcb-mshk4   Container created
+2026-09-05T08:22:54Z   Normal   Pulled              web-587bcb4dcb-mshk4   Container image "nginx:1.29-alpine" already present on machine and can be accessed by the pod</code></div>
+    <p><code>tail -8</code>로 잘라 헤더 행은 빠졌다. 앞 두 줄은 1단계에서 파드가 만들어질 때의 이벤트고, 7단계의 삭제는 <code>:53</code>부터다 — 레플리카셋이 <code>SuccessfulCreate</code>로 새 파드를 만들고, 스케줄러가 <code>Scheduled</code>로 노드를 정하고, 옛 파드는 <code>Killing</code>, 새 파드는 kubelet이 <code>Pulled</code> → <code>Created</code> → <code>Started</code>로 실행했다. 8.2절 그림의 ③ ④ ⑤ ⑥이 그대로다. <code>already present on machine</code>은 M07에서 이미지가 노드에 있기 때문이다.</p>
+    <p>한 가지 주의 — <code>--sort-by=.lastTimestamp</code>는 초 단위로 정렬하므로 <strong>같은 초 안의 순서는 뒤섞일 수 있다</strong>. 위 출력에서 <code>Started</code>가 <code>Created</code>보다 먼저 찍힌 것이 그 예다. 순서가 아니라 <code>REASON</code>으로 단계를 대조한다.</p>
+    <div class="verdict"><span class="lbl">판정</span>지운 파드에 <code>Killing</code>, 새 파드에 <code>Scheduled</code> · <code>Pulled</code> · <code>Created</code> · <code>Started</code>가 각 한 건씩 있다. 타임스탬프와 파드 이름은 환경마다 다르다.</div>
+    <div class="note-2026">
+      <span class="lbl">이벤트는 사라진다</span>
+      기본 보존 기간이 1시간이다. 어제 새벽의 장애를 이벤트로 조사할 수는 없다. 그래서 이벤트를 로그 시스템으로 내보내는 구성이 필요하고, M22 로깅에서 다룬다. 지금은 "장애 직후에는 이벤트부터 본다"는 습관만 들인다.
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>9단계. 개수를 바꿔본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>의도한 상태(<code>replicas</code>)만 바꾸면 컨트롤러가 현실을 맞추는 것을 확인한다.</p>
+<pre><code>kubectl scale deploy/web --replicas=5
+kubectl get pods -l app=web --watch</code></pre>
+    <span class="out-lbl">실행 결과 (약 8초 뒤 Ctrl+C)</span>
+    <div class="out"><code>deployment.apps/web scaled
+NAME                   READY   STATUS              RESTARTS   AGE
+web-587bcb4dcb-5dcdx   0/1     ContainerCreating   0          0s
+web-587bcb4dcb-jh4pk   0/1     ContainerCreating   0          0s
+web-587bcb4dcb-mshk4   1/1     Running             0          26s
+web-587bcb4dcb-w4sgl   1/1     Running             0          44s
+web-587bcb4dcb-zpgcp   1/1     Running             0          44s
+web-587bcb4dcb-5dcdx   0/1     ContainerCreating   0          0s
+web-587bcb4dcb-jh4pk   0/1     ContainerCreating   0          0s
+web-587bcb4dcb-jh4pk   1/1     Running             0          0s
+web-587bcb4dcb-5dcdx   1/1     Running             0          0s</code></div>
+    <p><code>--watch</code>는 처음에 현재 목록을 찍고, 그 뒤로는 변화가 생길 때마다 줄을 <strong>추가</strong>한다. 새 파드 2개가 <code>ContainerCreating</code> → <code>Running</code>으로 넘어가는 것이 보인다(이미지가 노드에 있어 1초 안에 끝난다. <code>Pending</code> 단계는 너무 짧아 이 출력에는 잡히지 않았다). <code>Ctrl+C</code>로 나온다.</p>
+<pre><code>kubectl scale deploy/web --replicas=3
+sleep 5
+kubectl get pods -l app=web</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>deployment.apps/web scaled
+
+NAME                   READY   STATUS    RESTARTS   AGE
+web-587bcb4dcb-jh4pk   1/1     Running   0          14s
+web-587bcb4dcb-w4sgl   1/1     Running   0          58s
+web-587bcb4dcb-zpgcp   1/1     Running   0          58s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>5개에서 다시 3개. 사라진 것은 <code>-mshk4</code>와 <code>-5dcdx</code>다 — 방금 만든 것 둘이 아니라, 새 파드 하나(<code>-jh4pk</code>)가 남고 7단계에서 생긴 파드가 지워졌다. 어느 파드가 지워지는지는 환경마다 다르다.</div>
+    <p>줄이면 파드가 종료된다. 어느 것을 지울지는 컨트롤러가 정한다 — 준비되지 않은 파드, 같은 노드에 몰려 있는 파드, 재시작이 잦은 파드를 먼저 고르고, 조건이 같으면 최근에 만든 것을 먼저 지운다. 위 결과처럼 "가장 새것"이 아닌 파드가 지워지는 것은 노드 분산 규칙 때문이다. 중요한 상태를 가진 워크로드에서는 이 임의성이 문제가 되며, 그래서 StatefulSet이 따로 있다(M18).</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">8.6</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 파드를 직접 만들고 지워본다</span>
+    <p>디플로이먼트 없이 파드만 만들면 어떻게 되는지 확인한다. M07에서 이미 한 번 했던 <code>kubectl run</code>이 바로 그것이다.</p>
+<pre><code>kubectl run solo --image=nginx:1.29-alpine
+kubectl get pod solo
+kubectl delete pod solo
+sleep 3
+kubectl get pod solo</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>pod/solo created
+NAME   READY   STATUS    RESTARTS   AGE
+solo   1/1     Running   0          5s
+
+pod "solo" deleted from default namespace
+Error from server (NotFound): pods "solo" not found</code></div>
+    <div class="verdict"><span class="lbl">판정</span>돌아오지 않는다. 파드를 지켜보는 컨트롤러가 없기 때문이다.</div>
+    <p>규칙 하나가 여기서 나온다 — <strong>파드를 직접 만들지 않는다.</strong> 항상 디플로이먼트(또는 스테이트풀셋 · 데몬셋 · 잡)를 통해 만든다. <code>kubectl run</code>은 일회성 디버깅 파드를 띄울 때만 쓴다. 노드가 죽으면 그 위의 단독 파드는 그냥 사라진다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 엉뚱한 네임스페이스에서 찾는다</span>
+<pre><code>kubectl get pods -n kube-system -l app=web
+kubectl get pods --all-namespaces -l app=web</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>No resources found in kube-system namespace.
+
+NAMESPACE   NAME                   READY   STATUS    RESTARTS   AGE
+default     web-587bcb4dcb-jh4pk   1/1     Running   0          23s
+default     web-587bcb4dcb-w4sgl   1/1     Running   0          67s
+default     web-587bcb4dcb-zpgcp   1/1     Running   0          67s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>첫 명령은 <code>No resources found in kube-system namespace.</code>, 둘째 명령은 <code>NAMESPACE</code> 열이 <code>default</code>인 파드 3행.</div>
+    <p><code>No resources found</code>는 "없다"가 아니라 <strong>"여기에는 없다"</strong>이다. <dfn class="term">네임스페이스 <span class="en">(Namespace)</span></dfn>는 오브젝트 이름의 유효 범위이고, 지정하지 않으면 현재 컨텍스트의 기본값(<code>default</code>)이 쓰인다. M02에서 본 리눅스 커널 네임스페이스(프로세스의 시야를 가르는 커널 기능)와 이름만 같고 다른 것이다 — 이쪽은 apiserver가 관리하는 논리적 구획이며 커널과는 무관하다. M09에서 자세히 다루지만, 지금 익힐 습관은 두 가지다 — 안 보이면 <code>--all-namespaces</code>(줄여서 <code>-A</code>)로 한 번 더 찾아본다, 그리고 <code>kubectl config set-context --current --namespace=&lt;이름&gt;</code>으로 기본값을 바꿔둘 수 있다는 것.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">8.7</span>운영 관점 — 명령형에서 선언형으로</h2>
+  <p>지금까지 쓴 <code>kubectl create deployment</code>와 <code>kubectl scale</code>은 <strong>명령형</strong>이다. 편하지만 두 가지가 없다 — 이력과 재현성. 어제 누가 <code>scale --replicas=7</code>을 쳤는지 클러스터는 기억하지만 팀은 모른다.</p>
+  <p>책 1.2절의 지적이 이것이다. 명령형으로 구성한 클러스터는 "어떻게 그 상태가 됐는지" 알 수 없고, 그래서 문제를 재현하기 어렵다. 지금 만든 디플로이먼트를 파일로 뽑아본다.</p>
+<pre><code>kubectl get deploy web -o yaml | grep -A8 "^spec:"</code></pre>
+  <span class="out-lbl">실행 결과 (일부)</span>
+  <div class="out"><code>spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    rollingUpdate:</code></div>
+  <p>내가 지정하지 않은 필드가 잔뜩 채워져 있다. apiserver가 기본값을 적용한 결과이며, 여기에 <code>status</code>와 <code>managedFields</code>까지 붙어 실제 출력은 수십 줄이다. 이것을 그대로 파일로 저장하면 안 된다 — 클러스터 고유의 값(<code>uid</code>, <code>resourceVersion</code>, <code>creationTimestamp</code>)이 섞여 다른 클러스터에서 적용되지 않는다.</p>
+  <p>M09부터는 매니페스트를 손으로 쓴다(M09의 파드 YAML, M10의 <code>labs/k8s/m10-journal-deployment.yaml</code>). 그 파일들은 이 과정이 미리 써 두었으므로 여기서 만든 것을 저장할 필요는 없다. 다만 빈 화면에서 뼈대가 필요할 때 쓰는 방법 하나는 지금 알아둔다.</p>
+<pre><code># 실제로 만들지 않고 YAML만 화면에 출력한다
+kubectl create deployment web --image=nginx:1.29-alpine --replicas=3 \
+  --dry-run=client -o yaml</code></pre>
+  <span class="out-lbl">실행 결과</span>
+  <div class="out"><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+  name: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - image: nginx:1.29-alpine
+        name: nginx
+        resources: {}
+status: {}</code></div>
+  <p>위의 <code>kubectl get -o yaml</code> 출력과 비교하면 클러스터 고유의 값이 하나도 없다. M10의 매니페스트는 이 뼈대에 <code>strategy</code>와 <code>readinessProbe</code>를 채운 것이다. 비어 있는 <code>strategy: {}</code>, <code>resources: {}</code>, <code>status: {}</code>는 지워도 되고 두어도 된다.</p>
+  <ul class="tight">
+    <li><code>--dry-run=client</code> — 클라이언트에서만 처리하고 서버에 보내지 않는다. 뼈대 생성용</li>
+    <li><code>--dry-run=server</code> — 서버로 보내되 저장하지 않는다. <strong>어드미션 검증까지 통과하는지</strong> 확인할 수 있어 CI에서 매니페스트를 검사할 때 쓴다(M29)</li>
+  </ul>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">8.8</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get deploy,rs -l app=web</code> → 디플로이먼트 <code>READY 3/3</code>, 레플리카셋 행이 <strong>1개</strong>이고 <code>DESIRED 3</code></li>
+      <li><code>BEFORE=$(kubectl get pod -l app=web -o jsonpath='{.items[0].metadata.name}'); kubectl delete pod $BEFORE; sleep 20; kubectl get pods -l app=web</code> → <code>Running</code> 3행이고, 그 안에 <code>$BEFORE</code>와 같은 이름은 <strong>없다</strong></li>
+      <li><code>kubectl describe deploy web | grep -A4 Events:</code> → <code>From</code> 열에 <code>deployment-controller</code>, <code>Reason</code>에 <code>ScalingReplicaSet</code></li>
+      <li><code>kubectl explain deployment.spec.replicas | grep FIELD</code> → <code>FIELD: replicas &lt;integer&gt;</code></li>
+      <li><code>kubectl get pod solo</code> → <code>Error from server (NotFound)</code> (실패 ①에서 지운 파드가 돌아오지 않았다)</li>
+      <li><code>kubectl get pods -A -l app=web --no-headers | wc -l</code> → <code>3</code>, 같은 명령에서 <code>-A</code>를 빼도 <code>3</code> (지금 기본 네임스페이스가 <code>default</code>라는 뜻)</li>
+      <li>(이해 확인) 디플로이먼트 · 레플리카셋 · 파드 세 겹 중 사람이 직접 다루는 것은 어느 것이고, 왜 파드를 직접 만들면 안 되는가 — 실패 ①의 결과로 답한다</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li>이 모듈은 파일을 남기지 않는다. 클러스터에 <code>web</code> 디플로이먼트(파드 3개)가 남으며, M09 정리 블록이 함께 지운다</li>
+      <li>진단 3종 세트 — <code>describe</code> · <code>logs</code> · <code>get events</code>. 이후 모든 모듈의 "일부러 실패시키기"에서 이 셋으로 원인을 찾는다</li>
+    </ul>
+  </div>
+<pre><code># 이 모듈에서 만든 것 정리 (M09를 바로 이어서 한다면 두어도 된다)
+kubectl delete deploy web</code></pre>
+</section>
+
+<div class="navlinks">
+  <a href="m07-docker-registry-supplychain.html">← M07 레지스트리와 이미지 공급망</a>
+  <a href="m09-k8s-pod-label-namespace.html">M09 파드 · 레이블 · 네임스페이스 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금은 명령 한 줄로 배포했고, 파드 안에 무엇이 들어가는지는 보지 않았다. M09에서 파드 YAML을 직접 쓴다 — 컨테이너 두 개를 한 파드에 넣어 <code>localhost</code>로 통신시키고, init 컨테이너로 순서를 강제하고, 레이블 오타로 셀렉터가 아무것도 못 잡는 상황을 재현한다.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
+  <ul>
+    <li>쿠버네티스 컴포넌트: https://kubernetes.io/docs/concepts/overview/components/</li>
+    <li>디플로이먼트: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/</li>
+    <li>kubectl 명령 레퍼런스: https://kubernetes.io/docs/reference/kubectl/</li>
+    <li>오브젝트 관리 방식(명령형 vs 선언형): https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.2 구성 파일 관리, 1.3 디플로이먼트를 이용한 복제 서비스 생성</li>
+  </ul>
+  <p>검증 환경: kind v0.33.0 · Kubernetes 1.37.0 · kubectl v1.37.0</p>
+</footer>
+</div>
+</body>
+</html>

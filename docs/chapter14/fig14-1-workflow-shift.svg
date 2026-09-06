@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow141" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-weight { font-size: 11px; font-weight: 700; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 4단계 -->
+  <rect class="box" x="20" y="40" width="190" height="90" rx="4"/>
+  <text class="t-title" x="115" y="68" text-anchor="middle">① 데이터셋 준비</text>
+  <text class="t-sub" x="115" y="90" text-anchor="middle">스토리지·인덱싱</text>
+  <text class="t-sub" x="115" y="106" text-anchor="middle">카탈로그화</text>
+
+  <line class="line" x1="210" y1="85" x2="246" y2="85" marker-end="url(#arrow141)"/>
+
+  <rect class="box" x="250" y="40" width="190" height="90" rx="4"/>
+  <text class="t-title" x="345" y="68" text-anchor="middle">② 모델 개발</text>
+  <text class="t-sub" x="345" y="90" text-anchor="middle">JupyterHub 등</text>
+  <text class="t-sub" x="345" y="106" text-anchor="middle">알고리즘 설계·공유</text>
+
+  <line class="line" x1="440" y1="85" x2="476" y2="85" marker-end="url(#arrow141)"/>
+
+  <rect class="box" x="480" y="40" width="190" height="90" rx="4"/>
+  <text class="t-title" x="575" y="68" text-anchor="middle">③ 훈련</text>
+  <text class="t-sub" x="575" y="90" text-anchor="middle">스케줄링·특수 HW</text>
+  <text class="t-sub" x="575" y="106" text-anchor="middle">스토리지·네트워킹 총동원</text>
+
+  <line class="line" x1="670" y1="85" x2="706" y2="85" marker-end="url(#arrow141)"/>
+
+  <rect class="box" x="710" y="40" width="170" height="90" rx="4"/>
+  <text class="t-title" x="795" y="68" text-anchor="middle">④ 제공(서빙)</text>
+  <text class="t-sub" x="795" y="90" text-anchor="middle">추론 요청 처리</text>
+
+  <!-- 원서 vs 2026 무게중심 바 -->
+  <rect class="box" x="20" y="160" width="860" height="140" rx="6"/>
+  <text class="t-title" x="40" y="186">14.3절의 실제 분량 배분 — 원서 대 2026년 현실</text>
+
+  <text class="t-sub" x="40" y="212">원서 14.3절 (8개 하위 절)</text>
+  <rect x="220" y="200" width="600" height="18" fill="#f0f0f0" stroke="#c8c8c8"/>
+  <rect x="220" y="200" width="560" height="18" fill="#c8c8c8"/>
+  <text class="t-weight" x="500" y="213" text-anchor="middle" fill="#555">훈련 관련 내용 — 거의 전부</text>
+  <rect x="780" y="200" width="40" height="18" fill="#2456c4" opacity="0.5"/>
+
+  <text class="t-sub" x="40" y="250">2026년 실제 워크로드 비중 (업계 다수 관측)</text>
+  <rect x="220" y="238" width="600" height="18" fill="#f0f0f0" stroke="#c8c8c8"/>
+  <rect x="220" y="238" width="260" height="18" fill="#c8c8c8"/>
+  <text class="t-weight" x="350" y="251" text-anchor="middle" fill="#555">훈련</text>
+  <rect x="480" y="238" width="340" height="18" fill="#2456c4"/>
+  <text class="t-weight" x="650" y="251" text-anchor="middle" fill="#ffffff">추론 서빙 — 상당 비중</text>
+
+  <text class="t-sub" x="40" y="284">LLM 추론 서빙이 폭발적으로 늘며 워크로드 성격 자체가 달라졌다 — 이 장 뒤에 서빙 인프라를 별도로 다룬다.</text>
+
+  <text class="t-cap" x="450" y="322" text-anchor="middle">4단계 워크플로 자체는 그대로 유효하다 — 다만 14.3절이 훈련에 쏟는 비중만큼 실무 관심사가 이동했다.</text>
+</svg>

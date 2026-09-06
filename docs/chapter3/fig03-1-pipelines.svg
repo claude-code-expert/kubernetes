@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow31" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .divider { stroke: #e0e0e0; stroke-width: 1; }
+  </style>
+
+  <!-- 상단 레인: 리소스 메트릭 파이프라인 -->
+  <text class="t-lane" x="20" y="34">① 리소스 메트릭 파이프라인 — 최신값만, 오토스케일링·kubectl top 용</text>
+
+  <rect class="box" x="20" y="54" width="190" height="70" rx="4"/>
+  <text class="t-title" x="115" y="82" text-anchor="middle">kubelet + cAdvisor</text>
+  <text class="t-sub" x="115" y="102" text-anchor="middle">노드마다 · 컨테이너 사용량 측정</text>
+
+  <line class="line" x1="210" y1="89" x2="266" y2="89" marker-end="url(#arrow31)"/>
+
+  <rect class="box" x="270" y="54" width="190" height="70" rx="4"/>
+  <text class="t-title" x="365" y="82" text-anchor="middle">메트릭 서버</text>
+  <text class="t-sub" x="365" y="102" text-anchor="middle">메모리 집계 · 이력 없음</text>
+
+  <line class="line" x1="460" y1="89" x2="516" y2="89" marker-end="url(#arrow31)"/>
+
+  <rect class="box" x="520" y="54" width="190" height="70" rx="4"/>
+  <text class="t-title" x="615" y="82" text-anchor="middle">kubectl top · HPA</text>
+  <text class="t-sub" x="615" y="102" text-anchor="middle">현재 사용량 조회 · 스케일 판단</text>
+
+  <line class="divider" x1="20" y1="158" x2="880" y2="158"/>
+
+  <!-- 하단 레인: 모니터링 파이프라인 -->
+  <text class="t-lane" x="20" y="186">② 모니터링 파이프라인 — 시계열로 저장, 분석·대시보드·알림용</text>
+
+  <rect class="box" x="20" y="206" width="190" height="54" rx="4"/>
+  <text class="t-title" x="115" y="228" text-anchor="middle">cAdvisor</text>
+  <text class="t-sub" x="115" y="246" text-anchor="middle">컨테이너 리소스 사용량</text>
+
+  <rect class="box" x="20" y="272" width="190" height="54" rx="4"/>
+  <text class="t-title" x="115" y="294" text-anchor="middle">kube-state-metrics</text>
+  <text class="t-sub" x="115" y="312" text-anchor="middle">오브젝트 상태(레플리카 수 등)</text>
+
+  <rect class="box" x="20" y="338" width="190" height="54" rx="4"/>
+  <text class="t-title" x="115" y="360" text-anchor="middle">node-exporter 등</text>
+  <text class="t-sub" x="115" y="378" text-anchor="middle">노드 OS · 앱의 /metrics 지표</text>
+
+  <!-- 소스 → 프로메테우스 버스 -->
+  <line class="line" x1="210" y1="233" x2="260" y2="233"/>
+  <line class="line" x1="210" y1="299" x2="260" y2="299"/>
+  <line class="line" x1="210" y1="365" x2="260" y2="365"/>
+  <line class="line" x1="260" y1="233" x2="260" y2="365"/>
+  <line class="line" x1="260" y1="299" x2="306" y2="299" marker-end="url(#arrow31)"/>
+
+  <rect class="box-accent" x="310" y="259" width="190" height="80" rx="4"/>
+  <text class="t-title" x="405" y="292" text-anchor="middle">프로메테우스</text>
+  <text class="t-sub" x="405" y="312" text-anchor="middle">주기적 풀 수집 · 시계열 DB</text>
+
+  <!-- 프로메테우스 → 그라파나 / 얼럿매니저 -->
+  <polyline class="line" points="500,279 550,279 550,239 596,239" marker-end="url(#arrow31)"/>
+  <polyline class="line" points="500,319 550,319 550,359 596,359" marker-end="url(#arrow31)"/>
+
+  <rect class="box" x="600" y="207" width="190" height="64" rx="4"/>
+  <text class="t-title" x="695" y="233" text-anchor="middle">그라파나</text>
+  <text class="t-sub" x="695" y="253" text-anchor="middle">대시보드 · PromQL 시각화</text>
+
+  <rect class="box" x="600" y="327" width="190" height="64" rx="4"/>
+  <text class="t-title" x="695" y="353" text-anchor="middle">얼럿매니저</text>
+  <text class="t-sub" x="695" y="373" text-anchor="middle">알림 그룹핑 · 라우팅</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="430" text-anchor="middle">같은 cAdvisor 데이터라도 쓰임이 다르다. ①은 "지금 얼마나 쓰나"(이력 없음), ②는 "언제부터 어떻게 변했나"(시계열).</text>
+  <text class="t-cap" x="450" y="452" text-anchor="middle">①이 없으면 kubectl top과 HPA가 동작하지 않고, ②가 없으면 장애 분석과 알림이 불가능하다. 둘 다 필요하다.</text>
+</svg>

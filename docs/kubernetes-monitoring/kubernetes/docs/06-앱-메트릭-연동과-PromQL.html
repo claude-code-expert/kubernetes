@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 · 앱 메트릭 연동과 PromQL — 관측성 실습</title>
+<style>
+  :root{
+    --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+    --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.72;letter-spacing:-.005em;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  header{border-bottom:1px solid var(--ink);padding:56px 0 22px;margin-bottom:36px}
+  .docnum{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:34px;line-height:1.28;letter-spacing:-.03em;font-weight:700;margin:10px 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  nav.toc{border:1px solid var(--line);padding:20px 24px;margin:0 0 48px}
+  nav.toc h2{font-size:12px;font-family:var(--mono);letter-spacing:.14em;color:var(--muted);
+             font-weight:500;margin-bottom:12px}
+  nav.toc ol{list-style:none;counter-reset:t;columns:2;column-gap:36px}
+  nav.toc li{counter-increment:t;font-size:14.5px;line-height:2}
+  nav.toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+                     font-size:12px;color:var(--muted);margin-right:10px}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2.sec{font-size:23px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--ac);margin-right:12px;font-weight:500}
+  h3{font-size:17px;font-weight:700;margin:32px 0 10px;letter-spacing:-.02em}
+  h4{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--muted)}
+  p{margin:0 0 14px;max-width:74ch}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700}
+
+  .term{border-bottom:1px dotted var(--muted);cursor:help}
+
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  .fn{font-family:var(--mono);font-size:12px;color:var(--muted);margin:20px 0 -6px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0;font-size:13px}
+  pre .c{color:#6b7280}
+  pre .o{color:#0b4f2f}
+  .cap{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+  .cap b{color:var(--ink);font-weight:600}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td code{font-size:12.5px}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .note{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);padding:16px 20px;margin:20px 0}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+  figcaption b{color:var(--ink);font-weight:600}
+
+  ul.check{list-style:none;padding-left:0}
+  ul.check li{padding-left:30px;position:relative;margin:9px 0;font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:14px;
+                      border:1.5px solid var(--muted);border-radius:2px}
+
+  .src{font-size:13px;color:var(--muted);line-height:1.85}
+  .src ul{list-style:none;padding-left:0;max-width:none}
+  .src li{margin:4px 0;word-break:break-all}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;font-size:13px;
+         color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){.wrap{padding:0 18px 80px}h1{font-size:27px}nav.toc ol{columns:1}}
+  @media print{body{font-size:11pt}figure,table,.box,pre{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div style="max-width:920px;margin:0 auto;padding:22px 28px 0">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#585f6b;text-decoration:none;border-bottom:1px solid #d8dbe0">← 목차로</a>
+</div>
+<div class="wrap">
+
+<header>
+  <div class="docnum">STEP 06 / 11 · 트랙 C — 연동 가이드 · macOS</div>
+  <h1>앱 메트릭 연동과 PromQL</h1>
+  <p class="lede">
+    02단계에서 연 <code>/actuator/prometheus</code>를 04단계의 프로메테우스에 붙입니다.
+    연결 고리는 <strong>라벨 세 겹</strong>이고, 대부분의 사람이 첫 번째 겹에서 막힙니다.
+    일부러 한 번 실패시킨 뒤 고치고, 그다음 RED 지표를 PromQL로 직접 씁니다.
+  </p>
+  <div class="meta">
+    <span>검증일 2026-08-19</span>
+    <span>소요 70–90분</span>
+    <span>선행: 05단계까지 완료</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">라벨 세 겹</a></li>
+    <li><a href="#s2">일부러 실패시켜 보기</a></li>
+    <li><a href="#s3">ServiceMonitor 작성</a></li>
+    <li><a href="#s4">연결 검증</a></li>
+    <li><a href="#s5">프로메테우스가 붙여준 라벨</a></li>
+    <li><a href="#s6">PromQL 최소 문법</a></li>
+    <li><a href="#s7">RED 지표 완성</a></li>
+    <li><a href="#s8">지연 전파 관찰</a></li>
+    <li><a href="#s9">자주 겪는 문제</a></li>
+    <li><a href="#s10">완료 체크리스트</a></li>
+  </ol>
+</nav>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2 class="sec"><span class="n">01</span>라벨 세 겹</h2>
+
+  <p>
+    ServiceMonitor는 "이 서비스를 긁어라"라는 선언입니다.
+    그런데 그 선언이 실제로 효력을 가지려면 <strong>세 군데의 라벨이 모두 맞아야</strong> 합니다.
+    하나라도 어긋나면 아무 오류 없이 조용히 무시됩니다. 이것이 이 단계가 어려운 유일한 이유입니다.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 960 430" role="img" aria-label="프로메테우스 CR, ServiceMonitor, Service, 파드로 이어지는 라벨 연결 구조">
+      <rect width="960" height="430" fill="#ffffff"/>
+
+      <!-- Prometheus CR -->
+      <rect x="24" y="30" width="400" height="86" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.5"/>
+      <text x="40" y="56" font-size="13.5" fill="#15181d">Prometheus (CR)</text>
+      <text x="40" y="80" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">serviceMonitorSelector:</text>
+      <text x="52" y="100" font-family="ui-monospace,monospace" font-size="11" fill="#6a4a9c">release: kps</text>
+
+      <!-- ① -->
+      <path d="M224 118 L224 152" fill="none" stroke="#6a4a9c" stroke-width="1.5" marker-end="url(#z1)"/>
+      <circle cx="248" cy="135" r="11" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.5"/>
+      <text x="248" y="140" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" fill="#6a4a9c">1</text>
+      <text x="268" y="140" font-size="12" fill="#585f6b">오퍼레이터가 고를 것인가</text>
+
+      <!-- ServiceMonitor -->
+      <rect x="24" y="154" width="400" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="180" font-size="13.5" fill="#15181d">ServiceMonitor</text>
+      <text x="40" y="204" font-family="ui-monospace,monospace" font-size="11" fill="#6a4a9c">labels: {release: kps}</text>
+      <text x="40" y="226" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">selector.matchLabels:</text>
+      <text x="52" y="246" font-family="ui-monospace,monospace" font-size="11" fill="#1f4d8f">app.kubernetes.io/name: order-api</text>
+      <text x="40" y="268" font-family="ui-monospace,monospace" font-size="11" fill="#2e7d4f">endpoints[0].port: http</text>
+
+      <!-- ② -->
+      <path d="M224 282 L224 316" fill="none" stroke="#1f4d8f" stroke-width="1.5" marker-end="url(#z2)"/>
+      <circle cx="248" cy="299" r="11" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="248" y="304" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">2</text>
+      <text x="268" y="304" font-size="12" fill="#585f6b">이 라벨을 가진 Service가 있는가</text>
+
+      <!-- Service -->
+      <rect x="24" y="318" width="400" height="94" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="344" font-size="13.5" fill="#15181d">Service (03단계에서 만든 것)</text>
+      <text x="40" y="368" font-family="ui-monospace,monospace" font-size="11" fill="#1f4d8f">labels: {app.kubernetes.io/name: order-api}</text>
+      <text x="40" y="390" font-family="ui-monospace,monospace" font-size="11" fill="#2e7d4f">ports: [{name: http, port: 8080}]</text>
+
+      <!-- ③ -->
+      <path d="M428 365 L494 365" fill="none" stroke="#2e7d4f" stroke-width="1.5" marker-end="url(#z3)"/>
+      <circle cx="461" cy="345" r="11" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="461" y="350" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" fill="#2e7d4f">3</text>
+
+      <rect x="496" y="318" width="440" height="94" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="512" y="344" font-size="13.5" fill="#15181d">파드의 엔드포인트</text>
+      <text x="512" y="368" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">10.244.1.7:8080/actuator/prometheus</text>
+      <text x="512" y="390" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">10.244.1.9:8080/actuator/prometheus</text>
+
+      <!-- 우측 설명 -->
+      <rect x="496" y="30" width="440" height="250" fill="#f5f6f7" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="516" y="58" font-size="13.5" fill="#15181d">어긋났을 때의 증상</text>
+      <text x="516" y="88" font-family="ui-monospace,monospace" font-size="11.5" fill="#6a4a9c">1 실패</text>
+      <text x="516" y="108" font-size="12" fill="#585f6b">타깃 목록에 아예 나타나지 않는다. 오류도 없다</text>
+      <text x="516" y="140" font-family="ui-monospace,monospace" font-size="11.5" fill="#1f4d8f">2 실패</text>
+      <text x="516" y="160" font-size="12" fill="#585f6b">타깃 그룹은 생기지만 대상이 0개다</text>
+      <text x="516" y="192" font-family="ui-monospace,monospace" font-size="11.5" fill="#2e7d4f">3 실패</text>
+      <text x="516" y="212" font-size="12" fill="#585f6b">포트 이름이 없어 스크레이프 주소가 만들어지지 않는다</text>
+      <text x="516" y="248" font-size="12" fill="#8f4408">셋 다 "조용히" 실패한다 — 그래서 확인 순서가 중요하다</text>
+
+      <defs>
+        <marker id="z1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+        </marker>
+        <marker id="z2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1f4d8f"/>
+        </marker>
+        <marker id="z3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>
+      <b>그림 1.</b> 03단계에서 Service에 라벨을 붙이고 포트에 <code>http</code>라는 이름을 준 이유가 여기 있다.
+      ②와 ③은 그때 이미 준비해 둔 것이고, 이번에 새로 만드는 것은 ①과 ServiceMonitor뿐이다.
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2 class="sec"><span class="n">02</span>일부러 실패시켜 보기</h2>
+
+  <p>
+    먼저 <code>release</code> 라벨 없이 만들어 봅니다. 5분이면 되고,
+    이 경험이 앞으로 몇 시간을 아껴줍니다.
+  </p>
+
+<pre data-lang="bash"><code>mkdir -p ~/k8s-observability/k8s/monitoring
+cd ~/k8s-observability/k8s/monitoring
+
+cat &lt;&lt;'EOF' &gt; 90-servicemonitor-broken.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api-broken
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  namespaceSelector:
+    matchNames: [apps]
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+EOF
+
+kubectl apply -f 90-servicemonitor-broken.yaml
+kubectl -n apps get servicemonitor</code></pre>
+
+  <p>
+    리소스는 정상적으로 만들어집니다. 이제 타깃에 나타나는지 확인합니다.
+  </p>
+
+<pre data-lang="bash"><code>sleep 40
+curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=up{namespace="apps"}' \
+  | jq '.data.result | length'</code></pre>
+<pre data-lang="text"><code><span class="o">0</span></code></pre>
+
+  <p class="cap">
+    <b>0입니다.</b> 오류 메시지도, 경고 로그도 없습니다.
+    프로메테우스 CR의 셀렉터를 직접 확인해 보면 이유가 보입니다.
+  </p>
+
+<pre data-lang="bash"><code>kubectl -n monitoring get prometheus -o yaml \
+  | grep -A4 'serviceMonitorSelector:'</code></pre>
+<pre data-lang="text"><code><span class="o">    serviceMonitorSelector:
+      matchLabels:
+        release: kps</span></code></pre>
+
+  <div class="box ac">
+    <span class="t">왜 이런 기본값인가</span>
+    <p>
+      차트는 <code>serviceMonitorSelectorNilUsesHelmValues: true</code>를 기본으로 둡니다.
+      "이 헬름 릴리스가 관리하는 것만 본다"는 뜻입니다.
+      한 클러스터에 프로메테우스를 여러 개 띄우는 상황(팀별 분리 등)에서
+      서로의 타깃을 침범하지 않게 하려는 장치입니다.
+      <br><br>
+      이 선택을 무력화하려면 값 파일에 <code>serviceMonitorSelectorNilUsesHelmValues: false</code>를 넣으면 됩니다.
+      실습에서는 <strong>넣지 않습니다.</strong> 라벨을 붙이는 쪽이 원리를 드러내고,
+      운영 클러스터에서도 그쪽이 표준이기 때문입니다.
+    </p>
+  </div>
+
+<pre data-lang="bash"><code>kubectl delete -f 90-servicemonitor-broken.yaml</code></pre>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2 class="sec"><span class="n">03</span>ServiceMonitor 작성</h2>
+
+  <p class="fn">k8s/monitoring/90-servicemonitors.yaml</p>
+<pre data-lang="yaml"><code>apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    <span class="c"># ① 04단계 헬름 릴리스 이름과 일치해야 오퍼레이터가 고른다</span>
+    release: kps
+spec:
+  <span class="c"># ② 이 라벨을 가진 Service를 찾는다 (03단계에서 붙여둔 것)</span>
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  namespaceSelector:
+    matchNames:
+      - apps
+  endpoints:
+    <span class="c"># ③ Service의 포트 '이름'이다. 숫자가 아니다.</span>
+    - port: http
+      path: /actuator/prometheus
+      <span class="c"># 04단계 전역 설정과 같은 값. 명시해두면 나중에 이 서비스만 조정하기 쉽다.</span>
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gateway
+  namespace: apps
+  labels:
+    release: kps
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  namespaceSelector:
+    matchNames:
+      - apps
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 10s</code></pre>
+
+<pre data-lang="bash"><code>kubectl apply -f 90-servicemonitors.yaml
+kubectl -n apps get servicemonitor</code></pre>
+
+  <div class="box">
+    <span class="t">Service가 없을 때는 PodMonitor</span>
+    <p>
+      배치 작업처럼 Service를 붙이지 않는 워크로드는 <code>PodMonitor</code>를 씁니다.
+      구조는 같고 ②번 고리가 Service 대신 파드 라벨로 바뀝니다.
+      Service가 있다면 ServiceMonitor를 쓰는 편이 낫습니다 —
+      엔드포인트 정보를 쿠버네티스가 관리해주기 때문입니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2 class="sec"><span class="n">04</span>연결 검증</h2>
+
+  <h4>1. 타깃이 생겼는가</h4>
+<pre data-lang="bash"><code>sleep 40
+curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=up{namespace="apps"}' \
+  | jq -r '.data.result[] | "\(.metric.job)\t\(.metric.pod)\t\(.value[1])"'</code></pre>
+<pre data-lang="text"><code><span class="o">gateway     gateway-7d9c4b8f6-qk2xp     1
+order-api   order-api-6b8f7d5c9-h4nm2   1
+order-api   order-api-6b8f7d5c9-t8wcv   1</span></code></pre>
+
+  <p class="cap">
+    파드 <b>3개</b>가 각각 하나의 타깃입니다. 서비스가 아니라 파드 단위로 긁는다는 점이 중요합니다.
+    레플리카를 늘리면 타깃도 자동으로 늘어납니다.
+  </p>
+
+  <h4>2. 앱 메트릭이 실제로 들어왔는가</h4>
+<pre data-lang="bash"><code>curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=orders_created_total' \
+  | jq -r '.data.result[] | "\(.metric.pod)\t\(.value[1])"'</code></pre>
+
+  <p class="cap">
+    03단계에서 부하를 넣었다면 값이 보입니다. 비어 있으면 다시 요청을 몇 번 보내고 40초 기다리세요.
+  </p>
+
+  <h4>3. 오퍼레이터가 만든 설정을 직접 열어보기</h4>
+  <p>
+    이것이 가장 확실한 디버깅 방법입니다. 프로메테우스가 실제로 읽는 설정 파일은
+    시크릿에 gzip으로 들어 있습니다.
+  </p>
+
+<pre data-lang="bash"><code>kubectl -n monitoring get secret prometheus-kps-kube-prometheus-prometheus \
+  -o jsonpath='{.data.prometheus\.yaml\.gz}' \
+  | base64 -d | gunzip | grep -A12 'job_name.*order-api' | head -20</code></pre>
+
+  <p class="cap">
+    <code>job_name</code>이 보이면 ①번 고리는 통과한 것입니다.
+    여기에 없으면 라벨 문제이고, 있는데도 타깃이 0개면 ②·③번 문제입니다.
+    <b>이 명령 하나로 원인을 절반으로 좁힐 수 있습니다.</b>
+  </p>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2 class="sec"><span class="n">05</span>프로메테우스가 붙여준 라벨</h2>
+
+  <p>
+    앱은 <code>orders_created_total{channel="api"}</code> 하나만 내보냈는데,
+    프로메테우스에 저장된 시계열에는 라벨이 훨씬 많습니다.
+  </p>
+
+<pre data-lang="bash"><code>curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=orders_created_total' \
+  | jq '.data.result[0].metric'</code></pre>
+<pre data-lang="text"><code><span class="o">{
+  "__name__": "orders_created_total",
+  "channel": "api",
+  "container": "order-api",
+  "endpoint": "http",
+  "instance": "10.244.1.7:8080",
+  "job": "order-api",
+  "namespace": "apps",
+  "pod": "order-api-6b8f7d5c9-h4nm2",
+  "service": "order-api"
+}</span></code></pre>
+
+  <table>
+    <thead>
+      <tr><th style="width:22%">라벨</th><th>어디서 왔나</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">channel</td><td>앱이 직접 붙인 태그 (02단계 <code>Counter.builder</code>)</td></tr>
+      <tr><td class="num">job</td><td>Service 이름. ServiceMonitor 기반 타깃의 기본 규칙</td></tr>
+      <tr><td class="num">namespace / pod / service / container</td><td>쿠버네티스 서비스 디스커버리가 자동으로 부여</td></tr>
+      <tr><td class="num">endpoint</td><td>ServiceMonitor에 쓴 포트 이름</td></tr>
+      <tr><td class="num">instance</td><td>스크레이프 대상 주소</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box ac">
+    <span class="t">02단계에서 공통 태그를 넣지 않은 이유</span>
+    <p>
+      앱에 <code>application=order-api</code> 같은 태그를 넣었다면, 지금 <code>job</code>·<code>service</code>와
+      의미가 겹치는 라벨이 세 개가 됐을 겁니다. 질의할 때 무엇을 기준으로 묶어야 할지 매번 고민하게 되고,
+      팀원마다 다른 라벨을 쓰기 시작합니다.
+      쿠버네티스에서는 <strong>수집 계층이 붙여주는 라벨을 표준으로 삼는 것</strong>이 깔끔합니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2 class="sec"><span class="n">06</span>PromQL 최소 문법</h2>
+
+  <p>
+    여기서부터는 <a href="http://localhost:30900/graph">localhost:30900/graph</a>에 직접 입력하며 읽으세요.
+    필요한 개념은 네 개뿐입니다.
+  </p>
+
+  <h3>1. 카운터는 그대로 보면 쓸모가 없다</h3>
+
+  <figure>
+    <svg viewBox="0 0 960 330" role="img" aria-label="계속 증가하는 카운터 그래프와 rate 적용 후의 초당 증가량 그래프 비교">
+      <rect width="960" height="330" fill="#ffffff"/>
+
+      <text x="60" y="34" font-size="13" fill="#15181d">원본 카운터 — <tspan font-family="ui-monospace,monospace" font-size="12">orders_created_total</tspan></text>
+      <line x1="60" y1="150" x2="600" y2="150" stroke="#585f6b" stroke-width="1.2"/>
+      <line x1="60" y1="50" x2="60" y2="150" stroke="#585f6b" stroke-width="1.2"/>
+      <polyline points="60,142 128,142 128,130 196,130 196,112 264,112 264,104 332,104 332,84 400,84 400,72 468,72 468,60 536,60 536,56 600,56"
+                fill="none" stroke="#1f4d8f" stroke-width="1.8"/>
+      <text x="612" y="60" font-size="12" fill="#585f6b">계속 증가하기만 한다</text>
+      <text x="612" y="80" font-size="12" fill="#585f6b">"지금 트래픽이 많은가"를</text>
+      <text x="612" y="100" font-size="12" fill="#585f6b">읽어낼 수 없다</text>
+
+      <text x="60" y="204" font-size="13" fill="#15181d">rate() 적용 — <tspan font-family="ui-monospace,monospace" font-size="12">rate(orders_created_total[2m])</tspan></text>
+      <line x1="60" y1="300" x2="600" y2="300" stroke="#585f6b" stroke-width="1.2"/>
+      <line x1="60" y1="220" x2="60" y2="300" stroke="#585f6b" stroke-width="1.2"/>
+      <polyline points="60,278 128,278 196,262 264,286 332,244 400,258 468,250 536,272 600,264"
+                fill="none" stroke="#2e7d4f" stroke-width="1.8"/>
+      <text x="612" y="240" font-size="12" fill="#585f6b">초당 증가량 — 트래픽의 모양</text>
+      <text x="612" y="260" font-size="12" fill="#585f6b">파드가 재시작해 카운터가</text>
+      <text x="612" y="280" font-size="12" fill="#585f6b">0으로 돌아가도 보정해준다</text>
+    </svg>
+    <figcaption>
+      <b>그림 2.</b> 카운터를 다룰 때는 거의 항상 <code>rate()</code>를 씌운다.
+      대괄호 안의 시간은 "이만큼을 돌아보며 평균 낸다"는 뜻이고,
+      <strong>스크레이프 간격의 4배 이상</strong>을 권장한다. 우리는 30초 간격이므로 최소 2분이다.
+    </figcaption>
+  </figure>
+
+  <h3>2. sum by — 필요한 축만 남긴다</h3>
+<pre data-lang="promql"><code><span class="c"># 파드별로 흩어진 값을 서비스 단위로 합친다</span>
+sum by (service) (rate(orders_created_total[2m]))
+
+<span class="c"># by 대신 without을 쓰면 "이 라벨만 빼고 나머지로 묶어라"가 된다</span>
+sum without (pod, instance) (rate(orders_created_total[2m]))</code></pre>
+
+  <h3>3. 히스토그램에서 분위수 뽑기</h3>
+<pre data-lang="promql"><code><span class="c"># le(less or equal) 라벨을 반드시 남겨야 한다. 빠지면 계산이 안 된다.</span>
+histogram_quantile(
+  0.95,
+  sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace="apps"}[5m]))
+)</code></pre>
+
+  <div class="box">
+    <span class="t">네이티브 히스토그램</span>
+    <p>
+      Prometheus 3.8부터 <span class="term" title="Native Histogram — 버킷을 미리 정하지 않고 지수적으로 자동 분할하는 새로운 히스토그램 방식">네이티브 히스토그램</span>이
+      정식 기능이 됐습니다. 버킷 시계열이 폭증하는 문제를 근본적으로 줄여줍니다.
+      다만 그라파나 패널과 기존 대시보드가 아직 고전 버킷 기준인 경우가 많아,
+      이 실습은 고전 버킷(<code>_bucket</code>)으로 진행합니다.
+      10단계 카디널리티 논의에서 전환 판단 기준을 다시 다룹니다.
+    </p>
+  </div>
+
+  <h3>4. 비율 계산에서 조심할 것</h3>
+<pre data-lang="promql"><code><span class="c"># 트래픽이 없으면 분모가 0이 되어 결과가 비어버린다.
+# 대시보드에서 'No data'가 뜨는 흔한 원인이다.</span>
+sum(rate(http_server_requests_seconds_count{namespace="apps", status=~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count{namespace="apps"}[5m]))</code></pre>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2 class="sec"><span class="n">07</span>RED 지표 완성</h2>
+
+  <p>
+    <strong>R</strong>ate(처리율) · <strong>E</strong>rrors(에러율) · <strong>D</strong>uration(지연).
+    애플리케이션 관측은 이 셋으로 시작해서 이 셋으로 끝납니다.
+    아래 질의들이 07단계 대시보드의 패널이 됩니다.
+  </p>
+
+  <h4>R — 서비스별 초당 요청 수</h4>
+<pre data-lang="promql"><code>sum by (service) (
+  rate(http_server_requests_seconds_count{namespace="apps"}[2m])
+)</code></pre>
+
+  <h4>E — 서비스별 5xx 비율(%)</h4>
+<pre data-lang="promql"><code>100 * (
+  sum by (service) (
+    rate(http_server_requests_seconds_count{namespace="apps", status=~"5.."}[5m])
+  )
+  /
+  sum by (service) (
+    rate(http_server_requests_seconds_count{namespace="apps"}[5m])
+  )
+)</code></pre>
+
+  <h4>D — 서비스별 P95 응답 시간(초)</h4>
+<pre data-lang="promql"><code>histogram_quantile(
+  0.95,
+  sum by (le, service) (
+    rate(http_server_requests_seconds_bucket{namespace="apps"}[5m])
+  )
+)</code></pre>
+
+  <h4>D 심화 — 엔드포인트별 P99, 느린 순서대로</h4>
+<pre data-lang="promql"><code>topk(5,
+  histogram_quantile(
+    0.99,
+    sum by (le, uri) (
+      rate(http_server_requests_seconds_bucket{namespace="apps", service="order-api"}[5m])
+    )
+  )
+)</code></pre>
+
+  <p class="cap">
+    <code>uri</code> 라벨이 <code>/api/orders/{id}</code>처럼 템플릿으로 찍혀 있는 것을 확인하세요.
+    02단계에서 <code>@PathVariable</code>로 매핑한 덕분입니다.
+  </p>
+
+  <h4>비즈니스 지표 — 분당 주문 수와 거부율</h4>
+<pre data-lang="promql"><code><span class="c"># 분당 주문 건수</span>
+sum(rate(orders_created_total[5m])) * 60
+
+<span class="c"># 거부 비율(%) — 검증에 걸린 주문의 비중</span>
+100 * (
+  sum(rate(orders_rejected_total[5m]))
+  /
+  (sum(rate(orders_created_total[5m])) + sum(rate(orders_rejected_total[5m])))
+)</code></pre>
+
+  <div class="box ac">
+    <span class="t">RED와 비즈니스 지표를 나란히 두는 이유</span>
+    <p>
+      기술 지표만 보면 "에러율 0%, P95 정상"인데 매출이 떨어지는 상황을 놓칩니다.
+      주문 수가 평소의 30%로 줄었는데 응답 시간은 오히려 좋아진 경우가 그렇습니다 —
+      사용자가 들어오지 못하고 있다는 뜻일 수 있습니다.
+      대시보드 맨 위에 비즈니스 지표를 두는 팀이 늘어나는 이유입니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2 class="sec"><span class="n">08</span>지연 전파 관찰</h2>
+
+  <p>
+    서비스를 둘로 나눈 이유를 확인할 차례입니다.
+    백엔드를 느리게 만들고, 게이트웨이의 지연이 어떻게 따라 움직이는지 봅니다.
+  </p>
+
+<pre data-lang="bash"><code><span class="c"># 터미널 1 — 평상시 트래픽을 계속 흘린다</span>
+while true; do
+  curl -s -o /dev/null -X POST http://localhost:30080/api/orders \
+    -H 'Content-Type: application/json' \
+    -d '{"item":"latte","quantity":2}'
+  sleep 0.3
+done</code></pre>
+
+<pre data-lang="bash"><code><span class="c"># 터미널 2 — 3분 동안 느린 요청을 섞는다</span>
+end=$((SECONDS+180))
+while [ "$SECONDS" -lt "$end" ]; do
+  curl -s -o /dev/null "http://localhost:30080/api/chaos/slow?ms=900"
+  sleep 1
+done
+echo "지연 주입 종료"</code></pre>
+
+  <p>두 질의를 그래프에 함께 띄워 비교합니다.</p>
+
+<pre data-lang="promql"><code><span class="c"># 게이트웨이가 본 P95 (클라이언트 관점)</span>
+histogram_quantile(0.95,
+  sum by (le) (rate(http_server_requests_seconds_bucket{service="gateway"}[2m]))
+)
+
+<span class="c"># 백엔드가 본 P95 (서버 관점)</span>
+histogram_quantile(0.95,
+  sum by (le) (rate(http_server_requests_seconds_bucket{service="order-api"}[2m]))
+)</code></pre>
+
+  <table>
+    <thead>
+      <tr><th style="width:34%">관찰되는 패턴</th><th>해석</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>두 값이 거의 같이 오른다</td>
+        <td>백엔드가 원인. 게이트웨이는 기다렸을 뿐이다</td>
+      </tr>
+      <tr>
+        <td>게이트웨이만 오르고 백엔드는 평온</td>
+        <td>게이트웨이 자체 병목 — 커넥션 풀, CPU, 라우팅 필터를 의심</td>
+      </tr>
+      <tr>
+        <td>백엔드가 올랐는데 게이트웨이는 그대로</td>
+        <td>느린 경로가 게이트웨이를 거치지 않았거나, 타임아웃으로 잘리고 있다</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>게이트웨이의 라우트 단위 지표로 한 번 더 확인할 수 있습니다.</p>
+
+<pre data-lang="promql"><code>histogram_quantile(0.95,
+  sum by (le, routeId) (rate(spring_cloud_gateway_requests_seconds_bucket[5m]))
+)</code></pre>
+
+  <div class="box warn">
+    <span class="t">실습이 끝나면 반드시 부하 루프를 끄세요</span>
+    <p>
+      터미널 1의 무한 루프를 켜둔 채 잊으면 노트북 팬이 계속 돌고,
+      프로메테우스 저장 공간(04단계에서 8Gi)이 예상보다 빨리 찹니다.
+      <code>Ctrl+C</code>로 종료하세요.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 9 ══════ -->
+<section id="s9">
+  <h2 class="sec"><span class="n">09</span>자주 겪는 문제</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:34%">증상</th><th>확인 순서</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>타깃 목록에 앱이 아예 없다</td>
+        <td>①번 고리. <code>release: kps</code> 라벨과 프로메테우스 CR의 셀렉터를 대조한다</td>
+      </tr>
+      <tr>
+        <td>타깃 그룹은 있는데 대상이 0개</td>
+        <td>②번 고리. <code>kubectl -n apps get svc --show-labels</code>로 Service 라벨을 확인</td>
+      </tr>
+      <tr>
+        <td><code>server returned HTTP status 404</code></td>
+        <td><code>path</code>가 <code>/actuator/prometheus</code>인지, 앱의 exposure 설정에 prometheus가 있는지</td>
+      </tr>
+      <tr>
+        <td><code>connection refused</code></td>
+        <td>포트 이름이 가리키는 실제 포트가 앱의 리슨 포트와 다르다</td>
+      </tr>
+      <tr>
+        <td>메트릭은 있는데 <code>_bucket</code>만 없다</td>
+        <td>앱 설정 문제. 02단계 <code>percentiles-histogram</code>을 확인하고 이미지를 다시 빌드</td>
+      </tr>
+      <tr>
+        <td><code>histogram_quantile</code> 결과가 <code>NaN</code></td>
+        <td><code>sum by</code>에서 <code>le</code>를 빠뜨렸거나, 해당 구간에 샘플이 없다</td>
+      </tr>
+      <tr>
+        <td>비율 질의가 빈 결과</td>
+        <td>분모가 0. 트래픽을 넣거나 <code>or vector(0)</code>로 기본값을 준다</td>
+      </tr>
+      <tr>
+        <td>그래프가 톱니처럼 끊긴다</td>
+        <td>rate 윈도가 스크레이프 간격에 비해 짧다. <code>[2m]</code> 이상으로 늘린다</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="box warn">
+    <span class="t">지금부터 조심해야 할 것 — 카디널리티</span>
+    <p>
+      앱 메트릭이 붙는 순간 시계열 개수가 급증합니다.
+      <code>http_server_requests_seconds_bucket</code> 하나가
+      (엔드포인트 수) × (상태 코드 수) × (버킷 수) × (파드 수)만큼의 시계열을 만듭니다.
+      실습 규모에서는 문제없지만, 운영에서 <code>uri</code> 태그에 ID가 섞이는 순간
+      프로메테우스가 메모리 부족으로 죽습니다. 10단계의 주제입니다.
+    </p>
+  </div>
+
+<pre data-lang="promql"><code><span class="c"># 지금 시계열이 몇 개인지 확인해두면 나중에 비교하기 좋다</span>
+prometheus_tsdb_head_series
+
+<span class="c"># 메트릭 이름별 시계열 수 상위 10개</span>
+topk(10, count by (__name__) ({__name__=~".+"}))</code></pre>
+</section>
+
+<!-- ══════ 10 ══════ -->
+<section id="s10">
+  <h2 class="sec"><span class="n">10</span>완료 체크리스트</h2>
+
+  <ul class="check">
+    <li><code>release</code> 라벨 없이 만들면 타깃이 안 생긴다는 것을 직접 확인했다</li>
+    <li><code>up{namespace="apps"}</code> 결과가 파드 3개 모두 1이다</li>
+    <li>시크릿에서 생성된 스크레이프 설정을 열어 <code>job_name</code>을 확인했다</li>
+    <li>메트릭에 <code>job</code>·<code>namespace</code>·<code>pod</code>·<code>service</code> 라벨이 붙어 있다</li>
+    <li>RED 질의 세 개가 모두 값을 반환한다</li>
+    <li><code>uri</code> 라벨이 <code>/api/orders/{id}</code> 형태로 템플릿화되어 있다</li>
+    <li>지연 주입 실습에서 게이트웨이와 백엔드의 P95 곡선을 함께 봤다</li>
+    <li>부하 생성 루프를 종료했다</li>
+    <li>질의 6개를 팀 저장소의 메모에 정리했다 (07단계에서 패널로 옮긴다)</li>
+  </ul>
+
+  <div class="box ac">
+    <span class="t">다음 문서</span>
+    <p>
+      <strong>07 · 대시보드와 알림</strong> — 방금 만든 질의들을 05단계의 프로비저닝 방식으로
+      대시보드에 옮깁니다. 변수(namespace·service)를 넣어 하나의 대시보드로 여러 서비스를 보고,
+      <code>PrometheusRule</code>로 알림 규칙을 선언한 뒤 Alertmanager에서 라우팅합니다.
+      "알림을 몇 개 만들 것인가"라는 더 어려운 질문도 함께 다룹니다.
+    </p>
+  </div>
+
+  <h3>출처</h3>
+  <div class="src">
+    <ul>
+      <li>Prometheus Operator ServiceMonitor 설계 — https://github.com/prometheus-operator/kube-prometheus/blob/main/docs/kube-prometheus-on-kubeadm.md</li>
+      <li>kube-prometheus-stack 값 파일 (selector 기본 동작) — https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml</li>
+      <li>ServiceMonitor 라벨 요구사항 사례 — https://github.com/prometheus-community/helm-charts/issues/1911</li>
+      <li>ServiceMonitor 구성 가이드 — https://oneuptime.com/blog/post/2026-01-19-kubernetes-prometheus-servicemonitor/view</li>
+      <li>Prometheus 3.x 네이티브 히스토그램 현황 — https://prometheus.io/docs/specs/prw/remote_write_spec_2_0/</li>
+      <li>Spring Boot 메트릭 레퍼런스 — https://docs.spring.io/spring-boot/reference/actuator/metrics.html</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <span>관측성 실습 시리즈 · STEP 06 / 11 · macOS</span>
+  <span>2026-08-19 기준 · 버전은 실습 당일 재확인</span>
+</footer>
+
+</div>
+<div style="max-width:920px;margin:0 auto;padding:0 28px 60px">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#1a4fa0;text-decoration:none;border-bottom:1px solid #b9c9e2">← 시리즈 목차로 돌아가기</a>
+</div>
+</body>
+</html>

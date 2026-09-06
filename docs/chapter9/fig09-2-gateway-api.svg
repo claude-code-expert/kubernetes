@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow92" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-role { font-size: 12px; font-weight: 700; fill: #333333; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 인프라 프로바이더 레인 -->
+  <rect class="lane" x="20" y="20" width="270" height="150" rx="6"/>
+  <text class="t-role" x="36" y="42">인프라 프로바이더</text>
+  <text class="t-sub" x="36" y="58">(클라우드·플랫폼 팀)</text>
+  <rect class="box-accent" x="36" y="70" width="238" height="80" rx="4"/>
+  <text class="t-title" x="155" y="98" text-anchor="middle">GatewayClass</text>
+  <text class="t-sub" x="155" y="118" text-anchor="middle">어떤 구현체를 쓸지</text>
+  <text class="t-sub" x="155" y="134" text-anchor="middle">(Envoy, Cilium 등) 정의</text>
+
+  <line class="line" x1="290" y1="110" x2="326" y2="110" marker-end="url(#arrow92)"/>
+
+  <!-- 플랫폼 관리자 레인 -->
+  <rect class="lane" x="330" y="20" width="270" height="150" rx="6"/>
+  <text class="t-role" x="346" y="42">플랫폼 관리자</text>
+  <text class="t-sub" x="346" y="58">(운영·보안 팀)</text>
+  <rect class="box-accent" x="346" y="70" width="238" height="80" rx="4"/>
+  <text class="t-title" x="465" y="98" text-anchor="middle">Gateway</text>
+  <text class="t-sub" x="465" y="118" text-anchor="middle">리스너·포트·TLS 정책</text>
+  <text class="t-sub" x="465" y="134" text-anchor="middle">누가 뭘 붙일 수 있는지 통제</text>
+
+  <line class="line" x1="600" y1="110" x2="636" y2="110" marker-end="url(#arrow92)"/>
+
+  <!-- 개발자 레인 -->
+  <rect class="lane" x="640" y="20" width="240" height="150" rx="6"/>
+  <text class="t-role" x="656" y="42">개발자</text>
+  <text class="t-sub" x="656" y="58">(애플리케이션 팀)</text>
+  <rect class="box-accent" x="656" y="70" width="208" height="80" rx="4"/>
+  <text class="t-title" x="760" y="98" text-anchor="middle">HTTPRoute</text>
+  <text class="t-sub" x="760" y="118" text-anchor="middle">/api → 내 서비스로</text>
+  <text class="t-sub" x="760" y="134" text-anchor="middle">라우팅 규칙만 선언</text>
+
+  <!-- 인그레스 비교 -->
+  <rect class="box" x="40" y="210" width="820" height="130" rx="6"/>
+  <text class="t-title" x="60" y="234">왜 셋으로 나눴나 — 인그레스 API의 한계와 대비</text>
+  <text class="t-sub" x="60" y="260">인그레스: 역할 구분 없이 애너테이션 하나에 모든 설정이 뒤섞임 → 벤더 종속, 멀티테넌시 어려움</text>
+  <text class="t-sub" x="60" y="282">게이트웨이 API: 인프라·정책·라우팅을 계층으로 분리 → 개발자는 라우팅 규칙만, 나머지는 플랫폼팀 책임</text>
+  <text class="t-sub" x="60" y="304">HTTP 외 TCP·gRPC 등 프로토콜도 같은 모델로 확장 — 2026년 현재 정식(GA) API, 신규 구축의 기본 권장값</text>
+
+  <text class="t-cap" x="450" y="362" text-anchor="middle">세 오브젝트는 각각 다른 사람이 만들고 관리한다 — "누가 무엇을 책임지는가"가 인그레스와의 근본적 차이다.</text>
+</svg>

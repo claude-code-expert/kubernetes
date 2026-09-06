@@ -1,0 +1,56 @@
+# M27 — 감사 정책. 모든 것을 남기면 아무것도 읽지 못한다.
+#
+# 규칙은 위에서 아래로 평가되고 **처음 일치한 규칙**의 수준이 적용된다.
+# 그래서 "버릴 것"을 먼저 쓰고 "남길 것"을 나중에 쓴다.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+# RequestReceived 단계는 남기지 않는다 (요청마다 줄이 두 배가 된다)
+omitStages:
+  - RequestReceived
+rules:
+  # ① 읽기는 시스템 구성요소 것만 버린다.
+  #    사람·앱의 읽기를 전부 버리면 **인가 거부(403)도 함께 사라진다** (M27 실패 ①).
+  - level: None
+    userGroups: ["system:nodes", "system:serviceaccounts:kube-system"]
+    verbs: ["get", "list", "watch"]
+  - level: None
+    users: ["system:apiserver", "system:kube-scheduler", "system:kube-controller-manager"]
+    verbs: ["get", "list", "watch"]
+
+  # ② 컨트롤러·kubelet 이 스스로 하는 일은 버린다. 양이 압도적이다.
+  - level: None
+    users:
+      - system:apiserver
+      - system:kube-scheduler
+      - system:kube-controller-manager
+      - system:serviceaccount:kube-system:endpoint-controller
+    verbs: ["update", "patch"]
+    resources:
+      - group: ""
+        resources: ["endpoints", "leases", "events"]
+  - level: None
+    userGroups: ["system:nodes"]
+    verbs: ["update", "patch"]
+
+  # ③ 시크릿·컨피그맵은 본문을 남기지 않는다. 감사 로그가 유출 경로가 된다.
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["secrets", "configmaps"]
+      - group: "authentication.k8s.io"
+        resources: ["tokenreviews"]
+
+  # ④ 삭제와 권한 변경은 본문까지 남긴다. 사후에 "무엇이 있었는지" 복원해야 한다.
+  - level: RequestResponse
+    verbs: ["delete", "deletecollection"]
+  - level: RequestResponse
+    resources:
+      - group: "rbac.authorization.k8s.io"
+      - group: "admissionregistration.k8s.io"
+
+  # ⑤ 나머지 쓰기는 요청 본문까지.
+  - level: Request
+    verbs: ["create", "update", "patch"]
+
+  # ⑥ 여기까지 안 걸린 것 (거부된 요청 포함) 은 메타데이터만.
+  - level: Metadata

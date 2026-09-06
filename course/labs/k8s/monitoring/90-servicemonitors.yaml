@@ -1,0 +1,45 @@
+# M20 — 프로메테우스에게 "저기도 긁어라"라고 말하는 오브젝트.
+#
+# 라벨이 세 겹으로 맞아야 연결된다. 하나만 어긋나도 에러 없이 조용히 사라진다:
+#   ① ServiceMonitor 의 라벨  ←→  Prometheus CR 의 serviceMonitorSelector
+#        확인: kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}'
+#   ② ServiceMonitor 의 selector.matchLabels  ←→  Service 의 라벨
+#   ③ endpoints[].port  ←→  Service 의 포트 '이름' (숫자가 아니다)
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    release: kps                      # ① 이것이 없으면 오퍼레이터가 이 오브젝트를 보지 않는다
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api   # ② Service 에 붙은 라벨
+  namespaceSelector:
+    matchNames: [apps]
+  endpoints:
+    - port: http                      # ③ Service 의 포트 이름
+      path: /actuator/prometheus      # 스프링 액추에이터의 경로
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: journal-api
+  namespace: journal
+  labels:
+    release: kps
+spec:
+  selector:
+    matchLabels:
+      app: journal-api                # journal-api Service 는 이 라벨을 쓴다 (M11)
+  namespaceSelector:
+    matchNames: [journal]
+  endpoints:
+    - port: http
+      path: /metrics                  # prom-client 를 직접 붙였으므로 경로가 다르다
+      interval: 30s
+      scrapeTimeout: 10s

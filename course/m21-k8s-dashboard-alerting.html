@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 4 · 관측] M21 대시보드와 알림 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 전이 시각과 수치는 2026-09-05 kind study 클러스터에서 실제로 측정한 값이다.
+  그림은 인라인 SVG — figures/m21-fig1-alert-lifecycle.svg 에 같은 파일을 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 21 / 38 · PART 4 관측</div>
+  <h1>대시보드와 알림</h1>
+  <p class="ch-desc">M20까지는 질의를 칠 때만 값을 봤다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 알 방법이 없다. 이 모듈에서 늘 켜 두는 대시보드와 사람을 부르는 알림을 만들고, 카오스로 실제 장애를 만들어 <strong>pending → firing → 해소</strong>까지 시각과 함께 기록한다. 그리고 각 구간의 길이를 무엇이 정하는지 확인한다.</p>
+  <div class="meta">
+    <span class="tag">중반</span><span class="tag">90분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">kube-prometheus-stack 89.2.2</span>
+    <br>2026-09-05 검증 (kind v0.33.0 · k6 v2.2.0) · 버전 숫자는 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m20-k8s-promql-instrumentation.html">M20</a> 완료 — 두 앱이 스크레이프되고 있다. 확인: 질의 <code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code>가 두 줄</li>
+    <li><code>k6-red.js</code>가 있다. 확인: <code>k6 inspect course/labs/scripts/k6-red.js</code></li>
+    <li>그라파나에 접근할 수 있다. 확인: <code>kubectl -n monitoring port-forward svc/kps-grafana 3000:80</code> 후 <code>localhost:3000</code></li>
+    <li>새로 쓰는 파일: <code>course/labs/k8s/monitoring/91-prometheusrule.yaml</code> · <code>kustomization.yaml</code> · <code>course/labs/monitoring/dashboards/study-red.json</code> · <code>course/labs/scripts/apply-dashboards.sh</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. RED 질의에 임계값과 <code>for</code>를 붙여 알림 규칙 넷을 만들고, 카오스로 발화시켜 상태 전이를 20초 간격으로 기록한다.</p>
+  <p>2. 발화까지 2분 18초, 해소까지 5분 5초가 걸린 이유를 각각 다른 설정에서 찾아낸다 — 늦게 울리는 것과 늦게 꺼지는 것은 원인이 다르다.</p>
+  <p>3. 대시보드를 ConfigMap으로 코드화하고, Alertmanager의 억제·침묵이 알림을 어떻게 눌러 두는지 상태 필드로 구분한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">21.1</span>보고 있지 않을 때</a>
+  <a href="#s2"><span class="num">21.2</span>이론 — 무엇에 알림을 걸 것인가</a>
+  <a href="#s3"><span class="num">21.3</span>따라하기 ① 알림 규칙 넷</a>
+  <a href="#s4"><span class="num">21.4</span>따라하기 ② 발화시킨다</a>
+  <a href="#s5"><span class="num">21.5</span>따라하기 ③ Alertmanager가 하는 일</a>
+  <a href="#s6"><span class="num">21.6</span>따라하기 ④ 대시보드를 코드로</a>
+  <a href="#s7"><span class="num">21.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">21.8</span>운영 관점 — 알림 피로</a>
+  <a href="#s9"><span class="num">21.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">21.1</span>보고 있지 않을 때</h2>
+  <p class="lead">M20 10단계에서 <code>/api/chaos/slow</code>가 P99를 805ms로 끌어올린 것을 찾아냈다. 찾아낼 수 있었던 것은 <strong>그때 우리가 질의를 치고 있었기 때문</strong>이다.</p>
+  <p>같은 일이 새벽 3시에 일어나면 어떻게 되는가. 프로메테우스는 지표를 계속 쌓고 있으므로 다음 날 아침에 되짚을 수는 있다. 그러나 그 사이 사용자는 3초를 기다렸고, 아무도 몰랐다. <strong>기록이 있는 것과 사람이 아는 것은 다른 일이다.</strong></p>
+  <p>이 간격을 메우는 것이 둘이다. <dfn class="term">대시보드</dfn>는 사람이 볼 때 빠르게 판단할 수 있게 하고, <dfn class="term">알림 <span class="en">alert</span></dfn>은 사람이 보고 있지 않을 때 불러낸다. 둘은 보완이 아니라 <strong>역할이 다르다</strong> — 대시보드에 패널을 아무리 많이 만들어도 새벽 3시에는 아무도 보지 않는다.</p>
+  <p>그런데 알림을 만들기 시작하면 곧 반대 문제가 온다. 너무 많이 울려서 아무도 보지 않게 되는 것이다. 이 모듈은 규칙 넷만 만들고, 그 넷이 각각 <strong>왜 그 임계값과 그 지속 시간인지</strong>를 실제 발화 시간으로 확인한다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">21.2</span>이론 — 무엇에 알림을 걸 것인가</h2>
+  <p>책 3.11이 다루는 것이 이 절이고, 핵심 주장은 하나다 — <strong>알림은 사람을 부르는 일이므로, 사람이 무언가 할 수 있을 때만 울려야 한다.</strong> CPU가 80%인 것은 사람이 할 일이 없을 수도 있다. 사용자 요청의 5%가 실패하고 있는 것은 다르다.</p>
+
+  <h3>증상에 걸고 원인으로 내려간다</h3>
+  <p>M20 2절에서 USE(자원)와 RED(서비스)를 나눴다. 알림은 <strong>RED 쪽</strong>에 건다. 사용자가 겪는 것이 거기 있기 때문이다. 자원 지표는 알림이 울린 뒤 원인을 찾을 때 본다.</p>
+  <p>예외가 하나 있다 — <strong>관측 자체의 고장</strong>이다. 스크레이프가 실패하면 다른 모든 알림이 침묵한다. 아무 알림도 안 울리는 것이 "정상"인지 "관측이 죽었는지" 구분되지 않으므로, 이것만은 따로 걸어 둔다. 21.3의 첫 번째 규칙이 그것이다.</p>
+
+  <h3>SLO 기반 알림 — "느리다"와 "위험하다"는 다르다</h3>
+  <p><dfn class="term">SLO <span class="en">Service Level Objective</span></dfn>는 "요청의 99%가 200ms 안에"처럼 <strong>사용자와의 약속</strong>이다. 나머지 1%가 <dfn class="term">오차 예산 <span class="en">error budget</span></dfn>이고, 이것을 다 쓰기 전까지는 여유가 있다는 뜻이다.</p>
+  <p>P95가 500ms를 넘었다고 곧바로 사람을 부르면 자주 울린다. 잠깐 느려지는 것은 늘 있는 일이고, 예산 안이면 문제가 아니다. SLO 기반 알림은 대신 <strong>예산을 얼마나 빨리 태우고 있는가</strong>를 본다 — 이 속도가 유지되면 이번 달 예산이 언제 바닥나는가. 21.4에서 두 알림 중 하나만 울리는 것을 보게 되는데, 그 차이가 이것이다.</p>
+
+  <h3>알림 하나에 붙는 세 가지 시간</h3>
+  <table>
+    <tr><th>설정</th><th>정하는 것</th><th>이 모듈의 값</th></tr>
+    <tr><td><code>interval</code> (그룹)</td><td>얼마나 자주 규칙을 평가할까</td><td>30초</td></tr>
+    <tr><td><code>for</code> (규칙)</td><td>조건이 얼마나 지속돼야 부를까</td><td>2~3분</td></tr>
+    <tr><td><code>rate(...[5m])</code> (질의)</td><td>얼마나 긴 창으로 계산할까</td><td>5분</td></tr>
+  </table>
+  <p>셋이 각각 다른 구간의 길이를 정하는데, 특히 마지막이 자주 오해받는다. <code>for</code>는 <strong>발화를 늦추는</strong> 값이지만 해소는 늦추지 않는다. 그런데 실제로는 문제가 사라진 뒤에도 알림이 한참 남는다 — 그 이유가 <code>rate</code>의 창이다. 21.4에서 숫자로 확인한다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">21.3</span>따라하기 ① 알림 규칙 넷</h2>
+
+  <div class="step">
+    <h4>1단계 — 오퍼레이터가 규칙을 고르는 조건을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M20에서 ServiceMonitor로 겪은 것과 같은 라벨 문제를 미리 피한다.</p>
+<pre><code>kubectl -n monitoring get prometheus \
+  -o jsonpath='ruleSelector={.items[0].spec.ruleSelector}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>ruleSelector={"matchLabels":{"release":"kps"}}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>ServiceMonitor</code>와 똑같이 <code>release: kps</code>를 요구한다. 이 라벨을 빼면 M20 실패 ①과 같은 방식으로 <strong>조용히 무시된다</strong> — 규칙 파일이 만들어지지 않고 오류도 나지 않는다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 규칙 넷을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M20에서 쓴 RED 질의에 임계값과 지속 시간을 붙여 알림으로 만든다.</p>
+    <p><code>course/labs/k8s/monitoring/91-prometheusrule.yaml</code>로 저장한다. 넷 중 앞의 셋은 M20 8·9단계의 질의를 그대로 쓴다.</p>
+<pre><code>apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: study-app-rules
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: study-app
+      interval: 30s        # 이 그룹의 규칙을 얼마나 자주 평가할지
+      rules:
+        # ── ① 대상이 사라졌다 ────────────────────────────────────────────
+        # 증상이 아니라 관측 자체의 고장이다. 이것이 울리면 다른 알림을 믿을 수 없다.
+        - alert: AppTargetDown
+          expr: up{job=~"order-api|journal-api"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} 스크레이프 실패"
+            description: "{{ $labels.pod }} 를 1분 이상 긁지 못하고 있습니다."</code></pre>
+<pre><code>        # ── ② 에러율 ─────────────────────────────────────────────────────
+        # M20 8단계의 질의에 임계값 5% 와 지속 2분을 더했다.
+        - alert: AppHighErrorRate
+          expr: |
+            100 * (
+              sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api", status=~"5.."}[5m]))
+              /
+              sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api"}[5m]))
+            ) &gt; 5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} 에러율 {{ $value | printf \"%.1f\" }}%"
+            description: "5xx 비율이 2분 이상 5% 를 넘고 있습니다."
+
+        # ── ③ 지연 ───────────────────────────────────────────────────────
+        # le 를 남겨야 histogram_quantile 이 동작한다 (M20 9단계).
+        - alert: AppHighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum by (job, le) (rate(http_server_requests_seconds_bucket{job=~"order-api|journal-api"}[5m]))
+            ) &gt; 0.5
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} P95 {{ $value | printf \"%.2f\" }}초"
+            description: "P95 응답 시간이 3분 이상 500ms 를 넘고 있습니다."</code></pre>
+<pre><code>        # ── ④ SLO 소진 속도 ──────────────────────────────────────────────
+        # 책 3.11 이 말하는 SLO 기반 알림. "느리다"가 아니라
+        # "이 속도면 이번 달 예산을 다 쓴다"를 알린다.
+        #
+        # SLO: 요청의 99% 가 200ms 안에. 오차 예산은 1%.
+        # 5분 창에서 예산을 14.4배 속도로 태우면 30일 예산을 2일 만에 소진한다.
+        - alert: AppSLOFastBurn
+          expr: |
+            (
+              1 - (
+                sum by (job) (rate(http_server_requests_seconds_bucket{job=~"order-api|journal-api", le="0.2"}[5m]))
+                /
+                sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api"}[5m]))
+              )
+            ) &gt; (14.4 * 0.01)
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} SLO 예산을 빠르게 소진 중"
+            description: "200ms 를 넘긴 요청 비율이 임계를 넘었습니다."</code></pre>
+    <table>
+      <tr><th>필드</th><th>뜻</th></tr>
+      <tr><td><code>expr</code></td><td>이 질의의 결과가 <strong>비어 있지 않으면</strong> 조건 성립이다. 비교 연산자가 필터 역할을 한다</td></tr>
+      <tr><td><code>for</code></td><td>조건이 이 시간 동안 계속 성립해야 발화한다. 그 사이는 <code>pending</code></td></tr>
+      <tr><td><code>labels.severity</code></td><td>Alertmanager의 라우팅과 억제가 이 라벨을 본다 (21.5)</td></tr>
+      <tr><td><code>annotations</code></td><td>사람이 읽을 내용. <code>{{ $labels.x }}</code>와 <code>{{ $value }}</code>를 쓸 수 있다</td></tr>
+      <tr><td><code>le="0.2"</code></td><td>버킷 경계를 직접 고른다. <strong>그 경계가 실제로 있어야</strong> 한다 — M20 실패 ③에서 본 것처럼 버킷 정의에 없으면 이 질의는 결과가 없다</td></tr>
+    </table>
+    <p><code>expr</code>에서 <code>&gt; 5</code>가 임계값이자 필터다. 조건을 만족하는 시계열만 남고, 남은 것이 하나라도 있으면 그 라벨 조합마다 알림 인스턴스가 하나씩 생긴다. 그래서 <code>sum by (job)</code>으로 묶어 둔 것이 중요하다 — 파드별로 묶으면 파드 수만큼 알림이 온다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 로드됐는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>오퍼레이터가 규칙을 실제로 프로메테우스에 넣었는지 본다. 여기서 안 보이면 라벨 문제다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/monitoring/91-prometheusrule.yaml
+
+kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 &amp;
+
+curl -s http://localhost:9090/api/v1/rules | python3 -c "
+import json,sys
+for g in json.load(sys.stdin)['data']['groups']:
+    if g['name']!='study-app': continue
+    print('  그룹:',g['name'],'· 규칙',len(g['rules']),'개')
+    for r in g['rules']:
+        print(f\"    {r['name']:20} state={r.get('state','-')} health={r.get('health')}\")"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  그룹: study-app · 규칙 4 개
+    AppTargetDown        state=unknown health=unknown
+    AppHighErrorRate     state=unknown health=unknown
+    AppHighLatencyP95    state=unknown health=unknown
+    AppSLOFastBurn       state=unknown health=unknown</code></div>
+    <div class="verdict"><span class="lbl">판정</span>넷이 다 있다. <code>state=unknown</code>은 <strong>아직 한 번도 평가하지 않았다</strong>는 뜻이고, 30초 뒤에는 <code>inactive</code>가 된다. 오퍼레이터가 규칙 파일을 만들고 프로메테우스가 설정을 다시 읽는 데 시간이 걸리므로, 적용 직후에는 그룹 자체가 안 보일 수 있다 — 1분쯤 기다렸다 다시 친다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">21.4</span>따라하기 ② 발화시킨다</h2>
+
+  <div class="step">
+    <h4>4단계 — 상태를 20초 간격으로 기록한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>전이 시각을 남긴다. 나중에 각 구간의 길이를 계산하려면 시각이 필요하다.</p>
+<pre><code>while true; do
+  line=$(curl -s http://localhost:9090/api/v1/rules | python3 -c "
+import json,sys
+out=[]
+for x in json.load(sys.stdin)['data']['groups']:
+    if x['name']!='study-app': continue
+    for r in x['rules']:
+        st=r.get('state','?'); n=len(r.get('alerts',[]))
+        if st!='inactive' or n: out.append(f\"{r['name']}={st}({n})\")
+print('  '.join(out) if out else 'all inactive')
+")
+  printf '%-9s %s\n' "$(date +%T)" "$line"
+  sleep 20
+done</code></pre>
+    <p><strong>멈추는 방법은 Ctrl-C다.</strong> 다른 터미널에서 카오스를 건다.</p>
+<pre><code>kubectl -n apps port-forward svc/order-api 18082:8080 &amp;
+k6 run -e DURATION=6m course/labs/scripts/k6-red.js</code></pre>
+    <span class="out-lbl">관찰 출력</span>
+    <div class="out"><code>시각      알림 상태
+22:00:20  == 카오스 시작 ==
+22:00:40  all inactive
+22:01:00  AppHighErrorRate=pending(1)  AppHighLatencyP95=pending(1)
+22:02:58  AppHighErrorRate=pending(1)  AppHighLatencyP95=pending(1)
+22:03:18  AppHighErrorRate=firing(1)   AppHighLatencyP95=pending(1)
+22:04:18  AppHighErrorRate=firing(1)   AppHighLatencyP95=firing(1)
+22:05:59  == 카오스 종료 ==
+22:10:44  AppHighErrorRate=firing(1)   AppHighLatencyP95=firing(1)
+22:11:04  all inactive</code></div>
+    <div class="verdict"><span class="lbl">판정</span>네 구간이 보인다. 부하가 시작되고 40초 뒤 <code>pending</code>, 거기서 2분 18초 뒤 <code>firing</code>, 지연 알림은 3분 18초 뒤. 그리고 <strong>부하가 끝난 뒤에도 5분 5초 동안 계속 울렸다.</strong></div>
+  </div>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .load { fill:#e8e8e6; stroke:#777777; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
+      <text class="t-h" x="40" y="46">알림 하나가 울리고 꺼지기까지 — 무엇이 각 구간의 길이를 정하는가</text>
+
+      <!-- 부하 구간 -->
+      <text class="t-sub" x="40" y="82">부하</text>
+      <rect class="node" x="120" y="66" width="720" height="26" rx="3"/>
+      <rect class="load" x="150" y="66" width="300" height="26" rx="3"/>
+      <text class="t-sub" x="300" y="84" text-anchor="middle">카오스 (에러 70% · 800ms 지연)</text>
+      <text class="t-mono" x="150" y="106" text-anchor="middle">22:00:20</text>
+      <text class="t-mono" x="450" y="106" text-anchor="middle">22:05:59</text>
+
+      <line class="tick" x1="150" y1="60" x2="150" y2="330"/>
+      <line class="tick" x1="450" y1="60" x2="450" y2="330"/>
+
+      <!-- 에러율 알림 -->
+      <text class="t-title" x="40" y="146">에러율</text>
+      <text class="t-mono" x="40" y="162">for: 2m</text>
+      <rect class="node" x="120" y="126" width="720" height="34" rx="3"/>
+      <rect class="accent" x="186" y="126" width="120" height="34" rx="3"/>
+      <text class="t-acc" x="246" y="147" text-anchor="middle">pending</text>
+      <rect class="warnbox" x="306" y="126" width="304" height="34" rx="3"/>
+      <text class="t-warn" x="458" y="147" text-anchor="middle">firing</text>
+      <text class="t-mono" x="186" y="176" text-anchor="middle">22:01:00</text>
+      <text class="t-mono" x="306" y="176" text-anchor="middle">22:03:18</text>
+      <text class="t-mono" x="610" y="176" text-anchor="middle">22:11:04</text>
+
+      <!-- 지연 알림 -->
+      <text class="t-title" x="40" y="212">지연 P95</text>
+      <text class="t-mono" x="40" y="228">for: 3m</text>
+      <rect class="node" x="120" y="192" width="720" height="34" rx="3"/>
+      <rect class="accent" x="186" y="192" width="180" height="34" rx="3"/>
+      <text class="t-acc" x="276" y="213" text-anchor="middle">pending</text>
+      <rect class="warnbox" x="366" y="192" width="244" height="34" rx="3"/>
+      <text class="t-warn" x="488" y="213" text-anchor="middle">firing</text>
+      <text class="t-mono" x="366" y="242" text-anchor="middle">22:04:18</text>
+
+      <!-- 구간 설명 -->
+      <line class="line" x1="150" y1="266" x2="186" y2="266" marker-start="url(#ar1)" marker-end="url(#ar1)"/>
+      <text class="t-sub" x="168" y="284" text-anchor="middle">40초</text>
+      <text class="t-sub" x="168" y="300" text-anchor="middle">평가 주기</text>
+
+      <line class="line" x1="186" y1="266" x2="306" y2="266" marker-start="url(#ar1)" marker-end="url(#ar1)"/>
+      <text class="t-acc" x="246" y="284" text-anchor="middle">2분 18초</text>
+      <text class="t-sub" x="246" y="300" text-anchor="middle">규칙의 for</text>
+
+      <line class="line" x1="450" y1="266" x2="610" y2="266" marker-start="url(#ar1)" marker-end="url(#ar1)"/>
+      <text class="t-warn" x="530" y="284" text-anchor="middle">5분 5초</text>
+      <text class="t-sub" x="530" y="300" text-anchor="middle">rate 창 길이 — for 가 아니다</text>
+
+      <!-- 결론 -->
+      <rect class="soft" x="40" y="322" width="818" height="84" rx="4"/>
+      <text class="t-h" x="56" y="346">세 값이 각각 다른 구간을 정한다</text>
+      <rect class="box" x="56" y="356" width="256" height="40" rx="3"/>
+      <text class="t-mono" x="184" y="373" text-anchor="middle">interval: 30s</text>
+      <text class="t-sub" x="184" y="389" text-anchor="middle">얼마나 자주 확인할까</text>
+      <rect class="accent" x="322" y="356" width="256" height="40" rx="3"/>
+      <text class="t-mono" x="450" y="373" text-anchor="middle">for: 2m</text>
+      <text class="t-sub" x="450" y="389" text-anchor="middle">얼마나 지속돼야 부를까</text>
+      <rect class="warnbox" x="588" y="356" width="270" height="40" rx="3"/>
+      <text class="t-mono" x="723" y="373" text-anchor="middle">rate(...[5m])</text>
+      <text class="t-sub" x="723" y="389" text-anchor="middle">얼마나 오래 기억할까</text>
+    </svg>
+    <figcaption>그림 21.1 — 실제로 잰 전이 시각. 발화까지는 <code>for</code>가, 해소까지는 <code>rate</code>의 창 길이가 정한다.</figcaption>
+  </figure>
+
+  <h3>각 구간을 무엇이 정했나</h3>
+  <table>
+    <tr><th>구간</th><th>걸린 시간</th><th>무엇이 정했나</th></tr>
+    <tr><td>카오스 시작 → <code>pending</code></td><td>40초</td><td>평가 주기 30초 + rate 창이 값을 잡는 데 걸린 시간</td></tr>
+    <tr><td><code>pending</code> → <code>firing</code> (에러율)</td><td>2분 18초</td><td>규칙의 <code>for: 2m</code></td></tr>
+    <tr><td><code>pending</code> → <code>firing</code> (지연)</td><td>3분 18초</td><td>규칙의 <code>for: 3m</code></td></tr>
+    <tr><td>카오스 종료 → <code>inactive</code></td><td><strong>5분 5초</strong></td><td><strong><code>rate(...[5m])</code>의 창 길이</strong></td></tr>
+  </table>
+  <p>앞의 셋은 우리가 적은 값과 정확히 맞는다. 마지막이 다르다 — <code>for</code>는 <code>2m</code>인데 해소는 5분이 걸렸다.</p>
+  <p>이유는 <code>rate</code>가 <strong>과거 5분을 본다</strong>는 데 있다. 에러가 22:05:59에 멈춰도, 22:09에 계산하는 <code>rate(...[5m])</code>은 22:04~22:09 구간을 보므로 아직 에러가 들어 있다. 창이 완전히 지나간 뒤에야 비율이 임계 아래로 떨어진다. <strong>알림이 늦게 꺼지는 것은 대부분 <code>for</code>가 아니라 창 길이 때문</strong>이고, 이것을 모르면 "알림이 안 꺼진다"고 규칙을 의심하게 된다.</p>
+
+  <div class="step">
+    <h4>5단계 — SLO 알림은 왜 울리지 않았나</h4>
+    <p class="purpose"><span class="lbl">목적</span>넷 중 하나가 침묵한 것이 버그인지 설계인지 판정한다.</p>
+    <p>관찰 로그에 <code>AppSLOFastBurn</code>이 한 번도 나오지 않았다. 질의를 직접 쳐 본다.</p>
+<pre><code>curl -sG http://localhost:9090/api/v1/query --data-urlencode '
+query=(1 - (
+  sum by (job) (rate(http_server_requests_seconds_bucket{job=~"order-api|journal-api", le="0.2"}[5m]))
+  / sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api"}[5m]))
+))'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  order-api      5.63%  (임계 14.4%)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>버그가 아니다. 200ms를 넘긴 요청이 5.63%로 임계 14.4%에 못 미쳤다. <strong>P95는 500ms를 넘었는데(③이 울렸다) 예산 소진 속도는 위험 수준이 아니었다</strong> — 느린 요청 2rps가 전체 23rps 중 일부였기 때문이다.</div>
+    <p>이것이 21.2에서 말한 차이다. ③은 "느린 요청이 있다"를, ④는 "이 속도면 약속을 못 지킨다"를 말한다. 둘 다 필요하지만 <strong>사람을 깨우는 것은 ④여야 한다</strong> — ③은 낮에 보고 원인을 찾을 일이고, ④는 새벽에도 대응해야 할 일이다. 그래서 ③은 <code>warning</code>, ④는 <code>critical</code>로 잡았다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">21.5</span>따라하기 ③ Alertmanager가 하는 일</h2>
+  <p>프로메테우스는 조건이 성립했다는 것까지만 판단한다. <strong>누구에게 어떻게 보낼지, 묶을지 참을지</strong>는 Alertmanager의 일이다. M19에서 값 파일에 써 둔 설정이 여기서 동작한다.</p>
+
+  <div class="step">
+    <h4>6단계 — 라우팅 트리를 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>알림이 어느 수신자로 가는지, 무엇이 버려지는지 본다.</p>
+<pre><code>kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-alertmanager 9093:9093 &amp;
+curl -s http://localhost:9093/api/v2/status | python3 -c "
+import json,sys,re
+c=json.load(sys.stdin)['config']['original']
+for ln in c.split('\n'):
+    if re.match(r'^(route|  group_|  receiver|  routes|    -|inhibit_rules|receivers)', ln): print(' ',ln)"</code></pre>
+    <span class="out-lbl">출력 (일부)</span>
+    <div class="out"><code>  route:
+    receiver: study-default
+    group_by:
+    routes:
+      - alertname=~"InfoInhibitor|Watchdog"
+      - severity="critical"
+    group_wait: 30s
+    group_interval: 5m</code></div>
+    <table>
+      <tr><th>값</th><th>뜻</th></tr>
+      <tr><td><code>group_by: [namespace, alertname]</code></td><td>같은 네임스페이스의 같은 알림은 한 덩어리로 묶어 보낸다. 파드 10개가 동시에 죽어도 알림 하나다</td></tr>
+      <tr><td><code>group_wait: 30s</code></td><td>첫 알림을 30초 기다렸다 보낸다. 연달아 터지는 것을 한 번에 묶기 위해서다</td></tr>
+      <tr><td><code>group_interval: 5m</code></td><td>같은 그룹에 새 알림이 추가되면 5분 간격으로 다시 보낸다</td></tr>
+      <tr><td><code>repeat_interval: 4h</code></td><td>해결되지 않은 알림을 4시간마다 재통보한다</td></tr>
+    </table>
+    <p>첫 번째 하위 라우트가 <code>Watchdog</code>을 <code>"null"</code> 수신자로 보낸다. Watchdog은 <strong>"모니터링이 살아있다"를 알리는 상시 알림</strong>이다 — 늘 발화 상태이고, 이것이 멈추면 관측 파이프라인 자체가 죽었다는 뜻이다. 외부 시스템에서 감시할 때 쓰지만 사람에게 보낼 것은 아니므로 버린다.</p>
+    <span class="out-lbl">지금 들고 있는 알림</span>
+    <div class="out"><code>  NodeClockNotSynchronising severity=warning  state=active   (x3)
+  Watchdog                  severity=none     state=active</code></div>
+    <p><code>NodeClockNotSynchronising</code>은 kind 노드가 NTP를 돌리지 않아 생기는 것으로, 이 실습 환경의 특성이다. 실제 클러스터라면 조사할 일이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>7단계 — 억제 규칙을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 문제로 여러 알림이 동시에 울릴 때 무엇이 눌리는지 본다.</p>
+    <p>실제 장애를 기다리는 대신 API로 알림 둘을 직접 밀어넣는다. 같은 <code>alertname</code>·<code>namespace</code>에 <code>critical</code>과 <code>warning</code>이다.</p>
+<pre><code>curl -s -XPOST http://localhost:9093/api/v2/alerts -H 'content-type: application/json' -d '[
+ {"labels":{"alertname":"DemoAlert","severity":"critical","namespace":"apps"},
+  "annotations":{"summary":"억제 실험 critical"}},
+ {"labels":{"alertname":"DemoAlert","severity":"warning","namespace":"apps"},
+  "annotations":{"summary":"억제 실험 warning"}}
+]'</code></pre>
+<pre><code>curl -s http://localhost:9093/api/v2/alerts | python3 -c "
+import json,sys
+for x in json.load(sys.stdin):
+    l=x['labels']
+    if l.get('alertname')=='DemoAlert':
+        st=x['status']
+        print(f\"  severity={l['severity']:8} state={st['state']:10} inhibitedBy={len(st.get('inhibitedBy',[]))}건\")"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  severity=critical state=active     inhibitedBy=0건
+  severity=warning  state=suppressed inhibitedBy=1건</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>warning</code>이 <code>suppressed</code>가 됐고 <code>inhibitedBy</code>가 1건이다. M19 값 파일의 억제 규칙이 동작한 것이다 — <strong>같은 대상에 critical이 울리는 동안 warning은 보내지 않는다.</strong> 데이터베이스가 죽으면 그것을 쓰는 서비스 열 개가 전부 경고를 내는데, 사람이 봐야 할 것은 하나다.</div>
+  </div>
+
+  <div class="step">
+    <h4>8단계 — 침묵을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>계획된 작업 중에 알림을 잠시 끄는 방법을 확인하고, 억제와 어떻게 다른지 본다.</p>
+<pre><code>SIL=$(curl -s -XPOST http://localhost:9093/api/v2/silences -H 'content-type: application/json' -d '{
+ "matchers":[{"name":"alertname","value":"DemoAlert","isRegex":false}],
+ "startsAt":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
+ "endsAt":"'"$(date -u -v+10M +%Y-%m-%dT%H:%M:%SZ)"'",
+ "createdBy":"m21-lab","comment":"실습용 10분 침묵"}' \
+ | python3 -c "import json,sys;print(json.load(sys.stdin)['silenceID'])")
+echo "$SIL"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  침묵 ID: 6b6e9594-d8c4-4742-a297-84a155362229
+  severity=critical state=suppressed silencedBy=1건
+  severity=warning  state=suppressed silencedBy=1건</code></div>
+    <div class="verdict"><span class="lbl">판정</span>이번에는 <strong>critical까지</strong> <code>suppressed</code>가 됐고 <code>silencedBy</code>가 1건이다. 억제와 침묵 모두 <code>state=suppressed</code>지만 <strong>어느 필드가 채워졌는지로 구분된다</strong> — <code>inhibitedBy</code>는 규칙이 자동으로 누른 것, <code>silencedBy</code>는 사람이 기간을 정해 끈 것이다.</div>
+<pre><code>curl -s -XDELETE "http://localhost:9093/api/v2/silence/$SIL"</code></pre>
+    <p>침묵은 <strong>반드시 끝나는 시각을 갖는다.</strong> 영구 침묵이 없는 것이 설계 의도다 — "이건 아는 문제니까 꺼두자"가 쌓이면 관측이 무의미해진다. 계획 작업이 끝나면 지우고, 아는 문제라면 침묵이 아니라 <strong>규칙을 고치거나 문제를 고쳐야</strong> 한다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">21.6</span>따라하기 ④ 대시보드를 코드로</h2>
+  <p>M19 13단계에서 차트가 넣어 준 기본 대시보드를 봤다. 그것들은 ConfigMap으로 들어와 있었고, 같은 방식으로 우리 대시보드를 만든다. <strong>UI에서 만든 대시보드는 그라파나 파드가 다시 뜨면 사라진다</strong>(우리 설치는 대시보드용 영구 볼륨이 없다).</p>
+
+  <div class="step">
+    <h4>9단계 — 대시보드 JSON을 가져와 고친다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이미 있는 자산을 우리 클러스터에 맞춘다. 패널을 처음부터 만드는 것은 이 모듈의 목적이 아니다.</p>
+    <p><code>docs/kubernetes-monitoring/kubernetes/labs/monitoring/dashboards/obs-red.json</code>을 <code>course/labs/monitoring/dashboards/study-red.json</code>으로 가져와 셋을 고친다.</p>
+    <table>
+      <tr><th>고칠 것</th><th>왜</th></tr>
+      <tr><td>로그 패널 제거</td><td>Loki 데이터소스가 아직 없다. M22에서 되돌린다</td></tr>
+      <tr><td><code>namespace</code>·<code>service</code> 변수를 다중 선택으로</td><td>두 앱이 <code>apps</code>와 <code>journal</code>에 나뉘어 있다</td></tr>
+      <tr><td><code>orders_created_total</code> → <code>orders_total</code></td><td>21.7 실패 ②에서 다룬다</td></tr>
+    </table>
+<pre><code>d['panels'] = [p for p in d['panels'] if p.get('type') != 'logs']
+for v in d['templating']['list']:
+    if v['name'] in ('namespace', 'service'):
+        v['multi'] = True
+        v['includeAll'] = True
+d['title'] = '스터디 — 서비스 RED'
+d['uid'] = 'study-red'
+d['timezone'] = 'Asia/Seoul'</code></pre>
+    <p><code>uid</code>를 고정하는 것이 중요하다. 대시보드 링크와 알림의 <code>dashboardUID</code> 애너테이션이 이 값을 쓰므로, 바뀌면 링크가 전부 깨진다.</p>
+  </div>
+
+  <div class="step">
+    <h4>10단계 — ConfigMap으로 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>사이드카가 집어 갈 수 있는 형태로 클러스터에 넣는다.</p>
+    <p>M19 값 파일의 이 설정이 조건이다.</p>
+<pre><code>  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard    # 이 라벨이 붙은 ConfigMap 을 대시보드로 인식한다
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder</code></pre>
+    <p><code>course/labs/scripts/apply-dashboards.sh</code>로 저장한다.</p>
+<pre><code>ARGS=()
+for f in "$LABS"/monitoring/dashboards/*.json; do
+  ARGS+=(--from-file="$(basename "$f")=$f")
+done
+
+kubectl -n "$NS" create configmap "$NAME" "${ARGS[@]}" \
+  --dry-run=client -o yaml \
+| kubectl label --local -f - grafana_dashboard=1 -o yaml \
+| kubectl annotate --local -f - grafana_folder=스터디 -o yaml \
+| kubectl apply -f -</code></pre>
+    <div class="note-2026">
+      <span class="lbl">kustomize로는 만들 수 없다</span>
+      <code>configMapGenerator</code>로 하려고 하면 이렇게 거부된다.
+      <br><code>error: loading KV pairs: file sources: [...]: security; file '.../labs/monitoring/dashboards/study-red.json' is not in or below '.../labs/k8s/monitoring'</code>
+      <br>kustomize는 <code>kustomization.yaml</code>이 있는 디렉터리 <strong>밖의 파일을 읽지 못한다.</strong> 대시보드 JSON을 <code>k8s/</code> 아래로 복사하면 정본이 둘이 되므로(고칠 때마다 두 곳을 맞춰야 한다), 스크립트로 만드는 쪽을 택했다.
+    </div>
+<pre><code>bash course/labs/scripts/apply-dashboards.sh
+kubectl -n monitoring logs deploy/kps-grafana -c grafana-sc-dashboard --tail=20 | grep -i study</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>configmap/study-dashboards created
+적용됨: monitoring/study-dashboards
+  labels={"grafana_dashboard":"1"}
+
+{"time": "...", "level": "INFO", "msg": "Found a folder override annotation, placing the study-dashboards in: /tmp/dashboards/스터디"}
+{"time": "...", "level": "INFO", "msg": "Writing /tmp/dashboards/스터디/study-red.json (ascii)"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>사이드카가 ConfigMap을 집어 파일로 썼다. 그라파나에서 <strong>Dashboards → 스터디 → 스터디 — 서비스 RED</strong>로 들어가면 M20에서 질의한 것들이 패널로 보인다. 안 보이면 라벨이 <code>grafana_dashboard: "1"</code>인지 확인한다 — 문자열 <code>"1"</code>이지 숫자 1이 아니다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">21.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① 알림이 꺼지지 않는다</h4>
+    <p>4단계의 관찰 로그에서 이미 겪었다. 카오스를 22:05:59에 멈췄는데 알림은 22:11:04까지 <code>firing</code>이었다.</p>
+    <span class="lbl">잘못된 진단</span>
+    <p>"<code>for: 2m</code>인데 왜 5분이나 걸리지? 규칙이 잘못됐나?" — <code>for</code>를 줄여 보지만 아무것도 달라지지 않는다. <code>for</code>는 <strong>발화 조건</strong>이지 해소 조건이 아니기 때문이다.</p>
+    <span class="lbl">진단</span>
+    <p>알림의 <code>expr</code>이 계산하는 값을 시간 축으로 직접 본다. 프로메테우스 UI의 Graph 탭에서 규칙의 질의를 그대로 치고 부하 종료 시각 전후를 보면, 비율이 <strong>계단이 아니라 완만한 경사로</strong> 내려간다.</p>
+    <span class="lbl">원인</span>
+    <p><code>rate(...[5m])</code>은 매 순간 <strong>직전 5분</strong>을 본다. 22:09에 계산하면 22:04~22:09 구간이고, 여기에는 22:05:59까지의 에러가 아직 들어 있다. 창이 완전히 지나가는 22:11이 되어서야 비율이 0이 된다.</p>
+    <span class="lbl">고친다 — 무엇을 고칠 것인가</span>
+    <p>이것은 버그가 아니므로 "고친다"는 표현이 정확하지 않다. 선택지는 셋이다.</p>
+    <table>
+      <tr><th>선택</th><th>얻는 것</th><th>잃는 것</th></tr>
+      <tr><td>창을 줄인다 (<code>[2m]</code>)</td><td>더 빨리 꺼지고 더 빨리 울린다</td><td>트래픽이 적을 때 비율이 요동쳐 오탐이 는다</td></tr>
+      <tr><td>그대로 둔다</td><td>안정적인 판단</td><td>해소가 늦다 — 사람이 "이미 고쳤는데 왜 울리지"라고 느낀다</td></tr>
+      <tr><td>알림 문구에 적는다</td><td>오해를 없앤다</td><td>없음</td></tr>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>실무에서는 대개 세 번째다. <code>description</code>에 "5분 창으로 계산하므로 원인이 사라진 뒤에도 최대 5분간 유지됩니다"를 적어 두면, 대응하는 사람이 <strong>고쳤는지 아닌지를 알림이 아니라 그래프로 판단</strong>하게 된다. 창을 줄이는 것은 트래픽이 충분히 많은 서비스에서만 안전하다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② 대시보드 패널 하나가 늘 비어 있다</h4>
+    <p>10단계에서 대시보드를 올리면 "분당 주문 수" 패널만 <code>No data</code>다. 다른 패널은 다 나온다.</p>
+    <span class="lbl">진단</span>
+    <p>패널의 질의는 <code>sum(rate(orders_created_total[5m])) * 60</code>이다. 그 이름이 실제로 있는지 확인한다.</p>
+<pre><code>kubectl -n apps exec deploy/order-api -- \
+  sh -c 'curl -s localhost:8080/actuator/prometheus | grep "^orders"'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>orders_total{channel="api"} 0.0
+orders_processing_seconds_bucket{le="0.001"} 0
+...</code></div>
+    <p><code>orders_created_total</code>이 없다. 앱 코드를 보면 분명히 그 이름으로 만들었다.</p>
+<pre><code>this.createdCounter = Counter.builder("orders.created")
+        .description("생성에 성공한 주문 수")
+        .tag("channel", "api")
+        .register(registry);</code></pre>
+    <span class="lbl">원인</span>
+    <p><code>orders.created</code>는 <code>orders_created_total</code>이 되어야 할 것 같지만 <strong><code>orders_total</code>로 나온다.</strong> OpenMetrics에서 <code>_created</code>는 <strong>카운터가 언제 만들어졌는지를 나타내는 예약 접미사</strong>이고, 클라이언트 라이브러리가 충돌을 피하려고 이름에서 그 부분을 떼기 때문이다.</p>
+    <p>같은 클래스의 <code>orders.rejected</code>는 충돌이 없어 <code>orders_rejected_total</code>로 그대로 나온다. <strong>같은 코드에서 만든 카운터 둘의 이름 규칙이 달라진 것</strong>이고, 코드만 보면 알 수 없다.</p>
+    <span class="lbl">확인</span>
+<pre><code>kubectl -n apps exec deploy/order-api -- sh -c \
+ 'curl -s -X POST localhost:8080/api/orders -H "content-type: application/json" \
+    -d "{\"item\":\"book\",\"quantity\":2}" &gt;/dev/null;
+  curl -s localhost:8080/actuator/prometheus | grep "^orders_total"'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>orders_total{channel="api"} 1.0</code></div>
+    <div class="verdict"><span class="lbl">판정</span>주문을 하나 만들자 <code>orders_total</code>이 1로 올랐다. 이것이 "생성된 주문 수"가 맞다. 대시보드 질의를 <code>orders_total</code>로 바꾸면 패널이 채워진다.</div>
+    <p>교훈은 <strong>계측한 이름을 코드가 아니라 엔드포인트에서 확인하라</strong>는 것이다. 지표 이름을 정할 때 <code>_total</code>·<code>_created</code>·<code>_bucket</code>·<code>_sum</code>·<code>_count</code>는 클라이언트가 쓰는 접미사이므로 피한다. M20 4단계에서 <code>journal-api</code>의 이름을 <code>http_server_requests_seconds</code>로 잡을 때 <code>_seconds</code>까지만 쓰고 <code>_count</code>를 붙이지 않은 것도 같은 이유다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">21.8</span>운영 관점 — 알림 피로</h2>
+  <p>책 3.7의 팁 하나는 "그래프의 장벽"이라 부를 만한 것이다 — <strong>대시보드가 늘어날수록 아무도 보지 않게 된다.</strong> 패널 40개짜리 대시보드는 만든 사람만 읽을 수 있고, 만든 사람도 6개월 뒤에는 어느 패널이 중요한지 잊는다.</p>
+  <p>알림에는 더 강한 형태로 온다. 하루에 스무 번 울리는 알림은 <strong>울리지 않는 것과 같다</strong> — 사람이 반사적으로 닫게 되고, 진짜 장애가 그 스무 개 사이에 섞여 사라진다. 이것을 알림 피로라고 부르고, 관측 스택이 실패하는 가장 흔한 방식이다.</p>
+
+  <h3>알림을 줄이는 네 가지 방법</h3>
+  <table>
+    <tr><th>방법</th><th>이 모듈에서 쓴 것</th></tr>
+    <tr><td>증상에만 건다</td><td>규칙 넷 중 셋이 RED 지표다. CPU·메모리 알림은 만들지 않았다</td></tr>
+    <tr><td><code>for</code>로 순간적인 것을 거른다</td><td>2~3분. 잠깐 튀는 것은 사람을 부르지 않는다</td></tr>
+    <tr><td>묶는다</td><td><code>group_by: [namespace, alertname]</code>. 파드 10개가 죽어도 알림 하나</td></tr>
+    <tr><td>억제한다</td><td>critical이 울리는 동안 같은 대상의 warning은 보내지 않는다</td></tr>
+  </table>
+  <p>다섯 번째가 가장 중요한데 도구로는 안 된다 — <strong>울렸는데 아무도 아무것도 하지 않은 알림은 지운다.</strong> 한 달에 열 번 울렸고 매번 "아 그거 원래 그래요"였다면 그 알림은 정보가 아니라 소음이다. 지우거나, 임계값을 올리거나, 진짜 문제를 고쳐야 한다.</p>
+
+  <h3>severity를 어떻게 나눌 것인가</h3>
+  <p>이 모듈은 <code>critical</code>과 <code>warning</code> 둘만 썼다. 기준은 <strong>지금 사람을 깨울 것인가</strong>다.</p>
+  <table>
+    <tr><th>등급</th><th>뜻</th><th>이 모듈의 것</th></tr>
+    <tr><td><code>critical</code></td><td>새벽 3시에 깨워도 되는 것. 사용자가 이미 겪고 있고 대응이 필요하다</td><td>스크레이프 실패, SLO 빠른 소진</td></tr>
+    <tr><td><code>warning</code></td><td>업무 시간에 보면 되는 것. 지금 나빠지고 있지만 아직 예산 안이다</td><td>에러율 5% 초과, P95 500ms 초과</td></tr>
+  </table>
+  <p>등급을 셋 이상으로 나누는 것은 대개 도움이 되지 않는다. <code>info</code> 등급 알림은 아무도 보지 않으므로 <strong>알림이 아니라 대시보드에 두어야 할 것</strong>이다. 등급이 늘어나는 것은 "지우기는 아깝고 울리기는 부담스러운" 규칙이 쌓인다는 신호다.</p>
+
+  <h3>대시보드는 몇 개여야 하나</h3>
+  <p>정답은 없지만 기준은 있다 — <strong>알림이 울렸을 때 열 대시보드가 정해져 있는가.</strong> 알림의 <code>annotations</code>에 <code>runbook_url</code>이나 대시보드 링크를 넣어 두면, 대응하는 사람이 "어디를 봐야 하지"에서 시간을 쓰지 않는다. 이 모듈에서 <code>uid</code>를 <code>study-red</code>로 고정한 것이 그 준비다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">21.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n monitoring get prometheusrule study-app-rules -o jsonpath='{.metadata.labels.release}'</code> → <code>kps</code></li>
+      <li>질의 <code>curl -s localhost:9090/api/v1/rules</code>에서 그룹 <code>study-app</code>의 규칙 → <code>4</code>개, 전부 <code>health=ok</code></li>
+      <li><code>curl -s localhost:9090/api/v1/rules</code>에서 <code>study-app</code> 규칙의 <code>state</code> → 부하가 없으면 전부 <code>inactive</code></li>
+      <li>부하를 걸고 3분 뒤 → <code>AppHighErrorRate=firing</code></li>
+      <li>부하를 멈추고 6분 뒤 → 전부 <code>inactive</code></li>
+      <li><code>kubectl -n monitoring get cm study-dashboards -o jsonpath='{.metadata.labels.grafana_dashboard}'</code> → <code>1</code></li>
+      <li><code>kubectl -n monitoring logs deploy/kps-grafana -c grafana-sc-dashboard --tail=50 | grep -c 'study-red.json'</code> → <code>1</code> 이상</li>
+      <li>그라파나 → <strong>Dashboards → 스터디 → 스터디 — 서비스 RED</strong>가 있고 "초당 요청 수" 패널에 숫자가 있다</li>
+      <li><code>curl -s localhost:9093/api/v2/status</code>의 설정에 <code>alertname=~"InfoInhibitor|Watchdog"</code> 라우트가 있다</li>
+      <li><code>curl -s localhost:9093/api/v2/silences | python3 -c "import json,sys;print(len([s for s in json.load(sys.stdin) if s['status']['state']=='active']))"</code> → <code>0</code> (실습용 침묵을 지웠다)</li>
+      <li>(이해 확인) <code>for: 2m</code>인 알림이 부하 종료 후 5분이나 유지된 이유를 한 문장으로 적어 본다</li>
+      <li>(이해 확인) P95 알림은 울렸는데 SLO 알림은 울리지 않은 것이 왜 정상인지 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/monitoring/91-prometheusrule.yaml</code> — 알림 규칙 넷. M36 카오스 실습의 판정 도구가 된다</li>
+      <li><code>course/labs/k8s/monitoring/kustomization.yaml</code> — ServiceMonitor와 규칙을 <code>apply -k</code> 한 줄로</li>
+      <li><code>course/labs/monitoring/dashboards/study-red.json</code> — 대시보드 정본</li>
+      <li><code>course/labs/scripts/apply-dashboards.sh</code> — 대시보드 ConfigMap 생성. M22가 로그 패널을 되살릴 때 다시 쓴다</li>
+      <li>클러스터: 알림 규칙 4개가 평가되고 있고, 그라파나 "스터디" 폴더에 대시보드 하나</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 부하와 port-forward 를 멈춘다
+pkill -f k6-red 2&gt;/dev/null
+pkill -f 'port-forward.*1808' 2&gt;/dev/null
+pkill -f 'port-forward.*909' 2&gt;/dev/null
+pkill -f 'port-forward.*3000' 2&gt;/dev/null
+
+# 실습용 침묵이 남아 있으면 지운다 (10분 뒤 자동으로 만료되지만 확인한다)
+curl -s localhost:9093/api/v2/silences | python3 -c "
+import json,sys
+for s in json.load(sys.stdin):
+    if s['status']['state']=='active': print(s['id'], s.get('comment'))"
+
+# 실습용 DemoAlert 는 resolve_timeout(5분) 뒤 자동으로 사라진다</code></pre>
+  <p>알림 규칙과 대시보드는 <strong>지우지 않는다.</strong> M22가 로그를 붙여 같은 대시보드에 로그 패널을 되살리고, M36에서 카오스 실험을 할 때 이 알림들이 <strong>실험의 판정 도구</strong>가 된다 — 파드를 죽였을 때 알림이 울리고 자동 복구 뒤 꺼지는지가 그 실험의 합격 기준이다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m20-k8s-promql-instrumentation.html">← M20 PromQL과 애플리케이션 계측</a>
+  <a href="m22-k8s-logging-loki.html">M22 로깅 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>알림이 "에러율 5.9%"라고 말해 준다. 그런데 <strong>그 에러가 무엇이었는지</strong>는 메트릭이 답하지 못한다 — 숫자는 얼마나 많이 일어났는지만 알고 무슨 일이었는지는 모른다. M22에서 로그를 모은다. 먼저 <code>kubectl logs</code>의 한계를 재현한다 — 파드가 사라지면 로그도 사라진다는 것을 직접 확인하고, Loki와 Alloy로 그것을 클러스터 밖에 남긴다. 그리고 M19 8절에서 다룬 카디널리티 문제가 로그 라벨에서 어떻게 더 심하게 나타나는지 실험한다. <strong>검색하면 나오는 Promtail은 2026-03에 EOL이므로 쓰지 않는다.</strong></p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>알림 규칙 작성: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/</li>
+    <li>알림 설계 원칙(증상 기반): https://prometheus.io/docs/practices/alerting/</li>
+    <li>Alertmanager 설정(라우팅·억제·침묵): https://prometheus.io/docs/alerting/latest/configuration/</li>
+    <li>Prometheus Operator PrometheusRule: https://prometheus-operator.dev/docs/api-reference/api/</li>
+    <li>Grafana 사이드카 대시보드 프로비저닝: https://github.com/grafana/helm-charts/tree/main/charts/grafana</li>
+    <li>SLO와 오차 예산 소진 알림: https://sre.google/workbook/alerting-on-slos/</li>
+    <li>OpenMetrics 지표 이름 접미사: https://prometheus.io/docs/practices/naming/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 3.7 도구 선택과 그래프의 장벽 · 3.11 알림</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · kube-prometheus-stack 89.2.2 · k6 v2.2.0</p>
+</footer>
+
+</div>
+</body>
+</html>

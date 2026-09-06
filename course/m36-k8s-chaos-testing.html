@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 8 · 검증] M36 카오스 테스팅 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 36 / 38 · PART 8 검증</div>
+  <h1>카오스 테스팅</h1>
+  <p class="ch-desc">Part 1부터 여기까지 <strong>만드는 것</strong>을 했다. 프로브를 걸고, 리소스를 정하고, 정책을 붙이고, 알림을 만들었다. 그것들이 <strong>실제로 동작하는지</strong>는 대부분 정상 상황에서만 확인했다. 이 모듈에서 클러스터를 <strong>계획적으로 망가뜨린다</strong> — 파드를 죽이고, 통신에 지연을 넣고, CPU를 태우고, 앱이 오류를 내게 한다. 가설을 먼저 쓰고 실험으로 검증하며, <strong>측정 도구가 먼저 막히는 것</strong>부터 겪는다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">140분</span><span class="tag">Chaos Mesh 2.8.4</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전은 실습 당일 릴리스 페이지에서 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m21-k8s-dashboard-alerting.html">M21</a>의 <code>PrometheusRule</code>이 살아 있다. 실험 ④가 그 알림을 검증한다</li>
+    <li><a href="m24-k8s-pod-container-security.html">M24</a>·<a href="m25-k8s-networkpolicy-mesh.html">M25</a> 완료 — <strong>이 둘이 측정 도구를 막는다.</strong> 36.3에서 그것부터 고친다</li>
+    <li><a href="m30-k8s-deploy-strategies.html">M30</a>의 <code>journal-api:v3</code>와 <code>FAULT_RATE</code>가 있다</li>
+    <li>도커에 1GiB 이상 여유. 확인: <code>docker stats --no-stream</code></li>
+    <li>새로 만들 파일: <code>course/labs/chaos/</code> 전체 · <code>scripts/fuzz-api.sh</code> · <code>k8s/netpol/30-allow-loadgen.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 실험을 시작하기 전에 <strong>측정 도구가 동작하는지</strong> 확인한다 — M24와 M25가 부하 생성기를 두 번 막는다.</p>
+  <p>2. 파드 킬·지연·CPU 고갈을 주입하고 <strong>가설과 실측을 표로 남긴다</strong>. 지연 실험이 앱의 레디스 호출 횟수를 드러낸다.</p>
+  <p>3. 앱이 500을 내게 해서 <strong>M21의 알림이 실제로 발화하는지</strong> 확인하고, 퍼즈로 <strong>입력 검증이 없다는 것</strong>을 찾아낸다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">36.1</span>만든 것이 동작하는지 모른다</a>
+  <a href="#s2"><span class="num">36.2</span>이론 — 게임 데이와 폭발 반경</a>
+  <a href="#s3"><span class="num">36.3</span>따라하기 ① 측정 도구부터 고친다</a>
+  <a href="#s4"><span class="num">36.4</span>따라하기 ② 파드를 죽인다</a>
+  <a href="#s5"><span class="num">36.5</span>따라하기 ③ 느리게 만든다</a>
+  <a href="#s6"><span class="num">36.6</span>따라하기 ④ 오류와 알림</a>
+  <a href="#s7"><span class="num">36.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">36.8</span>운영 관점 — 실험 시트와 스테이징의 한계</a>
+  <a href="#s9"><span class="num">36.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">36.1</span>만든 것이 동작하는지 모른다</h2>
+  <p class="lead">M15에서 <code>preStop</code>을 10초로 잡았다. 그때 실패 요청이 20건에서 0건이 되는 것을 쟀으므로 그 설정은 검증됐다. 그런데 그 뒤로 <strong>스물한 개 모듈이 지나갔다.</strong> 이미지가 두 번 바뀌었고, 리소스와 보안 컨텍스트가 붙었고, 네트워크가 화이트리스트가 됐다.</p>
+  <p>지금도 파드 하나가 죽었을 때 요청이 떨어지지 않는지 <strong>아무도 모른다.</strong> M21에서 만든 알림도 마찬가지다 — 규칙을 쓰고 문법이 맞는 것은 확인했지만, <strong>실제 장애에서 울리는지는 확인하지 않았다.</strong></p>
+  <p>이런 것들의 공통점이 있다. <strong>정상일 때는 아무것도 알려 주지 않는다.</strong> 프로브가 잘못 설정돼 있어도, 알림 표현식이 틀렸어도, PDB가 무의미해도 평소에는 증상이 없다. 그리고 진짜 장애가 났을 때 <strong>동작하지 않는다는 것을 그때 처음 안다.</strong></p>
+  <p>카오스 테스팅은 그 확인을 <strong>계획된 시간에 앞당기는 것</strong>이다. 새벽 3시에 알게 될 일을 평일 오후에 알게 하고, 그때는 옆에 사람이 있고 되돌릴 준비가 돼 있다. 이 모듈의 실험 다섯 개 중 <strong>둘이 가설을 벗어난 결과</strong>를 냈다 — 그것이 이 방식의 값이다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">36.2</span>이론 — 게임 데이와 폭발 반경</h2>
+  <p><span class="lbl">책 매핑</span>20.1.1 목표 · 20.1.2 전제 조건 · 20.1.3 통신 카오스 · 20.1.4 작동 카오스 · 20.1.5 퍼즈 테스팅</p>
+
+  <h3>전제 조건 둘이 먼저다</h3>
+  <p>카오스 실험을 시작하기 전에 갖춰야 할 것이 둘이다. <strong>관측</strong>이 없으면 무슨 일이 일어났는지 모르고, <strong>자동 복구</strong>가 없으면 실험이 곧 장애다. 이 교재가 Part 4(관측)와 Part 3(안정성)을 먼저 한 이유가 그것이다.</p>
+  <p>여기에 하나를 더한다 — <strong>측정 도구가 동작하는가.</strong> 36.3에서 부하 생성기가 두 번 막히는데, 그 상태로 실험을 시작했다면 <strong>"모든 요청이 실패한다"를 앱의 고장으로 오진</strong>했을 것이다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+      <text class="t-h" x="40" y="46">가설을 먼저 쓴다 — 그래야 실험이다</text>
+
+      <!-- 4단계 -->
+      <rect class="accent" x="40" y="66" width="190" height="58" rx="4"/>
+      <text class="t-title" x="135" y="88" text-anchor="middle">① 가설</text>
+      <text class="t-sub" x="135" y="106" text-anchor="middle">정상 상태를 숫자로</text>
+      <path class="line" d="M 230 95 L 256 95" marker-end="url(#ar1)"/>
+      <rect class="accent" x="258" y="66" width="190" height="58" rx="4"/>
+      <text class="t-title" x="353" y="88" text-anchor="middle">② 이벤트</text>
+      <text class="t-sub" x="353" y="106" text-anchor="middle">폭발 반경 · 중단 조건</text>
+      <path class="line" d="M 448 95 L 474 95" marker-end="url(#ar1)"/>
+      <rect class="accent" x="476" y="66" width="184" height="58" rx="4"/>
+      <text class="t-title" x="568" y="88" text-anchor="middle">③ 대조</text>
+      <text class="t-sub" x="568" y="106" text-anchor="middle">같은 도구로 전후 비교</text>
+      <path class="line" d="M 660 95 L 686 95" marker-end="url(#ar1)"/>
+      <rect class="accent" x="688" y="66" width="172" height="58" rx="4"/>
+      <text class="t-title" x="774" y="88" text-anchor="middle">④ 판정</text>
+      <text class="t-sub" x="774" y="106" text-anchor="middle">틀렸으면 왜 틀렸는지</text>
+
+      <!-- 실험 결과 -->
+      <rect class="soft" x="40" y="140" width="820" height="182" rx="4"/>
+      <text class="t-h" x="56" y="164">실험 다섯과 실측</text>
+
+      <rect class="box" x="56" y="176" width="392" height="40" rx="3"/>
+      <text class="t-mono" x="66" y="194">① 파드 킬 (mode: one)</text>
+      <text class="t-sub" x="66" y="210">요청 16,971건 전부 200 — preStop 과 PDB 가 지켰다</text>
+
+      <rect class="box" x="468" y="176" width="392" height="40" rx="3"/>
+      <text class="t-mono" x="478" y="194">② 지연 200ms → 응답 404ms</text>
+      <text class="t-acc" x="478" y="210">두 배다 = 요청당 레디스를 2회 부른다</text>
+
+      <rect class="warnbox" x="56" y="222" width="392" height="40" rx="3"/>
+      <text class="t-mono" x="66" y="240">②-b 지연 1500ms (왕복 3초 &gt; 타임아웃 2초)</text>
+      <text class="t-warn" x="66" y="256">2,368건/20초 → 109건/40초 (76건 실패)</text>
+
+      <rect class="warnbox" x="468" y="222" width="392" height="40" rx="3"/>
+      <text class="t-mono" x="478" y="240">③ CPU 한 파드 → HPA 1051% → 4에서 8로</text>
+      <text class="t-warn" x="478" y="256">HPA 는 평균을 본다. 나머지 7개는 놀고 있었다</text>
+
+      <rect class="box" x="56" y="268" width="392" height="42" rx="3"/>
+      <text class="t-mono" x="66" y="286">④ FAULT_RATE 0.5 → 에러율 48.6%</text>
+      <text class="t-acc" x="66" y="303">AppHighErrorRate firing (2분 뒤)</text>
+
+      <rect class="box" x="468" y="268" width="392" height="42" rx="3"/>
+      <text class="t-mono" x="478" y="286">⑤ 퍼즈 26회 — 500 은 0건</text>
+      <text class="t-warn" x="478" y="303">그런데 {} 와 [] 가 201 로 저장된다</text>
+
+      <!-- 관측 지점 -->
+      <rect class="soft" x="56" y="336" width="784" height="88" rx="4"/>
+      <text class="t-h" x="70" y="360">알림은 관측 지점 뒤의 고장만 본다</text>
+      <rect class="warnbox" x="70" y="372" width="370" height="42" rx="3"/>
+      <text class="t-mono" x="80" y="390">HTTPChaos abort — 요청이 앱에 닿지 않는다</text>
+      <text class="t-warn" x="80" y="407">전부 000 · 인그레스 502 · 알림은 울리지 않았다</text>
+      <rect class="accent" x="456" y="372" width="384" height="42" rx="3"/>
+      <text class="t-mono" x="466" y="390">앱이 스스로 500 — 메트릭에 기록된다</text>
+      <text class="t-acc" x="466" y="407">2분 뒤 알림 발화</text>
+    </svg>
+    <figcaption>그림 36.1 — 게임 데이 4단계와 이 모듈의 실험 다섯. 아래 두 칸이 알림이 울리는 조건과 울리지 않는 조건이다.</figcaption>
+  </figure>
+
+  <h3>가설을 먼저 쓴다</h3>
+  <p>순서가 바뀌면 실험이 아니라 관찰이 된다. 주입하고 나서 결과를 보고 "그럴 줄 알았다"고 쓰는 것은 <strong>아무것도 검증하지 않는다.</strong></p>
+  <p>가설에는 <strong>숫자</strong>가 있어야 한다. "괜찮을 것이다"가 아니라 "실패 요청 0건, P95 50ms 미만"이다. 그래야 결과가 가설을 지지하는지 판정할 수 있고, <strong>정상 상태를 먼저 재는 일</strong>이 실험의 절반이 된다.</p>
+
+  <h3>폭발 반경은 명시적으로 좁힌다</h3>
+  <p>Chaos Mesh의 <code>mode</code>가 그 장치다. <code>one</code>은 하나, <code>fixed</code>는 지정한 수, <code>all</code>은 전부다. <strong><code>all</code>은 실험이 아니라 사고</strong>이고, <code>selector</code>의 네임스페이스와 라벨이 그 위의 울타리다.</p>
+  <p><code>duration</code>도 안전장치다. 실험 오브젝트를 지우는 것을 잊어도 <strong>스스로 끝난다.</strong> 이것이 없는 실험은 퇴근 후에도 계속 돈다.</p>
+  <p>여기에 <strong>중단 조건</strong>을 미리 정해 둔다 — "실패율 5%를 넘으면 즉시 삭제". 실험 중에 판단하려 들면 늦는다.</p>
+
+  <h3>세 종류의 카오스</h3>
+  <p>책은 셋으로 나눈다. <strong>통신</strong>(20.1.3)은 네트워크를 건드린다 — 지연, 손실, 분단. <strong>작동</strong>(20.1.4)은 프로세스와 자원을 건드린다 — 죽이기, CPU·메모리 고갈, 디스크. <strong>퍼즈</strong>(20.1.5)는 <strong>입력</strong>을 건드린다.</p>
+  <p>셋이 찾는 것이 다르다. 통신 카오스는 <strong>타임아웃과 재시도 설계</strong>를, 작동 카오스는 <strong>복제와 자동 복구</strong>를, 퍼즈는 <strong>입력 검증</strong>을 시험한다. 이 모듈은 셋을 모두 해 본다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">36.3</span>따라하기 ① 측정 도구부터 고친다</h2>
+
+  <div class="step">
+    <h4>1단계 — Chaos Mesh를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>실험 도구를 넣는다. kind에서 걸리는 설정이 하나 있다.</p>
+<pre><code>helm repo add chaos-mesh https://charts.chaos-mesh.org
+cat &gt; course/labs/chaos/values.yaml &lt;&lt;'EOF'
+chaosDaemon:
+  runtime: containerd
+  socketPath: /run/containerd/containerd.sock
+dashboard:
+  create: false
+dnsServer:
+  create: false
+EOF
+helm install chaos-mesh chaos-mesh/chaos-mesh --version 2.8.4 \
+  -n chaos-mesh --create-namespace -f course/labs/chaos/values.yaml --wait --timeout 300s</code></pre>
+    <p><code>runtime: containerd</code>가 필수다. 기본값은 도커이고, kind는 containerd를 쓰므로 <strong>카오스 데몬이 컨테이너를 찾지 못한다.</strong> 대시보드는 만들지 않는다 — <strong>실험은 매니페스트로 한다</strong>는 것이 이 모듈의 방침이고, UI로 클릭한 실험은 재현되지도 리뷰되지도 않는다.</p>
+<pre><code>kubectl -n chaos-mesh get po --no-headers
+kubectl get crd | grep -c chaos-mesh</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>chaos-controller-manager-65457d5957-hb6bf   1/1   Running   0   22s
+chaos-daemon-bsh82                          1/1   Running   0   22s
+chaos-daemon-lwbmz                          1/1   Running   0   22s
+
+23</code></div>
+    <div class="verdict"><span class="lbl">판정</span>데몬이 <strong>2개</strong>다. 노드는 셋인데 컨트롤 플레인에는 테인트가 있어 뜨지 않았다 — <strong>그 노드의 파드에는 실험을 주입할 수 없다</strong>는 뜻이다. 실습에서는 워커에만 워크로드가 있으니 문제가 없지만, 실제 클러스터에서 <strong>일부 노드에 데몬이 없으면 실험이 조용히 건너뛴다.</strong></div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 부하 생성기를 켠다 (두 번 막힌다)</h4>
+    <p class="purpose"><span class="lbl">목적</span>실험 전 정상 상태를 재려는데, <strong>도구가 먼저 고장 나 있다.</strong></p>
+<pre><code>bash course/labs/scripts/loadgen.sh start</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (NotFound): pods "curlbox" not found</code></div>
+    <div class="verdict"><span class="lbl">판정</span>M15에서 만든 스크립트가 <code>kubectl run</code>으로 파드를 만드는데, <strong>M24에서 <code>journal</code>에 <code>restricted</code>를 걸었기 때문에</strong> 그 파드가 거부됐다. 오류 메시지는 "파드가 없다"라서 원인을 가리키지 않는다 — 거부는 <code>kubectl run</code> 단계에서 났고 스크립트가 그것을 삼켰다.</div>
+    <p>고친다. <code>securityContext</code>를 갖춘 매니페스트로 만들고, 이미지도 바꾼다 — <strong>비루트라 <code>apk add curl</code>을 할 수 없으므로</strong> curl이 들어 있는 이미지를 쓴다.</p>
+<pre><code>    cat &lt;&lt;YAML | kubectl apply -f - &gt;/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $POD
+  namespace: $NS
+  labels:
+    role: loadgen          # 아래 네트워크 정책이 이 라벨로 경로를 연다
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: curlbox
+      image: curlimages/curl:8.19.0
+      command: ["sleep", "infinity"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: ["ALL"]}
+YAML</code></pre>
+    <p>다시 돌린다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>요청 수 / 응답 코드 분포:
+52
+     52 000</code></div>
+    <div class="verdict"><span class="lbl">판정</span>이번엔 파드는 떴는데 <strong>전부 <code>000</code></strong>이다. M25의 <code>default-deny</code>가 부하 생성기의 경로를 막았다 — 허용한 것은 인그레스와 프로메테우스뿐이고, 클러스터 안에서 직접 때리는 것은 그 목록에 없다.</div>
+    <p>진단용 경로를 <strong>명시적으로</strong> 연다. 라벨로 대상을 좁히고, 실험이 끝나면 지운다.</p>
+<pre><code># course/labs/k8s/netpol/30-allow-loadgen.yaml
+spec:
+  podSelector:
+    matchLabels: {app: journal-api}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {role: loadgen}
+      ports: [{protocol: TCP, port: 8080}]
+---
+# default-deny 는 양방향이므로 나가는 쪽도 열어야 한다
+spec:
+  podSelector:
+    matchLabels: {role: loadgen}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: journal-api}
+      ports: [{protocol: TCP, port: 8080}]</code></pre>
+    <span class="out-lbl">출력 (25초)</span>
+    <div class="out"><code>요청 수 / 응답 코드 분포:
+4238
+   4236 200
+      2 000</code></div>
+    <div class="verdict"><span class="lbl">판정</span>정상 상태를 잡았다 — <strong>약 170 req/s, 실패 2건(0.05%).</strong> 이 두 건은 파드가 준비되기 전의 첫 요청들이다. 이제 실험을 시작할 수 있다.</div>
+    <p>여기서 배운 것을 정리해 둔다. <strong>보안 설정을 강화한 뒤 진단 도구를 다시 확인하지 않으면, 사고 대응 중에 그 사실을 알게 된다.</strong> M24·M25를 한 시점과 이 모듈 사이에 열한 개 모듈이 있었고, 그동안 아무도 눈치채지 못했다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">36.4</span>따라하기 ② 파드를 죽인다</h2>
+
+  <div class="step">
+    <h4>1단계 — 손으로 먼저 한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>도구 없이 되는 실험은 도구 없이 한다. <strong>가설 검증에 도구가 필요한 것은 아니다.</strong></p>
+    <p><strong>가설</strong>: journal-api 파드 하나가 죽어도 실패 요청은 0이다. <strong>근거</strong>: M15의 <code>preStop</code> 10초와 프로브 3종, M16의 PDB.</p>
+<pre><code>bash course/labs/scripts/loadgen.sh reset
+P=$(kubectl -n journal get po -l app=journal-api -o jsonpath='{.items[0].metadata.name}')
+kubectl -n journal delete pod $P --wait=false
+sleep 45
+bash course/labs/scripts/loadgen.sh report</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>요청 수 / 응답 코드 분포:
+10236
+  10236 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>가설 성립.</strong> 1만 건 넘게 보내는 동안 실패가 없다. M15에서 <code>preStop</code> 없이 쟀을 때 20건이 떨어졌던 것과 비교하면, 그 설정이 <strong>21개 모듈이 지난 지금도 유효하다</strong>는 확인이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 도구로 한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>실험을 <strong>매니페스트로</strong> 만든다. 그래야 반복하고 리뷰하고 저장소에 남긴다.</p>
+<pre><code>apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata: {name: kill-one-api, namespace: journal}
+spec:
+  action: pod-kill
+  mode: one              # &lt;- 폭발 반경. all 로 두면 실험이 아니라 사고다
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  duration: "10s"</code></pre>
+<pre><code>kubectl apply -f course/labs/chaos/10-podchaos.yaml
+kubectl -n journal get podchaos --no-headers
+kubectl -n journal get podchaos kill-one-api \
+  -o jsonpath='{.status.experiment.containerRecords[*].id}{"\n"}'
+bash course/labs/scripts/loadgen.sh report</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>kill-one-api   25s
+journal/journal-api-59546f4fbc-jhw6k
+
+요청 수 / 응답 코드 분포:
+16971
+  16971 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>status</code>에 <strong>어느 파드를 죽였는지</strong>가 남는다. 실험 기록이 오브젝트에 있다는 것이 UI로 클릭하는 것과의 차이다 — 나중에 "그날 무엇을 했나"를 클러스터에 물어볼 수 있다.</div>
+    <p>반복 실험은 <code>Schedule</code>로 만든다. <strong>한 번 살아남는 것과 계속 살아남는 것은 다르다</strong> — 1분마다 한 마리씩 죽이면서 실패율이 유지되는지 보는 것이 더 강한 검증이다.</p>
+<pre><code>kind: Schedule
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid    # M35 의 크론잡과 같은 개념
+  historyLimit: 3
+  type: PodChaos
+  podChaos: {action: pod-kill, mode: one, selector: {...}}</code></pre>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">36.5</span>따라하기 ③ 느리게 만든다</h2>
+
+  <div class="step">
+    <h4>1단계 — 레디스로 가는 길에 지연을 넣는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>통신 카오스(20.1.3). <strong>죽는 것보다 느려지는 것이 다루기 어렵다.</strong></p>
+    <p><strong>가설</strong>: 200ms 지연이 생기면 응답이 그만큼 느려지지만 실패는 없다.</p>
+<pre><code>kind: NetworkChaos
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  direction: to
+  target:                        # &lt;- 어느 쪽으로 가는 트래픽인가
+    mode: all
+    selector:
+      namespaces: [journal]
+      labelSelectors: {app: redis}
+  delay: {latency: "200ms"}
+  duration: "60s"</code></pre>
+    <p><code>direction</code>과 <code>target</code>이 폭발 반경을 만든다. <strong>journal-api에서 redis로 가는 트래픽만</strong> 느려지고, 인그레스에서 오는 것과 프로메테우스 스크레이프는 그대로다.</p>
+<pre><code>kubectl -n journal exec curlbox -- sh -c \
+  'for i in 1 2 3; do curl -s -o /dev/null -w "%{time_total}s %{http_code}\n" \
+     --max-time 5 http://journal-api:8080/api/entries; done'</code></pre>
+    <span class="out-lbl">출력 (지연 중 / 평상시)</span>
+    <div class="out"><code>0.404048s 200
+0.404748s 200
+0.403853s 200
+
+0.001518s 200
+0.001321s 200
+0.001141s 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>가설은 성립했다. 그런데 <strong>404ms는 200ms의 두 배다.</strong> 요청 하나가 레디스를 <strong>두 번</strong> 부른다는 뜻이고, 실제로 그렇다 — <code>KEYS</code>로 키 목록을 받고 <code>MGET</code>으로 값을 받는다. <strong>지연 실험이 호출 횟수를 드러냈다</strong> — 코드를 읽지 않고 알아낸 사실이다.</div>
+    <p>이것이 통신 카오스의 부수적인 값이다. 외부 의존이 하나 느려졌을 때 <strong>우리 응답이 몇 배로 느려지는가</strong>가 곧 그 의존을 몇 번 부르는지를 말해 준다. 실측값이 예상보다 크면 <strong>줄일 수 있는 호출이 있다는 신호</strong>다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 타임아웃을 넘겨 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span><strong>느림이 죽음이 되는 지점</strong>을 찾는다.</p>
+    <p><strong>가설</strong>: 지연이 클라이언트 타임아웃(2초)을 넘으면 실패가 나타난다. 부하 생성기의 <code>--max-time 2</code>가 그 타임아웃이다.</p>
+<pre><code>  delay: {latency: "1500ms"}     # 왕복 2회 = 3초 &gt; 2초
+  duration: "45s"</code></pre>
+    <span class="out-lbl">출력 (평상시 20초 / 지연 40초)</span>
+    <div class="out"><code>2368
+   2368 200
+
+109
+     76 000
+     33 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>처리량이 <strong>118 req/s에서 2.7 req/s로</strong> 떨어졌고 <strong>70%가 실패</strong>했다. 백엔드는 살아 있고 응답도 하는데 클라이언트가 기다려 주지 않는다 — <strong>느림과 죽음의 경계는 클라이언트가 정한다.</strong></div>
+    <p>여기서 나오는 설계 질문이 있다. <strong>타임아웃을 늘리면 될까.</strong> 늘리면 실패는 줄지만 <strong>느린 요청이 커넥션을 붙잡아</strong> 처리량이 더 떨어지고, 결국 앞단이 밀린다. 타임아웃은 <strong>포기하는 시점을 정하는 것</strong>이지 성공률을 올리는 손잡이가 아니다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — CPU를 태운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>작동 카오스(20.1.4). M17의 HPA가 실제로 반응하는지 본다.</p>
+    <p><strong>가설</strong>: 파드 하나의 CPU를 고갈시키면 ① HPA가 파드를 늘리고 ② 실패는 없다.</p>
+<pre><code>kind: StressChaos
+spec:
+  mode: one
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  stressors:
+    cpu: {workers: 2, load: 100}
+  duration: "90s"</code></pre>
+<pre><code>kubectl -n journal get hpa journal-api --no-headers   # 실험 전 / 중
+kubectl top pods -n journal -l app=journal-api --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>실험 전: journal-api   cpu: 33%/50%     3   8   4
+실험 중: journal-api   cpu: 1051%/50%   3   8   5  →  8
+
+journal-api-...-nlrjn   2022m   43Mi      &lt;- 스트레스 받은 파드
+journal-api-...-4vldx     34m   34Mi
+journal-api-...-9h6sb     47m   37Mi
+journal-api-...-bdb4x     23m   38Mi
+... (나머지도 22~47m)
+
+요청 18,756건 전부 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>가설은 성립했다 — 실패 0건, HPA가 최대치까지 늘렸다. 그런데 <strong>늘린 것이 옳았는가</strong>는 다른 질문이다. 파드 하나가 2022m을 쓰는 동안 나머지 일곱은 <strong>22~47m으로 놀고 있었다.</strong> HPA는 <strong>평균</strong>을 보므로 한 파드의 이상이 전체 평균을 1051%로 만들었고, 클러스터 자원을 8배로 쓰게 했다.</div>
+    <p>이것이 M17에서 다룬 HPA의 성질이 <strong>장애 상황에서 어떻게 나타나는지</strong>다. 한 파드가 비정상일 때 필요한 것은 <strong>파드를 늘리는 것이 아니라 그 파드를 빼는 것</strong>인데, HPA에는 그런 개념이 없다. 그 일은 프로브(M15)가 해야 하고, <strong>CPU 고갈은 프로브를 실패시키지 않는다</strong>(요청은 여전히 처리된다, 느릴 뿐). 두 장치 사이에 틈이 있다는 것을 이 실험이 보여 준다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">36.6</span>따라하기 ④ 오류와 알림</h2>
+
+  <div class="step">
+    <h4>1단계 — 밖에서 연결을 끊는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>앱을 고치지 않고 HTTP 응답을 바꾼다. <strong>그리고 알림이 울리지 않는 것을 본다.</strong></p>
+<pre><code>kind: HTTPChaos
+spec:
+  mode: all
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  target: Request
+  port: 8080
+  path: "/api/entries"
+  method: "GET"
+  abort: true
+  duration: "180s"</code></pre>
+<pre><code>bash course/labs/scripts/loadgen.sh report
+curl -s -o /dev/null -m 5 -w '%{http_code}\n' -H 'Host: journal.local' http://localhost:18080/api/entries
+curl -s -o /dev/null -m 5 -w '%{http_code}\n' -H 'Host: journal.local' http://localhost:18080/</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>4291
+   4291 000
+
+502
+200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>API는 완전히 죽었고 <strong>정적 파일은 200</strong>이다 — 폭발 반경이 <code>path</code>와 <code>labelSelectors</code>로 제한됐다. 인그레스는 <code>502</code>를 준다: 업스트림이 연결을 끊었을 때의 표준 응답이다.</div>
+<pre><code># 프로메테우스 /api/v1/alerts 에서 우리 알림만</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>(AppHighErrorRate 가 없다)
+KubeHpaMaxedOut pending warning
+Watchdog firing none</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>에러율 알림이 울리지 않는다.</strong> 요청이 앱에 도달하지 못했으므로 <code>http_server_requests_seconds_count</code>가 증가하지 않았고, <strong>에러율의 분모도 분자도 0</strong>이다. <strong>알림은 관측 지점 뒤의 고장만 본다</strong> — 이것이 이 실험에서 얻은 가장 중요한 사실이다.</div>
+    <p>대응은 <strong>관측 지점을 앞으로도 두는 것</strong>이다. 인그레스 컨트롤러의 메트릭(5xx 비율)이나 클러스터 밖에서의 합성 모니터링이 이 구멍을 메운다. M21에서 앱 지표만으로 알림을 만든 것이 <strong>절반의 커버리지</strong>였다는 뜻이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 앱이 스스로 오류를 내게 한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>메트릭에 기록되는 고장을 만들어 <strong>알림 경로 전체</strong>를 검증한다.</p>
+    <p><strong>가설</strong>: 에러율이 50%가 되면 <code>AppHighErrorRate</code>가 2분 안에 발화한다.</p>
+<pre><code># M30 에서 만든 손잡이를 쓴다. FAULT_RATE 는 v3 이미지에만 있다.
+kubectl -n journal set image deploy/journal-api api=journal-api:v3
+kubectl -n journal set env deploy/journal-api FAULT_RATE=0.5
+kubectl -n journal rollout status deploy/journal-api</code></pre>
+    <span class="out-lbl">출력 (45초 부하)</span>
+    <div class="out"><code>7153
+   3616 200
+   3537 500</code></div>
+<pre><code># 2분 30초 뒤 알림과 에러율 쿼리</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>AppHighErrorRate firing journal-api — journal-api 에러율 35.5%
+
+에러율(2m rate): 48.6 %</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>가설 성립.</strong> M21에서 쓴 규칙이 실제 장애에서 울렸다 — 규칙의 문법이 맞는 것과 <strong>울리는 것</strong> 사이의 간격을 여기서 메웠다. 알림 메시지의 35.5%와 지금 쿼리의 48.6%가 다른 것은 <strong>발화 시점의 값</strong>과 <strong>지금 값</strong>이기 때문이고, 시간창(2분)이 겹쳐 있어 생긴 차이다.</div>
+    <p>실험이 끝나면 반드시 되돌린다. 되돌리는 것을 <strong>실험 시트의 항목</strong>으로 두는 것이 좋다 — 앞의 실험들은 <code>duration</code>이 있어 저절로 끝나지만, 이것은 배포를 바꾼 것이라 사람이 되돌려야 한다.</p>
+<pre><code>kubectl -n journal set env deploy/journal-api FAULT_RATE-
+kubectl -n journal set image deploy/journal-api api=journal-api:v1</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 퍼즈</h4>
+    <p class="purpose"><span class="lbl">목적</span>입력을 흔든다(20.1.5). <strong>500이 나오는 지점</strong>을 찾는 것이 목표다.</p>
+    <p>무작위 바이트열보다 <strong>경계값과 형식 위반</strong>이 버그를 잘 찾는다. 빈 객체, <code>null</code>, 타입 위반, 아주 긴 값, JSON이 아닌 것.</p>
+<pre><code>bash course/labs/scripts/fuzz-api.sh 26</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>퍼즈 시작 — 26 회
+--- 응답 코드 분포
+    24 201
+     2 400
+판정: 통과 — 500 대 없음</code></div>
+    <div class="verdict"><span class="lbl">판정</span>가설(500이 나오지 않는다)은 성립했다. <strong>그런데 이 결과가 더 나쁘다.</strong> 26번 중 24번이 <code>201 Created</code>다 — 서버가 <strong>거의 모든 것을 받아들여 저장했다</strong>는 뜻이다.</div>
+<pre><code>for P in '{}' '{"text":null}' '{"text":123}' '{"text":[1,2,3]}' 'not json at all' '[]'; do
+  ... POST 해서 코드만 본다 ...
+done
+kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  {}                     -&gt; 201
+  {"text":null}          -&gt; 201
+  {"text":123}           -&gt; 201
+  {"text":[1,2,3]}       -&gt; 201
+  not json at all        -&gt; 400
+  []                     -&gt; 201
+
+총 31 건
+  {}
+  {"text":""}
+  {"text":{"nested":"object"}}
+  {"text":"ok","extra":"모르는 필드"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>입력 검증이 전혀 없다.</strong> <code>400</code>이 나온 것은 JSON 파서가 거부한 하나뿐이고, JSON이기만 하면 무엇이든 저장된다. 퍼즈가 찾으려던 <strong>충돌(500)</strong>은 없었지만 <strong>데이터 오염</strong>을 찾았다 — 이 앱을 그대로 쓰면 저장소가 쓰레기로 찬다.</div>
+    <p>조치는 둘이다. <strong>앱에 스키마 검증을 넣고</strong>(<code>text</code>가 문자열이고 길이 제한이 있어야 한다), <strong>퍼즈를 CI에 넣는다</strong>(M29의 파이프라인에 한 단계로). 그리고 <strong>실험이 만든 쓰레기 31건을 지운다</strong> — 카오스 실험은 뒷정리까지가 실험이다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">36.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 측정 도구가 막혀 앱을 오진한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>36.3에서 겪은 것을 <strong>사고의 형태</strong>로 다시 본다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>요청 수 / 응답 코드 분포:
+52
+     52 000</code></div>
+    <div class="verdict"><span class="lbl">판정</span>이 화면만 보면 <strong>"앱이 완전히 죽었다"</strong>고 읽힌다. 실제로는 앱이 멀쩡하고 <strong>측정 도구가 막힌 것</strong>이다. 카오스 실험 중에 이 화면을 봤다면 실험을 중단하고 앱을 뒤졌을 것이고, 아무 문제도 찾지 못했을 것이다.</div>
+    <p>구분하는 방법이 있다. <strong>다른 경로로 같은 것을 확인한다</strong> — 인그레스로 부르고(<code>curl -H 'Host: journal.local'</code>), 프로메테우스 타깃 상태를 보고, 파드 로그를 본다. 셋 중 하나라도 정상이면 <strong>측정 도구를 의심한다.</strong></p>
+    <p>더 나은 대응은 <strong>실험 전에 정상 상태를 재는 것</strong>이다. 게임 데이 4단계의 첫 단계가 그것이고, 이 실습에서 그 단계가 실제로 값을 냈다 — <strong>주입하기 전에 도구가 고장 난 것을 알았다.</strong></p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 알림이 울리지 않는 고장이 있다</h4>
+    <p class="purpose"><span class="lbl">목적</span>36.6의 관찰을 <strong>관측 설계의 문제</strong>로 정리한다.</p>
+    <p>두 실험을 나란히 놓는다. 둘 다 <strong>사용자가 보기에 서비스가 죽은 상태</strong>다.</p>
+    <table>
+      <thead><tr><th>고장</th><th>사용자가 보는 것</th><th>앱 메트릭</th><th>알림</th></tr></thead>
+      <tbody>
+        <tr><td>HTTPChaos abort</td><td>502</td><td><strong>증가하지 않음</strong></td><td>울리지 않음</td></tr>
+        <tr><td><code>FAULT_RATE=0.5</code></td><td>500</td><td>5xx 카운터 증가</td><td>2분 뒤 발화</td></tr>
+      </tbody>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>같은 심각도의 장애인데 <strong>한쪽만 알림이 울린다.</strong> M21의 규칙이 <code>http_server_requests_seconds_count</code>에만 의존하기 때문이고, <strong>그 지표가 증가하지 않는 고장은 보이지 않는다.</strong> 파드가 통째로 죽는 경우는 <code>AppTargetDown</code>이 잡지만, 이 실험처럼 <strong>파드는 살아 있는데 요청이 앞에서 끊기는</strong> 상황은 어느 규칙에도 걸리지 않는다.</div>
+    <p>메우는 방법이 셋이다. <strong>인그레스 컨트롤러의 메트릭</strong>으로 5xx 비율을 보고(사용자에게 가장 가깝다), <strong>합성 모니터링</strong>으로 클러스터 밖에서 주기적으로 부르고, <strong>트래픽 부재</strong>를 알림으로 만든다(<code>rate(...) == 0</code> — 요청이 아예 없는 것도 이상 신호다).</p>
+    <p>세 번째가 특히 값싸다. M21에서 쓴 <code>or vector(0)</code> 기법으로 <strong>지표가 사라진 것</strong>과 <strong>0인 것</strong>을 구분할 수 있고, 야간처럼 원래 트래픽이 없는 시간대는 시간 조건으로 뺀다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">36.8</span>운영 관점 — 실험 시트와 스테이징의 한계</h2>
+
+  <h3>시트가 실험을 실험으로 만든다</h3>
+  <p>이 모듈의 산출물 중 매니페스트보다 중요한 것이 <code>chaos/GAMEDAY.md</code>다. 각 실험이 <strong>가설·근거·폭발 반경·중단 조건·실측·판정·배운 것</strong>으로 정리돼 있다.</p>
+  <p>이 형식이 강제하는 것이 있다. <strong>가설을 쓰려면 정상 상태를 숫자로 정의해야</strong> 하고, <strong>중단 조건을 쓰려면 얼마까지 감당할지 미리 정해야</strong> 한다. 그리고 <strong>"배운 것" 칸이 비어 있으면 그 실험은 할 필요가 없었다.</strong></p>
+  <p>이 모듈의 다섯 실험 중 셋에서 가설 밖의 것을 배웠다 — 레디스 호출이 두 번이라는 것, HPA가 한 파드 때문에 전체를 늘린다는 것, 입력 검증이 없다는 것. <strong>가설이 맞았다는 확인보다 이쪽이 값이 크다.</strong></p>
+
+  <h3>실험을 언제 어디서 돌릴 것인가</h3>
+  <p>순서가 있다. <strong>개발 클러스터에서 도구를 익히고</strong>, <strong>스테이징에서 실험을 설계하고</strong>, <strong>운영에서 폭발 반경을 좁혀 돌린다.</strong> 마지막 단계를 건너뛰면 실험의 값이 크게 떨어지는데, 스테이징에서 재현되지 않는 것이 많기 때문이다.</p>
+  <p>책이 정리한 <strong>스테이징의 한계</strong>를 이 교재의 경험으로 다시 쓰면 이렇다.</p>
+  <table>
+    <thead><tr><th>재현되지 않는 것</th><th>이 모듈에서의 예</th></tr></thead>
+    <tbody>
+      <tr><td>실제 트래픽 양과 분포</td><td>실험 ③의 HPA 반응은 부하가 있어야 나온다</td></tr>
+      <tr><td>실제 데이터 크기</td><td>레디스에 3건일 때와 300만 건일 때 <code>KEYS</code>의 비용이 다르다</td></tr>
+      <tr><td>실제 노드 수와 배치</td><td>데몬이 없는 노드에는 실험이 주입되지 않는다</td></tr>
+      <tr><td>사용자의 재시도 행동</td><td>실패하면 사람은 새로고침을 누른다 — 부하가 늘어난다</td></tr>
+      <tr><td>외부 의존의 실제 지연</td><td>실험 ②는 우리가 정한 200ms지 실제 값이 아니다</td></tr>
+      <tr><td>시간</td><td>며칠에 걸쳐 새는 메모리는 90초 실험에서 안 보인다</td></tr>
+    </tbody>
+  </table>
+
+  <h3>운영에서 돌릴 때의 최소 조건</h3>
+  <p>세 가지가 갖춰져야 한다. <strong>중단 버튼</strong>(실험 오브젝트를 지우면 즉시 멈추는가 — <code>duration</code>과 함께 확인한다), <strong>알림 경로</strong>(실험이 진짜 장애를 만들었을 때 사람이 안다), <strong>공지</strong>(다른 팀이 그 시간대의 이상을 실험으로 이해한다).</p>
+  <p>세 번째를 빠뜨리면 실험이 <strong>다른 팀의 장애 대응을 유발</strong>한다. 실험 시간과 대상을 미리 알리는 것이 게임 데이의 절반이다.</p>
+
+  <h3>다음에 추가할 실험</h3>
+  <p>이 모듈에서 다루지 않은 것 중 값이 큰 것 셋을 적어 둔다. <strong>노드 하나를 통째로 잃는 실험</strong>(M16의 PDB와 토폴로지 분산이 그때 시험된다), <strong>DNS 장애</strong>(M25에서 본 이그레스 사고를 <code>DNSChaos</code>로 재현), <strong>디스크 가득 참</strong>(M18의 볼륨 확장이 그때 필요해진다).</p>
+  <p>공통점이 있다. <strong>앞의 모듈에서 만든 것을 시험한다</strong>는 것이다. 카오스 실험은 새로운 것을 찾는 도구가 아니라 <strong>이미 넣은 안전장치를 확인하는 도구</strong>다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">36.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n chaos-mesh get po --no-headers | grep -c Running</code> → <code>3</code></li>
+      <li><code>kubectl get crd | grep -c chaos-mesh</code> → <code>23</code> (실험 종류 12 + 워크플로·상태 관련)</li>
+      <li><code>helm -n chaos-mesh get values chaos-mesh | grep -c containerd</code> → <code>2</code> (<code>runtime</code>과 <code>socketPath</code>)</li>
+      <li><code>kubectl -n journal get netpol allow-loadgen -o jsonpath='{.spec.ingress[0].from[0].podSelector.matchLabels.role}'</code> → <code>loadgen</code></li>
+      <li><code>bash course/labs/scripts/loadgen.sh start; sleep 20; bash course/labs/scripts/loadgen.sh report</code> → <code>200</code>이 대부분이고 <code>000</code>이 5건 미만</li>
+      <li><code>kubectl -n journal get po curlbox -o jsonpath='{.spec.securityContext.runAsNonRoot}'</code> → <code>true</code></li>
+      <li><code>kubectl apply -f course/labs/chaos/10-podchaos.yaml; sleep 20; kubectl -n journal get podchaos kill-one-api -o jsonpath='{.status.experiment.containerRecords[0].id}'</code> → 파드 이름이 나온다</li>
+      <li>파드 킬 실험 중 <code>loadgen report</code> → <code>000</code>이 0건</li>
+      <li><code>NetworkChaos delay 200ms</code> 적용 후 <code>curl -w '%{time_total}'</code> → <code>0.4</code>초 부근 (지연의 <strong>두 배</strong>)</li>
+      <li><code>StressChaos</code> 적용 후 <code>kubectl -n journal get hpa journal-api</code> → CPU 퍼센트가 세 자리 이상</li>
+      <li><code>FAULT_RATE=0.5</code> 적용 2분 뒤 프로메테우스 알림 → <code>AppHighErrorRate</code>가 <code>firing</code></li>
+      <li><code>bash course/labs/scripts/fuzz-api.sh 26</code> → <code>500</code>대 0건, 종료 코드 <code>0</code></li>
+      <li><code>ls course/labs/chaos/</code> → <code>GAMEDAY.md</code>를 포함해 파일 8개</li>
+      <li><code>kubectl -n journal get podchaos,networkchaos,stresschaos,httpchaos --no-headers | wc -l</code> → <code>0</code> (정리 후)</li>
+      <li>(이해 확인) HTTPChaos로 끊었을 때 <code>AppHighErrorRate</code>가 울리지 않은 이유를 적는다</li>
+      <li>(이해 확인) 퍼즈에서 <code>500</code>이 없었는데도 문제를 찾은 것이 무엇인지 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/chaos/values.yaml</code> — kind용 Chaos Mesh 설치 값</li>
+      <li><code>course/labs/chaos/10-podchaos.yaml</code> · <code>11-podchaos-schedule.yaml</code></li>
+      <li><code>course/labs/chaos/20-networkchaos.yaml</code> · <code>21-networkchaos-timeout.yaml</code></li>
+      <li><code>course/labs/chaos/30-stresschaos.yaml</code> · <code>40-httpchaos.yaml</code></li>
+      <li><code>course/labs/chaos/GAMEDAY.md</code> — <strong>실험 시트 5장 + 4단계 요약 + 스테이징의 한계</strong></li>
+      <li><code>course/labs/scripts/fuzz-api.sh</code> — 퍼즈 (종료 코드로 판정)</li>
+      <li><code>course/labs/scripts/loadgen.sh</code> — <code>restricted</code>와 네트워크 정책에 맞게 수정</li>
+      <li><code>course/labs/k8s/netpol/30-allow-loadgen.yaml</code> — 진단 도구 경로</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 부하를 먼저 멈춘다
+bash course/labs/scripts/loadgen.sh stop
+
+# 실험 오브젝트를 전부 지운다 (duration 이 있어도 명시적으로)
+kubectl -n journal delete podchaos,networkchaos,stresschaos,httpchaos,schedule --all
+
+# 배포를 원래대로 되돌렸는지 확인한다
+kubectl -n journal get deploy journal-api \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl -n journal get deploy journal-api \
+  -o jsonpath='{.spec.template.spec.containers[0].env[*].name}{"\n"}'</code></pre>
+  <p><code>journal-api:v1</code>이고 <code>FAULT_RATE</code>가 없어야 한다. 실험이 <strong>배포를 바꾼 것은 사람이 되돌린다</strong> — <code>duration</code>이 지켜 주지 않는 유일한 경우다.</p>
+  <p>Chaos Mesh와 <code>allow-loadgen</code> 정책은 남긴다. M37의 부하 시험에서 <strong>부하와 장애를 겹쳐서</strong> 보고, M38 캡스톤의 검증 절차에 실험 시트가 들어간다.</p>
+  <p>HPA가 8개까지 올라가 있으면 부하를 멈춘 뒤 몇 분 안에 <code>stabilizationWindowSeconds</code>(M17에서 120초로 잡았다)를 지나 줄어든다. 급하면 <code>kubectl -n journal delete hpa journal-api</code> 없이 기다린다 — <strong>HPA를 지우면 replicas가 그 자리에 고정된다.</strong></p>
+</section>
+
+<div class="navlinks">
+  <a href="m35-k8s-platform-ml.html">← M35 플랫폼 패턴과 ML 워크로드</a>
+  <a href="m37-k8s-load-testing.html">M37 로드 테스팅 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>이 모듈의 부하 생성기는 <strong>측정 도구지 부하 도구가 아니다.</strong> 초당 170건을 보내며 응답 코드를 세는 것이 전부이고, 목표 RPS를 정하거나 분위수를 보거나 시나리오를 나누지 못한다.</p>
+  <p>M37에서 k6로 제대로 된 부하 시험을 만든다. 목표 RPS를 계단식으로 올리며 <strong>어디서 무너지는지</strong>를 찾고, M20의 히스토그램과 k6가 각각 재는 지연이 <strong>왜 다른지</strong>를 확인한다. 그리고 이 모듈의 카오스와 겹쳐서 <strong>부하가 있는 상태의 장애</strong>를 본다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>Chaos Mesh: https://chaos-mesh.org/docs/</li>
+    <li>PodChaos: https://chaos-mesh.org/docs/simulate-pod-chaos-on-kubernetes/</li>
+    <li>NetworkChaos: https://chaos-mesh.org/docs/simulate-network-chaos-on-kubernetes/</li>
+    <li>StressChaos: https://chaos-mesh.org/docs/simulate-heavy-stress-on-kubernetes/</li>
+    <li>HTTPChaos: https://chaos-mesh.org/docs/simulate-http-chaos-on-kubernetes/</li>
+    <li>Schedule: https://chaos-mesh.org/docs/define-scheduling-rules/</li>
+    <li>정정: 책의 Chaos Toolkit은 2024-04 이후 릴리스가 없다. 이 교재는 Chaos Mesh를 쓴다</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 20.1 카오스 엔지니어링</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Chaos Mesh 2.8.4</p>
+</footer>
+
+</div>
+</body>
+</html>
