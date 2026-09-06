@@ -1,0 +1,12 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: testdb
+
+  probe:
+    image: mysql:8.4
+    command: ["sh","-c","mysqladmin ping -h mysql -uroot -p1234"]
+    depends_on:
+      - mysql
