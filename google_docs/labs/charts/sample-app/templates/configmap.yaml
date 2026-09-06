@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "sample-app.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.app.logLevel | quote }}
+  REDIS_HOST: {{ .Release.Name }}-redis

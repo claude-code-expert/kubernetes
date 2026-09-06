@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sample-app
+description: k8s-sample-boot 과 레디스를 한 벌로 묶은 차트
+type: application
+version: 0.1.0
+appVersion: "v1"

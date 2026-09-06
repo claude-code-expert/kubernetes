@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: sample-app
+data:
+  LOG_LEVEL: "info"
+  REDIS_HOST: "redis"
