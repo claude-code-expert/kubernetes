@@ -17,6 +17,10 @@ repositories { mavenCentral() }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // 이 한 줄이 /actuator/prometheus 엔드포인트를 만든다.
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     compileOnly 'org.projectlombok:lombok:1.18.42'
     annotationProcessor 'org.projectlombok:lombok:1.18.42'
 }

@@ -17,9 +17,9 @@ public class IndexController {
 
     @GetMapping("/hello")
     public String getHello() {
-        String helloWorld = "Hello World! V2";
+        String helloWorld = "Hello World! V3";
         String host = environment.getProperty("HOSTNAME");
-        log.info("##### getHello V2 = {} and Host = {}", helloWorld, host);
+        log.info("##### getHello V3 = {} and Host = {}", helloWorld, host);
         return helloWorld + " (Host = " + host + ")";
     }
 }

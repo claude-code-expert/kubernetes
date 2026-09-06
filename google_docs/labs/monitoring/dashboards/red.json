@@ -1,0 +1,35 @@
+{
+  "title": "k8s-sample-boot RED",
+  "uid": "ksb-red",
+  "schemaVersion": 39,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries", "title": "Rate — 초당 요청 수",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [ {
+        "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"k8s-sample-boot\"}[5m]))",
+        "legendFormat": "{{uri}}"
+      } ]
+    },
+    {
+      "type": "timeseries", "title": "Errors — 5xx 비율",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "targets": [ {
+        "expr": "sum(rate(http_server_requests_seconds_count{application=\"k8s-sample-boot\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"k8s-sample-boot\"}[5m])) or vector(0)",
+        "legendFormat": "5xx"
+      } ]
+    },
+    {
+      "type": "timeseries", "title": "Duration — P50 / P99",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"k8s-sample-boot\",uri=\"/hello\"}[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"k8s-sample-boot\",uri=\"/hello\"}[5m])))", "legendFormat": "p99" }
+      ]
+    }
+  ]
+}
