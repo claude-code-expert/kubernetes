@@ -161,3 +161,8 @@ kubeconfig-*.yaml
 # 이 디렉터리에 있던 별도 git 저장소를 본문에 합쳤다(내용 140개는 그쪽에서도 미추적이었다).
 # 원래 .git 은 되돌릴 수 있게 .git.bak 으로 남겨 두고 커밋에서만 뺀다.
 docs/kubernetes-monitoring/kubernetes/.git.bak/
+
+# Gradle 로컬 빌드 캐시 — 머신마다 다르고 재생성된다 (order-api / gateway)
+.gradle/
+**/build/classes/
+**/build/tmp/

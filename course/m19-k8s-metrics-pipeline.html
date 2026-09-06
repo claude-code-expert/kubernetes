@@ -328,8 +328,8 @@
   <div class="step">
     <h4>1단계 — 기존 자산을 가져온다</h4>
     <p class="purpose"><span class="lbl">목적</span>이미 검증된 Spring Boot 앱을 course의 실습 파일로 편입한다.</p>
-    <p><code>docs/kubernetes-monitoring/kubernetes/labs/apps/order-api</code>에 Spring Boot 4.1.0 애플리케이션이 있다. Micrometer로 <code>/actuator/prometheus</code>를 노출하고, M21에서 쓸 지연·에러 생성기(<code>ChaosController</code>)를 갖고 있다.</p>
-<pre><code>SRC=docs/kubernetes-monitoring/kubernetes/labs/apps/order-api
+    <p><code>docs/kubernetes-monitoring/labs/apps/order-api</code>에 Spring Boot 4.1.0 애플리케이션이 있다. Micrometer로 <code>/actuator/prometheus</code>를 노출하고, M21에서 쓸 지연·에러 생성기(<code>ChaosController</code>)를 갖고 있다.</p>
+<pre><code>SRC=docs/kubernetes-monitoring/labs/apps/order-api
 DST=course/labs/apps/order-api
 mkdir -p "$DST"
 rsync -a --exclude '.gradle' --exclude 'build' "$SRC/" "$DST/"

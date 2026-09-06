@@ -45,7 +45,7 @@
 | 카오스 도구 | **Chaos Mesh v2.8.4** | chaos-mesh.org | 책의 Chaos Toolkit은 0.39.0(2024-04) 이후 릴리스 없음 — 대체 |
 | 부하 도구 | k6 | grafana.com/docs/k6 | `ab`·`wrk`는 시나리오 표현력 부족 |
 | 실습 앱 ① `journal-api` | Node 22 / Express 5 / TypeScript | course/labs/apps/journal-api | M04~M18 대상. 빌드가 빨라 M04 캐시 실험·M07 공급망 실습이 성립한다 |
-| 실습 앱 ② `order-api` | Spring Boot 4.1.0 / JDK 21 / Gradle | docs/kubernetes-monitoring/kubernetes/labs | M19~M38 대상. `/actuator/prometheus`·ChaosController 보유. 빌드에 JDK 21·Gradle 필요 |
+| 실습 앱 ② `order-api` | Spring Boot 4.1.0 / JDK 21 / Gradle | docs/kubernetes-monitoring/labs | M19~M38 대상. `/actuator/prometheus`·ChaosController 보유. 빌드에 JDK 21·Gradle 필요 |
 | metrics-server | **v0.9.0** (2026-07-13, 호환 1.34+) | kubernetes-sigs/metrics-server | kind 기본 미포함. `--kubelet-insecure-tls` 없이는 파드가 Ready 가 되지 않는다(kubelet 인증서에 IP SAN 이 없다). M16 `kubectl top`·M17 HPA의 전제라 M01에서 설치한다 |
 
 버전 숫자를 적는 모든 문서에 확인일과 "실습 당일 재확인" 안내를 함께 넣는다.

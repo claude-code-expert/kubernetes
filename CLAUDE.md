@@ -6,7 +6,7 @@
 - 커리큘럼 정본: `CURRICULUM.md` (38개 모듈, 8개 파트, 고정 버전 매트릭스)
 - 이론 정본: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』(한빛미디어 2024) 21개 장.
   `book/kubernetes-example.pdf`는 44쪽 맛보기라 **앞부속·전체 목차·1장 본문만** 들어 있다.
-  3장·20장 본문은 PDF에 없으므로 목차 골격 + `docs/kubernetes-monitoring/kubernetes/analysis/`의
+  3장·20장 본문은 PDF에 없으므로 목차 골격 + `docs/kubernetes-monitoring/analysis/`의
   추출 노트 + 공식 문서로 채운다
 - 실습 정본: 공식 문서(kubernetes.io, docs.docker.com, helm.sh, 각 프로젝트 문서).
   블로그·검색 결과는 근거로 쓰지 않는다
@@ -27,7 +27,7 @@ kubernetes/
     ├── chapter0 ~ chapter21   책 21개 장과 1:1 대응 HTML (ch0은 환경 구축)
     ├── kubenetes/             14일 로드맵 day01~14 + 00-index
     ├── k8s-observability-study/  관측 실습 10편 (kind 기반, 2026-08 검증)
-    ├── kubernetes-monitoring/kubernetes/
+    ├── kubernetes-monitoring/
     │   ├── CLAUDE.md          관측성 강의 전용 규약 — 문체·버전 규약의 원조
     │   ├── analysis/          책 3장·5장 추출 노트, 책↔docs 격차 분석 (정정 목록의 정본)
     │   ├── lectures/ slides/ labs/
@@ -154,7 +154,7 @@ kubectl describe pod web-5d8f7c9b4-x2kqp | tail -n 12
   20.1.3(통신) → NetworkChaos, 20.1.4(작동) → PodChaos·StressChaos, 20.1.5(퍼즈) →
   API 무작위 입력 실습으로 각 절에 실행 가능한 대응물을 만든다. 게임 데이 4단계는
   채워 넣는 실습 시트 양식으로 산출한다
-- 책의 낡은 실습은 `docs/kubernetes-monitoring/kubernetes/analysis/03-책-docs-격차와-강의-설계.md`
+- 책의 낡은 실습은 `docs/kubernetes-monitoring/analysis/03-책-docs-격차와-강의-설계.md`
   1절 정정 목록을 따른다 (Promtail, loki-stack, stable 저장소, Minikube, drone.io,
   SA 토큰 조회, Chaos Toolkit, cluster-admin 남발)
 - 확장한 내용은 `course/`에 새로 쓴다. `docs/chapter3`, `docs/chapter20` 원본은
@@ -228,7 +228,7 @@ kubectl describe pod web-5d8f7c9b4-x2kqp | tail -n 12
 | 앱 | 스택 | 위치 | 실습 구간 | 역할 |
 |---|---|---|---|---|
 | `journal-api` | Node 22 · Express 5 · TypeScript | `labs/apps/journal-api/` | M04~M18 | 빌드·배포·프로브·스케줄링의 대상. 책 1장 저널 예제의 최소 구현 |
-| `order-api` | Spring Boot 4.1.0 · JDK 21 · Gradle | `docs/kubernetes-monitoring/kubernetes/labs/`에서 가져와 `labs/apps/order-api/` | M19~M38 | 관측·카오스의 대상. `/actuator/prometheus`, ChaosController 보유 |
+| `order-api` | Spring Boot 4.1.0 · JDK 21 · Gradle | `docs/kubernetes-monitoring/labs/`에서 가져와 `labs/apps/order-api/` | M19~M38 | 관측·카오스의 대상. `/actuator/prometheus`, ChaosController 보유 |
 
 `journal-api`는 이미지를 직접 빌드하는 실습(M04 멀티스테이지, M07 공급망)이 성립하도록
 작고 빌드가 빠른 것을 쓴다. `order-api`는 M19부터 **추가로** 배포한다 — 기존
