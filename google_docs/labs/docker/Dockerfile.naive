@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
-FROM eclipse-temurin:8-jdk-noble
-WORKDIR /app
+# 순진한 버전 — 한 스테이지에서 빌드까지 하고 그대로 실행한다.
+# JDK · 메이븐 · 소스 · ~/.m2 캐시가 최종 이미지에 전부 남는다.
+FROM maven:3.9-eclipse-temurin-21
+WORKDIR /src
 COPY . .
-ENTRYPOINT ["java","-jar","/app/target/docker-0.0.1-SNAPSHOT.jar"]
+RUN mvn -B clean package -DskipTests
+EXPOSE 8080
+ENTRYPOINT ["sh","-c","java -jar /src/target/*.jar"]

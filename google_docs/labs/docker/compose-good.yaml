@@ -1,18 +1,36 @@
+# 문서 13장 — healthcheck 와 condition: service_healthy 를 함께 쓴다.
+# up 명령이 MySQL 이 준비될 때까지 기다렸다가 돌아온다.
+#
+#   docker compose -f compose-good.yaml -p dgood up -d
+#   docker compose -f compose-good.yaml -p dgood ps
+#   docker compose -f compose-good.yaml -p dgood down -v
 services:
   mysql:
     image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: "1234"
       MYSQL_DATABASE: testdb
+    volumes:
+      - mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p1234"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  probe:
-    image: mysql:8.4
-    command: ["sh","-c","mysqladmin ping -h mysql -uroot -p1234"]
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.multi
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/testdb"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "1234"
     depends_on:
       mysql:
         condition: service_healthy
+
+volumes:
+  mysql-data:

@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
-FROM eclipse-temurin:8-jre-noble
+# jar 를 미리 빌드해 두고 복사만 한다.
+#
+#   docker run --rm -v "$PWD":/src -w /src maven:3.9-eclipse-temurin-21 \
+#     mvn -B clean package -DskipTests
+#   docker build -f Dockerfile.jre -t docker-sample:jre .
+FROM eclipse-temurin:21-jre-noble
 WORKDIR /app
-COPY target/docker-0.0.1-SNAPSHOT.jar app.jar
+COPY target/*.jar app.jar
 RUN useradd --system --uid 10001 spring
 USER 10001
 EXPOSE 8080

@@ -1,5 +1,9 @@
 # labs — Kubernetes_시작하기_2026.docx 실습 파일
 
+> 애플리케이션 소스의 **정본은 별도 저장소**에 있다 —
+> https://github.com/villainscode/kubernetes (`k8s-sample-boot`, `docker-sample`).
+> 이 디렉터리의 파일들은 그 사본이며, 둘이 어긋나면 저장소를 기준으로 맞춘다.
+
 문서의 코드 블록이 정본이고 이 디렉터리는 그 추출본이다. 둘이 어긋나면 문서를 기준으로 맞춘다.
 
 ```

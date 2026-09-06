@@ -1,3 +1,9 @@
+# 문서 13장 — depends_on 만 걸었을 때.
+# probe 는 MySQL 이 아직 접속을 받지 못하는 시점에 붙으려다 실패한다.
+#
+#   docker compose -f compose-bad.yaml -p dbad up -d
+#   docker compose -f compose-bad.yaml -p dbad ps -a
+#   docker compose -f compose-bad.yaml -p dbad down -v
 services:
   mysql:
     image: mysql:8.4
@@ -7,6 +13,6 @@ services:
 
   probe:
     image: mysql:8.4
-    command: ["sh","-c","mysqladmin ping -h mysql -uroot -p1234"]
+    command: ["sh", "-c", "mysqladmin ping -h mysql -uroot -p1234"]
     depends_on:
       - mysql

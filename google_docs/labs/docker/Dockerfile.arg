@@ -1,9 +1,20 @@
 # syntax=docker/dockerfile:1
-FROM eclipse-temurin:8-jre-noble
+# 같은 소스에서 v1 · v2 두 이미지를 만든다 (문서 8.6절).
+#   docker build -f Dockerfile.arg -t docker-sample:v1 .
+#   docker build -f Dockerfile.arg --build-arg APP_VERSION=v2 -t docker-sample:v2 .
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+RUN mvn -B clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-noble
 ARG APP_VERSION=v1
 ENV APP_VERSION=${APP_VERSION}
 WORKDIR /app
-COPY target/docker-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /src/target/*.jar app.jar
 RUN useradd --system --uid 10001 spring
 USER 10001
+EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]
