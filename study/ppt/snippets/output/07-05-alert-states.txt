@@ -1,0 +1,7 @@
+AppTargetDown         inactive
+AppHighErrorRate      inactive       →  pending  →  firing
+AppHighLatencyP95     inactive
+OrderRejectionSpike   inactive
+
+판정 — 에러 주입 후 pending 에서 firing 까지 2분.  for: 2m 의 효과다.
+pending 은 프로메테우스 /alerts 화면에서 눈으로 확인한다.

@@ -1,0 +1,6 @@
+NAME                STATUS   ROLES           AGE   VERSION
+obs-control-plane   Ready    control-plane   96s   v1.36.1
+obs-worker          Ready    <none>          82s   v1.36.1
+obs-worker2         Ready    <none>          82s   v1.36.1
+
+판정 — STATUS 가 셋 다 Ready.  AGE 는 환경마다 다르다.

@@ -1,0 +1,8 @@
+# ① 시계열을 가장 많이 차지하는 메트릭 10개
+topk(10, count by (__name__) ({__name__=~".+"}))
+
+# ② 특정 라벨이 몇 종류의 값을 갖는지 — 계속 늘면 위험 신호
+count(count by (uri) (http_server_requests_seconds_count))
+
+# ③ 스크레이프 대상별 시계열 수
+topk(10, count by (job, instance) ({__name__=~".+"}))

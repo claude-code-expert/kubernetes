@@ -1,0 +1,8 @@
+구성요소	고정 버전	확인된 변경점
+Kubernetes	1.36.x	유지 브랜치는 최근 3개(1.36 / 1.35 / 1.34)
+kind	v0.32.0	기본 노드 이미지 kindest/node:v1.36.1
+kube-prometheus-stack	차트 86.x–88.x	Prometheus Operator v0.91.0 계열
+Grafana	13.x	2026-04-21 GA. Dynamic dashboards 정식
+Loki	3.7.x (차트 17.x)	차트가 2026-03-16부로 grafana-community 로 이전
+로그 수집기	Grafana Alloy	Promtail 은 2026-03-02 EOL
+Spring Boot	4.1.0	2026-06-10 릴리스

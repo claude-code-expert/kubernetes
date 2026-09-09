@@ -1,0 +1,5 @@
+조절 손잡이	효과	주의
+scrapeInterval 30s → 60s	샘플 수 절반	rate() 윈도도 함께 늘려야 한다 (간격의 4배 이상)
+retention 단축	디스크 선형 감소	주간 비교 · 용량 추세 분석이 불가능해진다
+metricRelabelings 드롭	디스크 · 메모리 모두 감소	되돌릴 수 없다
+retentionSize 지정	디스크 상한 보장	기간보다 먼저 걸리면 오래된 데이터가 조용히 사라진다

@@ -1,0 +1,4 @@
+장	라벨이 빠지면	확인 명령
+05 대시보드	컨피그맵은 있고 대시보드만 없다	kubectl -n monitoring get cm -l grafana_dashboard=1
+06 ServiceMonitor	타깃이 0개. 오류 없음	프로메테우스 UI 의 Service Discovery
+07 PrometheusRule	규칙이 조용히 무시된다	프로메테우스 /rules 화면

@@ -1,0 +1,6 @@
+라벨	어디서 왔나
+channel	앱이 직접 붙인 태그 (02장 Counter.builder)
+job	Service 이름. ServiceMonitor 기반 타깃의 기본 규칙
+namespace / pod / service / container	쿠버네티스 서비스 디스커버리가 자동으로 부여
+endpoint	ServiceMonitor 에 쓴 포트 이름
+instance	스크레이프 대상 주소

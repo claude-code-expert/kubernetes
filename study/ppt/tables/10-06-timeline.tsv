@@ -1,0 +1,5 @@
+시각	무엇이 보이나
+0 ~ 1분	대시보드에서 order-api 와 gateway 의 P95 가 올라간다
+3분경	프로메테우스 Alerts 에서 AppHighLatencyP95 가 pending → firing
+5분	실험 자동 종료. P95 가 내려온다
+8분경	알림 resolved

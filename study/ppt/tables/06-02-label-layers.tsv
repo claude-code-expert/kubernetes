@@ -1,0 +1,4 @@
+겹	무엇이 무엇을 고르나	어긋나면	확인 방법
+1	프로메테우스 CR 의 serviceMonitorSelector 가 ServiceMonitor 를	ServiceMonitor 가 아예 읽히지 않는다	kubectl get prometheus -o yaml | grep -A4 serviceMonitorSelector
+2	ServiceMonitor 의 selector 가 서비스를	타깃이 0개	프로메테우스 UI 의 Service Discovery
+3	서비스의 selector 가 파드를	엔드포인트가 빈다	kubectl get endpointslices

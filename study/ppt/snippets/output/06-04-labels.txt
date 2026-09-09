@@ -1,0 +1,10 @@
+{
+  "__name__": "orders_created_total",
+  "channel":   "api",              ← 앱이 붙인 것
+  "job":       "order-api",        ┐
+  "namespace": "apps",             │ 프로메테우스가 붙인 것
+  "pod":       "order-api-6b8f7d5c9-h4nm2",
+  "service":   "order-api"         ┘
+}
+
+판정 — pod 가 바뀌어도 job 은 그대로다. 그래서 하나의 시계열처럼 묶인다.

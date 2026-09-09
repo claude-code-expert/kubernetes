@@ -1,0 +1,8 @@
+# kind-cluster.yaml — 이 부분이 04장의 타깃 4개를 살린다
+kubeadmConfigPatches:
+  - |
+    apiVersion: kubeadm.k8s.io/v1beta4     # v1beta3 예제는 형식이 다르다
+    controllerManager:
+      extraArgs:
+        - { name: bind-address, value: "0.0.0.0" }
+    ...    # scheduler · etcd · kube-proxy 도 같은 방식

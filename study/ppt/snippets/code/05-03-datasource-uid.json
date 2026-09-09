@@ -1,0 +1,5 @@
+// 이름이 아니라 uid 로 참조한다. 이름은 환경마다 다를 수 있다.
+"datasource": {
+  "type": "prometheus",
+  "uid": "${datasource}"      // datasource 타입 변수를 두면 uid 를 박지 않아도 된다
+}

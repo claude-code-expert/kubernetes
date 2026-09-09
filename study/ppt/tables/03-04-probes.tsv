@@ -1,0 +1,4 @@
+프로브	답하는 질문	실패하면	액추에이터 경로
+startup	아직 시작 중인가	다른 두 프로브를 미룬다	/actuator/health/liveness
+readiness	지금 트래픽을 받아도 되나	서비스 엔드포인트에서 빠진다. 파드는 살아 있다	/actuator/health/readiness
+liveness	살아 있나	컨테이너를 죽이고 다시 만든다	/actuator/health/liveness

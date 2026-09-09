@@ -1,0 +1,12 @@
+job 별 타깃 수
+
+kube-controller-manager     1      ← 01장 bind-address 를 고쳐야 잡힌다
+kube-etcd                   1      ←
+kube-proxy                  3      ←
+kube-scheduler              1      ←
+kubelet                     3
+node-exporter               3
+kube-state-metrics          1
+...
+
+판정 — 위 네 줄이 0 이면 01장 설정이 빠진 것이다.

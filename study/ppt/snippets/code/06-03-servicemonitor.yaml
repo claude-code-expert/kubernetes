@@ -1,0 +1,8 @@
+kind: ServiceMonitor
+metadata:
+  labels: { release: kps }                 # ① 없으면 프로메테우스가 안 읽는다
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/name: order-api }   # ② 서비스의 라벨
+  endpoints:
+    - { port: http, path: /actuator/prometheus }         # ③ 번호가 아니라 이름

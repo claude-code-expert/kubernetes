@@ -1,0 +1,4 @@
+검색하면 나오는 것	문제	대신 쓰는 것
+Promtail	2026-03-02 EOL. 설정 형식이 Alloy 와 완전히 다르다	Grafana Alloy
+loki-stack 차트	차트가 2026-03-16 부로 저장소를 옮겼다	grafana-community/loki
+grafana 저장소	grafana/loki 경로로는 원하는 차트를 못 받는다	grafana-community

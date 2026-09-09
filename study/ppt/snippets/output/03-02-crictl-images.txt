@@ -1,0 +1,7 @@
+docker exec obs-worker crictl images | grep obs/
+
+docker.io/obs/gateway     0.0.1   3f2a91c4e7b8f   289MB
+docker.io/obs/order-api   0.0.1   b71c05de9a12c   276MB
+
+판정 — 두 줄이 보이면 적재 완료.  docker images 로는 알 수 없다.
+이미지 ID 는 환경마다 다르다.

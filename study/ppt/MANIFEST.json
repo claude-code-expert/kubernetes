@@ -16,9 +16,13 @@
     "figures_svg": 21,
     "figures_png": 5,
     "notes_files": 11,
-    "notes_bytes": 29157
+    "notes_bytes": 29157,
+    "tables": 16,
+    "code": 8,
+    "output": 7,
+    "slides_with_assets": 40
   },
-  "stage": "B 완료 — 도판 21개 + 발표자 노트 11장. C(코드·출력·표 스니펫)는 아직",
+  "stage": "C 완료 — 도판 21 · 노트 11장 · 표 16 · 코드 8 · 출력 7. 장표 40/56 에 자산이 붙었다",
   "chapters": [
     {
       "chapter": "00",
@@ -122,7 +126,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/00-05-version-matrix.tsv"
+            ]
           },
           "notes": "notes/ch00.md#00-05"
         },
@@ -139,7 +145,9 @@
           "assets": {
             "figures": [],
             "code": [],
-            "output": [],
+            "output": [
+              "snippets/output/00-06-preflight.txt"
+            ],
             "tables": []
           },
           "notes": "notes/ch00.md#00-06"
@@ -184,7 +192,9 @@
           ],
           "assets": {
             "figures": [],
-            "code": [],
+            "code": [
+              "snippets/code/01-01-kind-bindaddress.yaml"
+            ],
             "output": [],
             "tables": []
           },
@@ -244,7 +254,9 @@
           "assets": {
             "figures": [],
             "code": [],
-            "output": [],
+            "output": [
+              "snippets/output/01-04-get-nodes.txt"
+            ],
             "tables": []
           },
           "notes": "notes/ch01.md#01-04"
@@ -308,7 +320,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/02-02-use-red.tsv"
+            ]
           },
           "notes": "notes/ch02.md#02-02"
         },
@@ -367,7 +381,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/02-05-metric-kinds.tsv"
+            ]
           },
           "notes": "notes/ch02.md#02-05"
         },
@@ -386,7 +402,9 @@
             "figures": [
               "figures/ch02-fig1.svg"
             ],
-            "code": [],
+            "code": [
+              "snippets/code/02-06-metric-names.txt"
+            ],
             "output": [],
             "tables": []
           },
@@ -448,7 +466,9 @@
           "assets": {
             "figures": [],
             "code": [],
-            "output": [],
+            "output": [
+              "snippets/output/03-02-crictl-images.txt"
+            ],
             "tables": []
           },
           "notes": "notes/ch03.md#03-02"
@@ -466,7 +486,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/03-03-pullpolicy.tsv"
+            ]
           },
           "notes": "notes/ch03.md#03-03"
         },
@@ -485,7 +507,9 @@
             ],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/03-04-probes.tsv"
+            ]
           },
           "notes": "notes/ch03.md#03-04"
         },
@@ -502,7 +526,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/03-05-image-size.tsv"
+            ]
           },
           "notes": "notes/ch03.md#03-05",
           "gaps": [
@@ -567,7 +593,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/04-01-metric-sources.tsv"
+            ]
           },
           "notes": "notes/ch04.md#04-01",
           "gaps": [
@@ -642,7 +670,9 @@
           "assets": {
             "figures": [],
             "code": [],
-            "output": [],
+            "output": [
+              "snippets/output/04-05-targets.txt"
+            ],
             "tables": []
           },
           "notes": "notes/ch04.md#04-05"
@@ -698,7 +728,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/05-02-silent-failures.tsv"
+            ]
           },
           "notes": "notes/ch05.md#05-02"
         },
@@ -715,7 +747,9 @@
             "figures": [
               "figures/ch05-fig2.svg"
             ],
-            "code": [],
+            "code": [
+              "snippets/code/05-03-datasource-uid.json"
+            ],
             "output": [],
             "tables": []
           },
@@ -758,7 +792,9 @@
               "figures/ch06-fig1.svg"
             ],
             "code": [],
-            "output": [],
+            "output": [
+              "snippets/output/06-01-up-zero.txt"
+            ],
             "tables": []
           },
           "notes": "notes/ch06.md#06-01"
@@ -776,7 +812,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/06-02-label-layers.tsv"
+            ]
           },
           "notes": "notes/ch06.md#06-02"
         },
@@ -791,7 +829,9 @@
           ],
           "assets": {
             "figures": [],
-            "code": [],
+            "code": [
+              "snippets/code/06-03-servicemonitor.yaml"
+            ],
             "output": [],
             "tables": []
           },
@@ -809,8 +849,12 @@
           "assets": {
             "figures": [],
             "code": [],
-            "output": [],
-            "tables": []
+            "output": [
+              "snippets/output/06-04-labels.txt"
+            ],
+            "tables": [
+              "tables/06-04-labels-origin.tsv"
+            ]
           },
           "notes": "notes/ch06.md#06-04"
         },
@@ -827,7 +871,9 @@
             "figures": [
               "figures/ch06-fig2.svg"
             ],
-            "code": [],
+            "code": [
+              "snippets/code/06-05-red-queries.promql"
+            ],
             "output": [],
             "tables": []
           },
@@ -913,7 +959,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/07-03-alert-delay.tsv"
+            ]
           },
           "notes": "notes/ch07.md#07-03",
           "gaps": [
@@ -954,7 +1002,9 @@
               "figures/ch07-fig2.svg"
             ],
             "code": [],
-            "output": [],
+            "output": [
+              "snippets/output/07-05-alert-states.txt"
+            ],
             "tables": []
           },
           "notes": "notes/ch07.md#07-05"
@@ -1016,7 +1066,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/08-02-outdated.tsv"
+            ]
           },
           "notes": "notes/ch08.md#08-02"
         },
@@ -1050,7 +1102,9 @@
           ],
           "assets": {
             "figures": [],
-            "code": [],
+            "code": [
+              "snippets/code/08-04-logql.txt"
+            ],
             "output": [],
             "tables": []
           },
@@ -1094,7 +1148,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/09-01-tuning-knobs.tsv"
+            ]
           },
           "notes": "notes/ch09.md#09-01"
         },
@@ -1129,7 +1185,9 @@
           ],
           "assets": {
             "figures": [],
-            "code": [],
+            "code": [
+              "snippets/code/09-03-cardinality.promql"
+            ],
             "output": [],
             "tables": []
           },
@@ -1211,7 +1269,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/10-02-gameday-sheet.tsv"
+            ]
           },
           "notes": "notes/ch10.md#10-02"
         },
@@ -1245,7 +1305,9 @@
             "figures": [],
             "code": [],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/10-04-chaos-tools.tsv"
+            ]
           },
           "notes": "notes/ch10.md#10-04"
         },
@@ -1277,9 +1339,13 @@
           ],
           "assets": {
             "figures": [],
-            "code": [],
+            "code": [
+              "snippets/code/10-06-networkchaos.yaml"
+            ],
             "output": [],
-            "tables": []
+            "tables": [
+              "tables/10-06-timeline.tsv"
+            ]
           },
           "notes": "notes/ch10.md#10-06",
           "gaps": [
@@ -1403,7 +1469,13 @@
         "spec": "실험 3 타임라인 4행"
       }
     ],
-    "note": "GUIDE 의 인라인 SVG 방식으로 그린다 — 흰 배경, #585f6b 선, 모노스페이스 라벨"
+    "note": "GUIDE 의 인라인 SVG 방식으로 그린다 — 흰 배경, #585f6b 선, 모노스페이스 라벨",
+    "output": [
+      {
+        "slide": "09-03",
+        "spec": "topk 카디널리티 질의의 실제 출력. 문서에 없어 지어내지 않았다. 실습 클러스터에서 한 번 돌려 붙인다"
+      }
+    ]
   },
   "palette_check": {
     "guide_declares": [
@@ -1422,5 +1494,23 @@
       "#9aa1ad"
     ],
     "verdict": "도판이 GUIDE 보다 색을 더 쓴다. 흐름 구분(pull 보라 / push 주황 / 질의 파랑)에 의미가 실려 있으므로 도판을 고치지 말고 GUIDE 팔레트 표를 갱신하는 편이 맞다."
-  }
+  },
+  "text_only_slides": [
+    "00-01",
+    "00-02",
+    "00-03",
+    "01-02",
+    "02-01",
+    "02-03",
+    "03-06",
+    "04-02",
+    "04-03",
+    "07-02",
+    "07-04",
+    "09-04",
+    "10-01",
+    "10-03",
+    "10-05",
+    "10-07"
+  ]
 }

@@ -1,0 +1,8 @@
+# 코드에 쓰는 이름          →  /actuator/prometheus 에 나오는 이름
+orders.created            →  orders_created_total
+orders.rejected           →  orders_rejected_total
+orders.processing         →  orders_processing_seconds_{count,sum,bucket}
+orders.stored             →  orders_stored
+
+# 마이크로미터가 . 을 _ 로 바꾸고 카운터에 _total 을 붙인다.
+# 06장 PromQL 과 07장 대시보드 JSON 이 오른쪽 이름에 의존한다.

@@ -1,0 +1,9 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+spec:
+  selector:
+    labelSelectors: { app.kubernetes.io/name: order-api }
+  delay:
+    latency: "600ms"      # 임계 0.5s 를 jitter 감안해도 확실히 넘긴다
+    jitter: "100ms"
+  duration: "5m"          # for: 3m 알림이 발화하는 것까지 보려면 3분 이상

@@ -1,0 +1,7 @@
+메트릭	타입	쓰이는 곳
+http_server_requests_seconds_count	카운터	06 — 처리율 R, 에러율 E
+http_server_requests_seconds_bucket	히스토그램	06 · 07 — P95 · P99 지연 D
+orders_created_total	카운터	07 — 비즈니스 지표 패널
+orders_rejected_total	카운터	07 — 거부율 알림 규칙
+orders_processing_seconds_*	타이머	06 — HTTP 지연과 내부 처리 지연 분리
+orders_stored	게이지	07 — 게이지와 카운터의 그래프 차이

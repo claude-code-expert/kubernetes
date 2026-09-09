@@ -1,0 +1,11 @@
+curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=up{namespace="apps"}' | jq '.data.result | length'
+
+0
+
+판정 — 오류도 경고 로그도 없다. ServiceMonitor 는 정상적으로 만들어져 있다.
+프로메테우스 CR 의 셀렉터를 보면 이유가 나온다.
+
+    serviceMonitorSelector:
+      matchLabels:
+        release: kps

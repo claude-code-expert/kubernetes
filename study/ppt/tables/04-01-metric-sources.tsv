@@ -1,0 +1,5 @@
+출처	무엇을 보나	배치	이름 접두사
+cAdvisor	컨테이너의 실제 자원 사용	노드마다 (kubelet 내장)	container_
+metrics-server	리소스 메트릭 API. kubectl top 과 HPA 가 쓴다	클러스터에 하나	(API 전용)
+node-exporter	기계의 상태 — 메모리가 몇 바이트 남았는가	노드마다 (DaemonSet)	node_
+kube-state-metrics	API 서버가 아는 상태 — 원한 3개 중 실제 2개인가	클러스터에 하나	kube_
