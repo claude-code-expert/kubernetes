@@ -23,15 +23,17 @@ kubernetes/
 │   ├── mNN-<슬러그>.html     모듈 교안 38편
 │   ├── figures/             mNN-figN.svg (문서에 인라인 삽입)
 │   └── labs/                실습 파일 (매니페스트·values·스크립트·앱 소스)
+├── study/                   ← 관측성 11장. 별도 축, 별도 버전 고정
+│   ├── index.html           로드맵·장 목록·버전
+│   ├── chNN-<슬러그>.html    11장 (이론+설치+따라하기+실패+검증+명령어)
+│   ├── labs/ scripts/       실습 코드와 외부 예제 fetch
+│   └── ppt/                 장표 제작 키트 (아웃라인·도판·규약)
 └── docs/                    ← 기존 자산. 참조·재사용하되 요청 없이 수정하지 않는다
     ├── chapter0 ~ chapter21   책 21개 장과 1:1 대응 HTML (ch0은 환경 구축)
     ├── kubenetes/             14일 로드맵 day01~14 + 00-index
-    ├── k8s-observability-study/  관측 실습 10편 (kind 기반, 2026-08 검증)
     ├── kubernetes-monitoring/
     │   ├── CLAUDE.md          관측성 강의 전용 규약 — 문체·버전 규약의 원조
-    │   ├── analysis/          책 3장·5장 추출 노트, 책↔docs 격차 분석 (정정 목록의 정본)
-    │   ├── lectures/ slides/ labs/
-    │   └── docs/
+    │   └── analysis/          책 3장·5장 추출 노트, 책↔docs 격차 분석 (정정 목록의 정본)
     ├── docker-basic/          2022년 Notion 도커 입문 — 명령이 낡음. 소재로만 참고
     ├── kubernetes-in-action/  『쿠버네티스 인 액션』 스터디 슬라이드 PDF (배경 지식)
     └── 이미지참고/             구조 다이어그램 PNG/SVG (재사용 가능)
@@ -228,11 +230,11 @@ kubectl describe pod web-5d8f7c9b4-x2kqp | tail -n 12
 | 앱 | 스택 | 위치 | 실습 구간 | 역할 |
 |---|---|---|---|---|
 | `journal-api` | Node 22 · Express 5 · TypeScript | `labs/apps/journal-api/` | M04~M18 | 빌드·배포·프로브·스케줄링의 대상. 책 1장 저널 예제의 최소 구현 |
-| `order-api` | Spring Boot 4.1.0 · JDK 21 · Gradle | `docs/kubernetes-monitoring/labs/`에서 가져와 `labs/apps/order-api/` | M19~M38 | 관측·카오스의 대상. `/actuator/prometheus`, ChaosController 보유 |
+| `order-api` | Spring Boot 4.1.0 · JDK 21 · Gradle | `study/labs/apps/order-api/`에서 가져와 `labs/apps/order-api/` | M19~M38 | 관측·카오스의 대상. `/actuator/prometheus`, ChaosController 보유 |
 
 `journal-api`는 이미지를 직접 빌드하는 실습(M04 멀티스테이지, M07 공급망)이 성립하도록
 작고 빌드가 빠른 것을 쓴다. `order-api`는 M19부터 **추가로** 배포한다 — 기존
-`docs/kubernetes-monitoring`의 대시보드 JSON·PromQL·ChaosController 자산을 그대로 쓰기
+`study/labs`의 대시보드 JSON·PromQL·ChaosController 자산을 그대로 쓰기
 위해서다. 커스텀 메트릭 이름과 태그는 M20의 PromQL과 M21 대시보드가 의존하므로
 임의로 바꾸지 않는다.
 
@@ -264,6 +266,39 @@ M14 이후 `labs/k8s/journal/`(kustomize)과 `labs/charts/journal/`(Helm)이 같
 
 모듈 하나를 끝낼 때마다 kind 클러스터를 새로 만들어 문서대로만 따라 해 본다.
 문서에 없는 명령을 손으로 쳐야 진행된다면 그 문서는 미완성이다.
+
+## study/ — 관측성 11장 (별도 축)
+
+`course/` 38편과 **다른 과정**이다. 흩어져 있던 강의안(md 8편)·실습서(html 11편)·실습
+코드·외부 예제를 한 축으로 합친 것이고, 장마다 이론 → 설치 → 따라하기 → 실패 재현 →
+검증 → 명령어 레퍼런스 순서를 갖는다. 규약은 `study/README.md`에 있다.
+
+- 버전이 다르다. `study/`는 2026-08-19 검증 기준 **1.36 / kind v0.32.0 / 차트 88.x**에
+  고정돼 있고 `course/`는 1.37 라인이다. 문서의 실행 결과가 그 조합에서 실제로 실행해
+  얻은 것이라 유지한다. **두 과정을 같은 클러스터에서 섞어 돌리지 않는다**
+- HTML 스타일이 다르다. `study/`는 원본 실습서의 클래스 체계(`.box.ac` `.box.warn`
+  `.cap` `.check`)를 그대로 쓴다. `course/` 클래스와 섞지 않는다
+- `study/labs/apps/order-api`의 커스텀 메트릭 이름 4종(`orders.created` `orders.rejected`
+  `orders.processing` `orders.stored`)은 바꾸지 않는다. 06장 PromQL과 07장 대시보드가
+  의존하고, `course/` M19~M22도 같은 앱을 쓴다
+- 외부 예제(`villainscode/kubernetes`)는 복사하지 않는다. `study/scripts/fetch-samples.sh`가
+  커밋 SHA를 고정해 받아 온다
+- 장표는 이 저장소에서 만들지 않는다. `study/ppt/`의 아웃라인·도판·규약만 산출하고
+  제작은 별도 저장소가 한다
+
+## 배포
+
+GitHub Pages는 `.github/workflows/pages.yaml`이 `course/`와 `study/`만 골라
+`_site/`로 조립해 올린다. 배치가 저장소 구조와 같아서 상대 링크가 로컬과 배포본에서
+똑같이 동작한다.
+
+```
+/          랜딩 (.github/pages-index.html)
+/course/   38편 과정
+/study/    관측성 11장
+```
+
+`docs/`·`book/`·`google_docs/`는 배포 대상이 아니다.
 
 ## 작업 시 주의
 

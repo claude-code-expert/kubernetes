@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠버네티스 관측성 실습 — 이론과 따라하기 11장</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --soft:#f5f6f7;
+    --ink:#15181d;
+    --muted:#585f6b;
+    --line:#d8dbe0;
+    --line2:#eceef0;
+    --ac:#1a4fa0;
+    --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:16px;line-height:1.72;letter-spacing:-.005em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  /* ── 문서 헤더 ── */
+  header{border-bottom:1px solid var(--ink);padding:56px 0 22px;margin-bottom:36px}
+  .docnum{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:34px;line-height:1.28;letter-spacing:-.03em;font-weight:700;margin:10px 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  /* ── 목차 ── */
+  nav.toc{border:1px solid var(--line);padding:20px 24px;margin:0 0 48px}
+  nav.toc h2{font-size:12px;font-family:var(--mono);letter-spacing:.14em;color:var(--muted);
+             font-weight:500;margin-bottom:12px}
+  nav.toc ol{list-style:none;counter-reset:t;columns:2;column-gap:36px}
+  nav.toc li{counter-increment:t;font-size:14.5px;line-height:2}
+  nav.toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+                     font-size:12px;color:var(--muted);margin-right:10px}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+
+  /* ── 섹션 ── */
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2.sec{font-size:23px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--ac);margin-right:12px;font-weight:500}
+  h3{font-size:17px;font-weight:700;margin:32px 0 10px;letter-spacing:-.02em}
+  h4{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--muted)}
+  p{margin:0 0 14px;max-width:74ch}
+  p+p{margin-top:-2px}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700}
+
+  /* 용어 병기 */
+  .term{border-bottom:1px dotted var(--muted);cursor:help}
+  .en{font-family:var(--mono);font-size:.85em;color:var(--muted)}
+
+  /* 코드 */
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0;font-size:13px}
+  pre .c{color:#6b7280}
+  pre .o{color:#0b4f2f}
+  .cap{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+  .cap b{color:var(--ink);font-weight:600}
+
+  /* 표 */
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td code{font-size:12.5px}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .note{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  /* 콜아웃 */
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);
+       padding:16px 20px;margin:20px 0;background:#fff}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  /* 도판 */
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+  figcaption b{color:var(--ink);font-weight:600}
+
+  /* 체크리스트 */
+  ul.check{list-style:none;padding-left:0}
+  ul.check li{padding-left:30px;position:relative;margin:9px 0;font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:14px;
+                      border:1.5px solid var(--muted);border-radius:2px}
+
+  /* 출처 */
+  .src{font-size:13px;color:var(--muted);line-height:1.85}
+  .src ul{list-style:none;padding-left:0;max-width:none}
+  .src li{margin:4px 0;word-break:break-all}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;
+         font-size:13px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){
+    .wrap{padding:0 18px 80px}
+    h1{font-size:27px}
+    nav.toc ol{columns:1}
+  }
+  @media print{
+    body{font-size:11pt}
+    nav.toc{break-inside:avoid}
+    section{break-inside:auto}
+    figure,table,.box{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="docnum">STUDY · 쿠버네티스 관측성</div>
+  <h1>쿠버네티스 관측성 실습</h1>
+  <p class="lede">
+    노트북 한 대에서 kind 클러스터를 세우고 스프링 애플리케이션 두 개를 배포한 뒤,
+    프로메테우스·그라파나·로키로 관측하고 마지막에 <em>일부러 고장을 내서</em> 그 관측 체계를 판정한다.
+    각 장은 이론·설치·따라하기·명령어를 한 문서에 담아, 위에서 아래로 따라 하면 실습이 끝난다.
+  </p>
+  <div class="meta">
+    <span>11장 · 도판 20점</span>
+    <span>총 소요 13–17시간</span>
+    <span>검증일 2026-08-19</span>
+    <span>Kubernetes 1.36 · kind v0.32.0</span>
+  </div>
+</header>
+
+<section id="roadmap">
+  <h2 class="sec"><span class="n">01</span>전체 로드맵</h2>
+  <figure>
+  <svg viewBox="0 0 964 150" role="img" aria-label="11개 장 로드맵">
+    <rect width="964" height="150" fill="#ffffff"/>
+    <text x="32" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 A · 환경과 앱</text>
+    <line x1="32" y1="36" x2="338" y2="36" stroke="#d8dbe0" stroke-width="1"/>
+    <text x="360" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 B · 설치</text>
+    <line x1="360" y1="36" x2="510" y2="36" stroke="#d8dbe0" stroke-width="1"/>
+    <text x="532" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 C · 연동</text>
+    <line x1="532" y1="36" x2="760" y2="36" stroke="#d8dbe0" stroke-width="1"/>
+    <text x="782" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 D · 운영과 검증</text>
+    <line x1="782" y1="36" x2="932" y2="36" stroke="#d8dbe0" stroke-width="1"/>
+    <a href="ch00-setup-versions.html"><rect x="32" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="68" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">00</text><text x="68" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">환경 준비</text></a>
+    <a href="ch01-kind-cluster.html"><rect x="110" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="146" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">01</text><text x="146" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">kind 구축</text></a>
+    <a href="ch02-instrumented-app.html"><rect x="188" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="224" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">02</text><text x="224" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">스프링 앱</text></a>
+    <a href="ch03-containerize-deploy.html"><rect x="266" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="302" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">03</text><text x="302" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">배포</text></a>
+    <a href="ch04-prometheus-stack.html"><rect x="360" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="396" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">04</text><text x="396" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">프로메테우스</text></a>
+    <a href="ch05-grafana-dashboards.html"><rect x="438" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="474" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">05</text><text x="474" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">그라파나</text></a>
+    <a href="ch06-app-metrics-promql.html"><rect x="532" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="568" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">06</text><text x="568" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">메트릭·PromQL</text></a>
+    <a href="ch07-alerting.html"><rect x="610" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="646" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">07</text><text x="646" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">대시보드·알림</text></a>
+    <a href="ch08-logging-loki-alloy.html"><rect x="688" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="724" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">08</text><text x="724" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">로그</text></a>
+    <a href="ch09-operations.html"><rect x="782" y="52" width="72" height="60" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="818" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">09</text><text x="818" y="96" text-anchor="middle" font-size="10.5" fill="#15181d">운영</text></a>
+    <a href="ch10-chaos-testing.html"><rect x="860" y="52" width="72" height="60" fill="#ffffff" stroke="#1a4fa0" stroke-width="1.8"/><text x="896" y="76" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#1a4fa0">10</text><text x="896" y="96" text-anchor="middle" font-size="10.5" fill="#1a4fa0">카오스</text></a>
+    <text x="32" y="136" font-size="11" fill="#585f6b">앞 장의 산출물이 다음 장의 입력이 된다. 건너뛰면 사전 조건이 깨진다.</text>
+  </svg>
+    <figcaption><b>트랙 D 가 이 시리즈의 마무리다.</b> 09장이 실습 설정을 운영 설정으로 옮기는 타협을 정리하고, 10장이 이상을 주입해 앞의 열 장이 실제로 쓸모 있는지 판정한다.</figcaption>
+  </figure>
+</section>
+
+<section id="chapters">
+  <h2 class="sec"><span class="n">02</span>장 목록</h2>
+  <table>
+    <tr><th>장</th><th>제목</th><th>소요</th></tr>
+    <tr><td class="num"><a href="ch00-setup-versions.html">00</a></td><td><b>환경과 버전 고정</b><span class="note">도구 설치·버전 고정·사전 점검. 코드는 한 줄도 쓰지 않는다</span></td><td class="num">40–60분</td></tr>
+    <tr><td class="num"><a href="ch01-kind-cluster.html">01</a></td><td><b>kind 클러스터 구축</b><span class="note">설정 20줄이 04장의 타깃 상태를 미리 정한다</span></td><td class="num">50–70분</td></tr>
+    <tr><td class="num"><a href="ch02-instrumented-app.html">02</a></td><td><b>계측 가능한 애플리케이션</b><span class="note">USE·RED 를 고르고 도메인 지표 4종을 심는다</span></td><td class="num">90–120분</td></tr>
+    <tr><td class="num"><a href="ch03-containerize-deploy.html">03</a></td><td><b>컨테이너화와 배포</b><span class="note">이미지를 노드에 적재하고 프로브 3종을 건다</span></td><td class="num">70–90분</td></tr>
+    <tr><td class="num"><a href="ch04-prometheus-stack.html">04</a></td><td><b>프로메테우스 스택 설치</b><span class="note">메트릭 세 출처를 질의해서 구분한다</span></td><td class="num">60–80분</td></tr>
+    <tr><td class="num"><a href="ch05-grafana-dashboards.html">05</a></td><td><b>그라파나와 대시보드</b><span class="note">대시보드를 코드로 만든다. 라벨을 빼면 조용히 사라진다</span></td><td class="num">60–80분</td></tr>
+    <tr><td class="num"><a href="ch06-app-metrics-promql.html">06</a></td><td><b>앱 메트릭과 PromQL</b><span class="note">라벨 세 겹을 먼저 끊어 보고 고친다</span></td><td class="num">90–110분</td></tr>
+    <tr><td class="num"><a href="ch07-alerting.html">07</a></td><td><b>대시보드와 알림</b><span class="note">임계를 넘은 순간과 알림이 오는 순간 사이 네 구간</span></td><td class="num">80–100분</td></tr>
+    <tr><td class="num"><a href="ch08-logging-loki-alloy.html">08</a></td><td><b>로그 수집 — Loki + Alloy</b><span class="note">Promtail 이 아니다. 메트릭과 화살표가 반대다</span></td><td class="num">70–90분</td></tr>
+    <tr><td class="num"><a href="ch09-operations.html">09</a></td><td><b>운영과 모범 사례</b><span class="note">카디널리티를 숫자로 보고 잘라낸다</span></td><td class="num">60–80분</td></tr>
+    <tr><td class="num"><a href="ch10-chaos-testing.html">10</a></td><td><b>테스팅과 카오스 실험</b><span class="note">이상을 일부러 만들어 관측 체계를 판정한다</span></td><td class="num">90–120분</td></tr>
+  </table>
+</section>
+
+<section id="shape">
+  <h2 class="sec"><span class="n">03</span>한 장의 구성</h2>
+  <p>모든 장이 같은 순서로 쓰여 있다. 익숙해지면 필요한 블록만 골라 읽을 수 있다 — 발표자는 이론 절만, 실습자는 따라하기와 검증만 봐도 된다.</p>
+  <table>
+    <tr><th>블록</th><th>무엇이 들어 있나</th></tr>
+    <tr><td class="num">01 이론</td><td>책의 해당 절 매핑. 실습에서 마주칠 개념만</td></tr>
+    <tr><td class="num">02 ~ 03</td><td>설치와 사전 조건. 재실행해도 안전한 형태로</td></tr>
+    <tr><td class="num">04 ~ 09</td><td>따라하기. 단계마다 목적 → 명령 → 실행 결과 → 판정</td></tr>
+    <tr><td class="num">일부러 실패시키기</td><td>실제로 겪을 실수를 재현하고 에러 메시지를 읽은 뒤 고친다</td></tr>
+    <tr><td class="num">10 ~ 11</td><td>뒷정리와 완료 체크리스트. 명령 + 기대값 쌍으로 판정한다</td></tr>
+    <tr><td class="num">12 명령어 레퍼런스</td><td>그 장에서 쓴 명령만. 전체는 <a href="../course/cheatsheet-kubectl.html">kubectl 치트시트</a></td></tr>
+  </table>
+  <div class="box ac">
+    <span class="t">설치와 실습을 분리했다</span>
+    <p>설치 절차와 실습 절차가 한 흐름에 섞여 있으면, 이미 설치된 클러스터에서 문서를 다시 열었을 때 어디부터 읽어야 하는지 알 수 없다. 두 번째 회차부터는 설치 절을 건너뛰고 따라하기로 바로 들어가면 된다.</p>
+  </div>
+</section>
+
+<section id="apps">
+  <h2 class="sec"><span class="n">04</span>실습 코드</h2>
+  <p>문서의 코드 블록이 정본이고 <code>labs/</code>는 그 실행 가능한 형태다. 둘이 어긋나면 문서를 기준으로 맞춘다.</p>
+  <table>
+    <tr><th>앱</th><th>역할</th><th>쓰는 장</th></tr>
+    <tr><td class="num">order-api<span class="note">labs/apps/</span></td><td>커스텀 메트릭 <code>orders.created</code> · <code>rejected</code> · <code>processing</code> · <code>stored</code> 와 ChaosController. <b>이름을 바꾸지 않는다</b> — 06장 PromQL 과 07장 대시보드가 의존한다</td><td class="num">02 – 10</td></tr>
+    <tr><td class="num">gateway<span class="note">labs/apps/</span></td><td>앞단. 지연이 전파되는 모습을 여기서 본다</td><td class="num">02 – 10</td></tr>
+    <tr><td class="num">k8s-sample-boot<span class="note">외부</span></td><td><code>/hello</code> 가 호스트명을 돌려준다. 어느 파드가 응답했는지 눈으로 판정하는 최소 예제</td><td class="num">02 · 03</td></tr>
+    <tr><td class="num">docker-sample<span class="note">외부</span></td><td><code>Dockerfile</code> 4종으로 이미지 크기 감축을 재현</td><td class="num">03</td></tr>
+  </table>
+  <p>외부 앱 둘은 저장소에 복사해 두지 않는다. 커밋을 고정해 받아 온다.</p>
+  <pre><code>bash scripts/fetch-samples.sh</code></pre>
+</section>
+
+<section id="versions">
+  <h2 class="sec"><span class="n">05</span>버전</h2>
+  <p>이 시리즈의 실행 결과는 아래 조합에서 <strong>실제로 실행해 얻은 것</strong>이다. 버전을 올리면 화면이 달라질 수 있으므로, 문서의 출력과 대조하려면 이 조합을 그대로 쓴다.</p>
+  <table>
+    <tr><th>구성요소</th><th>버전</th><th>함정</th></tr>
+    <tr><td class="num">Kubernetes / kind</td><td class="num">1.36.x / v0.32.0</td><td>kubeadm 설정은 <code>v1beta4</code></td></tr>
+    <tr><td class="num">kube-prometheus-stack</td><td class="num">차트 88.x</td><td>Operator v0.91 계열</td></tr>
+    <tr><td class="num">Prometheus / Grafana</td><td class="num">3.x / 13.x</td><td>데이터소스는 이름이 아니라 <code>uid</code> 로 참조</td></tr>
+    <tr><td class="num">Loki</td><td class="num">3.7.x</td><td>차트 저장소는 <code>grafana</code> 가 아니라 <b><code>grafana-community</code></b></td></tr>
+    <tr><td class="num">로그 수집기</td><td class="num">Grafana Alloy</td><td><b>Promtail 은 2026-03-02 EOL.</b> 검색 결과에 아직 나오지만 쓰지 않는다</td></tr>
+    <tr><td class="num">Chaos Mesh</td><td class="num">v2.8.2</td><td>kind 에서는 <code>chaosDaemon.runtime=containerd</code> 가 없으면 실험이 조용히 아무 일도 하지 않는다</td></tr>
+    <tr><td class="num">Spring Boot / Cloud</td><td class="num">4.1.0 / 2025.1.x</td><td>게이트웨이 프로퍼티는 <code>spring.cloud.gateway.server.webflux.*</code></td></tr>
+  </table>
+  <div class="box warn">
+    <span class="t">course/ 38편과 버전이 다르다</span>
+    <p>같은 저장소의 <a href="../course/index.html">도커 &amp; 쿠버네티스 38편 과정</a>은 2026-09-03 기준 <b>1.37.0 · kind v0.33.0 · 차트 89.2.2</b>로 고정돼 있다. 이 시리즈를 1.37 라인으로 올리려면 11장의 명령과 출력을 다시 검증해야 하므로, <strong>검증된 조합을 그대로 유지</strong>하고 차이를 여기 적어 둔다. 두 과정을 같은 클러스터에서 섞어 돌리지 않는다.</p>
+  </div>
+</section>
+
+<footer>
+  <span>쿠버네티스 관측성 실습 · 11장</span>
+  <span>2026-08-19 검증 · 버전은 실습 당일 재확인</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,8 +1,16 @@
-# course/ 를 GitHub Pages 사이트 루트로 배포한다.
+# 교육 자료 두 과정을 GitHub Pages 로 배포한다.
 #
-# 저장소 루트가 아니라 course/ 를 올리는 이유가 둘 있다.
-# 하나는 URL — https://claude-code-expert.github.io/kubernetes 가 곧 로드맵이어야 한다.
-# 다른 하나는 book/ 의 출판사 맛보기 PDF 를 웹 페이지로 색인시키지 않기 위해서다.
+# 저장소 루트를 통째로 올리지 않는 이유는 book/ 의 출판사 맛보기 PDF 와
+# docs/ 의 구자산을 웹 페이지로 색인시키지 않기 위해서다.
+# 필요한 두 디렉터리만 골라 _site 로 조립한다.
+#
+#   /          랜딩 (.github/pages-index.html)
+#   /course/   38편 과정
+#   /study/    관측성 11장
+#
+# 이 배치는 저장소의 디렉터리 구조와 같다. 그래서 문서 안의 상대 링크
+# (study 에서 ../course/cheatsheet-kubectl.html 같은 것)가 로컬에서 열 때와
+# 배포본에서 똑같이 동작한다.
 name: pages
 
 on:
@@ -10,6 +18,8 @@ on:
     branches: [main]
     paths:
       - 'course/**'
+      - 'study/**'
+      - '.github/pages-index.html'
       - '.github/workflows/pages.yaml'
   workflow_dispatch:
 
@@ -33,12 +43,22 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
 
-      # path 가 사이트 루트가 된다. 문서 간 링크 228 개가 전부 같은 디렉터리를
-      # 가리키므로 course/ 를 통째로 루트에 두면 그대로 동작한다.
+      # 사이트를 조립한다. labs 의 매니페스트·소스도 함께 올라가므로
+      # 수강생이 클론하지 않고 브라우저에서 바로 열어볼 수 있다.
+      - name: 사이트 조립
+        run: |
+          mkdir -p _site
+          cp .github/pages-index.html _site/index.html
+          cp -r course _site/course
+          cp -r study  _site/study
+          echo "--- 조립 결과 ---"
+          find _site -maxdepth 2 -type d | sort
+          echo "파일 $(find _site -type f | wc -l) 개"
+
       # Jekyll 을 태우지 않는 경로라 .nojekyll 은 필요 없다.
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: course
+          path: _site
 
       - id: deploy
         uses: actions/deploy-pages@v4

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · 테스팅과 카오스 실험 — 쿠버네티스 관측성 실습</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --soft:#f5f6f7;
+    --ink:#15181d;
+    --muted:#585f6b;
+    --line:#d8dbe0;
+    --line2:#eceef0;
+    --ac:#1a4fa0;
+    --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:16px;line-height:1.72;letter-spacing:-.005em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  /* ── 문서 헤더 ── */
+  header{border-bottom:1px solid var(--ink);padding:56px 0 22px;margin-bottom:36px}
+  .docnum{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:34px;line-height:1.28;letter-spacing:-.03em;font-weight:700;margin:10px 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  /* ── 목차 ── */
+  nav.toc{border:1px solid var(--line);padding:20px 24px;margin:0 0 48px}
+  nav.toc h2{font-size:12px;font-family:var(--mono);letter-spacing:.14em;color:var(--muted);
+             font-weight:500;margin-bottom:12px}
+  nav.toc ol{list-style:none;counter-reset:t;columns:2;column-gap:36px}
+  nav.toc li{counter-increment:t;font-size:14.5px;line-height:2}
+  nav.toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+                     font-size:12px;color:var(--muted);margin-right:10px}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+
+  /* ── 섹션 ── */
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2.sec{font-size:23px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--ac);margin-right:12px;font-weight:500}
+  h3{font-size:17px;font-weight:700;margin:32px 0 10px;letter-spacing:-.02em}
+  h4{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--muted)}
+  p{margin:0 0 14px;max-width:74ch}
+  p+p{margin-top:-2px}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700}
+
+  /* 용어 병기 */
+  .term{border-bottom:1px dotted var(--muted);cursor:help}
+  .en{font-family:var(--mono);font-size:.85em;color:var(--muted)}
+
+  /* 코드 */
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0;font-size:13px}
+  pre .c{color:#6b7280}
+  pre .o{color:#0b4f2f}
+  .cap{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+  .cap b{color:var(--ink);font-weight:600}
+
+  /* 표 */
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td code{font-size:12.5px}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .note{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  /* 콜아웃 */
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);
+       padding:16px 20px;margin:20px 0;background:#fff}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  /* 도판 */
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+  figcaption b{color:var(--ink);font-weight:600}
+
+  /* 체크리스트 */
+  ul.check{list-style:none;padding-left:0}
+  ul.check li{padding-left:30px;position:relative;margin:9px 0;font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:14px;
+                      border:1.5px solid var(--muted);border-radius:2px}
+
+  /* 출처 */
+  .src{font-size:13px;color:var(--muted);line-height:1.85}
+  .src ul{list-style:none;padding-left:0;max-width:none}
+  .src li{margin:4px 0;word-break:break-all}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;
+         font-size:13px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){
+    .wrap{padding:0 18px 80px}
+    h1{font-size:27px}
+    nav.toc ol{columns:1}
+  }
+  @media print{
+    body{font-size:11pt}
+    nav.toc{break-inside:avoid}
+    section{break-inside:auto}
+    figure,table,.box{break-inside:avoid}
+  }
+</style>
+</head>
+
+<body>
+<div style="max-width:920px;margin:0 auto;padding:22px 28px 0">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#585f6b;text-decoration:none;border-bottom:1px solid #d8dbe0">← 목차로</a>
+</div>
+<div class="wrap">
+
+<header>
+  <div class="docnum">CHAPTER 10 / 11 · 쿠버네티스 관측성</div>
+  <h1>테스팅과 카오스 실험</h1>
+  <p class="lede">
+    여기까지 만든 관측 체계가 실제로 쓸모 있는지 확인하는 유일한 방법은 이상을 <em>일부러 만들어 보는</em> 것이다.
+    통제된 실험으로 장애를 주입하고, 07장에서 만든 알림이 우는지 07·05장의 대시보드가 그것을 보여 주는지 판정한다.
+    가설을 먼저 쓰고 실험을 나중에 돌리는 순서를 지킨다.
+  </p>
+  <div class="meta">
+    <span>검증일 2026-08-19</span>
+    <span>소요 90–120분</span>
+    <span>선행: 03 · 05 · 07장 산출물</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">이론 — 통제된 실험</a></li>
+    <li><a href="#s2">전제 조건 점검</a></li>
+    <li><a href="#s3">Chaos Mesh 설치</a></li>
+    <li><a href="#s4">실험 준비 — 세 개의 창</a></li>
+    <li><a href="#s5">게임 데이 시트 네 단계</a></li>
+    <li><a href="#s6">실험 1 — 손으로 파드 하나</a></li>
+    <li><a href="#s7">실험 2 — 같은 실험을 선언형으로</a></li>
+    <li><a href="#s8">실험 3 — 지연으로 알림 발화시키기</a></li>
+    <li><a href="#s9">일부러 실패시키기</a></li>
+    <li><a href="#s10">뒷정리</a></li>
+    <li><a href="#s11">완료 체크리스트</a></li>
+    <li><a href="#s12">명령어 레퍼런스</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════ 1 ══════════ -->
+<section id="s1">
+  <h2 class="sec"><span class="n">01</span>이론 — 통제된 실험</h2>
+  <p class="cap"><b>책 5.3 · 5.7 · 5.8</b> — 실험에서 마주칠 개념만 다룬다.</p>
+
+  <h3>테스트가 실패하면 빌드도 실패한 것이다</h3>
+  <p>원칙 하나면 된다. 테스트가 깨진 소스를 이미지로 구워 레지스트리에 올리는 순간, 그 이미지는 <strong>언젠가 배포된다</strong>. 이 실습에서는 <code>./gradlew build</code>가 테스트를 포함하므로 재배포 스크립트 앞에 게이트가 이미 있다.</p>
+  <p>검사 대상은 애플리케이션 코드만이 아니다. <code>helm lint</code>처럼 차트와 매니페스트 같은 인프라 구성물도 같은 파이프라인에서 검사할 수 있다.</p>
+
+  <h3>새 버전이 정상인지 무엇으로 판단하는가</h3>
+  <p>롤링 업데이트든 블루/그린이든 카나리든 같은 질문에 부딪힌다. 카나리로 트래픽 10%를 새 버전에 흘렸다면, <strong>그 10%가 양호한지 판단할 메트릭</strong>이 있어야 다음 단계로 갈 수 있다. 그 메트릭이 02장에서 심고 06장에서 뽑아낸 RED 지표다.</p>
+  <p>배포 전략은 관측이 없으면 절반만 동작한다. 롤링 업데이트가 무중단이 되는 조건도 이미 매니페스트에 들어 있다 — 레디니스 프로브가 새 파드를 준비될 때까지 서비스에서 빼 두고, <code>terminationGracePeriodSeconds</code>가 종료 중인 파드에 진행 중인 요청을 마칠 시간을 준다. 03장에서 심은 이 설정들이 이번 실험의 피험자다.</p>
+
+  <h3>게임 데이 네 단계</h3>
+  <p>카오스 엔지니어링은 넷플릭스에서 시작된 방법이다. 통제된 실험으로 장애를 주입해 취약점을 <em>미리</em> 찾는다. 절차는 네 단계다.</p>
+  <ol>
+    <li>정상 상태(steady state)에 대한 <strong>가설</strong>을 세운다</li>
+    <li>시스템에 영향을 줄 실제 <strong>이벤트</strong>를 준비한다</li>
+    <li><strong>대조군</strong>을 만들고 실험하면서 정상 상태와 비교한다</li>
+    <li>실험으로 가설을 <strong>판정</strong>한다</li>
+  </ol>
+
+  <div class="box warn">
+    <span class="t">폭발 반경 최소화</span>
+    <p>핵심 규율은 이것 하나다. 첫 실험은 파드 1개, 네임스페이스 하나, 5분. 라벨로 지우면 매칭되는 파드가 전부 죽으므로 반드시 <strong>이름을 골라 하나만</strong> 지운다.</p>
+    <p>“스테이징에서 하면 되지 않나”에 대한 책의 답은 명확하다 — 스테이징은 구성·트래픽·데이터·모니터링이 전부 프로덕션과 달라서, 스테이징에서의 생존이 프로덕션의 생존을 보장하지 않는다. 이 실습 환경은 스테이징조차 아니지만, <strong>절차와 규율을 몸에 익히는 것</strong>이 목적이다.</p>
+  </div>
+
+  <div class="box warn">
+    <span class="t">책과 달라진 것 — 카오스 도구</span>
+    <p>책 5.9.4는 <code>chaostoolkit</code>으로 실습한다. Chaos Toolkit은 0.39.0(2024-04) 이후 릴리스가 없다. 이 실습은 <strong>Chaos Mesh</strong>를 쓴다 — CNCF 프로젝트이고, 실험을 쿠버네티스 커스텀 리소스로 선언해 저장소에 남길 수 있다는 점이 재현성에서 결정적이다.</p>
+  </div>
+</section>
+
+<!-- ══════════ 2 ══════════ -->
+<section id="s2">
+  <h2 class="sec"><span class="n">02</span>전제 조건 점검</h2>
+  <p>이 장은 앞 장들의 산출물 위에서만 성립한다. 하나라도 없으면 실험 결과를 판정할 수 없다.</p>
+  <table>
+    <tr><th>필요한 것</th><th>어디서 만들었나</th><th>확인</th></tr>
+    <tr><td><code>order-api</code> replicas 2 + 프로브 3종</td><td class="num">03장</td><td><code>kubectl -n apps get deploy order-api</code> 가 <code>READY 2/2</code></td></tr>
+    <tr><td>obs-red 대시보드</td><td class="num">05 · 07장</td><td>그라파나에서 P95 패널에 선이 그려진다</td></tr>
+    <tr><td><code>AppHighErrorRate</code> · <code>AppHighLatencyP95</code></td><td class="num">07장</td><td><code>curl -s localhost:30900/api/v1/rules</code> 에 두 규칙이 보인다</td></tr>
+    <tr><td>부하를 넣을 수 있는 엔드포인트</td><td class="num">02장</td><td><code>POST /api/orders</code> 가 200을 준다</td></tr>
+  </table>
+  <div class="box ac">
+    <span class="t">판정 도구가 먼저다</span>
+    <p>알림과 대시보드가 없으면 이 장의 실험은 “파드가 죽었다”는 사실만 확인하고 끝난다. <strong>무엇이 정상인지 숫자로 말할 수 없으면 실험이 아니다.</strong></p>
+  </div>
+</section>
+
+<!-- ══════════ 3 ══════════ -->
+<section id="s3">
+  <h2 class="sec"><span class="n">03</span>Chaos Mesh 설치</h2>
+  <p>kind 노드는 containerd를 쓴다. 소켓 경로를 지정하지 않으면 기본값인 도커 소켓을 찾다가 <strong>파드는 전부 Running인데 실험이 아무 일도 하지 않는</strong> 상태가 된다. 09절에서 그 상태를 일부러 재현한다.</p>
+
+  <pre><code>helm repo add chaos-mesh https://charts.chaos-mesh.org
+helm repo update
+
+<span class="c"># 실습 당일 최신 안정 버전을 다시 확인한다 (2026-08 기준 2.8.2)</span>
+helm search repo chaos-mesh/chaos-mesh</code></pre>
+
+  <pre><code>kubectl create ns chaos-mesh
+
+helm install chaos-mesh chaos-mesh/chaos-mesh \
+  --namespace chaos-mesh \
+  --version 2.8.2 \
+  --set chaosDaemon.runtime=containerd \
+  --set chaosDaemon.socketPath=/run/containerd/containerd.sock</code></pre>
+
+  <p class="cap"><b>두 플래그가 전부다.</b> <code>runtime</code>과 <code>socketPath</code>를 빼면 설치는 성공하고 동작만 하지 않는다.</p>
+
+  <h3>검증</h3>
+  <pre><code>kubectl -n chaos-mesh get pods</code></pre>
+  <p><code>chaos-daemon</code>은 데몬셋이라 <strong>노드 수만큼</strong> 뜬다. 워커 2개 구성이면 3개다. 컨트롤러 매니저는 리더 선출 때문에 3개, 대시보드가 1개다. 전부 <code>Running</code>이어야 다음으로 간다.</p>
+</section>
+
+<!-- ══════════ 4 ══════════ -->
+<section id="s4">
+  <h2 class="sec"><span class="n">04</span>실험 준비 — 세 개의 창</h2>
+  <p>실험 내내 세 개의 창을 띄워 둔다. 주입하는 창과 관찰하는 창이 분리돼 있어야 무엇이 언제 변했는지 말할 수 있다.</p>
+
+  <h4>터미널 1 — 부하</h4>
+  <pre><code>while true; do
+  curl -s -o /dev/null -X POST http://localhost:30080/api/orders \
+    -H 'Content-Type: application/json' \
+    -d '{"item":"latte","quantity":2}'
+  sleep 0.3
+done</code></pre>
+  <div class="box warn">
+    <span class="t">이 루프를 끄는 방법</span>
+    <p>이 창에서 <strong>Ctrl-C</strong>. 10절 뒷정리에서 다시 확인한다. 끄지 않으면 실습이 끝난 뒤에도 계속 돌면서 다음 실험의 기준선을 오염시킨다.</p>
+  </div>
+
+  <h4>터미널 2 — 파드 상태</h4>
+  <pre><code>kubectl -n apps get pods -w</code></pre>
+
+  <h4>브라우저</h4>
+  <p>그라파나의 obs-red 대시보드와 프로메테우스 Alerts 화면(<code>localhost:30900/alerts</code>)을 나란히 연다. 알림의 <code>pending → firing → resolved</code> 전이를 눈으로 보기 위해서다.</p>
+</section>
+
+<!-- ══════════ 5 ══════════ -->
+<section id="s5">
+  <h2 class="sec"><span class="n">05</span>게임 데이 시트 네 단계</h2>
+
+  <figure>
+    <svg viewBox="0 0 960 300" role="img" aria-label="게임 데이 네 단계와 폭발 반경 최소화">
+      <rect width="960" height="300" fill="#ffffff"/>
+
+      <text x="24" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">실험 전에 채운다</text>
+      <text x="686" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">실험 후에 채운다</text>
+      <line x1="24" y1="34" x2="660" y2="34" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="686" y1="34" x2="936" y2="34" stroke="#8f4408" stroke-width="1"/>
+
+      <rect x="24" y="48" width="196" height="84" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="42" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">1. 가설</text>
+      <text x="42" y="94" font-size="11.5" fill="#585f6b">무엇이 변하지 않아야</text>
+      <text x="42" y="112" font-size="11.5" fill="#585f6b">성공인가</text>
+
+      <rect x="244" y="48" width="196" height="84" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="262" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">2. 이벤트</text>
+      <text x="262" y="94" font-size="11.5" fill="#585f6b">무엇을 어떻게</text>
+      <text x="262" y="112" font-size="11.5" fill="#585f6b">얼마나 주입하나</text>
+
+      <rect x="464" y="48" width="196" height="84" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="482" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">3. 대조군</text>
+      <text x="482" y="94" font-size="11.5" fill="#585f6b">비교 기준이 될 값과</text>
+      <text x="482" y="112" font-size="11.5" fill="#585f6b">그 출처</text>
+
+      <rect x="686" y="48" width="250" height="84" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="706" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#8f4408">4. 판정</text>
+      <text x="706" y="94" font-size="11.5" fill="#585f6b">채택인가 기각인가.</text>
+      <text x="706" y="112" font-size="11.5" fill="#585f6b">근거는 어느 화면인가</text>
+
+      <path d="M220 90 L242 90" fill="none" stroke="#585f6b" stroke-width="1.2"/>
+      <path d="M236 86 L244 90 L236 94 Z" fill="#585f6b"/>
+      <path d="M440 90 L462 90" fill="none" stroke="#585f6b" stroke-width="1.2"/>
+      <path d="M456 86 L464 90 L456 94 Z" fill="#585f6b"/>
+      <path d="M660 90 L684 90" fill="none" stroke="#8f4408" stroke-width="1.2"/>
+      <path d="M678 86 L686 90 L678 94 Z" fill="#8f4408"/>
+
+      <text x="24" y="180" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">폭발 반경 — 첫 실험은 가장 안쪽 하나만</text>
+      <rect x="24" y="194" width="420" height="82" fill="#f5f6f7" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="40" y="214" font-size="11.5" fill="#585f6b">클러스터</text>
+      <rect x="40" y="222" width="320" height="44" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+      <text x="56" y="240" font-size="11.5" fill="#585f6b">네임스페이스 apps</text>
+      <rect x="56" y="244" width="120" height="16" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="66" y="256" font-family="ui-monospace,monospace" font-size="10" fill="#8f4408">파드 1개 · 5분</text>
+      <rect x="188" y="244" width="120" height="16" fill="#ffffff" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="198" y="256" font-family="ui-monospace,monospace" font-size="10" fill="#585f6b">파드 2 (건드리지 않음)</text>
+
+      <text x="480" y="214" font-size="12" fill="#15181d">라벨로 지우면 매칭되는 파드가 전부 죽는다.</text>
+      <text x="480" y="236" font-size="12" fill="#15181d">이름을 골라 하나만 지운다.</text>
+      <text x="480" y="262" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">mode: one</text>
+    </svg>
+    <figcaption><b>1~3번을 실험 전에 채운다.</b> 실험을 돌리고 나서 가설을 쓰면 게임 데이가 아니라 사후 합리화다. 4번 판정 칸만 실험 후에 채우고, 기각이면 기각이라고 적는다 — 몰랐던 취약점을 장애 전에 찾은 것이므로 그것도 실험 성공이다.</figcaption>
+  </figure>
+
+  <p>실험 1건당 시트 1장. <code>labs/apps/chaos/gameday-sheet.md</code>를 복사해 쓴다. <strong>1~3번을 실험 전에 채운다</strong> — 돌리고 나서 가설을 쓰면 게임 데이가 아니라 사후 합리화다.</p>
+
+  <table>
+    <tr><th>칸</th><th>무엇을 적나</th><th>예</th></tr>
+    <tr><td class="num">폭발 반경</td><td>영향을 받을 수 있는 최대 범위</td><td>apps 네임스페이스의 order-api 파드 1개</td></tr>
+    <tr><td class="num">중단 조건</td><td>여기 닿으면 즉시 실험을 멈춘다</td><td>gateway 5xx 가 20% 를 넘으면 <code>kubectl delete</code></td></tr>
+    <tr><td class="num">1. 정상 상태 가설</td><td>무엇이 <em>변하지 않아야</em> 성공인가</td><td>gateway P95 ≤ 120ms, 5xx ≤ 0.5%</td></tr>
+    <tr><td class="num">2. 주입할 이벤트</td><td>무엇을 어떻게 얼마나</td><td>PodChaos <code>pod-kill</code>, <code>mode: one</code></td></tr>
+    <tr><td class="num">3. 대조군</td><td>비교 기준이 될 값과 그 출처</td><td>실험 전 30분간의 P95 · 에러율</td></tr>
+    <tr><td class="num">4. 판정</td><td>채택인가 기각인가, 근거는 어느 화면인가</td><td>실험 후에만 채운다</td></tr>
+  </table>
+
+  <div class="box ac">
+    <span class="t">기각도 실험 성공이다</span>
+    <p>가설이 기각되면 그것이 이 게임 데이의 <strong>수확</strong>이다. 몰랐던 취약점을 장애 전에 찾은 것이기 때문이다. 09절 두 번째 실패 실습이 정확히 그런 경우다.</p>
+  </div>
+</section>
+
+<!-- ══════════ 6 ══════════ -->
+<section id="s6">
+  <h2 class="sec"><span class="n">06</span>실험 1 — 손으로 파드 하나</h2>
+  <p><b>가설</b> — replicas 2와 레디니스 프로브 덕분에 <code>order-api</code> 파드 하나가 죽어도 gateway의 5xx 비율은 <code>AppHighErrorRate</code> 임계값 5%를 넘지 않는다.</p>
+  <p>첫 실험은 폭발 반경을 <strong>손으로</strong> 통제한다. 도구를 쓰기 전에 무슨 일이 일어나는지 먼저 본다.</p>
+
+  <pre><code>kubectl -n apps get pods -l app.kubernetes.io/name=order-api</code></pre>
+  <p>위 목록에서 <strong>이름을 하나 골라</strong> 지운다. 라벨로 지우면 두 개가 다 죽는다.</p>
+  <pre><code>kubectl -n apps delete pod &lt;고른 파드 이름&gt;</code></pre>
+
+  <h3>관찰 포인트</h3>
+  <ul>
+    <li>터미널 2에서 새 파드가 뜨고 <code>startupProbe</code>를 통과할 때까지 걸리는 시간</li>
+    <li>대시보드의 처리율(Rate)이 절반으로 떨어지는지</li>
+    <li>에러(Errors) 패널이 튀는지 — 여기가 가설의 판정 지점이다</li>
+  </ul>
+  <p>남은 파드 하나가 트래픽 전부를 받으므로 <strong>P95가 소폭 오르는 것은 정상</strong>이다. 가설은 에러율에 대한 것이지 지연에 대한 것이 아니다.</p>
+</section>
+
+<!-- ══════════ 7 ══════════ -->
+<section id="s7">
+  <h2 class="sec"><span class="n">07</span>실험 2 — 같은 실험을 선언형으로</h2>
+  <p>결과는 실험 1과 같아야 한다. 차이는 <strong>재현성</strong>이다. 이 YAML은 저장소에 남고, 다음 사람이 같은 실험을 같은 조건으로 돌릴 수 있다.</p>
+
+  <pre><code><span class="c"># labs/apps/chaos/10-podchaos-order-api-kill.yaml</span>
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: order-api-pod-kill
+  namespace: chaos-mesh
+spec:
+  action: pod-kill
+  mode: one                      <span class="c"># 폭발 반경 최소화 — 무작위 1개만</span>
+  selector:
+    namespaces:
+      - apps
+    labelSelectors:
+      app.kubernetes.io/name: order-api</code></pre>
+
+  <pre><code>kubectl apply -f labs/apps/chaos/10-podchaos-order-api-kill.yaml
+kubectl -n chaos-mesh describe podchaos order-api-pod-kill
+kubectl delete -f labs/apps/chaos/10-podchaos-order-api-kill.yaml</code></pre>
+
+  <p><code>describe</code>의 이벤트에 <strong>어느 파드를 골랐는지</strong>가 기록된다. 시트의 4번 판정 칸에 이 이름을 옮겨 적으면 나중에 같은 실험을 추적할 수 있다.</p>
+</section>
+
+<!-- ══════════ 8 ══════════ -->
+<section id="s8">
+  <h2 class="sec"><span class="n">08</span>실험 3 — 지연으로 알림 발화시키기</h2>
+  <p><b>가설</b> — <code>order-api</code>에 600ms 지연을 주입하면 gateway P95가 따라 올라가 <code>AppHighLatencyP95</code>(P95 &gt; 0.5s, <code>for: 3m</code>)가 발화하고, 5분 뒤 실험이 끝나면 저절로 해소된다.</p>
+  <p>02장에서 예고했던 “지연이 전파되는 모습”을 이번에는 앱 코드가 아니라 <strong>인프라 수준</strong>에서 만든다.</p>
+
+  <pre><code><span class="c"># labs/apps/chaos/20-networkchaos-order-api-delay.yaml</span>
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: order-api-delay
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - apps
+    labelSelectors:
+      app.kubernetes.io/name: order-api
+  delay:
+    latency: "600ms"             <span class="c"># 임계값 0.5s 를 jitter 감안해도 확실히 넘긴다</span>
+    jitter: "100ms"
+  duration: "5m"                 <span class="c"># for: 3m 인 알림이 발화하는 것까지 보려면 3분 이상</span></code></pre>
+
+  <pre><code>kubectl apply -f labs/apps/chaos/20-networkchaos-order-api-delay.yaml</code></pre>
+
+  <h3>타임라인</h3>
+  <p>부하 루프가 돌고 있어야 한다. 트래픽이 없으면 P95를 계산할 표본이 없다.</p>
+  <table>
+    <tr><th>시각</th><th>무엇이 보이나</th></tr>
+    <tr><td class="num">0 ~ 1분</td><td>obs-red 대시보드에서 order-api 와 gateway 의 P95 가 <strong>같이</strong> 계단을 그린다</td></tr>
+    <tr><td class="num">3분경</td><td>프로메테우스 Alerts 에서 <code>AppHighLatencyP95</code> 가 pending → <strong>firing</strong></td></tr>
+    <tr><td class="num">5분</td><td>실험 자동 종료. P95 가 내려온다</td></tr>
+    <tr><td class="num">8분경</td><td>알림 <strong>resolved</strong></td></tr>
+  </table>
+
+  <p>발화 여부는 화면 말고 API로도 남긴다. 시트에 붙일 근거가 된다.</p>
+  <pre><code>curl -s http://localhost:30900/api/v1/alerts \
+  | jq '.data.alerts[] | {name:.labels.alertname, state:.state, since:.activeAt}'</code></pre>
+
+  <div class="box ac">
+    <span class="t">두 개의 지연을 구분한다</span>
+    <p>주입한 지연은 600ms인데 알림은 3분 뒤에 울린다. 그 3분은 <code>for</code>가 만든 것이고, 07장에서 다룬 네 구간 중 하나다. <strong>고장이 난 시각과 알림이 온 시각은 같지 않다</strong> — 이 실험이 그 간격을 눈으로 보여 준다.</p>
+  </div>
+</section>
+
+<!-- ══════════ 9 ══════════ -->
+<section id="s9">
+  <h2 class="sec"><span class="n">09</span>일부러 실패시키기</h2>
+
+  <h3>① 소켓 경로를 빼고 설치하면</h3>
+  <p>03절의 두 플래그 없이 설치하면 모든 파드가 <code>Running</code>인데 <code>PodChaos</code>를 적용해도 <strong>파드가 죽지 않는다</strong>. 에러 화면도 없다.</p>
+  <pre><code>kubectl -n chaos-mesh logs ds/chaos-daemon | grep -i error | head</code></pre>
+  <p><code>no such file or directory</code> 류의 컨테이너 런타임 접속 실패가 보인다. 데몬은 떠 있지만 붙을 소켓이 없는 것이다.</p>
+  <p class="cap"><b>교훈</b> — “설치 성공”과 “동작함”은 다르다. 04장에서 타깃을 하나하나 확인했던 것과 같은 이유다.</p>
+  <pre><code>helm upgrade chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh --reuse-values \
+  --set chaosDaemon.runtime=containerd \
+  --set chaosDaemon.socketPath=/run/containerd/containerd.sock</code></pre>
+
+  <h3>② 안전장치를 빼고 실험 1을 다시</h3>
+  <p>이번에는 가설이 <strong>기각돼야 정상</strong>이다.</p>
+  <pre><code>kubectl -n apps scale deploy/order-api --replicas=1
+kubectl apply -f labs/apps/chaos/10-podchaos-order-api-kill.yaml</code></pre>
+  <p>유일한 파드가 죽는 순간 gateway는 502를 뱉는다. JVM 기동과 <code>startupProbe</code> 통과까지 수십 초 동안 에러율이 100%에 머물고 <code>AppHighErrorRate</code>가 발화한다. 03장에서 replicas 2와 프로브 세 개를 심은 이유가, <strong>그것을 빼는 순간 그래프로 증명된다.</strong></p>
+  <pre><code>kubectl delete -f labs/apps/chaos/10-podchaos-order-api-kill.yaml
+kubectl -n apps scale deploy/order-api --replicas=2</code></pre>
+  <p>시트의 4번 칸에 “기각”이라고 적고 근거 화면을 남긴다. 기각을 기록하지 않으면 다음 사람이 같은 함정에 빠진다.</p>
+</section>
+
+<!-- ══════════ 10 ══════════ -->
+<section id="s10">
+  <h2 class="sec"><span class="n">10</span>뒷정리</h2>
+  <p><strong>부하 루프를 먼저 끈다.</strong> 터미널 1에서 Ctrl-C.</p>
+  <pre><code>kubectl -n chaos-mesh get podchaos,networkchaos</code></pre>
+  <p>남아 있는 실험이 없어야 한다. 있으면 <code>kubectl delete</code>로 지운다. <code>duration</code>이 붙은 실험은 시간이 지나면 스스로 해제되지만, 리소스 자체는 남는다.</p>
+  <pre><code>kubectl -n apps get deploy order-api        <span class="c"># READY 2/2 로 원복됐는지</span>
+helm uninstall chaos-mesh -n chaos-mesh    <span class="c"># Chaos Mesh 자체를 내릴 때</span></code></pre>
+  <p>클러스터를 통째로 지우려면 09장의 정리 절차를 쓴다.</p>
+</section>
+
+<!-- ══════════ 11 ══════════ -->
+<section id="s11">
+  <h2 class="sec"><span class="n">11</span>완료 체크리스트</h2>
+  <ul class="check">
+    <li><code>kubectl -n chaos-mesh get pods</code> → 전부 <code>Running</code>, chaos-daemon 이 노드 수만큼</li>
+    <li>실험 1·2 — 파드 킬 중에도 5xx 비율 <strong>5% 미만</strong>, 새 파드 <code>RESTARTS 0</code> 으로 <code>Running</code></li>
+    <li>실험 3 — <code>AppHighLatencyP95</code> 가 firing 까지 갔다가 resolved 로 돌아온 이력이 Alerts 화면에 남는다</li>
+    <li>실패 실습 ② — <code>AppHighErrorRate</code> 발화, 시트에 <strong>“기각”</strong> 기록</li>
+    <li>게임 데이 시트 <strong>4장</strong>이 채워져 있다 (1~3번은 실험 전에 쓴 것)</li>
+    <li>부하 루프 종료 · <code>kubectl -n chaos-mesh get podchaos,networkchaos</code> → 결과 없음</li>
+    <li><code>kubectl -n apps get deploy order-api</code> → <code>READY 2/2</code></li>
+  </ul>
+</section>
+
+<!-- ══════════ 명령어 레퍼런스 ══════════ -->
+<section id="s12">
+  <h2 class="sec"><span class="n">12</span>명령어 레퍼런스</h2>
+  <p class="cap">이 장에서 쓴 명령만 모았다. 전체 목록은 <a href="../course/cheatsheet-kubectl.html">kubectl 치트시트</a>에 있다.</p>
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td class="num"><code>helm install chaos-mesh ... --set chaosDaemon.runtime=containerd</code></td><td>Chaos Mesh 설치. 두 플래그를 빼면 설치만 되고 동작하지 않는다</td></tr>
+    <tr><td class="num"><code>kubectl -n chaos-mesh get pods</code></td><td>chaos-daemon 이 노드 수만큼 떴는지</td></tr>
+    <tr><td class="num"><code>kubectl -n apps delete pod &lt;이름&gt;</code></td><td>손으로 하나만. 라벨로 지우면 전부 죽는다</td></tr>
+    <tr><td class="num"><code>kubectl apply -f 10-podchaos-order-api-kill.yaml</code></td><td>같은 실험을 선언형으로. 저장소에 남는다</td></tr>
+    <tr><td class="num"><code>kubectl -n chaos-mesh describe podchaos order-api-pod-kill</code></td><td>어느 파드를 골랐는지 이벤트에 기록된다</td></tr>
+    <tr><td class="num"><code>kubectl apply -f 20-networkchaos-order-api-delay.yaml</code></td><td>600ms 지연 5분간. 알림 발화까지 관찰</td></tr>
+    <tr><td class="num"><code>curl -s localhost:30900/api/v1/alerts | jq ...</code></td><td>발화 이력을 API 로 남긴다. 시트의 근거</td></tr>
+    <tr><td class="num"><code>kubectl -n chaos-mesh logs ds/chaos-daemon</code></td><td>실험이 아무 일도 안 할 때 여기부터</td></tr>
+    <tr><td class="num"><code>kubectl -n apps scale deploy/order-api --replicas=1</code></td><td>안전장치를 빼고 가설을 기각시킨다</td></tr>
+    <tr><td class="num"><code>kubectl -n chaos-mesh get podchaos,networkchaos</code></td><td>남은 실험 확인. 뒷정리의 판정</td></tr>
+  </table>
+</section>
+
+<footer>
+  <span>쿠버네티스 관측성 · 10 / 11 · 테스팅과 카오스 실험</span>
+  <span><a href="ch09-operations.html">← 09 운영과 모범 사례</a> &nbsp;·&nbsp; <a href="index.html">목차</a> &nbsp;·&nbsp; <span>마지막 장</span></span>
+</footer>
+
+</div>
+</body>
+</html>

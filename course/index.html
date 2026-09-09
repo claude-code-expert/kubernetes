@@ -179,6 +179,7 @@
   <a href="#labs"><span class="num">5</span>실습 파일 구조</a>
   <a href="#schedule"><span class="num">6</span>진행 방식</a>
   <a href="#reference"><span class="num">7</span>참고 자료 — kubectl 치트시트</a>
+  <a href="#observability"><span class="num">8</span>같은 저장소의 다른 과정 — 관측성 11장</a>
 </nav>
 
 <section id="roadmap">
@@ -360,6 +361,15 @@
     <tr><td><a href="cheatsheet-kubectl.html">kubectl 치트시트</a></td><td>컨텍스트 · 조회 · 셀렉터 · 진단 · exec · 생성 · 수정 · 롤아웃 · 설정 · 노드 · 권한 · API 탐색 · 삭제 · 출력 가공 17개 절. 헷갈리는 것 다섯 가지와 <strong>지금 쓰면 안 되는 명령</strong> 정정표를 포함한다</td></tr>
   </table>
   <p>치트시트에는 실행 결과를 싣지 않는다. 명령이 무엇을 하는지와 언제 쓰는지만 적고, 화면에 무엇이 나오는지는 모듈 본문이 갖는다. 두 곳에 같은 출력을 두면 한쪽이 낡기 때문이다.</p>
+</section>
+
+<section id="observability">
+  <h2 class="sec"><span class="num">8</span>같은 저장소의 다른 과정 — 관측성 11장</h2>
+  <p class="lead">이 38편 과정과 별개로 <a href="../study/index.html">쿠버네티스 관측성 실습</a> 11장이 같은 저장소에 있다. kind 클러스터에 스프링 애플리케이션 두 개를 올려 프로메테우스·그라파나·로키로 관측하고, 마지막에 일부러 고장을 내서 그 관측 체계가 쓸모 있는지 판정한다. Part 4(M19~M22)와 같은 <code>order-api</code>를 쓰지만 <strong>설치 절차와 게이트웨이 계측을 훨씬 깊게</strong> 다룬다.</p>
+  <div class="note-2026">
+    <span class="lbl">버전이 다르다</span>
+    관측성 11장은 2026-08-19 검증 기준 <strong>Kubernetes 1.36 · kind v0.32.0 · 차트 88.x</strong>에 고정돼 있다. 문서의 실행 결과가 그 조합에서 실제로 실행해 얻은 것이기 때문이다. 이 과정은 1.37 라인이다. <strong>두 과정을 같은 클러스터에서 섞어 돌리지 않는다.</strong>
+  </div>
 </section>
 
 <footer>

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 · kind 클러스터 구축 — 쿠버네티스 관측성 실습</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --soft:#f5f6f7;
+    --ink:#15181d;
+    --muted:#585f6b;
+    --line:#d8dbe0;
+    --line2:#eceef0;
+    --ac:#1a4fa0;
+    --warn:#8f4408;
+    --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:16px;line-height:1.72;letter-spacing:-.005em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+
+  header{border-bottom:1px solid var(--ink);padding:56px 0 22px;margin-bottom:36px}
+  .docnum{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ac)}
+  h1{font-size:34px;line-height:1.28;letter-spacing:-.03em;font-weight:700;margin:10px 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:66ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;
+        font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  nav.toc{border:1px solid var(--line);padding:20px 24px;margin:0 0 48px}
+  nav.toc h2{font-size:12px;font-family:var(--mono);letter-spacing:.14em;color:var(--muted);
+             font-weight:500;margin-bottom:12px}
+  nav.toc ol{list-style:none;counter-reset:t;columns:2;column-gap:36px}
+  nav.toc li{counter-increment:t;font-size:14.5px;line-height:2}
+  nav.toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+                     font-size:12px;color:var(--muted);margin-right:10px}
+  a{color:var(--ac);text-decoration:none;border-bottom:1px solid #b9c9e2}
+  a:hover{border-bottom-color:var(--ac)}
+
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2.sec{font-size:23px;letter-spacing:-.025em;font-weight:700;
+         padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--ac);margin-right:12px;font-weight:500}
+  h3{font-size:17px;font-weight:700;margin:32px 0 10px;letter-spacing:-.02em}
+  h4{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--muted)}
+  p{margin:0 0 14px;max-width:74ch}
+  ul,ol{margin:0 0 16px 0;padding-left:20px;max-width:74ch}
+  li{margin:6px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700}
+
+  .term{border-bottom:1px dotted var(--muted);cursor:help}
+  .en{font-family:var(--mono);font-size:.85em;color:var(--muted)}
+
+  code{font-family:var(--mono);font-size:.87em;background:var(--soft);
+       border:1px solid var(--line2);padding:1px 5px;border-radius:3px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.68;background:var(--soft);
+      border:1px solid var(--line);border-radius:4px;padding:16px 18px;overflow-x:auto;margin:12px 0 8px}
+  pre code{background:none;border:0;padding:0;font-size:13px}
+  pre .c{color:#6b7280}
+  pre .o{color:#0b4f2f}
+  .cap{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+  .cap b{color:var(--ink);font-weight:600}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0 8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+  th{background:var(--soft);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+  td code{font-size:12.5px}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .note{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  .box{border:1px solid var(--line);border-left:3px solid var(--ink);
+       padding:16px 20px;margin:20px 0;background:#fff}
+  .box .t{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);
+          margin-bottom:8px;display:block}
+  .box p:last-child{margin-bottom:0}
+  .box.warn{border-left-color:var(--warn)}
+  .box.warn .t{color:var(--warn)}
+  .box.ac{border-left-color:var(--ac)}
+  .box.ac .t{color:var(--ac)}
+
+  figure{margin:26px 0 28px}
+  figure svg{display:block;width:100%;height:auto;border:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+  figcaption b{color:var(--ink);font-weight:600}
+
+  ul.check{list-style:none;padding-left:0}
+  ul.check li{padding-left:30px;position:relative;margin:9px 0;font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:14px;
+                      border:1.5px solid var(--muted);border-radius:2px}
+
+  .src{font-size:13px;color:var(--muted);line-height:1.85}
+  .src ul{list-style:none;padding-left:0;max-width:none}
+  .src li{margin:4px 0;word-break:break-all}
+
+  footer{border-top:1px solid var(--line);padding-top:20px;margin-top:16px;
+         font-size:13px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:720px){
+    .wrap{padding:0 18px 80px}
+    h1{font-size:27px}
+    nav.toc ol{columns:1}
+  }
+  @media print{
+    body{font-size:11pt}
+    figure,table,.box{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div style="max-width:920px;margin:0 auto;padding:22px 28px 0">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#585f6b;text-decoration:none;border-bottom:1px solid #d8dbe0">← 목차로</a>
+</div>
+<div class="wrap">
+
+<header>
+  <div class="docnum">CHAPTER 01 / 11 · 쿠버네티스 관측성</div>
+  <h1>kind 클러스터 구축</h1>
+  <p class="lede">
+    노드 3개짜리 로컬 클러스터를 만듭니다. 여기서 설정 파일 20줄을 제대로 쓰면
+    04단계에서 프로메테우스 타깃이 전부 초록으로 뜨고, 대충 쓰면 <code>kube-controller-manager</code>·
+    <code>kube-scheduler</code>·<code>etcd</code>·<code>kube-proxy</code> 네 개가 DOWN 상태로 남습니다.
+    그 차이를 만드는 것이 이 문서의 전부입니다.
+  </p>
+  <div class="meta">
+    <span>검증일 2026-08-19</span>
+    <span>소요 30–40분</span>
+    <span>선행: 00단계 preflight 통과</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">이론 — 설정 파일 20줄이 승부처다</a></li>
+    <li><a href="#s2">이번에 만들 클러스터의 모양</a></li>
+    <li><a href="#s3">macOS에서 포트가 흐르는 경로</a></li>
+    <li><a href="#s4">bind-address 문제 — 미리 막아야 하는 이유</a></li>
+    <li><a href="#s5">클러스터 설정 파일 전문</a></li>
+    <li><a href="#s6">클러스터 생성</a></li>
+    <li><a href="#s7">검증 7단계</a></li>
+    <li><a href="#s8">macOS에서만 겪는 문제</a></li>
+    <li><a href="#s9">삭제·재생성과 컨텍스트 관리</a></li>
+    <li><a href="#s10">부록 — 로컬 레지스트리(선택)</a></li>
+    <li><a href="#s11">완료 체크리스트</a></li>
+    <li><a href="#s12">명령어 레퍼런스</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════ 이론 ══════════ -->
+<section id="s1">
+  <h2 class="sec"><span class="n">01</span>이론 — 설정 파일 20줄이 승부처다</h2>
+
+  <p class="cap"><b>이 장의 판돈</b> — 여기서 쓰는 클러스터 설정이 04장의 타깃 상태를 미리 결정한다.</p>
+
+  <p>kind는 도커 컨테이너를 노드처럼 쓰는 로컬 클러스터다. 실습에 쓰는 이유는 만들고 부수는 비용이 거의 없어서다 — 실습이 꼬이면 지우고 다시 만들면 된다. 클라우드 계정도 필요 없다.</p>
+
+  <p>그런데 기본 설정으로 만든 kind 클러스터에 프로메테우스를 설치하면 <strong>타깃 네 개가 DOWN으로 남는다</strong>. <code>kube-controller-manager</code>·<code>kube-scheduler</code>·<code>etcd</code>·<code>kube-proxy</code>다. 이유는 이 구성요소들이 기본적으로 <code>127.0.0.1</code>에만 바인드해서, 같은 클러스터 안의 프로메테우스조차 접근할 수 없기 때문이다.</p>
+
+  <div class="box warn">
+    <span class="t">먼저 막지 않으면 나중에 못 고친다</span>
+    <p>클러스터를 만든 뒤에 이 설정을 바꾸려면 컨트롤 플레인 노드에 들어가 매니페스트를 고치고 각 구성요소를 재시작해야 한다. 만들 때 설정 파일에 <code>bindAddress</code>를 적어 두는 것이 비교할 수 없이 싸다. 04장에서 타깃이 전부 초록으로 뜨는지 여부가 이 스무 줄에 달려 있다.</p>
+  </div>
+
+  <h3>포트가 흐르는 경로</h3>
+  <p>맥에서는 경로가 한 겹 더 있다. 도커 데스크톱이 리눅스 VM을 돌리고, 그 안에 kind 노드 컨테이너가 있고, 그 안에 파드가 있다. 브라우저에서 그라파나를 열려면 <strong>호스트 → VM → 노드 컨테이너 → 파드</strong> 네 칸을 전부 뚫어야 한다.</p>
+  <p>이 실습은 <code>extraPortMappings</code>로 노드 컨테이너의 NodePort를 호스트 포트에 직접 붙인다. <code>kubectl port-forward</code>는 터미널을 닫으면 끊기고 파드가 재시작하면 죽지만, 포트 매핑은 클러스터가 살아 있는 동안 유지된다. 8명이 같은 화면을 봐야 하는 실습에서는 이쪽이 사고가 적다.</p>
+</section>
+
+<!-- ══════════ 1 ══════════ -->
+<section id="s2">
+  <h2 class="sec"><span class="n">02</span>이번에 만들 클러스터의 모양</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:26%">노드</th><th style="width:22%">라벨</th><th>역할</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">obs-control-plane</td><td class="num">—</td><td>API 서버·etcd·스케줄러·컨트롤러 매니저. 호스트 포트 3개를 이 노드에 연결한다</td></tr>
+      <tr><td class="num">obs-worker</td><td class="num">workload=apps</td><td>gateway, order-api 등 애플리케이션 파드</td></tr>
+      <tr><td class="num">obs-worker2</td><td class="num">workload=observability</td><td>프로메테우스, 그라파나, 로키</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    워커를 굳이 둘로 나누고 라벨을 붙이는 이유는 06·10단계에서
+    <span class="term" title="nodeSelector — 파드를 특정 라벨을 가진 노드에만 배치하는 스케줄링 조건">노드셀렉터</span>와
+    노드별 메트릭 차이를 실습하기 위해서입니다. 메모리가 12 GiB 미만이면 워커를 하나로 줄이고
+    라벨 두 개를 같은 노드에 붙여도 됩니다.
+  </p>
+
+  <div class="box ac">
+    <span class="t">클러스터 이름을 obs로 고정하는 이유</span>
+    <p>
+      kind는 클러스터 이름을 컨테이너 이름과 kubeconfig 컨텍스트 이름에 그대로 씁니다.
+      이름을 <code>obs</code>로 정하면 컨테이너는 <code>obs-control-plane</code>,
+      컨텍스트는 <code>kind-obs</code>가 됩니다. 문서 전체가 이 이름을 전제로 하니 바꾸지 마세요.
+      기본값(<code>kind</code>)을 쓰면 기존에 만들어 둔 실습 클러스터와 충돌합니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 2 ══════════ -->
+<section id="s3">
+  <h2 class="sec"><span class="n">03</span>macOS에서 포트가 흐르는 경로</h2>
+
+  <p>
+    리눅스에서는 <code>docker network</code>의 IP로 컨테이너에 바로 접근할 수 있지만,
+    macOS의 도커는 경량 VM 안에서 돕니다. 호스트에서 노드 컨테이너 IP(<code>172.18.x.x</code>)로
+    핑을 보내면 응답이 없습니다. 그래서 <strong>브라우저로 무언가를 열려면 경로가 두 개뿐</strong>입니다.
+    <code>extraPortMappings</code> + NodePort, 또는 <code>kubectl port-forward</code>.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 960 340" role="img" aria-label="macOS에서 브라우저가 NodePort로 그라파나에 도달하는 경로">
+      <rect width="960" height="340" fill="#ffffff"/>
+
+      <!-- 브라우저 -->
+      <rect x="24" y="128" width="150" height="64" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="99" y="154" text-anchor="middle" font-size="13.5" fill="#15181d">브라우저</text>
+      <text x="99" y="174" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">127.0.0.1:30300</text>
+
+      <path d="M176 160 L226 160" fill="none" stroke="#6a4a9c" stroke-width="1.5" marker-end="url(#a1)"/>
+
+      <!-- Docker VM -->
+      <rect x="228" y="52" width="708" height="240" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="244" y="42" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">Docker Desktop VM (Apple Virtualization)</text>
+
+      <!-- control-plane 컨테이너 -->
+      <rect x="252" y="88" width="238" height="168" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="268" y="112" font-family="ui-monospace,monospace" font-size="12.5" fill="#1f4d8f">obs-control-plane</text>
+      <line x1="252" y1="124" x2="490" y2="124" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="268" y="148" font-family="ui-monospace,monospace" font-size="12" fill="#15181d">:30300 (extraPortMapping)</text>
+      <rect x="268" y="166" width="204" height="42" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="370" y="192" text-anchor="middle" font-size="12.5" fill="#15181d">kube-proxy</text>
+      <text x="268" y="232" font-size="11.5" fill="#585f6b">NodePort 규칙으로 목적지 재작성</text>
+
+      <path d="M492 187 L560 187" fill="none" stroke="#6a4a9c" stroke-width="1.5" marker-end="url(#a1)"/>
+      <text x="526" y="177" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#6a4a9c">파드 IP</text>
+
+      <!-- worker2 컨테이너 -->
+      <rect x="562" y="88" width="238" height="168" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="578" y="112" font-family="ui-monospace,monospace" font-size="12.5" fill="#1f4d8f">obs-worker2</text>
+      <line x1="562" y1="124" x2="800" y2="124" stroke="#d8dbe0" stroke-width="1"/>
+      <rect x="578" y="152" width="204" height="56" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="680" y="176" text-anchor="middle" font-size="13" fill="#15181d">Grafana 파드</text>
+      <text x="680" y="195" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">containerPort 3000</text>
+      <text x="578" y="232" font-size="11.5" fill="#585f6b">파드는 어느 노드에 있어도 된다</text>
+
+      <!-- 하단 설명 -->
+      <text x="252" y="284" font-size="12" fill="#585f6b">호스트 30300 → 컨테이너 30300 → NodePort 서비스 → 파드 3000</text>
+
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>
+      <b>그림 1.</b> 포트 매핑은 <em>컨트롤 플레인 노드에만</em> 걸어도 된다.
+      NodePort는 모든 노드에서 열리므로, 파드가 worker2에 있어도 control-plane을 거쳐 도달한다.
+      매핑은 클러스터를 만드는 순간 결정되며 <strong>나중에 추가할 수 없다</strong>. 그래서 지금 넉넉히 뚫어둔다.
+    </figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr><th style="width:22%">호스트 포트</th><th style="width:26%">용도</th><th>연결 시점</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">30080</td><td>gateway (애플리케이션)</td><td>03단계</td></tr>
+      <tr><td class="num">30300</td><td>Grafana</td><td>05단계</td></tr>
+      <tr><td class="num">30900</td><td>Prometheus UI</td><td>04단계</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════ 3 ══════════ -->
+<section id="s4">
+  <h2 class="sec"><span class="n">04</span>bind-address 문제 — 미리 막아야 하는 이유</h2>
+
+  <p>
+    kubeadm으로 만든 클러스터는 컨트롤 플레인 구성요소의 메트릭 포트를
+    <strong>루프백에만</strong> 엽니다. 보안상 합리적인 기본값이지만, 프로메테우스는 다른 노드의
+    파드에서 스크레이프를 시도하므로 연결 자체가 성립하지 않습니다.
+    04단계에서 타깃 목록에 빨간 줄 네 개가 뜨는 원인이 이것입니다.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 960 400" role="img" aria-label="루프백 바인딩일 때 스크레이프 실패, 0.0.0.0 바인딩일 때 성공하는 비교">
+      <rect width="960" height="400" fill="#ffffff"/>
+
+      <!-- 상단: 기본값 -->
+      <text x="24" y="34" font-family="ui-monospace,monospace" font-size="12" fill="#8f4408">기본값 — bind-address: 127.0.0.1</text>
+      <rect x="24" y="48" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="72" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-control-plane</text>
+      <rect x="40" y="86" width="298" height="34" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="52" y="108" font-family="ui-monospace,monospace" font-size="12" fill="#15181d">kube-controller-manager</text>
+      <text x="40" y="146" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">listen 127.0.0.1:10257</text>
+      <text x="40" y="164" font-size="11.5" fill="#585f6b">컨테이너 밖에서는 열리지 않은 포트</text>
+
+      <path d="M600 112 L364 112" fill="none" stroke="#8f4408" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <line x1="470" y1="98" x2="494" y2="126" stroke="#8f4408" stroke-width="2"/>
+      <line x1="494" y1="98" x2="470" y2="126" stroke="#8f4408" stroke-width="2"/>
+      <text x="482" y="150" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">connection refused</text>
+
+      <rect x="602" y="48" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="618" y="72" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-worker2</text>
+      <rect x="618" y="86" width="298" height="34" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="630" y="108" font-size="12.5" fill="#15181d">Prometheus 파드</text>
+      <text x="618" y="146" font-size="11.5" fill="#585f6b">타깃 상태: DOWN</text>
+
+      <line x1="24" y1="204" x2="936" y2="204" stroke="#d8dbe0" stroke-width="1"/>
+
+      <!-- 하단: 패치 후 -->
+      <text x="24" y="238" font-family="ui-monospace,monospace" font-size="12" fill="#1a4fa0">패치 후 — bind-address: 0.0.0.0</text>
+      <rect x="24" y="252" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="276" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-control-plane</text>
+      <rect x="40" y="290" width="298" height="34" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="52" y="312" font-family="ui-monospace,monospace" font-size="12" fill="#15181d">kube-controller-manager</text>
+      <text x="40" y="350" font-family="ui-monospace,monospace" font-size="11.5" fill="#1a4fa0">listen 0.0.0.0:10257 (HTTPS)</text>
+      <text x="40" y="368" font-size="11.5" fill="#585f6b">노드 IP로 접근 가능</text>
+
+      <path d="M600 316 L364 316" fill="none" stroke="#1a4fa0" stroke-width="1.5" marker-end="url(#a2)"/>
+      <text x="482" y="306" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#1a4fa0">GET /metrics · 토큰 인증</text>
+
+      <rect x="602" y="252" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="618" y="276" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-worker2</text>
+      <rect x="618" y="290" width="298" height="34" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="630" y="312" font-size="12.5" fill="#15181d">Prometheus 파드</text>
+      <text x="618" y="350" font-size="11.5" fill="#585f6b">타깃 상태: UP</text>
+
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1a4fa0"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>
+      <b>그림 2.</b> 해결책은 바인딩 주소를 <code>0.0.0.0</code>으로 바꾸는 것뿐이다.
+      인터넷에 떠도는 일부 가이드처럼 <code>secure-port: "0"</code>으로 HTTPS를 끄고 평문 포트를 여는 방법은
+      <strong>따라 하지 않는다</strong>. 인증 없이 클러스터 내부 메트릭이 노출되고, 04단계에서
+      차트 기본값(HTTPS 스크레이프)과도 어긋난다.
+    </figcaption>
+  </figure>
+
+  <p>같은 이유로 손봐야 하는 대상이 넷입니다.</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:26%">구성요소</th><th style="width:26%">기본 바인딩</th><th>패치 내용</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">kube-controller-manager</td><td class="num">127.0.0.1:10257</td><td><code>bind-address: 0.0.0.0</code></td></tr>
+      <tr><td class="num">kube-scheduler</td><td class="num">127.0.0.1:10259</td><td><code>bind-address: 0.0.0.0</code></td></tr>
+      <tr><td class="num">etcd</td><td class="num">메트릭 미분리</td><td><code>listen-metrics-urls: http://0.0.0.0:2381</code>
+        <span class="note">클라이언트 포트(2379)는 상호 TLS 인증이 필요하다. 2381은 메트릭 전용 포트로, 04단계에서 이 포트를 스크레이프하도록 차트 값을 맞춘다</span></td></tr>
+      <tr><td class="num">kube-proxy</td><td class="num">127.0.0.1:10249</td><td><code>metricsBindAddress: 0.0.0.0:10249</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="box warn">
+    <span class="t">프로덕션에서는 하지 말 것</span>
+    <p>
+      <code>0.0.0.0</code> 바인딩은 노드의 모든 인터페이스에 메트릭 포트를 노출합니다.
+      로컬 kind 클러스터는 도커 VM 안에 갇혀 있어 실질적 노출이 없지만,
+      실제 노드에서는 방화벽으로 해당 포트를 노드 IP 대역으로 제한하거나
+      노드 IP만 바인딩하는 방식을 씁니다. 이 실습 설정을 그대로 사내 클러스터로 옮기지 마세요.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 4 ══════════ -->
+<section id="s5">
+  <h2 class="sec"><span class="n">05</span>클러스터 설정 파일 전문</h2>
+
+  <p>
+    작업 디렉터리를 하나 만들고 그 안에 파일을 둡니다. 이후 모든 단계가 이 디렉터리를 기준으로 진행됩니다.
+  </p>
+
+<pre><code>mkdir -p ~/k8s-observability/infra
+cd ~/k8s-observability/infra</code></pre>
+
+  <h3><code>kind-cluster.yaml</code></h3>
+
+<pre><code>kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: obs
+
+<span class="c"># ── 컨트롤 플레인 메트릭을 클러스터 내부에서 스크레이프 가능하게 만드는 패치 ──
+# kind v0.32.0 + Kubernetes 1.36 조합에서는 kubeadm v1beta4 포맷을 쓴다.
+# v1beta3와 달리 extraArgs가 맵이 아니라 name/value 목록이다.</span>
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    controllerManager:
+      extraArgs:
+        - name: bind-address
+          value: "0.0.0.0"
+    scheduler:
+      extraArgs:
+        - name: bind-address
+          value: "0.0.0.0"
+    etcd:
+      local:
+        extraArgs:
+          - name: listen-metrics-urls
+            value: "http://0.0.0.0:2381"
+  - |
+    kind: KubeProxyConfiguration
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    metricsBindAddress: "0.0.0.0:10249"
+
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+    <span class="c"># 포트 매핑은 클러스터 생성 시점에만 정의할 수 있다. 나중에 못 늘린다.</span>
+    extraPortMappings:
+      - containerPort: 30080      <span class="c"># gateway (03단계)</span>
+        hostPort: 30080
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30300      <span class="c"># Grafana (05단계)</span>
+        hostPort: 30300
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30900      <span class="c"># Prometheus UI (04단계)</span>
+        hostPort: 30900
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+
+  - role: worker
+    image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+    labels:
+      workload: apps
+
+  - role: worker
+    image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+    labels:
+      workload: observability</code></pre>
+
+  <h4>읽는 법 — 헷갈리기 쉬운 세 곳</h4>
+  <ul>
+    <li><strong>다이제스트를 노드마다 반복</strong>하는 것이 번거로우면 <code>image:</code> 줄을 모두 지우고
+      생성 시 <code>--image</code> 플래그로 한 번만 넘겨도 됩니다. 다만 파일만 공유했을 때 버전 정보가 사라지므로
+      스터디에서는 파일에 박아두는 쪽을 권합니다.</li>
+    <li><code>listenAddress: "127.0.0.1"</code> 를 빼면 매핑이 <code>0.0.0.0</code> 으로 열려
+      같은 와이파이의 다른 기기에서 그라파나에 접근할 수 있게 됩니다. 카페에서 실습한다면 반드시 넣으세요.</li>
+    <li><code>labels</code> 는 kind가 노드 등록 시 kubelet에 넘겨주는 값입니다.
+      클러스터를 만든 뒤 <code>kubectl label</code> 로 붙여도 결과는 같지만, 재생성할 때마다 다시 해야 합니다.</li>
+  </ul>
+
+  <div class="box">
+    <span class="t">v1beta3 예제를 만났을 때</span>
+    <p>
+      검색으로 나오는 대부분의 예제는 <code>extraArgs: {bind-address: 0.0.0.0}</code> 형태의 맵입니다.
+      kind가 자동 변환을 시도하지만, 확실하게 하려면 위처럼 <code>apiVersion</code>을 명시한
+      목록 형식으로 쓰세요. Kubernetes 1.37부터는 kubeadm이 v1beta3 설정을 아예 받지 않습니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 5 ══════════ -->
+<section id="s6">
+  <h2 class="sec"><span class="n">06</span>클러스터 생성</h2>
+
+<pre><code>kind create cluster --config kind-cluster.yaml</code></pre>
+
+  <p class="cap">첫 실행은 노드 이미지(약 1 GB)를 내려받느라 5분 이상 걸릴 수 있습니다. 이후에는 2분 안팎입니다.</p>
+
+<pre><code><span class="o">Creating cluster "obs" ...
+ ✓ Ensuring node image (kindest/node:v1.36.1) 🖼
+ ✓ Preparing nodes 📦 📦 📦
+ ✓ Writing configuration 📜
+ ✓ Starting control-plane 🕹️
+ ✓ Installing CNI 🔌
+ ✓ Installing StorageClass 💾
+ ✓ Joining worker nodes 🚜
+Set kubectl context to "kind-obs"</span></code></pre>
+
+  <p>
+    마지막 줄이 중요합니다. kind가 kubeconfig에 <code>kind-obs</code> 컨텍스트를 만들고
+    현재 컨텍스트로 전환합니다. 다른 클러스터를 쓰고 있었다면 여기서 바뀝니다.
+  </p>
+</section>
+
+<!-- ══════════ 6 ══════════ -->
+<section id="s7">
+  <h2 class="sec"><span class="n">07</span>검증 7단계</h2>
+
+  <p>앞의 셋은 기본 확인이고, 뒤의 넷이 이번 문서의 핵심입니다.</p>
+
+  <h4>1. 컨텍스트와 노드</h4>
+<pre><code>kubectl config current-context
+kubectl get nodes -o wide</code></pre>
+<pre><code><span class="o">NAME                STATUS   ROLES           AGE   VERSION
+obs-control-plane   Ready    control-plane   96s   v1.36.1
+obs-worker          Ready    &lt;none&gt;          82s   v1.36.1
+obs-worker2         Ready    &lt;none&gt;          82s   v1.36.1</span></code></pre>
+
+  <h4>2. 시스템 파드가 전부 Running</h4>
+<pre><code>kubectl get pods -A</code></pre>
+  <p class="cap">
+    <code>coredns</code> 2개, <code>etcd</code>, <code>kube-apiserver</code>,
+    <code>kube-controller-manager</code>, <code>kube-scheduler</code>, <code>kindnet</code> 3개,
+    <code>kube-proxy</code> 3개, <code>local-path-provisioner</code>가 보이면 정상입니다.
+  </p>
+
+  <h4>3. 라벨 확인</h4>
+<pre><code>kubectl get nodes -L workload</code></pre>
+<pre><code><span class="o">NAME                STATUS   ROLES           AGE   VERSION   WORKLOAD
+obs-control-plane   Ready    control-plane   2m    v1.36.1
+obs-worker          Ready    &lt;none&gt;          2m    v1.36.1   apps
+obs-worker2         Ready    &lt;none&gt;          2m    v1.36.1   observability</span></code></pre>
+
+  <h4>4. 컨트롤러 매니저·스케줄러 바인딩 주소</h4>
+  <p>
+    정적 파드 매니페스트를 직접 확인하는 것이 가장 확실합니다. kubelet이 이 파일을 읽어 파드를 띄우기 때문입니다.
+  </p>
+<pre><code>docker exec obs-control-plane \
+  grep -h 'bind-address' \
+  /etc/kubernetes/manifests/kube-controller-manager.yaml \
+  /etc/kubernetes/manifests/kube-scheduler.yaml</code></pre>
+<pre><code><span class="o">    - --bind-address=0.0.0.0
+    - --bind-address=0.0.0.0</span></code></pre>
+  <p class="cap">
+    <code>127.0.0.1</code> 이 나오면 패치가 적용되지 않은 것입니다.
+    설정 파일의 <code>apiVersion: kubeadm.k8s.io/v1beta4</code> 줄과 <code>extraArgs</code> 목록 형식을 다시 확인하고,
+    클러스터를 삭제한 뒤 다시 만드세요. 실행 중인 클러스터에 패치를 소급 적용할 수는 없습니다.
+  </p>
+
+  <h4>5. etcd 메트릭 포트</h4>
+<pre><code>docker exec obs-control-plane \
+  grep -h 'listen-metrics-urls' /etc/kubernetes/manifests/etcd.yaml</code></pre>
+<pre><code><span class="o">    - --listen-metrics-urls=http://0.0.0.0:2381</span></code></pre>
+
+  <h4>6. kube-proxy 메트릭 주소</h4>
+<pre><code>kubectl -n kube-system get configmap kube-proxy \
+  -o jsonpath='{.data.config\.conf}' | grep -E 'metricsBindAddress|mode:'</code></pre>
+<pre><code><span class="o">metricsBindAddress: 0.0.0.0:10249
+mode: ""</span></code></pre>
+  <p class="cap">
+    <code>mode</code>가 비어 있으면 리눅스 기본값인 iptables 모드로 동작합니다.
+    2026년 기준 nftables 모드가 성능상 더 낫지만 아직 기본값은 아니며, 실습 규모에서는 차이가 없습니다.
+  </p>
+
+  <h4>7. 실제로 스크레이프가 되는지 (선택)</h4>
+  <p>
+    파드 안에서 노드 IP로 붙어봅니다. etcd 메트릭 포트는 인증이 없어 확인이 가장 간단합니다.
+  </p>
+<pre><code>NODE_IP=$(kubectl get node obs-control-plane \
+  -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+echo "control-plane InternalIP: ${NODE_IP}"
+
+kubectl run etcd-check --rm -i --restart=Never \
+  --image=curlimages/curl:latest -- \
+  curl -s --max-time 5 "http://${NODE_IP}:2381/metrics" | head -3</code></pre>
+<pre><code><span class="o"># HELP etcd_cluster_version Which version is running. 1 for 'cluster_version' label with current cluster version
+# TYPE etcd_cluster_version gauge
+etcd_cluster_version{cluster_version="3.6"} 1</span></code></pre>
+  <p class="cap">
+    출력이 비어 있으면 4·5번 확인을 다시 하세요. 실습용이라 이미지 태그를 <code>latest</code>로 두었지만,
+    사내에서 쓸 때는 태그를 고정하는 것이 원칙입니다.
+  </p>
+</section>
+
+<!-- ══════════ 7 ══════════ -->
+<section id="s8">
+  <h2 class="sec"><span class="n">08</span>macOS에서만 겪는 문제</h2>
+
+  <h3>포트 5000이 이미 잡혀 있다</h3>
+  <p>
+    macOS의 AirPlay 수신 기능이 5000번 포트를 씁니다. kind 공식 문서가 로컬 레지스트리에
+    5001을 쓰는 이유가 이것입니다. 5000을 쓰려면
+    <strong>시스템 설정 → 일반 → AirDrop 및 Handoff → AirPlay 수신 모드</strong>를 끄면 되지만,
+    그냥 5001을 쓰는 편이 낫습니다.
+  </p>
+
+  <h3>노드 컨테이너 IP로 접근이 안 된다</h3>
+  <p>
+    <code>docker network inspect kind</code>로 보이는 <code>172.18.x.x</code> 대역은
+    VM 내부 주소라 호스트에서 닿지 않습니다. 정상 동작입니다.
+    <code>docker exec</code>는 되고 <code>curl</code>은 안 되는 이유가 여기 있습니다.
+    접근은 언제나 포트 매핑이나 <code>kubectl port-forward</code>로 합니다.
+  </p>
+
+  <h3>Apple Silicon에서의 이미지 아키텍처</h3>
+  <p>
+    위 다이제스트는 멀티 아키텍처 매니페스트를 가리키므로 M 시리즈 맥에서도 그대로 동작합니다.
+    다만 03단계에서 만들 애플리케이션 이미지는 <strong>빌드한 아키텍처와 노드 아키텍처가 같아야</strong> 합니다.
+    인텔 맥과 M 시리즈 맥이 섞인 스터디라면 이미지를 서로 공유하지 말고 각자 빌드하세요.
+  </p>
+
+  <h3>Docker Desktop 설정 권장값</h3>
+  <ul>
+    <li><strong>VirtioFS</strong> 파일 공유 — 기본값이며 gRPC FUSE보다 빠릅니다</li>
+    <li><strong>Apple Virtualization framework</strong> 사용 — QEMU 대비 안정적입니다</li>
+    <li>Resources에서 CPU 4코어·메모리 10 GiB 이상</li>
+  </ul>
+  <p class="cap">
+    Docker Desktop 대신 <b>OrbStack</b>이나 <b>Colima</b>를 써도 kind는 동작합니다.
+    다만 포트 매핑·파일 공유 동작이 미묘하게 다르므로, 스터디 중 문제가 생기면
+    Docker Desktop 기준으로 맞추는 편이 시간을 아낍니다.
+  </p>
+
+  <h3>생성이 중간에 멈출 때</h3>
+  <table>
+    <thead>
+      <tr><th style="width:38%">증상</th><th>원인과 조치</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>failed to create cluster: ... timed out waiting for the condition</code></td>
+        <td>메모리 부족. Docker Desktop 할당을 10 GiB로 올리고 <code>kind delete cluster --name obs</code> 후 재시도</td>
+      </tr>
+      <tr>
+        <td><code>ERROR: failed to create cluster: node(s) already exist</code></td>
+        <td>같은 이름의 클러스터가 남아 있다. <code>kind get clusters</code>로 확인 후 삭제</td>
+      </tr>
+      <tr>
+        <td><code>Bind for 127.0.0.1:30300 failed: port is already allocated</code></td>
+        <td>다른 컨테이너가 그 포트를 쓰고 있다. <code>lsof -nP -iTCP:30300 -sTCP:LISTEN</code>로 범인 확인</td>
+      </tr>
+      <tr>
+        <td>파드가 <code>Evicted</code> / <code>DiskPressure</code></td>
+        <td>도커 디스크 여유 부족. <code>docker system prune -a</code>로 정리</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════ 8 ══════════ -->
+<section id="s9">
+  <h2 class="sec"><span class="n">09</span>삭제·재생성과 컨텍스트 관리</h2>
+
+  <p>
+    이 시리즈에서는 클러스터를 최소 두세 번 다시 만들게 됩니다. 재생성이 부담되지 않아야
+    설정을 과감하게 고칠 수 있습니다.
+  </p>
+
+<pre><code><span class="c"># 클러스터 목록</span>
+kind get clusters
+
+<span class="c"># 삭제 — 컨테이너와 kubeconfig 컨텍스트가 함께 지워진다</span>
+kind delete cluster --name obs
+
+<span class="c"># 재생성</span>
+kind create cluster --config kind-cluster.yaml
+
+<span class="c"># 컨텍스트 전환 (다른 클러스터를 함께 쓸 때)</span>
+kubectl config get-contexts
+kubectl config use-context kind-obs</code></pre>
+
+  <div class="box ac">
+    <span class="t">시간을 아끼는 습관</span>
+    <p>
+      노드 이미지는 삭제해도 로컬에 남으므로 재생성은 2분이면 끝납니다.
+      "설정을 고치려면 클러스터를 지워야 한다"는 제약을 부담으로 여기지 말고,
+      매니페스트를 고칠 때마다 지우고 다시 만드는 쪽이 상태가 꼬인 클러스터를 디버깅하는 것보다 훨씬 빠릅니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 9 ══════════ -->
+<section id="s10">
+  <h2 class="sec"><span class="n">10</span>부록 — 로컬 레지스트리(선택)</h2>
+
+  <p>
+    03단계에서는 <code>kind load docker-image</code>로 이미지를 노드에 직접 밀어 넣습니다.
+    8명 실습에는 이 방식으로 충분합니다. 다만 이미지를 자주 고쳐 빌드하면
+    매번 3개 노드에 전송하느라 느려지므로, 그때는 로컬 레지스트리를 붙이는 편이 낫습니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:30%">방식</th><th style="width:22%">전파 시간</th><th>적합한 상황</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>kind load docker-image</code></td><td class="num">이미지당 20–60초</td><td>배포 횟수가 적은 실습 (기본 선택)</td></tr>
+      <tr><td>로컬 레지스트리 + <code>docker push</code></td><td class="num">5–10초</td><td>코드를 고치며 반복 배포할 때</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    레지스트리를 쓰려면 클러스터 생성 <em>전에</em> containerd 설정 패치가 필요합니다.
+    공식 문서의 스크립트가 최신 상태로 유지되고 있으니 그대로 쓰세요 —
+    <a href="https://kind.sigs.k8s.io/docs/user/local-registry/">kind.sigs.k8s.io/docs/user/local-registry/</a>.
+    핵심은 레지스트리 컨테이너를 <code>127.0.0.1:5001</code>에 띄우고,
+    노드의 containerd가 <code>localhost:5001</code>을 그 컨테이너로 라우팅하게 만드는 것입니다.
+    호스트와 파드 매니페스트가 <em>같은 이름</em>을 쓸 수 있게 하려는 장치입니다.
+  </p>
+
+  <div class="box warn">
+    <span class="t">주의</span>
+    <p>
+      kind v0.27부터 containerd 2.x를 쓰므로 레지스트리 설정은 <code>config_path</code> 방식이어야 합니다.
+      2023년 이전에 쓰인 <code>registry.mirrors</code> 인라인 방식 예제는 동작하지 않습니다.
+      또한 새 노드 이미지로 <code>kind load</code>를 쓰려면 kind 자체가 v0.32.0 이상이어야 합니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 10 ══════════ -->
+<section id="s11">
+  <h2 class="sec"><span class="n">11</span>완료 체크리스트</h2>
+
+  <ul class="check">
+    <li><code>kubectl get nodes</code> 에서 3개 노드가 모두 <code>Ready</code> · <code>v1.36.1</code></li>
+    <li><code>kubectl get nodes -L workload</code> 에서 <code>apps</code>, <code>observability</code> 라벨 확인</li>
+    <li>매니페스트 grep 결과가 <code>--bind-address=0.0.0.0</code> 두 줄</li>
+    <li><code>--listen-metrics-urls=http://0.0.0.0:2381</code> 확인</li>
+    <li><code>metricsBindAddress: 0.0.0.0:10249</code> 확인</li>
+    <li><code>kind-cluster.yaml</code> 을 팀 저장소에 커밋 (다이제스트 포함)</li>
+    <li>호스트 포트 30080 / 30300 / 30900 이 다른 프로세스와 충돌하지 않음</li>
+  </ul>
+
+  <div class="box ac">
+    <span class="t">다음 문서</span>
+    <p>
+      <strong>02 · 스프링 애플리케이션 만들기</strong> — Spring Boot 4.1 기반으로
+      게이트웨이(<code>spring-cloud-starter-gateway-server-webflux</code>)와 백엔드 API를 만들고,
+      Actuator·Micrometer로 <code>/actuator/prometheus</code>를 여는 데까지 진행합니다.
+      사내 컨벤션(Record DTO, 정적 팩토리, <code>ApiResponse&lt;T&gt;</code>)을 그대로 적용합니다.
+    </p>
+  </div>
+
+  <h3>출처</h3>
+  <div class="src">
+    <ul>
+      <li>kind 릴리스 노트 v0.32.0 (기본 노드 이미지, kubeadm v1beta4 전환, Envoy 로드밸런서) — https://github.com/kubernetes-sigs/kind/releases</li>
+      <li>kind 로컬 레지스트리 — https://kind.sigs.k8s.io/docs/user/local-registry/</li>
+      <li>kubeadm으로 컨트롤 플레인 구성요소 커스터마이징 (v1beta4 extraArgs 형식) — https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/control-plane-flags/</li>
+      <li>kubeadm v1beta4 변경 요약 — https://kubernetes.io/blog/2024/08/23/kubernetes-1-31-kubeadm-v1beta4/</li>
+      <li>kube-proxy 설정 API v1alpha1 (metricsBindAddress) — https://kubernetes.io/docs/reference/config-api/kube-proxy-config.v1alpha1/</li>
+      <li>kube-proxy nftables 모드 현황 — https://kubernetes.io/blog/2025/02/28/nftables-kube-proxy/</li>
+      <li>kube-prometheus의 kubeadm 클러스터 대응 문서 (bind-address 배경) — https://github.com/prometheus-operator/kube-prometheus/blob/main/docs/kube-prometheus-on-kubeadm.md</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════ 명령어 레퍼런스 ══════════ -->
+<section id="s12">
+  <h2 class="sec"><span class="n">12</span>명령어 레퍼런스</h2>
+  <p class="cap">이 장에서 쓴 명령만 모았다. 전체 목록은 <a href="../course/cheatsheet-kubectl.html">kubectl 치트시트</a>에 있다.</p>
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td class="num"><code>kind create cluster --config kind-cluster.yaml</code></td><td>설정 파일로 클러스터 생성. 기본 설정으로 만들면 04장에서 타깃 4개가 DOWN이다</td></tr>
+    <tr><td class="num"><code>kubectl config current-context</code></td><td>어느 클러스터에 붙어 있는지. 명령을 치기 전에 확인한다</td></tr>
+    <tr><td class="num"><code>kubectl get nodes -o wide</code></td><td>노드 목록과 내부 IP. STATUS가 전부 Ready여야 한다</td></tr>
+    <tr><td class="num"><code>kubectl -n kube-system get pods</code></td><td>컨트롤 플레인 구성요소 상태</td></tr>
+    <tr><td class="num"><code>kind delete cluster --name obs</code></td><td>클러스터 삭제. 실습이 꼬였을 때의 탈출구</td></tr>
+    <tr><td class="num"><code>docker ps --filter name=obs</code></td><td>노드가 도커 컨테이너로 떠 있는 것을 확인</td></tr>
+  </table>
+</section>
+
+<footer>
+  <span>쿠버네티스 관측성 · 01 / 11 · kind 클러스터 구축</span>
+  <span><a href="ch00-setup-versions.html">← 00 환경과 버전 고정</a> &nbsp;·&nbsp; <a href="index.html">목차</a> &nbsp;·&nbsp; <a href="ch02-instrumented-app.html">02 계측 가능한 애플리케이션 →</a></span>
+</footer>
+
+</div>
+<div style="max-width:920px;margin:0 auto;padding:0 28px 60px">
+  <a href="index.html" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#1a4fa0;text-decoration:none;border-bottom:1px solid #b9c9e2">← 시리즈 목차로 돌아가기</a>
+</div>
+</body>
+</html>
