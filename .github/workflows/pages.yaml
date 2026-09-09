@@ -1,0 +1,44 @@
+# course/ 를 GitHub Pages 사이트 루트로 배포한다.
+#
+# 저장소 루트가 아니라 course/ 를 올리는 이유가 둘 있다.
+# 하나는 URL — https://claude-code-expert.github.io/kubernetes 가 곧 로드맵이어야 한다.
+# 다른 하나는 book/ 의 출판사 맛보기 PDF 를 웹 페이지로 색인시키지 않기 위해서다.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'course/**'
+      - '.github/workflows/pages.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write          # deploy-pages 가 OIDC 로 배포 권한을 받는다
+
+# 배포는 취소하지 않는다. 중간에 끊으면 사이트가 반쯤 갱신된 상태로 남는다.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+
+      # path 가 사이트 루트가 된다. 문서 간 링크 228 개가 전부 같은 디렉터리를
+      # 가리키므로 course/ 를 통째로 루트에 두면 그대로 동작한다.
+      # Jekyll 을 태우지 않는 경로라 .nojekyll 은 필요 없다.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: course
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
