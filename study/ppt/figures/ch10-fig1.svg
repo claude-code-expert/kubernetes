@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-label="게임 데이 네 단계와 폭발 반경 최소화">
+      <rect width="960" height="300" fill="#ffffff"/>
+
+      <text x="24" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">실험 전에 채운다</text>
+      <text x="686" y="26" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">실험 후에 채운다</text>
+      <line x1="24" y1="34" x2="660" y2="34" stroke="#d8dbe0" stroke-width="1"/>
+      <line x1="686" y1="34" x2="936" y2="34" stroke="#8f4408" stroke-width="1"/>
+
+      <rect x="24" y="48" width="196" height="84" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="42" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">1. 가설</text>
+      <text x="42" y="94" font-size="11.5" fill="#585f6b">무엇이 변하지 않아야</text>
+      <text x="42" y="112" font-size="11.5" fill="#585f6b">성공인가</text>
+
+      <rect x="244" y="48" width="196" height="84" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="262" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">2. 이벤트</text>
+      <text x="262" y="94" font-size="11.5" fill="#585f6b">무엇을 어떻게</text>
+      <text x="262" y="112" font-size="11.5" fill="#585f6b">얼마나 주입하나</text>
+
+      <rect x="464" y="48" width="196" height="84" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="482" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#15181d">3. 대조군</text>
+      <text x="482" y="94" font-size="11.5" fill="#585f6b">비교 기준이 될 값과</text>
+      <text x="482" y="112" font-size="11.5" fill="#585f6b">그 출처</text>
+
+      <rect x="686" y="48" width="250" height="84" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="706" y="72" font-family="ui-monospace,monospace" font-size="13" fill="#8f4408">4. 판정</text>
+      <text x="706" y="94" font-size="11.5" fill="#585f6b">채택인가 기각인가.</text>
+      <text x="706" y="112" font-size="11.5" fill="#585f6b">근거는 어느 화면인가</text>
+
+      <path d="M220 90 L242 90" fill="none" stroke="#585f6b" stroke-width="1.2"/>
+      <path d="M236 86 L244 90 L236 94 Z" fill="#585f6b"/>
+      <path d="M440 90 L462 90" fill="none" stroke="#585f6b" stroke-width="1.2"/>
+      <path d="M456 86 L464 90 L456 94 Z" fill="#585f6b"/>
+      <path d="M660 90 L684 90" fill="none" stroke="#8f4408" stroke-width="1.2"/>
+      <path d="M678 86 L686 90 L678 94 Z" fill="#8f4408"/>
+
+      <text x="24" y="180" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">폭발 반경 — 첫 실험은 가장 안쪽 하나만</text>
+      <rect x="24" y="194" width="420" height="82" fill="#f5f6f7" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="40" y="214" font-size="11.5" fill="#585f6b">클러스터</text>
+      <rect x="40" y="222" width="320" height="44" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+      <text x="56" y="240" font-size="11.5" fill="#585f6b">네임스페이스 apps</text>
+      <rect x="56" y="244" width="120" height="16" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="66" y="256" font-family="ui-monospace,monospace" font-size="10" fill="#8f4408">파드 1개 · 5분</text>
+      <rect x="188" y="244" width="120" height="16" fill="#ffffff" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="198" y="256" font-family="ui-monospace,monospace" font-size="10" fill="#585f6b">파드 2 (건드리지 않음)</text>
+
+      <text x="480" y="214" font-size="12" fill="#15181d">라벨로 지우면 매칭되는 파드가 전부 죽는다.</text>
+      <text x="480" y="236" font-size="12" fill="#15181d">이름을 골라 하나만 지운다.</text>
+      <text x="480" y="262" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">mode: one</text>
+    </svg>

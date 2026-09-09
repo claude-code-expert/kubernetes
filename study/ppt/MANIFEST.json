@@ -1,0 +1,1413 @@
+{
+  "schema": 1,
+  "generated_from": "study/ch*.html + study/ppt/outline.md",
+  "canonical": "study/ch*.html — 문서가 먼저이고 장표가 나중이다",
+  "deck": {
+    "ratio": "16:9",
+    "size": [
+      1920,
+      1080
+    ],
+    "slide_seconds": 90
+  },
+  "totals": {
+    "chapters": 11,
+    "slides": 56,
+    "figures_svg": 21,
+    "figures_png": 5
+  },
+  "stage": "A 완료 — 도판 21개 추출, 장표 17개에 매핑, 신규 도판 11개 명세. B(노트) · C(코드·출력·표)는 아직",
+  "chapters": [
+    {
+      "chapter": "00",
+      "title": "환경과 버전 고정",
+      "doc": "ch00-setup-versions.html",
+      "slides": [
+        {
+          "id": "00-01",
+          "title": "왜 버전을 고정하나",
+          "screen": "8명이 같은 화면을 보려면 같은 숫자여야 한다",
+          "say": "스터디 6주 동안 차트는 3~4번 올라간다. 한 사람이 88.3.0으로, 다른 사람이 90.x로 설치하면 대시보드 JSON이 서로 맞지 않는다",
+          "bridge": "그래서 첫 장에서 코드를 한 줄도 쓰지 않는다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "00-02",
+          "title": "메트릭이 이상을 알려주고, 로그가 이유를 말해준다",
+          "screen": "좌우 두 칸 · 지연 그래프 / 로그 한 줄",
+          "say": "메트릭은 '지금 이상하다'까지만 안다. 왜 이상한지는 그 시각의 로그에 있다",
+          "bridge": "이 시리즈의 04~07이 메트릭, 08이 로그다",
+          "needs": [
+            "output",
+            "figure"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "좌우 두 칸 — 지연 그래프 / 로그 한 줄"
+            }
+          ]
+        },
+        {
+          "id": "00-03",
+          "title": "폐쇄형과 개방형",
+          "screen": "앱 바깥에서 보는 것과 안에서 보는 것",
+          "say": "CPU·메모리는 앱이 왜 그렇게 동작하는지 맥락을 주지 못한다",
+          "bridge": "02장에서 앱 안에 계측을 심는 이유",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "폐쇄형 관측과 개방형 관측 대비"
+            }
+          ]
+        },
+        {
+          "id": "00-04",
+          "title": "메트릭은 당겨 오고 로그는 밀어 보낸다",
+          "screen": "화살표 방향이 반대인 그림 한 장",
+          "say": "프로메테우스는 대상의 /metrics 를 긁어 온다. 로그는 수집기가 로키로 밀어 넣는다",
+          "bridge": "이 차이가 04장 ServiceMonitor 와 08장 Alloy 설정의 생김새를 가른다",
+          "needs": [
+            "table",
+            "figure"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch00-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "00-05",
+          "title": "버전 매트릭스",
+          "screen": "표 · 7행",
+          "say": "검증일과 함께 적는다. 실습 당일 재확인",
+          "bridge": "다음 장에서 이 숫자로 클러스터를 만든다",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "00-06",
+          "title": "사전 점검",
+          "screen": "preflight.sh 실행 결과 · 판정 줄만",
+          "say": "여기서 막히면 다음 장이 전부 막힌다",
+          "bridge": "통과했으면 클러스터를 만든다",
+          "needs": [
+            "table",
+            "output"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch00-fig1.svg",
+          "caption": "그림 1. 물리 구조. kind는 kind라는 이름 그대로 도커 컨테이너 하나를 쿠버네티스 노드 하나로 쓴다. 노드 3개짜리 클러스터도 결국 컨테이너 3개다. 파드 배치는 스케줄러가 정하므로 실제 배치는 그림과 달라질 수 있다.",
+          "alt": "개발 PC 안에서 도커 컨테이너 3개가 쿠버네티스 노드로 동작하는 구조",
+          "viewBox": "0 0 960 392"
+        },
+        {
+          "file": "figures/ch00-fig2.svg",
+          "caption": "그림 2. 논리 구조와 데이터 흐름. 보라 점선은 메트릭 수집(pull), 주황 실선은 로그 전송(push), 파랑은 그라파나의 질의다. 애플리케이션은 어디로도 메트릭을 보내지 않는다. /actuator/prometheus 를 열어두고 기다릴 뿐이다.",
+          "alt": "네임스페이스별 구성요소와 메트릭 pull, 로그 push 데이터 흐름",
+          "viewBox": "0 0 960 500"
+        },
+        {
+          "file": "figures/ch00-fig3.svg",
+          "caption": "그림 3. 앞 장의 산출물이 다음 장의 입력이 된다. 건너뛰면 사전 조건이 깨진다. 마지막 10장은 앞의 열 장이 실제로 쓸모 있는지 판정하는 장이라 성격이 다르다 — 이상을 일부러 만들어 07장의 알림이 우는지 확인한다.",
+          "alt": "11장 로드맵, 현재 위치는 00장",
+          "viewBox": "0 0 960 176"
+        }
+      ],
+      "legacy_png": []
+    },
+    {
+      "chapter": "01",
+      "title": "kind 클러스터 구축",
+      "doc": "ch01-kind-cluster.html",
+      "slides": [
+        {
+          "id": "01-01",
+          "title": "설정 파일 20줄이 승부처",
+          "screen": "기본 설정 클러스터 vs 설정한 클러스터 — 타깃 4개 차이",
+          "say": "기본 설정으로 만들면 04장에서 controller-manager·scheduler·etcd·kube-proxy 가 DOWN 이다",
+          "bridge": "이유는 127.0.0.1 에만 바인드하기 때문이다",
+          "needs": [
+            "code"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "01-02",
+          "title": "만든 뒤에는 못 고친다",
+          "screen": "시간축 · 지금 20줄 vs 나중에 노드 진입",
+          "say": "클러스터를 만든 뒤 바꾸려면 컨트롤 플레인 노드에 들어가 매니페스트를 고치고 재시작해야 한다",
+          "bridge": "비교할 수 없이 싸다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "시간축 — 지금 20줄 vs 나중에 노드 진입"
+            }
+          ]
+        },
+        {
+          "id": "01-03",
+          "title": "맥에서 포트가 흐르는 경로",
+          "screen": "호스트 → VM → 노드 컨테이너 → 파드 네 칸",
+          "say": "네 칸을 전부 뚫어야 브라우저에서 그라파나가 열린다",
+          "bridge": "port-forward 는 끊긴다. extraPortMappings 를 쓴다",
+          "needs": [
+            "figure"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch01-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "01-04",
+          "title": "클러스터 생성과 검증",
+          "screen": "kind create 명령 · nodes 출력 판정 줄",
+          "say": "STATUS 가 전부 Ready",
+          "bridge": "이제 앱을 만든다",
+          "needs": [
+            "output"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch01-fig1.svg",
+          "caption": "그림 1. 포트 매핑은 컨트롤 플레인 노드에만 걸어도 된다. NodePort는 모든 노드에서 열리므로, 파드가 worker2에 있어도 control-plane을 거쳐 도달한다. 매핑은 클러스터를 만드는 순간 결정되며 나중에 추가할 수 없다. 그래서 지금 넉넉히 뚫어둔다.",
+          "alt": "macOS에서 브라우저가 NodePort로 그라파나에 도달하는 경로",
+          "viewBox": "0 0 960 340"
+        },
+        {
+          "file": "figures/ch01-fig2.svg",
+          "caption": "그림 2. 해결책은 바인딩 주소를 0.0.0.0으로 바꾸는 것뿐이다. 인터넷에 떠도는 일부 가이드처럼 secure-port: \"0\"으로 HTTPS를 끄고 평문 포트를 여는 방법은 따라 하지 않는다. 인증 없이 클러스터 내부 메트릭이 노출되고, 04장에서 차트 기본값(HTTPS 스크레이프)과도 어긋난다.",
+          "alt": "루프백 바인딩일 때 스크레이프 실패, 0.0.0.0 바인딩일 때 성공하는 비교",
+          "viewBox": "0 0 960 400"
+        }
+      ],
+      "legacy_png": []
+    },
+    {
+      "chapter": "02",
+      "title": "계측 가능한 애플리케이션",
+      "doc": "ch02-instrumented-app.html",
+      "slides": [
+        {
+          "id": "02-01",
+          "title": "파드는 오래 살지 않는다",
+          "screen": "VM 24시간 vs 파드 수명 그래프",
+          "say": "개별 인스턴스를 추적하는 방식은 성립하지 않는다. 레이블로 묶은 집합을 본다",
+          "bridge": "무엇을 측정할지부터 정한다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "VM 수명 vs 파드 수명 대비 그래프"
+            }
+          ]
+        },
+        {
+          "id": "02-02",
+          "title": "USE 와 RED",
+          "screen": "표 2행 · 인프라 / 애플리케이션",
+          "say": "USE 는 사용률·포화도·에러, RED 는 처리율·에러·처리시간",
+          "bridge": "스택 내장 대시보드가 USE 를, 우리가 심는 계측이 RED 를 채운다",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "02-03",
+          "title": "평균 40ms 뒤에 숨은 3초",
+          "screen": "분포 그래프 · 평균선과 P99 선",
+          "say": "99건이 10ms, 1건이 3초면 평균은 40ms 다. 대시보드는 초록이고 그 1건은 이탈한다",
+          "bridge": "P99 를 보려면 히스토그램 버킷이 필요하다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "지연 분포 — 평균선과 P99 선"
+            }
+          ]
+        },
+        {
+          "id": "02-04",
+          "title": "분위수는 공짜가 아니다",
+          "screen": "percentiles-histogram 켜기 전후 시계열 수",
+          "say": "켜는 순간 시계열이 버킷 개수만큼 는다",
+          "bridge": "09장에서 카디널리티 문제로 돌아온다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch02-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "02-05",
+          "title": "요청 하나가 만드는 세 종류",
+          "screen": "HTTP · JVM · 도메인 지표",
+          "say": "세 번째가 이 실습의 핵심이다",
+          "bridge": "orders.created · rejected · processing · stored",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "02-06",
+          "title": "이 네 이름을 바꾸지 않는다",
+          "screen": "의존 관계 화살표 · 06 PromQL, 07 대시보드",
+          "say": "마이크로미터가 점을 밑줄로 바꿔 orders_created_total 로 노출한다",
+          "bridge": "이제 컨테이너로 만든다",
+          "needs": [
+            "table",
+            "code",
+            "figure"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch02-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch02-fig1.svg",
+          "caption": "그림 1. 두 서비스 모두 같은 방식으로 계측한다. 차이는 게이트웨이만 spring.cloud.gateway.requests를 추가로 내보낸다는 점이다. 이 메트릭에는 라우트 ID 태그가 붙어 \"어떤 백엔드로 가는 트래픽이 느린가\"를 바로 볼 수 있다.",
+          "alt": "게이트웨이와 주문 API의 호출 관계 및 메트릭 노출 지점",
+          "viewBox": "0 0 960 320"
+        },
+        {
+          "file": "figures/ch02-fig2.svg",
+          "caption": "그림 2. _bucket은 기본으로 생성되지 않는다. percentiles-histogram을 켜야 만들어지고, 켜는 순간 시계열 수가 버킷 개수만큼 늘어난다. 공짜가 아니라는 사실을 알고 켜는 것과 모르고 켜는 것은 다르다.",
+          "alt": "HTTP 요청 하나가 count, sum, bucket 세 종류의 시계열로 노출되는 구조",
+          "viewBox": "0 0 960 366"
+        }
+      ],
+      "legacy_png": [
+        "seq-request-scrape.png"
+      ]
+    },
+    {
+      "chapter": "03",
+      "title": "컨테이너화와 배포",
+      "doc": "ch03-containerize-deploy.html",
+      "slides": [
+        {
+          "id": "03-01",
+          "title": "docker images 에 보여도 파드는 안 뜬다",
+          "screen": "두 개의 저장소 그림",
+          "say": "도커 데몬의 저장소와 kind 노드 안 런타임 저장소는 다른 공간이다",
+          "bridge": "kind load 가 그 간극을 메운다",
+          "needs": [
+            "figure"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch03-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "03-02",
+          "title": "적재 확인은 노드 안에서",
+          "screen": "crictl images 출력 · 판정 줄",
+          "say": "docker images 로는 알 수 없다",
+          "bridge": "여기서 확인하고 넘어간다",
+          "needs": [
+            "output"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "03-03",
+          "title": "latest 를 쓰면 조용히 깨진다",
+          "screen": "imagePullPolicy 기본값 표",
+          "say": "latest 면 Always 가 되어 적재해 둔 이미지를 무시하고 ErrImagePull",
+          "bridge": "모든 이미지에 버전 태그를 박는다",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "03-04",
+          "title": "프로브 세 개가 답하는 서로 다른 질문",
+          "screen": "표 3행 · 실패하면 무엇이 일어나나",
+          "say": "startup 은 미루고, readiness 는 빼고, liveness 는 죽인다",
+          "bridge": "기동 느린 앱에 liveness 만 걸면 CrashLoopBackOff",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch03-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "03-05",
+          "title": "이미지 크기 — Dockerfile 네 개",
+          "screen": "1.02GB → multi 비교 막대",
+          "say": "naive 는 JDK·메이븐·소스가 전부 남는다",
+          "bridge": "외부 docker-sample 로 재현한다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "이미지 크기 비교 막대 (1.02GB → 475MB)"
+            }
+          ]
+        },
+        {
+          "id": "03-06",
+          "title": "배포와 검증",
+          "screen": "rollout status · describe 이벤트",
+          "say": "뜨지 않으면 이벤트부터 읽는다",
+          "bridge": "이제 관측 스택을 올린다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch03-fig1.svg",
+          "caption": "그림 1. 이미지가 노드 안에 이미 있으므로 imagePullPolicy를 IfNotPresent로 두어야 한다. 기본값은 태그가 latest일 때 Always가 되는데, 그러면 존재하지 않는 레지스트리로 나가려다 ImagePullBackOff에 빠진다.",
+          "alt": "Gradle 빌드에서 kind 노드 적재를 거쳐 파드가 뜨기까지의 경로",
+          "viewBox": "0 0 960 330"
+        },
+        {
+          "file": "figures/ch03-fig2.svg",
+          "caption": "그림 2. startupProbe가 없으면 livenessProbe가 기동 중인 앱을 죽은 것으로 보고 재시작시키고, 다시 기동하다 또 죽는 부팅 루프가 만들어진다. 스프링 앱에 프로브를 걸 때 가장 흔한 사고다.",
+          "alt": "startupProbe, readinessProbe, livenessProbe가 동작하는 시간 구간",
+          "viewBox": "0 0 960 330"
+        }
+      ],
+      "legacy_png": [
+        "workflow-redeploy.png"
+      ]
+    },
+    {
+      "chapter": "04",
+      "title": "프로메테우스 스택 설치",
+      "doc": "ch04-prometheus-stack.html",
+      "slides": [
+        {
+          "id": "04-01",
+          "title": "메모리 사용량이 왜 두 군데서 다른가",
+          "screen": "네 출처 그림",
+          "say": "cAdvisor · metrics-server · node-exporter · kube-state-metrics",
+          "bridge": "말로 구분하지 말고 직접 질의해서 나온 이름으로 구분한다",
+          "needs": [
+            "figure"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "메모리 사용량의 네 출처"
+            }
+          ]
+        },
+        {
+          "id": "04-02",
+          "title": "기계의 상태와 API 서버가 아는 상태",
+          "screen": "node-exporter vs KSM 대비",
+          "say": "'메모리가 몇 바이트 남았나' vs '레플리카 3개를 원하는데 실제로 2개인가'",
+          "bridge": "전자는 노드마다, 후자는 클러스터에 하나",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "04-03",
+          "title": "metrics-server 는 과거를 모른다",
+          "screen": "시간축 · 현재값만",
+          "say": "'10분 전 CPU는?' 에 답하지 못한다",
+          "bridge": "그 답을 하려고 프로메테우스를 설치한다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "04-04",
+          "title": "오퍼레이터는 스크레이프하지 않는다",
+          "screen": "오퍼레이터 → 설정 → 프로메테우스 본체",
+          "say": "오퍼레이터는 CR 을 읽어 설정을 만들어 줄 뿐이다",
+          "bridge": "06장에서 타깃이 안 잡힐 때 어느 쪽을 볼지가 여기서 갈린다",
+          "needs": [
+            "code"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch04-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "04-05",
+          "title": "타깃 검증이 이 장의 핵심",
+          "screen": "targets API 출력 · 판정 줄",
+          "say": "01장 설정이 여기서 결과로 나온다",
+          "bridge": "다음은 그 데이터를 보는 화면이다",
+          "needs": [
+            "output"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch04-fig1.svg",
+          "caption": "그림 1. ②번 단계에 함정이 있다. 오퍼레이터는 아무 ServiceMonitor나 읽지 않고, 프로메테우스 리소스에 정의된 셀렉터에 맞는 것만 고른다. 기본값은 \"헬름 릴리스 이름과 같은 release 라벨을 가진 것\"이다 — 06장의 첫 관문이다.",
+          "alt": "오퍼레이터가 ServiceMonitor를 읽어 프로메테우스 설정을 생성하고, 프로메테우스가 대상을 스크레이프하는 흐름",
+          "viewBox": "0 0 960 340"
+        }
+      ],
+      "legacy_png": [
+        "arch-observability-stack.png"
+      ]
+    },
+    {
+      "chapter": "05",
+      "title": "그라파나와 대시보드",
+      "doc": "ch05-grafana-dashboards.html",
+      "slides": [
+        {
+          "id": "05-01",
+          "title": "UI 에서 만든 대시보드는 클러스터와 함께 사라진다",
+          "screen": "그라파나 내부 DB vs 컨피그맵",
+          "say": "이 실습은 클러스터를 자주 지운다",
+          "bridge": "그래서 대시보드를 코드로 만든다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch05-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "05-02",
+          "title": "라벨 하나를 빼면 아무 일도 일어나지 않는다",
+          "screen": "컨피그맵은 있고 대시보드는 없는 화면",
+          "say": "에러도 없고 이벤트도 없다",
+          "bridge": "일부러 빼고 적용해 그 침묵을 먼저 겪는다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "05-03",
+          "title": "데이터소스는 uid 로 참조한다",
+          "screen": "JSON 발췌 3줄",
+          "say": "이름으로 적으면 다른 클러스터에서 깨진다",
+          "bridge": "UI 에서 만들고 Export 해 옮기는 순서가 현실적이다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch05-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch05-fig1.svg",
+          "caption": "그림 1. 차트가 설치한 기본 대시보드도 전부 이 구조로 들어와 있다. 즉 우리도 같은 방법으로 대시보드를 추가할 수 있다. 그라파나를 재시작할 필요도, UI에서 임포트할 필요도 없다.",
+          "alt": "라벨이 붙은 ConfigMap을 사이드카가 감시해 공유 볼륨에 파일로 쓰고 그라파나가 읽는 구조",
+          "viewBox": "0 0 960 360"
+        },
+        {
+          "file": "figures/ch05-fig2.svg",
+          "caption": "그림 2. 2번에서 Export for sharing externally 옵션을 켜면 데이터소스가 ${DS_...} 변수로 치환된다. 팀 밖으로 공유할 때만 쓰고, 우리끼리 쓸 때는 끄는 편이 임포트가 간단하다.",
+          "alt": "UI에서 편집하고 JSON으로 내보내 ConfigMap으로 저장하는 순환 흐름",
+          "viewBox": "0 0 960 240"
+        }
+      ],
+      "legacy_png": []
+    },
+    {
+      "chapter": "06",
+      "title": "앱 메트릭과 PromQL",
+      "doc": "ch06-app-metrics-promql.html",
+      "slides": [
+        {
+          "id": "06-01",
+          "title": "에러 없이 타깃이 사라진다",
+          "screen": "라벨 세 겹 그림",
+          "say": "연결이 세 겹의 라벨 일치로만 이루어진다",
+          "bridge": "먼저 끊어 보고 고친다",
+          "needs": [
+            "figure"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch06-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "06-02",
+          "title": "어느 겹이 끊겼는지 보는 법",
+          "screen": "표 3행 · 확인 명령",
+          "say": "1겹은 프로메테우스 CR, 2겹은 Service Discovery, 3겹은 endpointslices",
+          "bridge": "각각 다른 명령으로 본다",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "06-03",
+          "title": "포트는 번호가 아니라 이름이다",
+          "screen": "ServiceMonitor 발췌",
+          "say": "숫자를 적으면 조용히 안 붙는다",
+          "bridge": "흔한 실수 하나",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "06-04",
+          "title": "프로메테우스가 붙여 주는 라벨",
+          "screen": "namespace · pod · service · job",
+          "say": "파드가 죽고 떠도 같은 job 으로 묶인다",
+          "bridge": "집계 축이 대부분 이 라벨이다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "06-05",
+          "title": "RED 를 PromQL 로",
+          "screen": "rate · histogram_quantile 세 줄",
+          "say": "02장에서 심은 지표가 여기서 그래프가 된다",
+          "bridge": "이제 화면과 알림으로 만든다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch06-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch06-fig1.svg",
+          "caption": "그림 1. 03장에서 Service에 라벨을 붙이고 포트에 http라는 이름을 준 이유가 여기 있다. ②와 ③은 그때 이미 준비해 둔 것이고, 이번에 새로 만드는 것은 ①과 ServiceMonitor뿐이다.",
+          "alt": "프로메테우스 CR, ServiceMonitor, Service, 파드로 이어지는 라벨 연결 구조",
+          "viewBox": "0 0 960 430"
+        },
+        {
+          "file": "figures/ch06-fig2.svg",
+          "caption": "그림 2. 카운터를 다룰 때는 거의 항상 rate()를 씌운다. 대괄호 안의 시간은 \"이만큼을 돌아보며 평균 낸다\"는 뜻이고, 스크레이프 간격의 4배 이상을 권장한다. 우리는 30초 간격이므로 최소 2분이다.",
+          "alt": "계속 증가하는 카운터 그래프와 rate 적용 후의 초당 증가량 그래프 비교",
+          "viewBox": "0 0 960 330"
+        }
+      ],
+      "legacy_png": [
+        "seq-request-scrape.png"
+      ]
+    },
+    {
+      "chapter": "07",
+      "title": "대시보드와 알림",
+      "doc": "ch07-alerting.html",
+      "slides": [
+        {
+          "id": "07-01",
+          "title": "패널 40개짜리 대시보드는 아무도 안 본다",
+          "screen": "그래프의 장벽",
+          "say": "한 화면은 하나의 질문에 답해야 한다",
+          "bridge": "우리 RED 대시보드는 '지금 정상인가' 하나만",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch07-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "07-02",
+          "title": "울리는데 아무도 안 보는 알림",
+          "screen": "알림 피로 곡선",
+          "say": "진짜 알림까지 같이 무시하게 만든다. 없는 것보다 나쁘다",
+          "bridge": "사람이 지금 무언가 해야 하는 것만 알림으로",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "알림 피로 곡선"
+            }
+          ]
+        },
+        {
+          "id": "07-03",
+          "title": "고장 난 시각과 알림이 온 시각은 다르다",
+          "screen": "네 구간 타임라인",
+          "say": "스크레이프 간격 · 평가 주기 · for · group_wait",
+          "bridge": "for 를 0 으로 두면 튐에 울고, 10분이면 10분 늦게 안다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "고장 시각 → 알림 도착까지 네 구간 타임라인"
+            }
+          ]
+        },
+        {
+          "id": "07-04",
+          "title": "규칙에도 라벨이 필요하다",
+          "screen": "release 라벨 빠진 PrometheusRule",
+          "say": "조용히 무시된다. 05장과 같은 함정",
+          "bridge": "빼고 적용해 먼저 겪는다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "07-05",
+          "title": "실제로 터뜨려 본다",
+          "screen": "chaos/error 호출 → Alerts 화면 전이",
+          "say": "pending → firing 을 눈으로 본다",
+          "bridge": "10장에서 이 알림으로 카오스 실험을 판정한다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch07-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch07-fig1.svg",
+          "caption": "그림 1. 패널 일곱 개. 더 넣고 싶은 것이 생기면 새 대시보드를 만드는 대신 먼저 지울 것을 찾는다. JVM 힙이나 GC는 이 화면이 아니라 별도의 심층 대시보드에 둔다 — \"응답이 느리다\"를 확인한 다음에 보는 지표이기 때문이다.",
+          "alt": "대시보드를 요약, RED 지표, 상세 순서로 배치하는 레이아웃 구조",
+          "viewBox": "0 0 960 380"
+        },
+        {
+          "file": "figures/ch07-fig2.svg",
+          "caption": "그림 2. pending 상태는 프로메테우스 /alerts 화면에서 확인할 수 있다. 알림을 만든 직후 여기서 pending을 눈으로 보는 것이, 규칙이 동작하는지 확인하는 가장 빠른 방법이다.",
+          "alt": "알림이 inactive에서 pending을 거쳐 firing으로 바뀌는 시간 흐름",
+          "viewBox": "0 0 960 300"
+        }
+      ],
+      "legacy_png": [
+        "lifecycle-alert.png"
+      ]
+    },
+    {
+      "chapter": "08",
+      "title": "로그 수집 — Loki + Alloy",
+      "doc": "ch08-logging-loki-alloy.html",
+      "slides": [
+        {
+          "id": "08-01",
+          "title": "파드가 사라지면 로그도 사라진다",
+          "screen": "노드 파일 → 파드 삭제",
+          "say": "사고를 조사할 때 필요한 로그가 대개 이미 사라진 로그다",
+          "bridge": "그래서 수집기를 둔다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch08-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "08-02",
+          "title": "검색하면 나오는 두 가지를 쓰지 않는다",
+          "screen": "Promtail EOL · loki-stack 차트",
+          "say": "Promtail 은 2026-03-02 EOL. 저장소는 grafana 가 아니라 grafana-community",
+          "bridge": "그대로 따라 하면 EOL 컴포넌트를 새로 설치하게 된다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "08-03",
+          "title": "로키는 본문을 인덱싱하지 않는다",
+          "screen": "라벨 인덱스 vs 압축된 본문",
+          "say": "라벨을 많이 붙일수록 비용이 급격히 는다",
+          "bridge": "메트릭 카디널리티와 같은 함정",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch08-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "08-04",
+          "title": "라벨로 먼저 좁히고 문자열로 거른다",
+          "screen": "LogQL 두 줄",
+          "say": "순서를 뒤집으면 느리다",
+          "bridge": "마지막으로 메트릭과 로그를 같은 시간축에 겹친다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch08-fig1.svg",
+          "caption": "그림 1. 프로메테우스의 카디널리티 문제와 정확히 같은 구조다. 06장에서 배운 \"라벨 값은 유한한 집합이어야 한다\"는 원칙이 로그에도 그대로 적용된다.",
+          "alt": "로키가 라벨만 색인하고 로그 본문은 압축 저장하는 구조",
+          "viewBox": "0 0 960 320"
+        },
+        {
+          "file": "figures/ch08-fig2.svg",
+          "caption": "그림 2. 애플리케이션 코드는 한 줄도 바뀌지 않는다. 표준 출력에만 쓰면 나머지는 플랫폼이 처리한다 — 컨테이너 환경에서 로그 파일을 직접 관리하지 말라는 원칙이 여기서 나온다.",
+          "alt": "애플리케이션 표준 출력에서 Alloy를 거쳐 로키에 저장되고 그라파나가 조회하는 경로",
+          "viewBox": "0 0 960 300"
+        }
+      ],
+      "legacy_png": [
+        "dataflow-log-pipeline.png"
+      ]
+    },
+    {
+      "chapter": "09",
+      "title": "운영과 모범 사례",
+      "doc": "ch09-operations.html",
+      "slides": [
+        {
+          "id": "09-01",
+          "title": "지금 설정은 노트북용이다",
+          "screen": "실습 vs 운영 대비 표",
+          "say": "보존 짧고 복제본 없고 인증 열려 있고 제한이 헐겁다",
+          "bridge": "그대로 올리면 첫 주에 문제가 난다",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "09-02",
+          "title": "프로메테우스를 죽이는 것은 트래픽이 아니다",
+          "screen": "시계열 수 폭증 그래프",
+          "say": "라벨에 사용자 ID 나 URL 이 들어가면 수만 개로 는다",
+          "bridge": "카디널리티가 1번 사망 원인",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch09-fig2.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "09-03",
+          "title": "느낌으로는 못 고친다",
+          "screen": "tsdb 상태 질의 출력 · 상위 메트릭",
+          "say": "현재 시계열 수를 먼저 숫자로 만든다",
+          "bridge": "그다음 metricRelabelings 로 스크레이프 시점에 잘라낸다",
+          "needs": [
+            "output",
+            "code"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "09-04",
+          "title": "간격·보존·디스크는 한 덩어리",
+          "screen": "삼각형 · 둘을 정하면 하나가 결정된다",
+          "say": "무엇을 포기할지 먼저 정하고 숫자를 넣는다",
+          "bridge": "마지막으로 이 체계가 쓸모 있는지 확인한다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "간격 · 보존 · 디스크 삼각형"
+            }
+          ]
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch09-fig1.svg",
+          "caption": "그림 1. 00장에서 그렸던 목표 구조가 그대로 완성됐다. 화살표 방향 — 메트릭은 당겨오고 로그는 밀어 넣는다 — 도 그때 예고한 그대로다.",
+          "alt": "아홉 단계를 거쳐 완성된 관측 스택의 전체 구조",
+          "viewBox": "0 0 960 430"
+        },
+        {
+          "file": "figures/ch09-fig2.svg",
+          "caption": "그림 2. 02장에서 @PathVariable로 매핑해 uri가 /api/orders/{id}로 찍히게 한 것이 바로 이 사고를 막는 장치였다. 직접 문자열을 파싱해 라우팅했다면 주문 ID가 그대로 라벨이 됐을 것이다.",
+          "alt": "메트릭 하나가 라벨 조합의 곱만큼 시계열로 늘어나는 구조",
+          "viewBox": "0 0 960 340"
+        }
+      ],
+      "legacy_png": []
+    },
+    {
+      "chapter": "10",
+      "title": "테스팅과 카오스 실험",
+      "doc": "ch10-chaos-testing.html",
+      "slides": [
+        {
+          "id": "10-01",
+          "title": "쓸모 있는지 아는 유일한 방법",
+          "screen": "이상을 일부러 만든다",
+          "say": "07장 알림이 우는지, 05장 대시보드가 보여 주는지 판정한다",
+          "bridge": "가설을 먼저 쓰고 실험을 나중에 돌린다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "10-02",
+          "title": "게임 데이 네 단계",
+          "screen": "가설 → 이벤트 → 대조 → 판정",
+          "say": "실험 후에 가설을 쓰면 게임 데이가 아니라 사후 합리화다",
+          "bridge": "시트 1~3번을 실험 전에 채운다",
+          "needs": [
+            "output"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "10-03",
+          "title": "폭발 반경 최소화",
+          "screen": "파드 1개 · 네임스페이스 하나 · 5분",
+          "say": "라벨로 지우면 매칭되는 파드가 전부 죽는다. 이름을 골라 하나만",
+          "bridge": "첫 실험은 손으로 한다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "10-04",
+          "title": "책과 달라진 것",
+          "screen": "Chaos Toolkit 0.39.0(2024-04) 이후 릴리스 없음",
+          "say": "Chaos Mesh 를 쓴다. 실험이 CR 로 저장소에 남는다",
+          "bridge": "재현성이 여기서 갈린다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "10-05",
+          "title": "설치 성공과 동작함은 다르다",
+          "screen": "파드는 Running, 실험은 무반응",
+          "say": "socketPath 를 빼면 chaos-daemon 이 붙을 소켓이 없다",
+          "bridge": "로그에 no such file or directory",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "10-06",
+          "title": "주입한 지연 600ms, 알림은 3분 뒤",
+          "screen": "실험 3 타임라인 4행",
+          "say": "그 3분은 for 가 만든 것이다",
+          "bridge": "07장의 네 구간이 여기서 눈에 보인다",
+          "needs": [
+            "table"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null,
+          "gaps": [
+            {
+              "kind": "figure",
+              "spec": "실험 3 타임라인 4행"
+            }
+          ]
+        },
+        {
+          "id": "10-07",
+          "title": "안전장치를 빼면 가설이 기각된다",
+          "screen": "replicas 1 로 줄인 뒤 파드 킬",
+          "say": "502 · 에러율 100% · AppHighErrorRate 발화",
+          "bridge": "03장에서 심은 것들이 그것을 빼는 순간 증명된다",
+          "needs": [
+            "text"
+          ],
+          "assets": {
+            "figures": [],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        },
+        {
+          "id": "10-08",
+          "title": "기각도 실험 성공이다",
+          "screen": "시트 4번 칸",
+          "say": "몰랐던 취약점을 장애 전에 찾은 것",
+          "bridge": "게임 데이의 채점 기준",
+          "needs": [
+            "figure"
+          ],
+          "assets": {
+            "figures": [
+              "figures/ch10-fig1.svg"
+            ],
+            "code": [],
+            "output": [],
+            "tables": []
+          },
+          "notes": null
+        }
+      ],
+      "figures": [
+        {
+          "file": "figures/ch10-fig1.svg",
+          "caption": "1~3번을 실험 전에 채운다. 실험을 돌리고 나서 가설을 쓰면 게임 데이가 아니라 사후 합리화다. 4번 판정 칸만 실험 후에 채우고, 기각이면 기각이라고 적는다 — 몰랐던 취약점을 장애 전에 찾은 것이므로 그것도 실험 성공이다.",
+          "alt": "게임 데이 네 단계와 폭발 반경 최소화",
+          "viewBox": "0 0 960 300"
+        }
+      ],
+      "legacy_png": []
+    }
+  ],
+  "figure_pool": [
+    {
+      "file": "figures/ch00-fig1.svg",
+      "use": "물리 구조. 00장 표지 또는 01장 도입"
+    },
+    {
+      "file": "figures/ch00-fig3.svg",
+      "use": "장 의존 흐름. 전체 로드맵 장표"
+    },
+    {
+      "file": "figures/ch01-fig2.svg",
+      "use": "API 서버 바인딩. 01장 함정 보강"
+    },
+    {
+      "file": "figures/ch09-fig1.svg",
+      "use": "완성된 목표 구조. 09장 또는 마무리 장표"
+    }
+  ],
+  "gaps": {
+    "figure": [
+      {
+        "slide": "00-02",
+        "spec": "좌우 두 칸 — 지연 그래프 / 로그 한 줄"
+      },
+      {
+        "slide": "00-03",
+        "spec": "폐쇄형 관측과 개방형 관측 대비"
+      },
+      {
+        "slide": "01-02",
+        "spec": "시간축 — 지금 20줄 vs 나중에 노드 진입"
+      },
+      {
+        "slide": "02-01",
+        "spec": "VM 수명 vs 파드 수명 대비 그래프"
+      },
+      {
+        "slide": "02-03",
+        "spec": "지연 분포 — 평균선과 P99 선"
+      },
+      {
+        "slide": "03-05",
+        "spec": "이미지 크기 비교 막대 (1.02GB → 475MB)"
+      },
+      {
+        "slide": "04-01",
+        "spec": "메모리 사용량의 네 출처"
+      },
+      {
+        "slide": "07-02",
+        "spec": "알림 피로 곡선"
+      },
+      {
+        "slide": "07-03",
+        "spec": "고장 시각 → 알림 도착까지 네 구간 타임라인"
+      },
+      {
+        "slide": "09-04",
+        "spec": "간격 · 보존 · 디스크 삼각형"
+      },
+      {
+        "slide": "10-06",
+        "spec": "실험 3 타임라인 4행"
+      }
+    ],
+    "note": "GUIDE 의 인라인 SVG 방식으로 그린다 — 흰 배경, #585f6b 선, 모노스페이스 라벨"
+  },
+  "palette_check": {
+    "guide_declares": [
+      "#15181d",
+      "#585f6b",
+      "#d8dbe0",
+      "#f5f6f7",
+      "#1a4fa0",
+      "#8f4408"
+    ],
+    "figures_also_use": [
+      "#1f4d8f",
+      "#2e7d4f",
+      "#6a4a9c",
+      "#b4621a",
+      "#9aa1ad"
+    ],
+    "verdict": "도판이 GUIDE 보다 색을 더 쓴다. 흐름 구분(pull 보라 / push 주황 / 질의 파랑)에 의미가 실려 있으므로 도판을 고치지 말고 GUIDE 팔레트 표를 갱신하는 편이 맞다."
+  }
+}

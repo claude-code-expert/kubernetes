@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-label="네임스페이스별 구성요소와 메트릭 pull, 로그 push 데이터 흐름">
+      <rect width="960" height="500" fill="#ffffff"/>
+
+      <!-- 클러스터 경계 -->
+      <rect x="16" y="40" width="704" height="444" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="32" y="30" font-family="ui-monospace,monospace" font-size="12.5" fill="#585f6b">kind 클러스터</text>
+
+      <!-- apps ns -->
+      <rect x="40" y="64" width="290" height="176" fill="none" stroke="#15181d" stroke-width="1.5"/>
+      <text x="56" y="88" font-family="ui-monospace,monospace" font-size="12.5" fill="#585f6b">namespace: apps</text>
+      <rect x="56" y="102" width="258" height="46" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="70" y="122" font-size="13.5" fill="#15181d">gateway</text>
+      <text x="70" y="139" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">Spring Cloud Gateway · :8080</text>
+      <rect x="56" y="158" width="258" height="46" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="70" y="178" font-size="13.5" fill="#15181d">order-api</text>
+      <text x="70" y="195" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">Spring Boot 4.1 · /actuator/*</text>
+      <text x="56" y="226" font-size="12" fill="#585f6b">표준 출력(stdout)으로 로그 기록</text>
+
+      <!-- logging ns -->
+      <rect x="40" y="272" width="290" height="200" fill="none" stroke="#15181d" stroke-width="1.5"/>
+      <text x="56" y="296" font-family="ui-monospace,monospace" font-size="12.5" fill="#585f6b">namespace: logging</text>
+      <rect x="56" y="310" width="258" height="46" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="70" y="330" font-size="13.5" fill="#15181d">Grafana Alloy</text>
+      <text x="70" y="347" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">DaemonSet · 노드마다 1개</text>
+      <rect x="56" y="390" width="258" height="46" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="70" y="410" font-size="13.5" fill="#15181d">Loki</text>
+      <text x="70" y="427" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">로그 저장 · LogQL 질의 응답</text>
+      <text x="56" y="458" font-size="12" fill="#585f6b">Promtail은 2026-03 EOL, 사용하지 않음</text>
+
+      <!-- monitoring ns -->
+      <rect x="382" y="64" width="308" height="392" fill="none" stroke="#15181d" stroke-width="1.5"/>
+      <text x="398" y="88" font-family="ui-monospace,monospace" font-size="12.5" fill="#585f6b">namespace: monitoring</text>
+      <rect x="416" y="102" width="258" height="44" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="430" y="130" font-size="13.5" fill="#15181d">Prometheus</text>
+      <rect x="416" y="158" width="258" height="44" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="430" y="186" font-size="13.5" fill="#15181d">Alertmanager</text>
+      <rect x="416" y="214" width="258" height="44" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="430" y="242" font-size="13.5" fill="#15181d">Grafana</text>
+      <rect x="416" y="270" width="258" height="44" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="430" y="298" font-size="13.5" fill="#15181d">kube-state-metrics</text>
+      <rect x="416" y="326" width="258" height="44" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="430" y="347" font-size="13.5" fill="#15181d">node-exporter</text>
+      <text x="430" y="363" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">DaemonSet</text>
+      <text x="398" y="400" font-size="12" fill="#585f6b">kube-prometheus-stack 차트 하나로</text>
+      <text x="398" y="418" font-size="12" fill="#585f6b">위 5개가 한 번에 설치된다</text>
+
+      <!-- pull: prometheus → apps -->
+      <path d="M414 124 L336 124" fill="none" stroke="#6a4a9c" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ar-p2)"/>
+      <text x="375" y="114" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#6a4a9c">pull · 30s</text>
+
+      <!-- grafana → prometheus (내부 질의) -->
+      <path d="M396 214 L396 150" fill="none" stroke="#1f4d8f" stroke-width="1.5" marker-end="url(#ar-b)"/>
+      <text x="390" y="190" text-anchor="end" font-family="ui-monospace,monospace" font-size="11" fill="#1f4d8f">PromQL</text>
+
+      <!-- grafana → loki -->
+      <path d="M414 236 L346 236 L346 413 L318 413" fill="none" stroke="#1f4d8f" stroke-width="1.5" marker-end="url(#ar-b)"/>
+      <text x="352" y="322" font-family="ui-monospace,monospace" font-size="11" fill="#1f4d8f">LogQL</text>
+
+      <!-- alloy → apps 로그 수집 -->
+      <path d="M185 308 L185 248" fill="none" stroke="#b4621a" stroke-width="1.5" marker-end="url(#ar-o)"/>
+      <text x="196" y="262" font-family="ui-monospace,monospace" font-size="11" fill="#b4621a">tail /var/log/pods</text>
+
+      <!-- alloy → loki push -->
+      <path d="M185 358 L185 386" fill="none" stroke="#b4621a" stroke-width="1.5" marker-end="url(#ar-o)"/>
+      <text x="196" y="378" font-family="ui-monospace,monospace" font-size="11" fill="#b4621a">push</text>
+
+      <!-- 브라우저 -->
+      <rect x="772" y="214" width="164" height="60" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="854" y="240" text-anchor="middle" font-size="13.5" fill="#15181d">브라우저</text>
+      <text x="854" y="258" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">localhost:3000</text>
+      <path d="M770 244 L678 244" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#ar-g)"/>
+      <text x="704" y="234" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">port-forward</text>
+
+      <defs>
+        <marker id="ar-p2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+        </marker>
+        <marker id="ar-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1f4d8f"/>
+        </marker>
+        <marker id="ar-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#b4621a"/>
+        </marker>
+        <marker id="ar-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+        </marker>
+      </defs>
+    </svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 392" role="img" aria-label="개발 PC 안에서 도커 컨테이너 3개가 쿠버네티스 노드로 동작하는 구조">
+      <rect width="960" height="392" fill="#ffffff"/>
+
+      <!-- 개발 PC -->
+      <rect x="16" y="16" width="928" height="360" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="32" y="40" font-family="ui-monospace,monospace" font-size="13" fill="#585f6b">개발 PC — macOS / Ubuntu / Windows(WSL2)</text>
+
+      <!-- CLI 칩 -->
+      <rect x="32" y="54" width="238" height="36" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="151" y="77" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13.5" fill="#15181d">kubectl · helm · kind CLI</text>
+
+      <!-- API 접근 화살표 -->
+      <path d="M151 90 L151 118 L200 118 L200 150" fill="none" stroke="#6a4a9c" stroke-width="1.5" marker-end="url(#ar-p)"/>
+      <text x="212" y="122" font-family="ui-monospace,monospace" font-size="11.5" fill="#6a4a9c">kubeconfig → 6443/TCP</text>
+
+      <!-- Docker Engine -->
+      <rect x="32" y="104" width="896" height="256" fill="none" stroke="#15181d" stroke-width="1.5"/>
+      <text x="912" y="126" text-anchor="end" font-family="ui-monospace,monospace" font-size="12.5" fill="#585f6b">Docker Engine (또는 Podman)</text>
+
+      <!-- 노드 3개 -->
+      <g>
+        <rect x="60" y="150" width="270" height="180" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+        <text x="76" y="174" font-family="ui-monospace,monospace" font-size="13" fill="#1f4d8f">kind-control-plane</text>
+        <line x1="60" y1="186" x2="330" y2="186" stroke="#d8dbe0" stroke-width="1"/>
+        <text x="76" y="208" font-size="13" fill="#15181d">kube-apiserver</text>
+        <text x="76" y="230" font-size="13" fill="#15181d">etcd</text>
+        <text x="76" y="252" font-size="13" fill="#15181d">kube-scheduler</text>
+        <text x="76" y="274" font-size="13" fill="#15181d">kube-controller-manager</text>
+        <text x="76" y="304" font-size="12" fill="#585f6b">컨테이너 1개 = 노드 1개</text>
+      </g>
+      <g>
+        <rect x="350" y="150" width="270" height="180" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+        <text x="366" y="174" font-family="ui-monospace,monospace" font-size="13" fill="#1f4d8f">kind-worker</text>
+        <line x1="350" y1="186" x2="620" y2="186" stroke="#d8dbe0" stroke-width="1"/>
+        <text x="366" y="208" font-size="13" fill="#15181d">kubelet · containerd</text>
+        <rect x="366" y="222" width="112" height="30" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+        <text x="422" y="242" text-anchor="middle" font-size="12.5" fill="#2e7d4f">gateway 파드</text>
+        <rect x="486" y="222" width="118" height="30" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+        <text x="545" y="242" text-anchor="middle" font-size="12.5" fill="#2e7d4f">order-api 파드</text>
+        <text x="366" y="278" font-size="12" fill="#585f6b">애플리케이션 워크로드</text>
+      </g>
+      <g>
+        <rect x="640" y="150" width="270" height="180" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+        <text x="656" y="174" font-family="ui-monospace,monospace" font-size="13" fill="#1f4d8f">kind-worker2</text>
+        <line x1="640" y1="186" x2="910" y2="186" stroke="#d8dbe0" stroke-width="1"/>
+        <text x="656" y="208" font-size="13" fill="#15181d">kubelet · containerd</text>
+        <rect x="656" y="222" width="114" height="30" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+        <text x="713" y="242" text-anchor="middle" font-size="12.5" fill="#2e7d4f">Prometheus</text>
+        <rect x="778" y="222" width="116" height="30" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+        <text x="836" y="242" text-anchor="middle" font-size="12.5" fill="#2e7d4f">Grafana · Loki</text>
+        <text x="656" y="278" font-size="12" fill="#585f6b">관측 스택 워크로드</text>
+      </g>
+
+      <defs>
+        <marker id="ar-p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+        </marker>
+      </defs>
+    </svg>

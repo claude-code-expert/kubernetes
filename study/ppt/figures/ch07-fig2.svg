@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-label="알림이 inactive에서 pending을 거쳐 firing으로 바뀌는 시간 흐름">
+      <rect width="960" height="300" fill="#ffffff"/>
+
+      <text x="24" y="34" font-size="13" fill="#15181d">규칙: 에러율 &gt; 5%, <tspan font-family="ui-monospace,monospace" font-size="12">for: 2m</tspan></text>
+
+      <!-- 조건 라인 -->
+      <text x="24" y="72" font-size="12" fill="#585f6b">조건 충족 여부</text>
+      <line x1="150" y1="66" x2="920" y2="66" stroke="#d8dbe0" stroke-width="1"/>
+      <rect x="150" y="56" width="90" height="20" fill="#ffffff" stroke="#585f6b" stroke-width="1"/>
+      <text x="195" y="71" text-anchor="middle" font-size="11" fill="#585f6b">거짓</text>
+      <rect x="240" y="56" width="60" height="20" fill="#f5f6f7" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="270" y="71" text-anchor="middle" font-size="11" fill="#8f4408">참</text>
+      <rect x="300" y="56" width="60" height="20" fill="#ffffff" stroke="#585f6b" stroke-width="1"/>
+      <text x="330" y="71" text-anchor="middle" font-size="11" fill="#585f6b">거짓</text>
+      <rect x="360" y="56" width="380" height="20" fill="#f5f6f7" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="550" y="71" text-anchor="middle" font-size="11" fill="#8f4408">참 (계속 유지)</text>
+      <rect x="740" y="56" width="180" height="20" fill="#ffffff" stroke="#585f6b" stroke-width="1"/>
+      <text x="830" y="71" text-anchor="middle" font-size="11" fill="#585f6b">거짓</text>
+
+      <!-- 상태 라인 -->
+      <text x="24" y="140" font-size="12" fill="#585f6b">알림 상태</text>
+      <rect x="150" y="124" width="90" height="26" fill="#ffffff" stroke="#585f6b" stroke-width="1"/>
+      <text x="195" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#585f6b">inactive</text>
+      <rect x="240" y="124" width="60" height="26" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="270" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#1f4d8f">pending</text>
+      <rect x="300" y="124" width="60" height="26" fill="#ffffff" stroke="#585f6b" stroke-width="1"/>
+      <text x="330" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">inactive</text>
+      <rect x="360" y="124" width="140" height="26" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="430" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#1f4d8f">pending (2분)</text>
+      <rect x="500" y="124" width="240" height="26" fill="#ffffff" stroke="#8f4408" stroke-width="1.5"/>
+      <text x="620" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#8f4408">firing</text>
+      <rect x="740" y="124" width="180" height="26" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="830" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#2e7d4f">resolved</text>
+
+      <path d="M270 156 L270 182" fill="none" stroke="#585f6b" stroke-width="1.2" marker-end="url(#y1)"/>
+      <text x="282" y="178" font-size="11.5" fill="#585f6b">2분을 못 채우고 사라짐 — 알림 없음</text>
+
+      <path d="M500 156 L500 214" fill="none" stroke="#8f4408" stroke-width="1.2" marker-end="url(#y2)"/>
+      <text x="512" y="210" font-size="11.5" fill="#8f4408">2분을 버텼다 — 이 시점에 Alertmanager로 전달</text>
+
+      <line x1="24" y1="248" x2="936" y2="248" stroke="#d8dbe0" stroke-width="1"/>
+      <text x="24" y="274" font-size="12.5" fill="#15181d">for 값이 짧으면 노이즈가, 길면 발견이 늦어진다 — 지표의 변동성을 보고 정한다</text>
+
+      <defs>
+        <marker id="y1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+        </marker>
+        <marker id="y2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#8f4408"/>
+        </marker>
+      </defs>
+    </svg>

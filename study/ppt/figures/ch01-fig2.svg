@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" role="img" aria-label="루프백 바인딩일 때 스크레이프 실패, 0.0.0.0 바인딩일 때 성공하는 비교">
+      <rect width="960" height="400" fill="#ffffff"/>
+
+      <!-- 상단: 기본값 -->
+      <text x="24" y="34" font-family="ui-monospace,monospace" font-size="12" fill="#8f4408">기본값 — bind-address: 127.0.0.1</text>
+      <rect x="24" y="48" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="72" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-control-plane</text>
+      <rect x="40" y="86" width="298" height="34" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="52" y="108" font-family="ui-monospace,monospace" font-size="12" fill="#15181d">kube-controller-manager</text>
+      <text x="40" y="146" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">listen 127.0.0.1:10257</text>
+      <text x="40" y="164" font-size="11.5" fill="#585f6b">컨테이너 밖에서는 열리지 않은 포트</text>
+
+      <path d="M600 112 L364 112" fill="none" stroke="#8f4408" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <line x1="470" y1="98" x2="494" y2="126" stroke="#8f4408" stroke-width="2"/>
+      <line x1="494" y1="98" x2="470" y2="126" stroke="#8f4408" stroke-width="2"/>
+      <text x="482" y="150" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#8f4408">connection refused</text>
+
+      <rect x="602" y="48" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="618" y="72" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-worker2</text>
+      <rect x="618" y="86" width="298" height="34" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="630" y="108" font-size="12.5" fill="#15181d">Prometheus 파드</text>
+      <text x="618" y="146" font-size="11.5" fill="#585f6b">타깃 상태: DOWN</text>
+
+      <line x1="24" y1="204" x2="936" y2="204" stroke="#d8dbe0" stroke-width="1"/>
+
+      <!-- 하단: 패치 후 -->
+      <text x="24" y="238" font-family="ui-monospace,monospace" font-size="12" fill="#1a4fa0">패치 후 — bind-address: 0.0.0.0</text>
+      <rect x="24" y="252" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="40" y="276" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-control-plane</text>
+      <rect x="40" y="290" width="298" height="34" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="52" y="312" font-family="ui-monospace,monospace" font-size="12" fill="#15181d">kube-controller-manager</text>
+      <text x="40" y="350" font-family="ui-monospace,monospace" font-size="11.5" fill="#1a4fa0">listen 0.0.0.0:10257 (HTTPS)</text>
+      <text x="40" y="368" font-size="11.5" fill="#585f6b">노드 IP로 접근 가능</text>
+
+      <path d="M600 316 L364 316" fill="none" stroke="#1a4fa0" stroke-width="1.5" marker-end="url(#a2)"/>
+      <text x="482" y="306" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#1a4fa0">GET /metrics · 토큰 인증</text>
+
+      <rect x="602" y="252" width="330" height="126" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+      <text x="618" y="276" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-worker2</text>
+      <rect x="618" y="290" width="298" height="34" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text x="630" y="312" font-size="12.5" fill="#15181d">Prometheus 파드</text>
+      <text x="618" y="350" font-size="11.5" fill="#585f6b">타깃 상태: UP</text>
+
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1a4fa0"/>
+        </marker>
+      </defs>
+    </svg>
