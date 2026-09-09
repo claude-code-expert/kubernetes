@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="m10a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="m10a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+    <marker id="m10a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .dash { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; stroke-dasharray:4 3; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:13px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
+    .wline { stroke:#a1442a; stroke-width:1.5; fill:none; }
+    .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="390" rx="6"/>
+  <text class="t-h" x="40" y="46">롤아웃 중에는 레플리카셋이 둘이다</text>
+  <text class="t-sub" x="40" y="66">템플릿이 바뀌면 새 해시의 레플리카셋이 생긴다. 디플로이먼트는 한쪽을 늘리며 다른 쪽을 줄인다. <tspan class="t-mono">maxSurge 1 · maxUnavailable 0</tspan></text>
+
+  <text class="t-sub" x="46" y="96">① 시작 — 리비전 1</text>
+  <rect class="box" x="40" y="106" width="240" height="228" rx="5"/>
+  <rect class="accent" x="58" y="122" width="204" height="30" rx="4"/>
+  <text class="t-acc" x="70" y="142">Deployment journal-api</text>
+  <line class="line" x1="160" y1="152" x2="160" y2="172" marker-end="url(#m10a1)"/>
+  <rect class="box" x="58" y="172" width="204" height="30" rx="4"/>
+  <text class="t-title" x="70" y="192">ReplicaSet v1</text>
+  <text class="t-mono" x="232" y="192">4/4</text>
+    <rect class="box" x="70" y="216" width="20" height="20" rx="3"/>
+    <rect class="box" x="96" y="216" width="20" height="20" rx="3"/>
+    <rect class="box" x="122" y="216" width="20" height="20" rx="3"/>
+    <rect class="box" x="148" y="216" width="20" height="20" rx="3"/>
+  <text class="t-sub" x="70" y="256">파드 4개 · 전부 v1</text>
+  <rect class="soft" x="58" y="274" width="204" height="44" rx="4"/>
+  <text class="t-mono" x="70" y="292">rollout status</text>
+  <text class="t-sub" x="70" y="310">complete</text>
+
+  <line class="line" x1="286" y1="220" x2="310" y2="220" marker-end="url(#m10a1)"/>
+
+  <text class="t-sub" x="322" y="96">② 진행 중 — 둘이 공존</text>
+  <rect class="box" x="316" y="106" width="268" height="228" rx="5"/>
+  <rect class="accent" x="334" y="122" width="232" height="30" rx="4"/>
+  <text class="t-acc" x="346" y="142">Deployment journal-api</text>
+  <line class="line" x1="400" y1="152" x2="400" y2="172" marker-end="url(#m10a1)"/>
+  <line class="line" x1="500" y1="152" x2="500" y2="172" marker-end="url(#m10a1)"/>
+  <rect class="box" x="334" y="172" width="112" height="30" rx="4"/>
+  <text class="t-title" x="344" y="192">RS v1</text>
+  <text class="t-mono" x="416" y="192">3/3</text>
+  <rect class="accent" x="454" y="172" width="112" height="30" rx="4"/>
+  <text class="t-acc" x="464" y="192">RS v2</text>
+  <text class="t-mono" x="536" y="192">2/2</text>
+    <rect class="box" x="340" y="216" width="20" height="20" rx="3"/>
+    <rect class="box" x="366" y="216" width="20" height="20" rx="3"/>
+    <rect class="box" x="392" y="216" width="20" height="20" rx="3"/>
+    <rect class="accent" x="460" y="216" width="20" height="20" rx="3"/>
+    <rect class="dash" x="486" y="216" width="20" height="20" rx="3"/>
+  <text class="t-sub" x="340" y="256">v1 3개</text>
+  <text class="t-sub" x="460" y="256">v2 2개 · 점선은 not ready</text>
+  <rect class="soft" x="334" y="274" width="232" height="44" rx="4"/>
+  <text class="t-sub" x="346" y="292">합이 5 — 목표 4 + surge 1</text>
+  <text class="t-sub" x="346" y="310">용량은 한 번도 4 아래로 내려가지 않는다</text>
+
+  <line class="line" x1="590" y1="220" x2="614" y2="220" marker-end="url(#m10a1)"/>
+
+  <text class="t-sub" x="626" y="96">③ 완료 — 리비전 2</text>
+  <rect class="box" x="620" y="106" width="240" height="228" rx="5"/>
+  <rect class="accent" x="638" y="122" width="204" height="30" rx="4"/>
+  <text class="t-acc" x="650" y="142">Deployment journal-api</text>
+  <line class="line" x1="740" y1="152" x2="740" y2="172" marker-end="url(#m10a1)"/>
+  <rect class="dash" x="638" y="172" width="98" height="30" rx="4"/>
+  <text class="t-sub" x="648" y="192">RS v1</text>
+  <text class="t-mono" x="706" y="192">0/0</text>
+  <rect class="accent" x="744" y="172" width="98" height="30" rx="4"/>
+  <text class="t-acc" x="754" y="192">RS v2</text>
+  <text class="t-mono" x="812" y="192">4/4</text>
+    <rect class="accent" x="650" y="216" width="20" height="20" rx="3"/>
+    <rect class="accent" x="676" y="216" width="20" height="20" rx="3"/>
+    <rect class="accent" x="702" y="216" width="20" height="20" rx="3"/>
+    <rect class="accent" x="728" y="216" width="20" height="20" rx="3"/>
+  <text class="t-sub" x="650" y="256">파드 4개 · 전부 v2</text>
+  <rect class="soft" x="638" y="274" width="204" height="44" rx="4"/>
+  <text class="t-sub" x="650" y="292">v1 은 0개인 채로 남는다</text>
+  <text class="t-mono" x="650" y="310">rollout undo</text>
+
+  <rect class="warnbox" x="40" y="346" width="820" height="46" rx="5"/>
+  <text class="t-warn" x="54" y="367">옛 레플리카셋을 0개로 남겨 두는 것이 롤백의 재료다. 이력을 지우면 되돌릴 지점도 사라진다.</text>
+  <text class="t-sub" x="54" y="385">②에서 "준비됐다"를 판정하는 것은 레디니스 프로브다. 프로브가 없으면 컨테이너가 뜬 것만으로 옛 파드를 뺀다.</text>
+</svg>
