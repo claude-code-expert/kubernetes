@@ -123,14 +123,14 @@
   <h1>kind 클러스터 구축</h1>
   <p class="lede">
     노드 3개짜리 로컬 클러스터를 만듭니다. 여기서 설정 파일 20줄을 제대로 쓰면
-    04단계에서 프로메테우스 타깃이 전부 초록으로 뜨고, 대충 쓰면 <code>kube-controller-manager</code>·
+    04장에서 프로메테우스 타깃이 전부 초록으로 뜨고, 대충 쓰면 <code>kube-controller-manager</code>·
     <code>kube-scheduler</code>·<code>etcd</code>·<code>kube-proxy</code> 네 개가 DOWN 상태로 남습니다.
     그 차이를 만드는 것이 이 문서의 전부입니다.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 30–40분</span>
-    <span>선행: 00단계 preflight 통과</span>
+    <span>선행: 00장 preflight 통과</span>
   </div>
 </header>
 
@@ -188,7 +188,7 @@
   </table>
 
   <p>
-    워커를 굳이 둘로 나누고 라벨을 붙이는 이유는 06·10단계에서
+    워커를 굳이 둘로 나누고 라벨을 붙이는 이유는 06·09장에서
     <span class="term" title="nodeSelector — 파드를 특정 라벨을 가진 노드에만 배치하는 스케줄링 조건">노드셀렉터</span>와
     노드별 메트릭 차이를 실습하기 위해서입니다. 메모리가 12 GiB 미만이면 워커를 하나로 줄이고
     라벨 두 개를 같은 노드에 붙여도 됩니다.
@@ -273,9 +273,9 @@
       <tr><th style="width:22%">호스트 포트</th><th style="width:26%">용도</th><th>연결 시점</th></tr>
     </thead>
     <tbody>
-      <tr><td class="num">30080</td><td>gateway (애플리케이션)</td><td>03단계</td></tr>
-      <tr><td class="num">30300</td><td>Grafana</td><td>05단계</td></tr>
-      <tr><td class="num">30900</td><td>Prometheus UI</td><td>04단계</td></tr>
+      <tr><td class="num">30080</td><td>gateway (애플리케이션)</td><td>03장</td></tr>
+      <tr><td class="num">30300</td><td>Grafana</td><td>05장</td></tr>
+      <tr><td class="num">30900</td><td>Prometheus UI</td><td>04장</td></tr>
     </tbody>
   </table>
 </section>
@@ -288,7 +288,7 @@
     kubeadm으로 만든 클러스터는 컨트롤 플레인 구성요소의 메트릭 포트를
     <strong>루프백에만</strong> 엽니다. 보안상 합리적인 기본값이지만, 프로메테우스는 다른 노드의
     파드에서 스크레이프를 시도하므로 연결 자체가 성립하지 않습니다.
-    04단계에서 타깃 목록에 빨간 줄 네 개가 뜨는 원인이 이것입니다.
+    04장에서 타깃 목록에 빨간 줄 네 개가 뜨는 원인이 이것입니다.
   </p>
 
   <figure>
@@ -344,7 +344,7 @@
     <figcaption>
       <b>그림 2.</b> 해결책은 바인딩 주소를 <code>0.0.0.0</code>으로 바꾸는 것뿐이다.
       인터넷에 떠도는 일부 가이드처럼 <code>secure-port: "0"</code>으로 HTTPS를 끄고 평문 포트를 여는 방법은
-      <strong>따라 하지 않는다</strong>. 인증 없이 클러스터 내부 메트릭이 노출되고, 04단계에서
+      <strong>따라 하지 않는다</strong>. 인증 없이 클러스터 내부 메트릭이 노출되고, 04장에서
       차트 기본값(HTTPS 스크레이프)과도 어긋난다.
     </figcaption>
   </figure>
@@ -359,7 +359,7 @@
       <tr><td class="num">kube-controller-manager</td><td class="num">127.0.0.1:10257</td><td><code>bind-address: 0.0.0.0</code></td></tr>
       <tr><td class="num">kube-scheduler</td><td class="num">127.0.0.1:10259</td><td><code>bind-address: 0.0.0.0</code></td></tr>
       <tr><td class="num">etcd</td><td class="num">메트릭 미분리</td><td><code>listen-metrics-urls: http://0.0.0.0:2381</code>
-        <span class="note">클라이언트 포트(2379)는 상호 TLS 인증이 필요하다. 2381은 메트릭 전용 포트로, 04단계에서 이 포트를 스크레이프하도록 차트 값을 맞춘다</span></td></tr>
+        <span class="note">클라이언트 포트(2379)는 상호 TLS 인증이 필요하다. 2381은 메트릭 전용 포트로, 04장에서 이 포트를 스크레이프하도록 차트 값을 맞춘다</span></td></tr>
       <tr><td class="num">kube-proxy</td><td class="num">127.0.0.1:10249</td><td><code>metricsBindAddress: 0.0.0.0:10249</code></td></tr>
     </tbody>
   </table>
@@ -422,15 +422,15 @@ nodes:
     image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
     <span class="c"># 포트 매핑은 클러스터 생성 시점에만 정의할 수 있다. 나중에 못 늘린다.</span>
     extraPortMappings:
-      - containerPort: 30080      <span class="c"># gateway (03단계)</span>
+      - containerPort: 30080      <span class="c"># gateway (03장)</span>
         hostPort: 30080
         listenAddress: "127.0.0.1"
         protocol: TCP
-      - containerPort: 30300      <span class="c"># Grafana (05단계)</span>
+      - containerPort: 30300      <span class="c"># Grafana (05장)</span>
         hostPort: 30300
         listenAddress: "127.0.0.1"
         protocol: TCP
-      - containerPort: 30900      <span class="c"># Prometheus UI (04단계)</span>
+      - containerPort: 30900      <span class="c"># Prometheus UI (04장)</span>
         hostPort: 30900
         listenAddress: "127.0.0.1"
         protocol: TCP
@@ -593,7 +593,7 @@ etcd_cluster_version{cluster_version="3.6"} 1</span></code></pre>
   <h3>Apple Silicon에서의 이미지 아키텍처</h3>
   <p>
     위 다이제스트는 멀티 아키텍처 매니페스트를 가리키므로 M 시리즈 맥에서도 그대로 동작합니다.
-    다만 03단계에서 만들 애플리케이션 이미지는 <strong>빌드한 아키텍처와 노드 아키텍처가 같아야</strong> 합니다.
+    다만 03장에서 만들 애플리케이션 이미지는 <strong>빌드한 아키텍처와 노드 아키텍처가 같아야</strong> 합니다.
     인텔 맥과 M 시리즈 맥이 섞인 스터디라면 이미지를 서로 공유하지 말고 각자 빌드하세요.
   </p>
 
@@ -672,7 +672,7 @@ kubectl config use-context kind-obs</code></pre>
   <h2 class="sec"><span class="n">10</span>부록 — 로컬 레지스트리(선택)</h2>
 
   <p>
-    03단계에서는 <code>kind load docker-image</code>로 이미지를 노드에 직접 밀어 넣습니다.
+    03장에서는 <code>kind load docker-image</code>로 이미지를 노드에 직접 밀어 넣습니다.
     8명 실습에는 이 방식으로 충분합니다. 다만 이미지를 자주 고쳐 빌드하면
     매번 3개 노드에 전송하느라 느려지므로, 그때는 로컬 레지스트리를 붙이는 편이 낫습니다.
   </p>

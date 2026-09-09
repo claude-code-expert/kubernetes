@@ -105,14 +105,14 @@
   <div class="docnum">CHAPTER 07 / 11 · 쿠버네티스 관측성</div>
   <h1>대시보드와 알림</h1>
   <p class="lede">
-    06단계에서 쓴 질의를 대시보드 패널과 알림 규칙으로 옮깁니다.
+    06장에서 쓴 질의를 대시보드 패널과 알림 규칙으로 옮깁니다.
     기술적으로는 어렵지 않습니다. 어려운 것은 <strong>무엇을 넣지 않을지 정하는 일</strong>입니다.
     패널 30개짜리 대시보드와 알림 40개는 아무도 보지 않게 되고, 결국 없는 것과 같아집니다.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 70–90분</span>
-    <span>선행: 06단계 완료</span>
+    <span>선행: 06장 완료</span>
   </div>
 </header>
 
@@ -257,9 +257,9 @@
   </table>
 
   <div class="box ac">
-    <span class="t">05단계와 달라진 점</span>
+    <span class="t">05장과 달라진 점</span>
     <p>
-      05단계 예제에서는 <code>datasource</code> 필드를 아예 생략해 기본 데이터소스를 쓰게 했습니다.
+      05장 예제에서는 <code>datasource</code> 필드를 아예 생략해 기본 데이터소스를 쓰게 했습니다.
       패널만 있을 때는 그것으로 충분하지만, <b>쿼리 변수는 데이터소스를 명시해야</b> 값을 채울 수 있습니다.
       그래서 datasource 타입 변수를 만들고 <code>${datasource}</code>로 참조합니다.
       결과적으로 uid를 박아넣지 않으면서도 변수가 동작합니다.
@@ -458,7 +458,7 @@ kubectl -n monitoring logs -l app.kubernetes.io/name=grafana \
     <span class="t">변수가 비어 있다면</span>
     <p>
       <code>label_values()</code>는 해당 메트릭이 존재해야 값을 반환합니다.
-      06단계 이후 트래픽이 없었다면 프로메테우스가 오래된 시계열을 이미 잊었을 수 있습니다.
+      06장 이후 트래픽이 없었다면 프로메테우스가 오래된 시계열을 이미 잊었을 수 있습니다.
       요청을 몇 번 보내고 1분 뒤 새로고침하세요.
     </p>
   </div>
@@ -545,7 +545,7 @@ metadata:
   name: obs-study-app-rules
   namespace: apps
   labels:
-    <span class="c"># ServiceMonitor와 같은 이유로 필요하다 (06단계 ①번 고리)</span>
+    <span class="c"># ServiceMonitor와 같은 이유로 필요하다 (06장 ①번 고리)</span>
     release: kps
 spec:
   groups:
@@ -624,7 +624,7 @@ OrderRejectionSpike   inactive</span></code></pre>
     <p>
       위 숫자(5%, 500ms)는 예시일 뿐입니다. 실제로는 <strong>과거 데이터를 보고 정합니다</strong> —
       평소 P95가 200ms인 서비스에 500ms 임계값은 합리적이지만, 평소가 800ms인 서비스에는 매분 울리는 알림이 됩니다.
-      06단계에서 만든 그래프를 며칠 관찰한 뒤 정하는 것이 정석이고,
+      06장에서 만든 그래프를 며칠 관찰한 뒤 정하는 것이 정석이고,
       급하면 "평소값의 2~3배"에서 시작해 조정합니다.
     </p>
   </div>

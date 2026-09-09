@@ -113,7 +113,7 @@
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 60–80분</span>
-    <span>선행: 08단계까지 (09 트레이싱은 선택)</span>
+    <span>선행: 08장까지 완료</span>
   </div>
 </header>
 
@@ -165,7 +165,7 @@
       <rect width="960" height="430" fill="#ffffff"/>
 
       <rect x="16" y="34" width="928" height="380" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
-      <text x="32" y="26" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">kind 클러스터 — 노드 3개 (01단계)</text>
+      <text x="32" y="26" font-family="ui-monospace,monospace" font-size="12" fill="#585f6b">kind 클러스터 — 노드 3개 (01장)</text>
 
       <!-- apps -->
       <rect x="40" y="60" width="264" height="150" fill="#ffffff" stroke="#15181d" stroke-width="1.5"/>
@@ -222,7 +222,7 @@
       </defs>
     </svg>
     <figcaption>
-      <b>그림 1.</b> 00단계에서 그렸던 목표 구조가 그대로 완성됐다.
+      <b>그림 1.</b> 00장에서 그렸던 목표 구조가 그대로 완성됐다.
       화살표 방향 — 메트릭은 당겨오고 로그는 밀어 넣는다 — 도 그때 예고한 그대로다.
     </figcaption>
   </figure>
@@ -310,7 +310,7 @@ curl -s --get http://localhost:30900/api/v1/query \
       <text x="24" y="320" font-size="12" fill="#585f6b">사용자 ID · 요청 ID · 이메일 · 전체 URL · 타임스탬프는 절대 라벨이 될 수 없다</text>
     </svg>
     <figcaption>
-      <b>그림 2.</b> 02단계에서 <code>@PathVariable</code>로 매핑해 <code>uri</code>가
+      <b>그림 2.</b> 02장에서 <code>@PathVariable</code>로 매핑해 <code>uri</code>가
       <code>/api/orders/{id}</code>로 찍히게 한 것이 바로 이 사고를 막는 장치였다.
       직접 문자열을 파싱해 라우팅했다면 주문 ID가 그대로 라벨이 됐을 것이다.
     </figcaption>
@@ -452,7 +452,7 @@ curl -s --get http://localhost:30900/api/v1/query \
   </table>
 
   <div class="box">
-    <span class="t">04단계 설정의 함정</span>
+    <span class="t">04장 설정의 함정</span>
     <p>
       값 파일에 <code>retention: 3d</code>와 <code>retentionSize: 4GB</code>를 함께 넣었습니다.
       둘 중 <strong>먼저 도달하는 쪽이 이깁니다.</strong>
@@ -475,7 +475,7 @@ curl -s --get http://localhost:30900/api/v1/query \
 
   <h3>먼저 스로틀링부터 확인한다</h3>
   <p>
-    03단계에서 애플리케이션에 CPU 제한을 걸지 않았습니다.
+    03장에서 애플리케이션에 CPU 제한을 걸지 않았습니다.
     그 판단이 왜 필요했는지 숫자로 확인합니다.
   </p>
 
@@ -510,7 +510,7 @@ max by (pod) (
   <p>
     예전에는 자원을 바꾸려면 파드를 다시 만들어야 했습니다.
     <strong>In-Place Pod Resize가 1.35에서 정식 기능</strong>이 되면서 달라졌습니다.
-    01단계에서 만든 클러스터는 1.36이므로 바로 써볼 수 있습니다.
+    01장에서 만든 클러스터는 1.36이므로 바로 써볼 수 있습니다.
   </p>
 
 <pre data-lang="bash"><code>POD=$(kubectl -n apps get pod -l app.kubernetes.io/name=order-api \
@@ -654,13 +654,13 @@ kubectl -n apps get pod "$POD" \
       <tr><th style="width:6%">#</th><th style="width:32%">증상</th><th>첫 번째로 볼 곳</th></tr>
     </thead>
     <tbody>
-      <tr><td class="num">1</td><td>클러스터 생성이 타임아웃</td><td>Docker Desktop 메모리 할당. 10 GiB 미만이면 04단계에서 반드시 막힌다</td></tr>
-      <tr><td class="num">2</td><td>컨트롤 플레인 타깃 DOWN</td><td>01단계 bind-address 패치. 클러스터 재생성이 필요하다</td></tr>
+      <tr><td class="num">1</td><td>클러스터 생성이 타임아웃</td><td>Docker Desktop 메모리 할당. 10 GiB 미만이면 04장에서 반드시 막힌다</td></tr>
+      <tr><td class="num">2</td><td>컨트롤 플레인 타깃 DOWN</td><td>01장 bind-address 패치. 클러스터 재생성이 필요하다</td></tr>
       <tr><td class="num">3</td><td><code>ImagePullBackOff</code></td><td><code>kind load</code> 여부와 <code>imagePullPolicy: IfNotPresent</code></td></tr>
       <tr><td class="num">4</td><td><code>CrashLoopBackOff</code>인데 로그는 정상</td><td><code>startupProbe</code>의 <code>failureThreshold × periodSeconds</code></td></tr>
       <tr><td class="num">5</td><td>ServiceMonitor가 무시됨</td><td><code>release: kps</code> 라벨. 오류 없이 조용히 실패한다</td></tr>
       <tr><td class="num">6</td><td>타깃 그룹은 있는데 대상 0개</td><td>Service 라벨과 포트 <b>이름</b></td></tr>
-      <tr><td class="num">7</td><td><code>_bucket</code>이 없어 P95 계산 불가</td><td>02단계 <code>percentiles-histogram</code>. 이미지 재빌드 필요</td></tr>
+      <tr><td class="num">7</td><td><code>_bucket</code>이 없어 P95 계산 불가</td><td>02장 <code>percentiles-histogram</code>. 이미지 재빌드 필요</td></tr>
       <tr><td class="num">8</td><td><code>histogram_quantile</code>이 NaN</td><td><code>sum by</code>에 <code>le</code>가 빠졌는지</td></tr>
       <tr><td class="num">9</td><td>대시보드가 <code>No data</code></td><td>같은 질의를 프로메테우스 UI에서 실행해 데이터 유무부터 분리</td></tr>
       <tr><td class="num">10</td><td>알림이 안 울림</td><td><code>/alerts</code>에서 <code>pending</code> 여부 → Alertmanager 라우팅 순으로</td></tr>
@@ -696,7 +696,7 @@ kubectl -n apps get pod "$POD" \
     <tbody>
       <tr>
         <td>비슷한 대시보드가 세 개 이상</td>
-        <td>변수로 합친다. 07단계에서 만든 <code>service</code> 변수가 그 방법이다</td>
+        <td>변수로 합친다. 07장에서 만든 <code>service</code> 변수가 그 방법이다</td>
       </tr>
       <tr>
         <td>아무도 열지 않는 대시보드</td>
@@ -786,7 +786,7 @@ kubectl -n monitoring annotate configmap obs-red-dashboard grafana_folder="Obs S
 echo "완료 — http://localhost:30300 (grafana) · http://localhost:30900 (prometheus)"</code></pre>
 
   <p class="cap">
-    로그 스택(08단계)은 메모리를 크게 쓰므로 이 스크립트에 넣지 않았습니다. 필요할 때만 별도로 설치하세요.
+    로그 스택(08장)은 메모리를 크게 쓰므로 이 스크립트에 넣지 않았습니다. 필요할 때만 별도로 설치하세요.
   </p>
 </section>
 
@@ -816,7 +816,7 @@ echo "완료 — http://localhost:30300 (grafana) · http://localhost:30900 (pro
       </tr>
       <tr>
         <td>사내 이전 계획</td>
-        <td>06절 표에서 자기 팀에 해당하는 항목 3개를 골라 구체적 대안을 작성하기</td>
+        <td>07절 표에서 자기 팀에 해당하는 항목 3개를 골라 구체적 대안을 작성하기</td>
       </tr>
     </tbody>
   </table>
@@ -827,7 +827,7 @@ echo "완료 — http://localhost:30300 (grafana) · http://localhost:30900 (pro
     <li><code>metricRelabelings</code>를 적용하고 시계열 수 변화를 비교했다</li>
     <li>CPU 스로틀링과 메모리 사용률 질의를 실행해 봤다</li>
     <li>resize 서브리소스로 재시작 없이 자원을 바꿔 봤다</li>
-    <li>06절 "실습 → 운영" 표를 팀과 함께 읽었다</li>
+    <li>07절 "실습 → 운영" 표를 팀과 함께 읽었다</li>
     <li><code>rebuild.sh</code>로 재구축이 되는지 한 번 검증했다</li>
     <li>모든 매니페스트·값 파일·대시보드 JSON이 저장소에 있다</li>
     <li>실습이 끝난 클러스터를 삭제해 자원을 돌려받았다</li>
@@ -836,12 +836,17 @@ echo "완료 — http://localhost:30300 (grafana) · http://localhost:30900 (pro
   <div class="box ac">
     <span class="t">시리즈를 마치며</span>
     <p>
-      10개 문서를 지나오며 만든 것은 도구 모음이 아니라 <strong>질문의 순서</strong>입니다.
+      아홉 장을 지나오며 만든 것은 도구 모음이 아니라 <strong>질문의 순서</strong>입니다.
       "지금 문제가 있는가"(대시보드 상단) → "어느 서비스인가"(RED 지표) →
       "언제부터인가"(시계열) → "무슨 일이 있었나"(로그).
       도구는 몇 년 안에 바뀝니다. Promtail이 사라지고 Alloy가 온 것처럼요.
       하지만 이 순서는 남습니다. 다음에 새 도구를 도입할 때
       "이 순서의 어느 칸을 채우는가"만 물으면 됩니다.
+    </p>
+    <p>
+      <strong>다음 문서 — 10 · 테스팅과 카오스 실험.</strong> 순서를 세웠으니 그것이 실제로
+      동작하는지 확인할 차례입니다. 이상을 일부러 만들어 07장에서 만든 알림이 우는지,
+      05장의 대시보드가 그것을 보여 주는지 판정합니다. 가설을 먼저 쓰고 실험을 나중에 돌립니다.
     </p>
   </div>
 

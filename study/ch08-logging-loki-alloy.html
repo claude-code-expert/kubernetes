@@ -106,13 +106,13 @@
   <h1>로그 수집 (Loki + Alloy)</h1>
   <p class="lede">
     메트릭은 "무언가 이상하다"까지 알려주고 멈춥니다. 그다음 질문인 "무슨 일이 있었나"는 로그의 몫입니다.
-    로키를 올리고 Alloy로 파드 로그를 모은 뒤, 07단계 대시보드와 <strong>같은 시간축에</strong> 놓습니다.
+    로키를 올리고 Alloy로 파드 로그를 모은 뒤, 07장 대시보드와 <strong>같은 시간축에</strong> 놓습니다.
     2026년 기준으로 <em>Promtail은 쓰지 않으며</em>, 차트 저장소도 바뀌었습니다.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 60–80분</span>
-    <span>선행: 07단계 완료 · 메모리 여유 2 GiB</span>
+    <span>선행: 07장 완료 · 메모리 여유 2 GiB</span>
   </div>
 </header>
 
@@ -194,7 +194,7 @@
     </svg>
     <figcaption>
       <b>그림 1.</b> 프로메테우스의 카디널리티 문제와 정확히 같은 구조다.
-      06단계에서 배운 "라벨 값은 유한한 집합이어야 한다"는 원칙이 로그에도 그대로 적용된다.
+      06장에서 배운 "라벨 값은 유한한 집합이어야 한다"는 원칙이 로그에도 그대로 적용된다.
     </figcaption>
   </figure>
 </section>
@@ -318,7 +318,7 @@ loki:
           period: 24h
 
   limits_config:
-    <span class="c"># 구조화 메타데이터 — 라벨을 늘리지 않고 필드를 붙이는 방법 (08절 참조)</span>
+    <span class="c"># 구조화 메타데이터 — 라벨을 늘리지 않고 필드를 붙이는 방법 (09절 참조)</span>
     allow_structured_metadata: true
     volume_enabled: true
     retention_period: 72h
@@ -504,7 +504,7 @@ open http://localhost:12345</code></pre>
   <h2 class="sec"><span class="n">06</span>그라파나에 데이터소스 등록</h2>
 
   <p>
-    05단계에서 정한 원칙대로 UI에서 추가하지 않고 값 파일에 선언합니다.
+    05장에서 정한 원칙대로 UI에서 추가하지 않고 값 파일에 선언합니다.
   </p>
 
   <p class="fn">monitoring/kps-values.yaml — grafana 블록에 추가</p>
@@ -582,7 +582,7 @@ sum(rate({namespace="apps"} |= "ERROR" [5m]))</code></pre>
       <tr><td class="num">!=</td><td>문자열 미포함</td></tr>
       <tr><td class="num">|~</td><td>정규식 일치</td></tr>
       <tr><td class="num">!~</td><td>정규식 불일치</td></tr>
-      <tr><td class="num">| json / | logfmt</td><td>본문을 파싱해 필드를 뽑는다 (08절)</td></tr>
+      <tr><td class="num">| json / | logfmt</td><td>본문을 파싱해 필드를 뽑는다 (09절)</td></tr>
       <tr><td class="num">count_over_time</td><td>구간 내 로그 줄 수</td></tr>
       <tr><td class="num">rate</td><td>초당 로그 발생률</td></tr>
     </tbody>
@@ -594,7 +594,7 @@ sum(rate({namespace="apps"} |= "ERROR" [5m]))</code></pre>
   <h2 class="sec"><span class="n">08</span>메트릭과 로그를 함께 보기</h2>
 
   <p>
-    이 실습의 목적지입니다. 07단계 대시보드에 로그 패널을 붙여
+    이 실습의 목적지입니다. 07장 대시보드에 로그 패널을 붙여
     <strong>같은 시간축에서</strong> 그래프와 로그를 나란히 놓습니다.
   </p>
 
@@ -608,7 +608,7 @@ echo "에러 주입 종료"</code></pre>
 
   <h4>2. 대시보드에 로그 패널 추가</h4>
   <p>
-    07단계의 <code>obs-red.json</code> 맨 아래에 패널 하나를 더합니다.
+    07장의 <code>obs-red.json</code> 맨 아래에 패널 하나를 더합니다.
     <code>gridPos</code>의 <code>y</code>는 마지막 패널(<code>y:13</code>, 높이 8) 다음인 21입니다.
   </p>
 
@@ -635,9 +635,9 @@ echo "에러 주입 종료"</code></pre>
     <span class="t">여기서만 uid를 고정한다</span>
     <p>
       로그 패널은 프로메테우스가 아닌 로키를 봐야 하므로 <code>uid: loki</code>를 명시합니다.
-      05단계에서 데이터소스를 지정하지 않는 원칙을 세웠지만,
+      05장에서 데이터소스를 지정하지 않는 원칙을 세웠지만,
       <strong>데이터소스가 둘 이상인 대시보드에서는 예외</strong>입니다.
-      그래서 05절에서 <code>uid: loki</code>를 값 파일에 못 박아 둔 것입니다.
+      그래서 06절에서 <code>uid: loki</code>를 값 파일에 못 박아 둔 것입니다.
     </p>
   </div>
 
@@ -685,7 +685,7 @@ kubectl -n monitoring annotate configmap obs-red-dashboard grafana_folder="Obs S
       console: ecs</code></pre>
 
   <p class="cap">
-    03단계 <code>redeploy.sh</code>로 태그를 올려 재배포한 뒤 로그를 다시 보면
+    03장 <code>redeploy.sh</code>로 태그를 올려 재배포한 뒤 로그를 다시 보면
     한 줄이 JSON 객체로 바뀝니다. 필드 이름은 형식에 따라 다르므로
     실제 출력 한 줄을 먼저 확인하고 질의를 씁니다.
   </p>
@@ -704,7 +704,7 @@ sum by (log_level) (count_over_time({namespace="apps"} | json [5m]))</code></pre
       로키 3.x의 <strong>구조화 메타데이터</strong>가 이 사이의 해법입니다 —
       색인되지 않지만 필드로 다룰 수 있습니다.
       값 파일에 <code>allow_structured_metadata: true</code>를 넣어둔 이유입니다.
-      본격적인 활용은 09단계 트레이스 연동과 함께 다루는 것이 자연스럽습니다.
+      요청 ID를 라벨이 아니라 구조화 메타데이터로 넣는 것이 이 시리즈에서 권하는 형태입니다.
     </p>
   </div>
 </section>
@@ -783,13 +783,17 @@ kubectl -n logging delete pvc --all</code></pre>
   </ul>
 
   <div class="box ac">
-    <span class="t">다음 문서 — 선택 단계</span>
+    <span class="t">다음 문서</span>
     <p>
-      <strong>09 · 트레이싱 (선택)</strong> — 메트릭과 로그로 좁힌 다음, 요청 하나가
-      게이트웨이에서 백엔드까지 거친 경로를 시간 단위로 쪼개 봅니다.
-      Spring Boot 4의 <code>spring-boot-starter-opentelemetry</code>로 OTLP를 내보내고
-      Tempo에 저장하는 구성이며, 일정이 빠듯하면 건너뛰고
-      <strong>10 · 운영 팁</strong>으로 바로 가도 시리즈는 완결됩니다.
+      <strong>09 · 운영과 모범 사례</strong> — 여기까지 만든 스택은 노트북 한 대를 전제로
+      설정돼 있습니다. 보존 기간이 짧고 복제본이 없고 자원 제한이 헐겁습니다.
+      현재 시계열 개수를 숫자로 확인하고, 카디널리티 상위 메트릭을
+      <code>metricRelabelings</code>로 스크레이프 시점에 잘라냅니다.
+    </p>
+    <p>
+      <strong>10 · 테스팅과 카오스 실험</strong> — 마지막으로 여기까지 만든 관측 체계가
+      실제로 쓸모 있는지 확인합니다. 파드를 죽이고 지연을 주입해, 07장에서 만든 알림이
+      우는지 05장의 대시보드가 그것을 보여 주는지 판정합니다.
     </p>
   </div>
 

@@ -105,14 +105,14 @@
   <div class="docnum">CHAPTER 06 / 11 · 쿠버네티스 관측성</div>
   <h1>앱 메트릭 연동과 PromQL</h1>
   <p class="lede">
-    02단계에서 연 <code>/actuator/prometheus</code>를 04단계의 프로메테우스에 붙입니다.
+    02장에서 연 <code>/actuator/prometheus</code>를 04장의 프로메테우스에 붙입니다.
     연결 고리는 <strong>라벨 세 겹</strong>이고, 대부분의 사람이 첫 번째 겹에서 막힙니다.
     일부러 한 번 실패시킨 뒤 고치고, 그다음 RED 지표를 PromQL로 직접 씁니다.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 70–90분</span>
-    <span>선행: 05단계까지 완료</span>
+    <span>선행: 05장까지 완료</span>
   </div>
 </header>
 
@@ -202,7 +202,7 @@
 
       <!-- Service -->
       <rect x="24" y="318" width="400" height="94" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
-      <text x="40" y="344" font-size="13.5" fill="#15181d">Service (03단계에서 만든 것)</text>
+      <text x="40" y="344" font-size="13.5" fill="#15181d">Service (03장에서 만든 것)</text>
       <text x="40" y="368" font-family="ui-monospace,monospace" font-size="11" fill="#1f4d8f">labels: {app.kubernetes.io/name: order-api}</text>
       <text x="40" y="390" font-family="ui-monospace,monospace" font-size="11" fill="#2e7d4f">ports: [{name: http, port: 8080}]</text>
 
@@ -240,7 +240,7 @@
       </defs>
     </svg>
     <figcaption>
-      <b>그림 1.</b> 03단계에서 Service에 라벨을 붙이고 포트에 <code>http</code>라는 이름을 준 이유가 여기 있다.
+      <b>그림 1.</b> 03장에서 Service에 라벨을 붙이고 포트에 <code>http</code>라는 이름을 준 이유가 여기 있다.
       ②와 ③은 그때 이미 준비해 둔 것이고, 이번에 새로 만드는 것은 ①과 ServiceMonitor뿐이다.
     </figcaption>
   </figure>
@@ -327,10 +327,10 @@ metadata:
   name: order-api
   namespace: apps
   labels:
-    <span class="c"># ① 04단계 헬름 릴리스 이름과 일치해야 오퍼레이터가 고른다</span>
+    <span class="c"># ① 04장 헬름 릴리스 이름과 일치해야 오퍼레이터가 고른다</span>
     release: kps
 spec:
-  <span class="c"># ② 이 라벨을 가진 Service를 찾는다 (03단계에서 붙여둔 것)</span>
+  <span class="c"># ② 이 라벨을 가진 Service를 찾는다 (03장에서 붙여둔 것)</span>
   selector:
     matchLabels:
       app.kubernetes.io/name: order-api
@@ -341,7 +341,7 @@ spec:
     <span class="c"># ③ Service의 포트 '이름'이다. 숫자가 아니다.</span>
     - port: http
       path: /actuator/prometheus
-      <span class="c"># 04단계 전역 설정과 같은 값. 명시해두면 나중에 이 서비스만 조정하기 쉽다.</span>
+      <span class="c"># 04장 전역 설정과 같은 값. 명시해두면 나중에 이 서비스만 조정하기 쉽다.</span>
       interval: 30s
       scrapeTimeout: 10s
 ---
@@ -403,7 +403,7 @@ order-api   order-api-6b8f7d5c9-t8wcv   1</span></code></pre>
   | jq -r '.data.result[] | "\(.metric.pod)\t\(.value[1])"'</code></pre>
 
   <p class="cap">
-    03단계에서 부하를 넣었다면 값이 보입니다. 비어 있으면 다시 요청을 몇 번 보내고 40초 기다리세요.
+    03장에서 부하를 넣었다면 값이 보입니다. 비어 있으면 다시 요청을 몇 번 보내고 40초 기다리세요.
   </p>
 
   <h4>3. 오퍼레이터가 만든 설정을 직접 열어보기</h4>
@@ -452,7 +452,7 @@ order-api   order-api-6b8f7d5c9-t8wcv   1</span></code></pre>
       <tr><th style="width:22%">라벨</th><th>어디서 왔나</th></tr>
     </thead>
     <tbody>
-      <tr><td class="num">channel</td><td>앱이 직접 붙인 태그 (02단계 <code>Counter.builder</code>)</td></tr>
+      <tr><td class="num">channel</td><td>앱이 직접 붙인 태그 (02장 <code>Counter.builder</code>)</td></tr>
       <tr><td class="num">job</td><td>Service 이름. ServiceMonitor 기반 타깃의 기본 규칙</td></tr>
       <tr><td class="num">namespace / pod / service / container</td><td>쿠버네티스 서비스 디스커버리가 자동으로 부여</td></tr>
       <tr><td class="num">endpoint</td><td>ServiceMonitor에 쓴 포트 이름</td></tr>
@@ -461,7 +461,7 @@ order-api   order-api-6b8f7d5c9-t8wcv   1</span></code></pre>
   </table>
 
   <div class="box ac">
-    <span class="t">02단계에서 공통 태그를 넣지 않은 이유</span>
+    <span class="t">02장에서 공통 태그를 넣지 않은 이유</span>
     <p>
       앱에 <code>application=order-api</code> 같은 태그를 넣었다면, 지금 <code>job</code>·<code>service</code>와
       의미가 겹치는 라벨이 세 개가 됐을 겁니다. 질의할 때 무엇을 기준으로 묶어야 할지 매번 고민하게 되고,
@@ -532,7 +532,7 @@ histogram_quantile(
       정식 기능이 됐습니다. 버킷 시계열이 폭증하는 문제를 근본적으로 줄여줍니다.
       다만 그라파나 패널과 기존 대시보드가 아직 고전 버킷 기준인 경우가 많아,
       이 실습은 고전 버킷(<code>_bucket</code>)으로 진행합니다.
-      10단계 카디널리티 논의에서 전환 판단 기준을 다시 다룹니다.
+      09장 카디널리티 논의에서 전환 판단 기준을 다시 다룹니다.
     </p>
   </div>
 
@@ -551,7 +551,7 @@ sum(rate(http_server_requests_seconds_count{namespace="apps"}[5m]))</code></pre>
   <p>
     <strong>R</strong>ate(처리율) · <strong>E</strong>rrors(에러율) · <strong>D</strong>uration(지연).
     애플리케이션 관측은 이 셋으로 시작해서 이 셋으로 끝납니다.
-    아래 질의들이 07단계 대시보드의 패널이 됩니다.
+    아래 질의들이 07장 대시보드의 패널이 됩니다.
   </p>
 
   <h4>R — 서비스별 초당 요청 수</h4>
@@ -590,7 +590,7 @@ sum(rate(http_server_requests_seconds_count{namespace="apps"}[5m]))</code></pre>
 
   <p class="cap">
     <code>uri</code> 라벨이 <code>/api/orders/{id}</code>처럼 템플릿으로 찍혀 있는 것을 확인하세요.
-    02단계에서 <code>@PathVariable</code>로 매핑한 덕분입니다.
+    02장에서 <code>@PathVariable</code>로 매핑한 덕분입니다.
   </p>
 
   <h4>비즈니스 지표 — 분당 주문 수와 거부율</h4>
@@ -682,7 +682,7 @@ histogram_quantile(0.95,
     <span class="t">실습이 끝나면 반드시 부하 루프를 끄세요</span>
     <p>
       터미널 1의 무한 루프를 켜둔 채 잊으면 노트북 팬이 계속 돌고,
-      프로메테우스 저장 공간(04단계에서 8Gi)이 예상보다 빨리 찹니다.
+      프로메테우스 저장 공간(04장에서 8Gi)이 예상보다 빨리 찹니다.
       <code>Ctrl+C</code>로 종료하세요.
     </p>
   </div>
@@ -715,7 +715,7 @@ histogram_quantile(0.95,
       </tr>
       <tr>
         <td>메트릭은 있는데 <code>_bucket</code>만 없다</td>
-        <td>앱 설정 문제. 02단계 <code>percentiles-histogram</code>을 확인하고 이미지를 다시 빌드</td>
+        <td>앱 설정 문제. 02장 <code>percentiles-histogram</code>을 확인하고 이미지를 다시 빌드</td>
       </tr>
       <tr>
         <td><code>histogram_quantile</code> 결과가 <code>NaN</code></td>
@@ -739,7 +739,7 @@ histogram_quantile(0.95,
       <code>http_server_requests_seconds_bucket</code> 하나가
       (엔드포인트 수) × (상태 코드 수) × (버킷 수) × (파드 수)만큼의 시계열을 만듭니다.
       실습 규모에서는 문제없지만, 운영에서 <code>uri</code> 태그에 ID가 섞이는 순간
-      프로메테우스가 메모리 부족으로 죽습니다. 10단계의 주제입니다.
+      프로메테우스가 메모리 부족으로 죽습니다. 09장의 주제입니다.
     </p>
   </div>
 
@@ -763,13 +763,13 @@ topk(10, count by (__name__) ({__name__=~".+"}))</code></pre>
     <li><code>uri</code> 라벨이 <code>/api/orders/{id}</code> 형태로 템플릿화되어 있다</li>
     <li>지연 주입 실습에서 게이트웨이와 백엔드의 P95 곡선을 함께 봤다</li>
     <li>부하 생성 루프를 종료했다</li>
-    <li>질의 6개를 팀 저장소의 메모에 정리했다 (07단계에서 패널로 옮긴다)</li>
+    <li>질의 6개를 팀 저장소의 메모에 정리했다 (07장에서 패널로 옮긴다)</li>
   </ul>
 
   <div class="box ac">
     <span class="t">다음 문서</span>
     <p>
-      <strong>07 · 대시보드와 알림</strong> — 방금 만든 질의들을 05단계의 프로비저닝 방식으로
+      <strong>07 · 대시보드와 알림</strong> — 방금 만든 질의들을 05장의 프로비저닝 방식으로
       대시보드에 옮깁니다. 변수(namespace·service)를 넣어 하나의 대시보드로 여러 서비스를 보고,
       <code>PrometheusRule</code>로 알림 규칙을 선언한 뒤 Alertmanager에서 라우팅합니다.
       "알림을 몇 개 만들 것인가"라는 더 어려운 질문도 함께 다룹니다.

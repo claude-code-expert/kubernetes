@@ -105,14 +105,14 @@
   <div class="docnum">CHAPTER 05 / 11 · 쿠버네티스 관측성</div>
   <h1>그라파나 설정과 대시보드 프로비저닝</h1>
   <p class="lede">
-    그라파나는 04단계에서 이미 떠 있습니다. 이 문서는 설치가 아니라 <strong>운영 방식</strong>을 정합니다.
+    그라파나는 04장에서 이미 떠 있습니다. 이 문서는 설치가 아니라 <strong>운영 방식</strong>을 정합니다.
     UI에서 만든 대시보드는 파드가 재생성되면 사라질 수 있습니다.
-    처음부터 코드로 관리하는 습관을 들이면, 07단계에서 만들 대시보드를 그대로 팀에 배포할 수 있습니다.
+    처음부터 코드로 관리하는 습관을 들이면, 07장에서 만들 대시보드를 그대로 팀에 배포할 수 있습니다.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 40–60분</span>
-    <span>선행: 04단계 타깃 검증 통과</span>
+    <span>선행: 04장 타깃 검증 통과</span>
   </div>
 </header>
 
@@ -159,14 +159,14 @@
 <section id="s2">
   <h2 class="sec"><span class="n">02</span>첫 로그인과 둘러볼 대시보드</h2>
 
-<pre data-lang="bash"><code><span class="c"># 04단계에서 NodePort 30300으로 열어뒀다</span>
+<pre data-lang="bash"><code><span class="c"># 04장에서 NodePort 30300으로 열어뒀다</span>
 open http://localhost:30300
 
 <span class="c"># 비밀번호를 값 파일에 두지 않았다면 시크릿에서 꺼낸다</span>
 kubectl -n monitoring get secret kps-grafana \
   -o jsonpath='{.data.admin-password}' | base64 -d; echo</code></pre>
 
-  <p class="cap">계정은 <b>admin</b>, 비밀번호는 04단계 값 파일에 넣은 <b>obs-study</b>입니다.</p>
+  <p class="cap">계정은 <b>admin</b>, 비밀번호는 04장 값 파일에 넣은 <b>obs-study</b>입니다.</p>
 
   <p>
     로그인하면 대시보드가 이미 수십 개 들어 있습니다. 직접 만든 적이 없는데도 그렇습니다.
@@ -180,7 +180,7 @@ kubectl -n monitoring get secret kps-grafana \
     <tbody>
       <tr>
         <td class="num">Kubernetes / Compute Resources / Namespace (Pods)</td>
-        <td><code>apps</code> 네임스페이스를 골라 보면 03단계에서 배포한 파드 3개의 CPU·메모리가 보인다</td>
+        <td><code>apps</code> 네임스페이스를 골라 보면 03장에서 배포한 파드 3개의 CPU·메모리가 보인다</td>
       </tr>
       <tr>
         <td class="num">Node Exporter / Nodes</td>
@@ -198,7 +198,7 @@ kubectl -n monitoring get secret kps-grafana \
     <p>
       위 대시보드에 보이는 것은 <b>컨테이너 관점</b>의 자원 사용량입니다.
       "주문 API가 초당 몇 건을 처리하고 P99가 몇 ms인가"는 아직 어디에도 없습니다.
-      그 데이터를 만들려면 06단계에서 ServiceMonitor를 붙여야 합니다.
+      그 데이터를 만들려면 06장에서 ServiceMonitor를 붙여야 합니다.
     </p>
   </div>
 </section>
@@ -392,7 +392,7 @@ kubectl -n monitoring rollout status deploy/kps-grafana</code></pre>
 
   <p>
     이제 직접 하나 만들어 봅니다. 아직 앱 메트릭이 없으므로 클러스터 지표로 구성합니다.
-    07단계에서는 같은 방법으로 RED 대시보드를 만들게 됩니다.
+    07장에서는 같은 방법으로 RED 대시보드를 만들게 됩니다.
   </p>
 
   <p class="fn">monitoring/dashboards/obs-overview.json</p>
@@ -724,7 +724,7 @@ kubectl -n monitoring annotate configmap obs-overview-dashboard grafana_folder="
     <p>
       <strong>06 · 앱 메트릭 연동 (ServiceMonitor와 PromQL)</strong> —
       드디어 <code>order-api</code>와 <code>gateway</code>를 프로메테우스에 붙입니다.
-      04단계에서 릴리스 이름을 <code>kps</code>로 정했으므로 ServiceMonitor에는
+      04장에서 릴리스 이름을 <code>kps</code>로 정했으므로 ServiceMonitor에는
       <code>release: kps</code> 라벨이 필요합니다. 이 라벨이 왜 필요한지, 없으면 어떻게 되는지를
       직접 확인한 뒤 RED 지표를 PromQL로 작성합니다.
     </p>

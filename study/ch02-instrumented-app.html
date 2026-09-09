@@ -108,13 +108,13 @@
   <p class="lede">
     Spring Boot 4.1 서비스 두 개를 만듭니다. 게이트웨이와 주문 API. 코드 자체는 단순하지만,
     <strong>어떤 메트릭이 어떤 이름과 태그로 나오는지</strong>를 여기서 정해두지 않으면
-    06단계의 PromQL과 07단계의 대시보드를 전부 다시 써야 합니다.
+    06장의 PromQL과 07장의 대시보드를 전부 다시 써야 합니다.
     그래서 이 문서는 기능이 아니라 계측을 중심으로 씁니다.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 60–90분</span>
-    <span>선행: 01단계 클러스터 생성 완료</span>
+    <span>선행: 01장 클러스터 생성 완료</span>
   </div>
 </header>
 
@@ -175,7 +175,7 @@
     서비스 하나로도 메트릭 실습은 됩니다. 그럼에도 둘로 나누는 이유는 하나뿐입니다 —
     <strong>지연이 전파되는 모습을 봐야</strong> RED 지표가 왜 서비스별로 필요한지 체감할 수 있기 때문입니다.
     주문 API가 500ms 느려질 때 게이트웨이의 <span class="term" title="99th percentile — 요청 100건 중 가장 느린 1건의 응답 시간">P99</span>가
-    어떻게 따라 움직이는지, 07단계에서 두 그래프를 나란히 놓고 보게 됩니다.
+    어떻게 따라 움직이는지, 07장에서 두 그래프를 나란히 놓고 보게 됩니다.
   </p>
 
   <table>
@@ -241,7 +241,7 @@
       <!-- prometheus -->
       <rect x="790" y="100" width="146" height="80" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.5"/>
       <text x="863" y="128" text-anchor="middle" font-size="13" fill="#15181d">Prometheus</text>
-      <text x="863" y="148" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#6a4a9c">04단계에서 연결</text>
+      <text x="863" y="148" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#6a4a9c">04장에서 연결</text>
 
       <path d="M863 182 L863 244 L336 244" fill="none" stroke="#6a4a9c" stroke-width="1.5" stroke-dasharray="5 3"/>
       <path d="M638 244 L638 212" fill="none" stroke="#6a4a9c" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#m2)"/>
@@ -275,7 +275,7 @@
     코드를 쓰기 전에 이것부터 이해해야 합니다. HTTP 요청 한 건이 들어오면 마이크로미터는
     <span class="term" title="Timer — 이벤트의 발생 횟수와 소요 시간을 함께 기록하는 계측 타입">타이머</span>
     하나를 갱신하는데, 프로메테우스 포맷으로 나올 때는 <strong>시계열 세 종류</strong>로 쪼개집니다.
-    06단계의 PromQL이 어렵게 느껴지는 이유의 8할이 이 구조를 모르기 때문입니다.
+    06장의 PromQL이 어렵게 느껴지는 이유의 8할이 이 구조를 모르기 때문입니다.
   </p>
 
   <figure>
@@ -318,7 +318,7 @@
 
       <text x="24" y="300" font-size="13" fill="#15181d">세 종류 모두 같은 태그를 공유한다</text>
       <text x="24" y="326" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">uri="/api/orders/{id}"  method="GET"  status="200"  outcome="SUCCESS"  exception="none"</text>
-      <text x="24" y="350" font-size="12" fill="#8f4408">uri 태그가 실제 ID 값으로 찍히면 시계열이 무한히 늘어난다 — 10단계 카디널리티 주제의 출발점</text>
+      <text x="24" y="350" font-size="12" fill="#8f4408">uri 태그가 실제 ID 값으로 찍히면 시계열이 무한히 늘어난다 — 09장 카디널리티 주제의 출발점</text>
 
       <defs>
         <marker id="n1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -338,7 +338,7 @@
     <p>
       요청 100건 중 99건이 10ms, 1건이 3초라면 평균은 40ms입니다. 대시보드는 초록색이고,
       그 1건을 겪은 사용자는 이탈합니다. P99를 보면 3초가 그대로 드러납니다.
-      07단계에서 만들 패널이 전부 분위수 기반인 이유입니다.
+      07장에서 만들 패널이 전부 분위수 기반인 이유입니다.
     </p>
   </div>
 </section>
@@ -347,7 +347,7 @@
 <section id="s4">
   <h2 class="sec"><span class="n">04</span>프로젝트 생성과 빌드 파일</h2>
 
-  <p>01단계에서 만든 작업 디렉터리 아래에 앱 두 개를 둡니다.</p>
+  <p>01장에서 만든 작업 디렉터리 아래에 앱 두 개를 둡니다.</p>
 
 <pre data-lang="bash"><code>cd ~/k8s-observability
 mkdir -p apps &amp;&amp; cd apps</code></pre>
@@ -597,7 +597,7 @@ public class GlobalExceptionHandler {
       <code>http.server.requests</code>의 <code>exception</code> 태그는 <code>none</code>,
       <code>status</code>는 <code>400</code>, <code>outcome</code>은 <code>CLIENT_ERROR</code>가 됩니다.
       예외를 잡지 않고 흘려보내면 <code>exception="InvalidOrderException"</code> 태그가 붙습니다.
-      06단계에서 "에러율을 status로 셀 것인가 exception으로 셀 것인가"를 결정할 때 이 차이가 근거가 됩니다.
+      06장에서 "에러율을 status로 셀 것인가 exception으로 셀 것인가"를 결정할 때 이 차이가 근거가 됩니다.
     </p>
   </div>
 
@@ -779,7 +779,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 대시보드와 알림 실습용 지연·에러 생성기.
- * 06~07단계에서 이 엔드포인트로 그래프를 움직인다.
+ * 06~07장에서 이 엔드포인트로 그래프를 움직인다.
  */
 @RestController
 @RequestMapping("/api/chaos")
@@ -838,7 +838,7 @@ management:
         include: health,info,prometheus
   endpoint:
     health:
-      <span class="c"># /actuator/health/liveness 와 /readiness 가 생긴다. 03단계 프로브에서 쓴다.</span>
+      <span class="c"># /actuator/health/liveness 와 /readiness 가 생긴다. 03장 프로브에서 쓴다.</span>
       probes:
         enabled: true
       show-details: never
@@ -860,7 +860,7 @@ management:
     <li>해당 프로퍼티는 Spring Boot 3.2에서 <code>management.observations.key-values</code>로 대체 예고됐고,
       대체 프로퍼티는 옵저베이션 기반 메트릭에만 적용되는 등 동작 범위가 다릅니다.
       버전을 넘나들며 헷갈릴 여지가 큽니다.</li>
-    <li>쿠버네티스에서는 06단계의 ServiceMonitor가 스크레이프 시점에
+    <li>쿠버네티스에서는 06장의 ServiceMonitor가 스크레이프 시점에
       <code>job</code>·<code>namespace</code>·<code>pod</code>·<code>service</code> 라벨을 자동으로 붙입니다.
       앱에서 또 붙이면 의미가 겹치는 라벨이 두 벌 생깁니다.</li>
   </ul>
@@ -1015,7 +1015,7 @@ orders_processing_seconds_bucket{le="0.021845"} 0.0
   <p class="cap">
     <code>orders.created</code>가 <code>orders_created_total</code>이 된 것을 확인하세요.
     점은 언더스코어로, 카운터에는 <code>_total</code> 접미사가 붙습니다.
-    06단계에서 PromQL을 쓸 때는 <b>변환된 이름</b>을 씁니다.
+    06장에서 PromQL을 쓸 때는 <b>변환된 이름</b>을 씁니다.
   </p>
 
   <h4>4. HTTP 메트릭과 버킷 확인</h4>
@@ -1029,7 +1029,7 @@ curl -s http://localhost:8081/actuator/prometheus \
   | grep -c 'http_server_requests_seconds_bucket'</code></pre>
   <p class="cap">
     결과가 <b>0</b>이면 <code>percentiles-histogram</code> 설정이 적용되지 않은 것입니다.
-    이 상태로 진행하면 07단계에서 P95 패널이 <code>No data</code>로 남습니다.
+    이 상태로 진행하면 07장에서 P95 패널이 <code>No data</code>로 남습니다.
   </p>
 
   <h4>5. 게이트웨이 라우트 메트릭 확인</h4>
@@ -1125,7 +1125,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/actuator/gateway/
     <li><code>http_server_requests_seconds_bucket</code> 개수가 0이 아니다</li>
     <li><code>spring_cloud_gateway_requests_seconds_count</code>에 <code>routeId="order-api"</code> 태그가 있다</li>
     <li><code>/actuator/env</code>와 <code>/actuator/gateway/routes</code>가 404다</li>
-    <li><code>/actuator/health/readiness</code>가 200이다 (03단계 프로브에서 사용)</li>
+    <li><code>/actuator/health/readiness</code>가 200이다 (03장 프로브에서 사용)</li>
     <li>두 프로젝트를 팀 저장소에 커밋했다</li>
   </ul>
 
@@ -1134,7 +1134,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/actuator/gateway/
     <p>
       <strong>03 · 컨테이너화와 쿠버네티스 배포</strong> — 두 앱을 이미지로 만들어
       <code>kind load docker-image</code>로 클러스터에 넣고, Deployment·Service·프로브·리소스 제한을 붙입니다.
-      01단계에서 붙여둔 <code>workload=apps</code> 라벨을 노드셀렉터로 쓰고,
+      01장에서 붙여둔 <code>workload=apps</code> 라벨을 노드셀렉터로 쓰고,
       게이트웨이를 NodePort 30080에 연결해 브라우저에서 확인합니다.
     </p>
   </div>

@@ -136,7 +136,7 @@
   <h1>실습 환경 준비와 버전 고정</h1>
   <p class="lede">
     쿠버네티스 클러스터 위에 스프링 애플리케이션을 올리고 프로메테우스·그라파나·로키로 관측하는
-    11단계 실습의 출발점입니다. 이 문서에서는 코드를 한 줄도 쓰지 않습니다.
+    11장 실습의 출발점입니다. 이 문서에서는 코드를 한 줄도 쓰지 않습니다.
     대신 8명이 <em>같은 화면</em>을 보게 만드는 데 필요한 버전 고정과 도구 설치만 끝냅니다.
   </p>
   <div class="meta">
@@ -151,7 +151,7 @@
   <ol>
     <li><a href="#s1">이론 — 무엇을 왜 보는가</a></li>
     <li><a href="#s2">최종적으로 만들 것</a></li>
-    <li><a href="#s3">11단계 로드맵</a></li>
+    <li><a href="#s3">11장 로드맵</a></li>
     <li><a href="#s4">용어 정리(영문 풀네임 병기)</a></li>
     <li><a href="#s5">버전 매트릭스 — 2026-08 검증</a></li>
     <li><a href="#s6">하드웨어·OS 요구사항</a></li>
@@ -381,17 +381,17 @@
 
 <!-- ══════════ 2 ══════════ -->
 <section id="s3">
-  <h2 class="sec"><span class="n">03</span>11단계 로드맵</h2>
+  <h2 class="sec"><span class="n">03</span>11장 로드맵</h2>
 
   <figure>
-    <svg viewBox="0 0 960 176" role="img" aria-label="11단계 실습 로드맵, 현재 위치는 00단계">
+    <svg viewBox="0 0 960 176" role="img" aria-label="11장 로드맵, 현재 위치는 00장">
       <rect width="960" height="176" fill="#ffffff"/>
 
       <!-- 트랙 라벨 -->
       <text x="32" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 A · 환경과 앱</text>
       <text x="368" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 B · 설치</text>
       <text x="532" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 C · 연동</text>
-      <text x="778" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 D · 운영</text>
+      <text x="778" y="34" font-family="ui-monospace,monospace" font-size="11.5" fill="#585f6b">트랙 D · 운영과 검증</text>
       <line x1="32" y1="44" x2="356" y2="44" stroke="#d8dbe0" stroke-width="1"/>
       <line x1="368" y1="44" x2="520" y2="44" stroke="#d8dbe0" stroke-width="1"/>
       <line x1="532" y1="44" x2="766" y2="44" stroke="#d8dbe0" stroke-width="1"/>
@@ -435,19 +435,20 @@
       <text x="734" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">08</text>
       <text x="734" y="104" text-anchor="middle" font-size="11" fill="#15181d">로그</text>
 
-      <rect x="778" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5" stroke-dasharray="4 3"/>
-      <text x="816" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#585f6b">09</text>
-      <text x="816" y="104" text-anchor="middle" font-size="11" fill="#585f6b">트레이싱</text>
+      <rect x="778" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+      <text x="816" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">09</text>
+      <text x="816" y="104" text-anchor="middle" font-size="11" fill="#15181d">운영</text>
 
-      <rect x="860" y="60" width="76" height="62" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
-      <text x="898" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#15181d">10</text>
-      <text x="898" y="104" text-anchor="middle" font-size="11" fill="#15181d">운영 팁</text>
+      <rect x="860" y="60" width="76" height="62" fill="#ffffff" stroke="#8f4408" stroke-width="1.8"/>
+      <text x="898" y="84" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" fill="#8f4408">10</text>
+      <text x="898" y="104" text-anchor="middle" font-size="11" fill="#8f4408">카오스</text>
 
-      <text x="816" y="140" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#585f6b">선택</text>
+      <text x="898" y="140" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#8f4408">판정</text>
     </svg>
     <figcaption>
-      <b>그림 3.</b> 09번(트레이싱)은 점선 = 선택 단계다. 스터디 일정이 빠듯하면 건너뛰고
-      06·07에 시간을 더 쓰는 편이 학습 효과가 크다.
+      <b>그림 3.</b> 앞 장의 산출물이 다음 장의 입력이 된다. 건너뛰면 사전 조건이 깨진다.
+      마지막 10장은 앞의 열 장이 실제로 쓸모 있는지 <b>판정하는</b> 장이라 성격이 다르다 —
+      이상을 일부러 만들어 07장의 알림이 우는지 확인한다.
     </figcaption>
   </figure>
 </section>
@@ -588,7 +589,7 @@
     </thead>
     <tbody>
       <tr><td>CPU</td><td class="num">4코어</td><td>6코어 이상. 노드 3개 + 관측 스택이 동시에 뜬다</td></tr>
-      <tr><td>메모리</td><td class="num">12 GiB</td><td>16 GiB. 도커에 최소 10 GiB를 할당해야 08단계(로키)까지 버틴다</td></tr>
+      <tr><td>메모리</td><td class="num">12 GiB</td><td>16 GiB. 도커에 최소 10 GiB를 할당해야 08장(로키)까지 버틴다</td></tr>
       <tr><td>디스크</td><td class="num">30 GB 여유</td><td>노드 이미지·앱 이미지·프로메테우스 TSDB가 쌓인다</td></tr>
       <tr><td>cgroup</td><td class="num">v2</td><td>K8s 1.35부터 cgroup v1 지원이 제거됐다. kind도 v1 감지 시 경고를 낸다</td></tr>
       <tr><td>아키텍처</td><td class="num">amd64 / arm64</td><td>Apple Silicon 정상 동작. 단 노드 이미지와 호스트 아키텍처가 같아야 한다</td></tr>
@@ -598,7 +599,7 @@
   <div class="box warn">
     <span class="t">메모리가 12 GiB 미만이라면</span>
     <p>
-      워커 노드를 1개로 줄이고(01단계 설정 파일에서 조정), 08단계 로키는 공용 클러스터로 대체하세요.
+      워커 노드를 1개로 줄이고(01장 설정 파일에서 조정), 08장 로키는 공용 클러스터로 대체하세요.
       메모리 부족으로 파드가 <code>Evicted</code> 되면 원인 파악에만 30분이 날아갑니다.
     </p>
   </div>
@@ -618,7 +619,7 @@ brew install kubectl kind helm jq
 brew install --cask temurin@21</code></pre>
   <p class="cap">
     Docker Desktop 설치 후 <b>Settings → Resources</b>에서 CPU 4코어, 메모리 10 GiB 이상으로 올려두세요.
-    기본값(2코어/2 GiB)으로는 04단계에서 반드시 멈춥니다.
+    기본값(2코어/2 GiB)으로는 04장에서 반드시 멈춥니다.
   </p>
 
   <h3>Ubuntu 22.04 / 24.04</h3>
@@ -721,9 +722,9 @@ fi
 
 echo
 if [ "$fail" -eq 0 ]; then
-  echo "결과: 통과 — 01단계로 진행하세요"
+  echo "결과: 통과 — 01장으로 진행하세요"
 else
-  echo "결과: 미충족 항목 있음 — 06절 설치 절차를 확인하세요"
+  echo "결과: 미충족 항목 있음 — 07절 설치 절차를 확인하세요"
 fi
 exit "$fail"</code></pre>
 
@@ -744,7 +745,7 @@ CPU 6코어 / MEM 10.0 GiB
 === cgroup 버전 (cgroup2fs 여야 정상) ===
 cgroup2fs
 
-결과: 통과 — 01단계로 진행하세요</span></code></pre>
+결과: 통과 — 01장으로 진행하세요</span></code></pre>
 
   <div class="box">
     <span class="t">버전이 정확히 일치하지 않아도 되는 경우</span>
@@ -762,7 +763,7 @@ cgroup2fs
 
   <p>
     이 세 가지는 검색으로 나오는 튜토리얼 대부분이 아직 반영하지 못한 변경점입니다.
-    04·08단계에서 실제로 부딪히기 전에 머리에 넣어두세요.
+    04·08장에서 실제로 부딪히기 전에 머리에 넣어두세요.
   </p>
 
   <h3>1. 헬름 저장소 이전 — <code>grafana</code> → <code>grafana-community</code></h3>
@@ -775,7 +776,7 @@ cgroup2fs
   <h3>2. Promtail은 EOL — 로그 수집기는 Alloy</h3>
   <p>
     Promtail은 2026-03-02에 수명을 다했습니다. 책과 대부분의 블로그가 Promtail 기준으로 쓰여 있으니
-    08단계에서 설정 파일을 그대로 복사하지 마세요. 형식 자체가 다릅니다.
+    08장에서 설정 파일을 그대로 복사하지 마세요. 형식 자체가 다릅니다.
   </p>
 
   <h3>3. Spring Cloud Gateway의 프로퍼티 접두사 변경</h3>
@@ -787,7 +788,7 @@ cgroup2fs
   </p>
 
   <div class="box warn">
-    <span class="t">보안 메모 — 02단계에서 다시 다룸</span>
+    <span class="t">보안 메모 — 02장에서 다시 다룸</span>
     <p>
       게이트웨이에서 액추에이터 <code>gateway</code> 엔드포인트를 무인증으로 노출하면
       런타임 라우트 조작 및 환경 프로퍼티 노출로 이어지는 취약점(CVE-2025-41243, CVE-2025-41253) 조건에 해당합니다.
@@ -816,7 +817,7 @@ cgroup2fs
   </table>
 
   <p class="cap">
-    도커에 10 GiB를 주고 시작하면 08단계까지 여유가 있습니다.
+    도커에 10 GiB를 주고 시작하면 08장까지 여유가 있습니다.
     <b>부족할 때 가장 먼저 줄일 것</b>은 프로메테우스 보존 기간(<code>retention</code>)과 워커 노드 수입니다.
     대시보드나 익스포터를 빼면 실습 자체가 성립하지 않습니다.
   </p>

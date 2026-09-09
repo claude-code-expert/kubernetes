@@ -105,15 +105,15 @@
   <div class="docnum">CHAPTER 03 / 11 · 쿠버네티스 관측성</div>
   <h1>컨테이너화와 쿠버네티스 배포</h1>
   <p class="lede">
-    02단계에서 만든 두 앱을 이미지로 굽고 kind 클러스터에 올립니다.
+    02장에서 만든 두 앱을 이미지로 굽고 kind 클러스터에 올립니다.
     레지스트리는 쓰지 않습니다. 여기서 정하는 <strong>서비스 라벨과 포트 이름</strong>이
-    06단계 ServiceMonitor의 선택 조건이 되므로, 매니페스트를 그냥 복사하지 말고
+    06장 ServiceMonitor의 선택 조건이 되므로, 매니페스트를 그냥 복사하지 말고
     라벨이 어디에 걸리는지만큼은 눈으로 따라가세요.
   </p>
   <div class="meta">
     <span>검증일 2026-08-19</span>
     <span>소요 50–70분</span>
-    <span>선행: 01·02단계 완료</span>
+    <span>선행: 01·02장 완료</span>
   </div>
 </header>
 
@@ -217,7 +217,7 @@
 
       <rect x="644" y="178" width="292" height="104" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
       <text x="660" y="202" font-family="ui-monospace,monospace" font-size="12" fill="#1f4d8f">obs-worker2 · observability</text>
-      <text x="660" y="228" font-size="12" fill="#585f6b">04단계에서 관측 스택이</text>
+      <text x="660" y="228" font-size="12" fill="#585f6b">04장에서 관측 스택이</text>
       <text x="660" y="248" font-size="12" fill="#585f6b">들어올 자리</text>
 
       <text x="24" y="312" font-size="12" fill="#8f4408">적재는 노드별로 이뤄진다 — 노드를 추가하면 이미지를 다시 적재해야 한다</text>
@@ -416,7 +416,7 @@ docker.io/obs/order-api   0.0.1   b71c05de9a12c   276MB</span></code></pre>
   </table>
 
   <p class="cap">
-    02단계에서 <code>management.endpoint.health.probes.enabled: true</code>를 넣었기 때문에
+    02장에서 <code>management.endpoint.health.probes.enabled: true</code>를 넣었기 때문에
     이 두 경로가 존재합니다. <b>liveness에는 외부 의존성 검사를 넣지 않는 것</b>이 원칙입니다.
     DB가 잠깐 끊겼다고 앱을 재시작하면 상황이 더 나빠지기 때문입니다.
   </p>
@@ -464,7 +464,7 @@ spec:
         app.kubernetes.io/name: order-api
         app.kubernetes.io/part-of: obs-study
     spec:
-      <span class="c"># 01단계에서 노드에 붙여둔 라벨</span>
+      <span class="c"># 01장에서 노드에 붙여둔 라벨</span>
       nodeSelector:
         workload: apps
       terminationGracePeriodSeconds: 40
@@ -479,7 +479,7 @@ spec:
           <span class="c"># 레지스트리가 없으므로 반드시 IfNotPresent</span>
           imagePullPolicy: IfNotPresent
           ports:
-            <span class="c"># 이 포트 '이름'을 06단계 ServiceMonitor가 참조한다</span>
+            <span class="c"># 이 포트 '이름'을 06장 ServiceMonitor가 참조한다</span>
             - name: http
               containerPort: 8080
           startupProbe:
@@ -518,7 +518,7 @@ metadata:
   name: order-api
   namespace: apps
   labels:
-    <span class="c"># 06단계 ServiceMonitor가 이 라벨로 서비스를 찾는다</span>
+    <span class="c"># 06장 ServiceMonitor가 이 라벨로 서비스를 찾는다</span>
     app.kubernetes.io/name: order-api
     app.kubernetes.io/part-of: obs-study
 spec:
@@ -567,7 +567,7 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            <span class="c"># 02단계에서 ${ORDER_API_URI:...} 로 열어둔 자리.
+            <span class="c"># 02장에서 ${ORDER_API_URI:...} 로 열어둔 자리.
             # 클러스터 안에서는 서비스 이름이 곧 DNS 이름이다.</span>
             - name: ORDER_API_URI
               value: http://order-api.apps.svc.cluster.local:8080
@@ -607,7 +607,7 @@ metadata:
     app.kubernetes.io/name: gateway
     app.kubernetes.io/part-of: obs-study
 spec:
-  <span class="c"># 01단계에서 뚫어둔 호스트 포트 30080과 짝을 이룬다</span>
+  <span class="c"># 01장에서 뚫어둔 호스트 포트 30080과 짝을 이룬다</span>
   type: NodePort
   selector:
     app.kubernetes.io/name: gateway
@@ -622,7 +622,7 @@ spec:
     <p>
       <code>app.kubernetes.io/name</code>은 ① Deployment 셀렉터, ② 파드 라벨, ③ Service 셀렉터,
       ④ Service 자신의 라벨에 각각 쓰입니다. 앞의 셋은 파드를 묶기 위한 것이고,
-      <strong>④번은 06단계의 ServiceMonitor가 서비스를 찾기 위한 것</strong>입니다.
+      <strong>④번은 06장의 ServiceMonitor가 서비스를 찾기 위한 것</strong>입니다.
       역할이 다르므로 값이 같더라도 각각 써야 합니다.
     </p>
   </div>
@@ -632,7 +632,7 @@ spec:
     <p>
       CPU 제한을 걸면 쿠버네티스는 CFS 쿼터로 스로틀링을 겁니다.
       그러면 응답 시간 그래프에 애플리케이션과 무관한 톱니가 생기고,
-      06~07단계에서 "이 지연이 코드 때문인가 스로틀링 때문인가"를 구분할 수 없게 됩니다.
+      06~07장에서 "이 지연이 코드 때문인가 스로틀링 때문인가"를 구분할 수 없게 됩니다.
       메모리는 제한합니다. 메모리는 압축 불가능한 자원이라 제한이 없으면 노드 전체가 위험해집니다.
       다만 이 판단은 <b>실습 환경 기준</b>입니다. 공용 클러스터라면 CPU 제한이 필요합니다.
     </p>
@@ -677,7 +677,7 @@ order-api-6b8f7d5c9-t8wcv    1/1     Running   0          58s   obs-worker</span
   -H 'Content-Type: application/json' \
   -d '{"item":"latte","quantity":3}' | python3 -m json.tool</code></pre>
   <p class="cap">
-    01단계에서 <code>hostPort: 30080</code>을 control-plane 노드에 뚫어뒀고, 서비스의 <code>nodePort</code>가 30080이라
+    01장에서 <code>hostPort: 30080</code>을 control-plane 노드에 뚫어뒀고, 서비스의 <code>nodePort</code>가 30080이라
     맥의 <code>localhost:30080</code>이 그대로 게이트웨이에 닿습니다. 파드가 다른 노드에 있어도 동작합니다.
   </p>
 
@@ -697,7 +697,7 @@ curl -s http://localhost:18080/actuator/prometheus | grep -c '^orders_'
 curl -s http://localhost:18080/actuator/prometheus | grep -c 'http_server_requests_seconds_bucket'
 kill %1</code></pre>
   <p class="cap">
-    두 숫자 모두 0보다 커야 합니다. <b>이것이 04단계 진입 조건</b>입니다.
+    두 숫자 모두 0보다 커야 합니다. <b>이것이 04장 진입 조건</b>입니다.
     여기서 0이면 프로메테우스를 설치해도 앱 메트릭은 보이지 않습니다.
   </p>
 
@@ -792,7 +792,7 @@ echo "완료: ${IMAGE}"</code></pre>
       </tr>
       <tr>
         <td><code>localhost:30080</code>이 응답 없음</td>
-        <td>서비스의 <code>nodePort</code>와 01단계 <code>hostPort</code>가 어긋났다.
+        <td>서비스의 <code>nodePort</code>와 01장 <code>hostPort</code>가 어긋났다.
           <code>kubectl -n apps get svc gateway</code>로 실제 값 확인</td>
       </tr>
       <tr>
@@ -802,7 +802,7 @@ echo "완료: ${IMAGE}"</code></pre>
       </tr>
       <tr>
         <td>메트릭에 <code>_bucket</code>이 없음</td>
-        <td>02단계 <code>application.yml</code>이 이미지에 반영되지 않았다. 태그를 올려 다시 빌드</td>
+        <td>02장 <code>application.yml</code>이 이미지에 반영되지 않았다. 태그를 올려 다시 빌드</td>
       </tr>
     </tbody>
   </table>
@@ -812,7 +812,7 @@ echo "완료: ${IMAGE}"</code></pre>
     <p>
       쿠버네티스 1.35에서 <b>In-Place Pod Resize</b>가 정식 기능이 됐습니다.
       파드를 재시작하지 않고 CPU·메모리 요청과 제한을 바꿀 수 있다는 뜻입니다.
-      10단계에서 자원 튜닝을 다룰 때, 예전처럼 재배포하지 않고 조정하는 방법을 함께 봅니다.
+      09장에서 자원 튜닝을 다룰 때, 예전처럼 재배포하지 않고 조정하는 방법을 함께 봅니다.
     </p>
   </div>
 </section>
@@ -836,7 +836,7 @@ echo "완료: ${IMAGE}"</code></pre>
     <span class="t">다음 문서</span>
     <p>
       <strong>04 · kube-prometheus-stack 설치</strong> — 헬름으로 프로메테우스·Alertmanager·
-      node-exporter·kube-state-metrics를 한 번에 올리고, 01단계에서 넣어둔 bind-address 패치 덕분에
+      node-exporter·kube-state-metrics를 한 번에 올리고, 01장에서 넣어둔 bind-address 패치 덕분에
       컨트롤 플레인 타깃이 전부 UP으로 뜨는 것을 확인합니다.
       값 파일에서 보존 기간·자원·NodePort(30900)를 정하고,
       etcd 메트릭을 2381 포트로 스크레이프하도록 맞춥니다.
