@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[참고] kubectl 치트시트 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 참고 자료. 제작 규약은 저장소 루트 CLAUDE.md.
+  모듈 교안이 아니라 레퍼런스다 — 실습 순서가 아니라 용도별로 묶여 있다.
+  여기 실린 명령은 38개 모듈 본문에서 실제로 실행한 것을 뽑아 재분류한 것이고,
+  플래그는 kubectl v1.37.0 의 --help 로 확인했다.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">REFERENCE · 모듈이 아니다</div>
+  <h1>kubectl 치트시트</h1>
+  <p class="ch-desc">38개 모듈 본문에서 <strong>실제로 실행한 명령</strong>만 뽑아 용도별로 다시 묶었다. 실습 순서를 따르지 않으므로 처음부터 읽을 필요가 없다. 손이 멈췄을 때 해당 절만 펴 보는 용도다.</p>
+  <div class="meta">
+    <span class="tag">참고 자료</span><span class="tag">kubectl v1.37.0</span><span class="tag">Kubernetes 1.37</span>
+    <br>2026-09-09 작성 · 플래그는 <code>kubectl v1.37.0</code>의 <code>--help</code>로 확인 · 실습 당일 <code>kubectl version</code>으로 클라이언트 버전을 다시 확인한다
+  </div>
+</header>
+
+<div class="tldr">
+  <h2>이 문서를 쓰는 법</h2>
+  <p>1. 명령에는 프롬프트 기호가 없다. 블록을 통째로 복사해 붙여넣는다.</p>
+  <p>2. <code>&lt;꺾쇠&gt;</code>로 감싼 자리는 각자의 이름으로 바꾼다. 그 밖의 값은 그대로 동작한다.</p>
+  <p>3. 각 절 끝의 모듈 링크는 그 명령을 <strong>실행 결과·실패 사례와 함께</strong> 다루는 곳이다. 치트시트에는 출력을 싣지 않는다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#context"><span class="num">1</span>컨텍스트와 네임스페이스</a>
+  <a href="#get"><span class="num">2</span>조회 — get 과 출력 포맷</a>
+  <a href="#select"><span class="num">3</span>레이블 셀렉터와 필드 셀렉터</a>
+  <a href="#diag"><span class="num">4</span>진단 — describe · events · logs</a>
+  <a href="#into"><span class="num">5</span>컨테이너 안으로 — exec · cp · port-forward · debug</a>
+  <a href="#create"><span class="num">6</span>만들기 — 명령형과 선언형</a>
+  <a href="#modify"><span class="num">7</span>고치기 — set · patch · edit</a>
+  <a href="#rollout"><span class="num">8</span>워크로드 운영 — rollout · scale · wait</a>
+  <a href="#config"><span class="num">9</span>설정과 시크릿</a>
+  <a href="#node"><span class="num">10</span>노드 운영 — top · cordon · drain · taint</a>
+  <a href="#auth"><span class="num">11</span>권한 확인 — auth can-i</a>
+  <a href="#api"><span class="num">12</span>API 탐색 — api-resources · explain</a>
+  <a href="#delete"><span class="num">13</span>삭제와 정리</a>
+  <a href="#output"><span class="num">14</span>출력 가공 — jsonpath · custom-columns</a>
+  <a href="#confuse"><span class="num">15</span>헷갈리는 것 다섯</a>
+  <a href="#obsolete"><span class="num">16</span>지금 쓰면 안 되는 명령</a>
+  <a href="#shell"><span class="num">17</span>셸 설정</a>
+</nav>
+
+<section id="context">
+  <h2 class="sec"><span class="num">1</span>컨텍스트와 네임스페이스</h2>
+  <p class="lead">사고의 절반은 여기서 난다. 스테이징을 지운다고 친 명령이 운영에서 돌거나, 아무것도 없다고 당황한 네임스페이스가 사실 <code>default</code>였던 경우다. <code>kubectl</code>은 어느 클러스터의 어느 네임스페이스인지를 <strong>매번 묻지 않는다.</strong> 그래서 무엇에 붙어 있는지 먼저 확인하는 습관이 명령 자체보다 중요하다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl config get-contexts</code></td><td>등록된 컨텍스트 목록. <code>*</code>가 붙은 줄이 지금 붙어 있는 곳이다</td></tr>
+    <tr><td><code>kubectl config current-context</code></td><td>현재 컨텍스트 이름만 한 줄로. 스크립트의 안전장치로 쓴다</td></tr>
+    <tr><td><code>kubectl config use-context kind-study</code></td><td>컨텍스트 전환. kind가 만드는 이름은 <code>kind-&lt;클러스터명&gt;</code>이다</td></tr>
+    <tr><td><code>kubectl config set-context --current --namespace=journal</code></td><td>현재 컨텍스트의 기본 네임스페이스 변경. 이후 <code>-n</code>을 생략할 수 있다</td></tr>
+    <tr><td><code>kubectl config view --minify</code></td><td>현재 컨텍스트에 해당하는 설정만. 클러스터 주소와 네임스페이스를 한눈에 본다</td></tr>
+    <tr><td><code>kubectl --context kind-edge get nodes</code></td><td>전환하지 않고 <strong>이 명령만</strong> 다른 클러스터에서. 멀티클러스터에서는 전환보다 안전하다</td></tr>
+    <tr><td><code>kubectl get pods -A</code></td><td>모든 네임스페이스. <code>--all-namespaces</code>의 축약</td></tr>
+  </table>
+
+  <p><code>set-context --namespace</code>로 기본값을 바꿔 두면 편하지만, 바꿔 놓은 것을 잊는 것이 그다음 사고다. 절충안은 기본값을 건드리지 않고 매 명령에 <code>-n</code>을 붙이는 쪽이다. 이 과정의 문서가 <code>-n journal</code>을 매번 반복해서 적는 이유가 그것이다 — 복사해 붙여넣은 명령이 어디서 실행되든 같은 곳을 가리킨다.</p>
+  <p>같이 볼 모듈: <a href="m09-k8s-pod-label-namespace.html">M09</a> 네임스페이스 · <a href="m32-k8s-global-rollout.html">M32</a> 컨텍스트 두 개를 리전으로 다루기</p>
+</section>
+
+<section id="get">
+  <h2 class="sec"><span class="num">2</span>조회 — get 과 출력 포맷</h2>
+  <p class="lead"><code>get</code>은 목록을, <code>describe</code>는 한 오브젝트의 사연을 본다. 문제를 만났을 때 <code>get</code>으로 범위를 좁히고 <code>describe</code>로 파고드는 순서가 굳어야 한다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl get pods</code></td><td>기본 목록. <code>READY</code>·<code>STATUS</code>·<code>RESTARTS</code>·<code>AGE</code></td></tr>
+    <tr><td><code>kubectl get pods -o wide</code></td><td>파드 IP와 <strong>어느 노드에 떴는지</strong>가 붙는다. 스케줄링과 네트워크를 볼 때 기본값</td></tr>
+    <tr><td><code>kubectl get deploy,rs,pods</code></td><td>여러 종류를 한 번에. 디플로이먼트 → 레플리카셋 → 파드의 3층 구조가 한 화면에 보인다</td></tr>
+    <tr><td><code>kubectl get pod &lt;이름&gt; -o yaml</code></td><td>서버가 채운 필드까지 전부. 내가 쓴 것과 <strong>기본값이 채운 것</strong>의 차이를 볼 때</td></tr>
+    <tr><td><code>kubectl get pod &lt;이름&gt; -o kyaml</code></td><td>1.37에 들어온 KYAML 출력. 들여쓰기가 모호한 YAML보다 붙여넣기 사고가 적다</td></tr>
+    <tr><td><code>kubectl get pods -w</code></td><td>변화를 계속 흘려 본다. 롤아웃·스케일 관찰용. <code>Ctrl+C</code>로 끝낸다</td></tr>
+    <tr><td><code>kubectl get pods --sort-by=.status.startTime</code></td><td>가장 최근에 뜬 파드를 맨 아래로. 재시작 추적에 쓴다</td></tr>
+    <tr><td><code>kubectl get pods --show-labels</code></td><td>레이블을 컬럼으로. 셀렉터가 안 맞을 때 첫 번째로 칠 명령</td></tr>
+    <tr><td><code>kubectl get pvc,pv</code></td><td>클레임과 실제 볼륨. <code>Pending</code>이면 스토리지클래스를 본다</td></tr>
+    <tr><td><code>kubectl get all -n journal</code></td><td>주요 워크로드·서비스. <strong>전부가 아니다</strong> — 아래 15절 참조</td></tr>
+  </table>
+
+  <p>같이 볼 모듈: <a href="m08-k8s-cluster-first-deploy.html">M08</a> 첫 조회 · <a href="m10-k8s-deployment-rollout.html">M10</a> 3층 구조</p>
+</section>
+
+<section id="select">
+  <h2 class="sec"><span class="num">3</span>레이블 셀렉터와 필드 셀렉터</h2>
+  <p class="lead">쿠버네티스에서 오브젝트를 묶는 것은 이름이 아니라 레이블이다. 서비스가 파드를 찾는 것도, <code>Deployment</code>가 자기 파드를 세는 것도 셀렉터다. <strong>레이블 한 글자가 틀리면 아무 에러 없이 아무것도 선택되지 않는다</strong> — 이 조용한 실패가 이 과정에서 가장 많이 재현하는 고장이다.</p>
+
+  <table>
+    <tr><th>표현</th><th>뜻</th></tr>
+    <tr><td><code>-l app=journal-api</code></td><td>같음</td></tr>
+    <tr><td><code>-l app!=journal-api</code></td><td>다름</td></tr>
+    <tr><td><code>-l 'env in (dev,stage)'</code></td><td>집합 포함. 따옴표가 필요하다</td></tr>
+    <tr><td><code>-l 'app=web,tier=front'</code></td><td>쉼표는 <strong>AND</strong>다. OR은 없다</td></tr>
+    <tr><td><code>-l 'canary'</code></td><td>키가 존재하기만 하면 (값 무관)</td></tr>
+    <tr><td><code>-l '!canary'</code></td><td>키가 없는 것만</td></tr>
+    <tr><td><code>--field-selector status.phase=Running</code></td><td>레이블이 아니라 오브젝트 필드로. 지원 필드는 종류마다 다르다</td></tr>
+    <tr><td><code>--field-selector spec.nodeName=study-worker</code></td><td>특정 노드에 뜬 파드만</td></tr>
+  </table>
+
+  <p>셀렉터가 비었을 때 <code>kubectl</code>은 <code>No resources found</code>라고만 한다. 오타인지 정말 없는 것인지 구분하려면 <code>--show-labels</code>로 실제 레이블을 눈으로 확인하는 수밖에 없다.</p>
+  <p>같이 볼 모듈: <a href="m09-k8s-pod-label-namespace.html">M09</a> 레이블 오타 재현 · <a href="m11-k8s-service-network.html">M11</a> 엔드포인트가 비는 이유 · <a href="m25-k8s-networkpolicy-mesh.html">M25</a> 셀렉터 AND/OR 함정</p>
+</section>
+
+<section id="diag">
+  <h2 class="sec"><span class="num">4</span>진단 — describe · events · logs</h2>
+  <p class="lead">파드가 뜨지 않을 때 로그부터 보는 것은 순서가 틀렸다. <strong>컨테이너가 시작조차 못 했다면 로그가 없다.</strong> 그때 답이 있는 곳은 이벤트다. 스케줄 실패, 이미지 풀 실패, 볼륨 마운트 실패는 전부 이벤트에 남는다. 로그는 컨테이너가 <em>돌기 시작한 뒤</em>의 이야기다.</p>
+
+  <h3>이벤트 — 시작 못 한 이유</h3>
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl describe pod &lt;이름&gt;</code></td><td>스펙·상태·마운트·이벤트를 한 화면에. 이벤트는 맨 아래에 있다</td></tr>
+    <tr><td><code>kubectl describe pod &lt;이름&gt; | tail -n 20</code></td><td>이벤트만 보려고 뒤를 자른다. 스펙이 길 때 실용적이다</td></tr>
+    <tr><td><code>kubectl get events --sort-by=.lastTimestamp</code></td><td>네임스페이스 전체 이벤트를 시간순으로. 기본 출력은 시간순이 아니다</td></tr>
+    <tr><td><code>kubectl events --for pod/&lt;이름&gt; -w</code></td><td>한 오브젝트의 이벤트만 실시간으로. <code>get events</code>보다 읽기 쉽다</td></tr>
+  </table>
+  <p>이벤트는 기본 한 시간만 보관된다(<code>--event-ttl</code>). 어제 난 사고를 이벤트로 조사할 수는 없다 — 그래서 로그 수집과 감사 로그가 따로 필요하다.</p>
+
+  <h3>로그 — 돌기 시작한 뒤</h3>
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl logs &lt;파드&gt;</code></td><td>기본. 컨테이너가 하나일 때만 컨테이너 지정을 생략할 수 있다</td></tr>
+    <tr><td><code>kubectl logs &lt;파드&gt; -c &lt;컨테이너&gt;</code></td><td>다중 컨테이너 파드에서 하나를 골라. 사이드카를 볼 때</td></tr>
+    <tr><td><code>kubectl logs &lt;파드&gt; --previous</code></td><td><strong>죽기 직전</strong> 인스턴스의 로그. <code>CrashLoopBackOff</code>를 만나면 이것부터 친다</td></tr>
+    <tr><td><code>kubectl logs -f &lt;파드&gt;</code></td><td>실시간 추적</td></tr>
+    <tr><td><code>kubectl logs deploy/journal-api --tail=50 --since=10m</code></td><td>디플로이먼트 이름으로. 파드 하나를 골라 붙는다</td></tr>
+    <tr><td><code>kubectl logs -l app=journal-api --max-log-requests=10 --prefix</code></td><td>레이블로 <strong>여러 파드를 한꺼번에</strong>. <code>--prefix</code>로 어느 파드인지 표시한다</td></tr>
+    <tr><td><code>kubectl logs -f -l app=web --timestamps</code></td><td>시각을 붙여 여러 파드의 순서를 맞춘다</td></tr>
+  </table>
+  <p><code>--previous</code>가 이 표에서 가장 값이 크다. 재시작한 파드에 그냥 <code>logs</code>를 치면 <strong>새로 뜬 인스턴스의 빈 로그</strong>가 나온다. 죽은 이유는 이전 인스턴스가 갖고 나갔다.</p>
+  <p>같이 볼 모듈: <a href="m08-k8s-cluster-first-deploy.html">M08</a> describe·logs·events 삼종 · <a href="m15-k8s-probes-lifecycle.html">M15</a> 프로브 실패 읽기 · <a href="m22-k8s-logging-loki.html">M22</a> 사라진 파드의 로그</p>
+</section>
+
+<section id="into">
+  <h2 class="sec"><span class="num">5</span>컨테이너 안으로 — exec · cp · port-forward · debug</h2>
+  <p class="lead">클러스터 안에서만 보이는 것이 있다. 서비스 이름의 DNS 해석, 네트워크 정책이 실제로 막는지, 마운트된 파일의 내용 — 전부 파드 안에서 확인해야 답이 나온다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl exec -it &lt;파드&gt; -- sh</code></td><td>셸을 붙인다. <code>--</code> 뒤가 컨테이너 안에서 실행할 명령이다</td></tr>
+    <tr><td><code>kubectl exec &lt;파드&gt; -c &lt;컨테이너&gt; -- env</code></td><td>일회성 명령. 환경변수가 실제로 주입됐는지 확인</td></tr>
+    <tr><td><code>kubectl exec &lt;파드&gt; -- cat /etc/config/app.properties</code></td><td>컨피그맵이 마운트된 실제 내용</td></tr>
+    <tr><td><code>kubectl cp &lt;파드&gt;:/tmp/heap.hprof ./heap.hprof</code></td><td>파드에서 파일을 꺼낸다. 컨테이너에 <code>tar</code>가 있어야 한다</td></tr>
+    <tr><td><code>kubectl port-forward svc/journal-api 8080:80</code></td><td>로컬 8080을 서비스 80으로. 인그레스 없이 바로 접근한다</td></tr>
+    <tr><td><code>kubectl port-forward -n monitoring svc/prometheus 9090</code></td><td>포트가 같으면 한 번만 쓴다</td></tr>
+    <tr><td><code>kubectl run curlbox --image=alpine:3.22 --restart=Never -- sh -c "sleep infinity"</code></td><td>클러스터 안에서 쓸 임시 도구 파드. <strong>태그를 박는다</strong></td></tr>
+    <tr><td><code>kubectl run probe --rm -it --image=curlimages/curl:8.19.0 --restart=Never -- sh</code></td><td><code>--rm</code>으로 나가면 지워지는 일회용</td></tr>
+    <tr><td><code>kubectl debug -it &lt;파드&gt; --image=alpine:3.22 --target=&lt;컨테이너&gt;</code></td><td>돌아가는 파드에 <strong>임시 컨테이너</strong>를 붙인다. 셸이 없는 distroless 이미지 진단용</td></tr>
+    <tr><td><code>kubectl debug node/study-worker -it --image=alpine:3.22</code></td><td>노드의 네임스페이스에 붙는 파드. 노드 파일시스템이 <code>/host</code>에 보인다</td></tr>
+  </table>
+
+  <div class="note-2026">
+    <span class="lbl">exec 이 안 될 때</span>
+    <code>OCI runtime exec failed ... "sh": executable file not found</code>이 나오면 컨테이너에 셸이 없는 것이다. distroless·scratch 기반 이미지가 그렇고, 이는 <strong>공격 표면을 줄인 결과지 고장이 아니다</strong>. 이미지에 셸을 도로 넣지 말고 <code>kubectl debug --target</code>으로 임시 컨테이너를 붙인다. <code>--profile</code>로 권한 수준을 고를 수 있다 — <code>general</code>(기본) · <code>baseline</code> · <code>restricted</code> · <code>netadmin</code> · <code>sysadmin</code>.
+  </div>
+
+  <p><code>port-forward</code>는 붙어 있는 동안만 산다. 터미널을 닫으면 끊기고, 파드가 재시작하면 그대로 죽는다. 상시 접근에 쓰는 물건이 아니라 <strong>지금 이 순간 확인하기 위한</strong> 도구다.</p>
+  <p>같이 볼 모듈: <a href="m11-k8s-service-network.html">M11</a> 클러스터 안에서 DNS 확인 · <a href="m24-k8s-pod-container-security.html">M24</a> 셸 없는 이미지 · <a href="m19-k8s-metrics-pipeline.html">M19</a> 프로메테우스 포트포워드</p>
+</section>
+
+<section id="create">
+  <h2 class="sec"><span class="num">6</span>만들기 — 명령형과 선언형</h2>
+  <p class="lead">같은 디플로이먼트를 두 가지로 만들 수 있다. <code>create deployment</code> 한 줄로 만드는 것이 명령형, YAML을 써서 <code>apply</code>하는 것이 선언형이다. 배우는 동안에는 명령형이 빠르고, 운영에서는 선언형만 남는다 — <strong>명령형은 무엇을 했는지 기록이 남지 않기 때문이다.</strong></p>
+
+  <h3>명령형 — 빠르게 만들고 버린다</h3>
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl create deployment web --image=nginx:1.29-alpine</code></td><td>디플로이먼트 하나</td></tr>
+    <tr><td><code>kubectl expose deploy web --port=80 --target-port=8080</code></td><td>서비스를 붙인다. 셀렉터는 디플로이먼트에서 자동으로 가져온다</td></tr>
+    <tr><td><code>kubectl create ns journal</code></td><td>네임스페이스</td></tr>
+    <tr><td><code>kubectl scale deploy/web --replicas=5</code></td><td>레플리카 수 변경</td></tr>
+    <tr><td><code>kubectl autoscale deploy/web --min=2 --max=10 --cpu-percent=50</code></td><td>HPA 생성</td></tr>
+  </table>
+
+  <h3>선언형 — 파일이 정본이다</h3>
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl apply -f manifest.yaml</code></td><td>없으면 만들고 있으면 맞춘다. 여러 번 실행해도 결과가 같다</td></tr>
+    <tr><td><code>kubectl apply -f ./dir/</code></td><td>디렉터리 전체. 파일 이름 순서로 적용된다</td></tr>
+    <tr><td><code>kubectl apply -k course/labs/k8s/journal/</code></td><td>kustomize. <code>kustomization.yaml</code>이 있는 디렉터리를 통째로</td></tr>
+    <tr><td><code>kubectl kustomize course/labs/k8s/overlays/dev</code></td><td>클러스터에 보내지 않고 <strong>렌더 결과만</strong> 본다. 오버레이 검증의 기본</td></tr>
+    <tr><td><code>kubectl diff -f manifest.yaml</code></td><td>적용하면 무엇이 바뀌는지 미리 본다. 운영 클러스터에서 apply 전에 친다</td></tr>
+    <tr><td><code>kubectl apply --server-side -f manifest.yaml</code></td><td>서버 사이드 어플라이. 필드 소유권을 서버가 추적해 도구 간 충돌을 드러낸다</td></tr>
+    <tr><td><code>kubectl apply --dry-run=server -f manifest.yaml</code></td><td>어드미션까지 태워 보고 만들지는 않는다. 정책 위반을 배포 전에 잡는다</td></tr>
+  </table>
+
+  <h3>둘을 잇는 다리 — YAML 뼈대 뽑기</h3>
+  <p>YAML을 처음부터 손으로 쓰지 않는다. 명령형으로 만든 것을 <code>--dry-run=client -o yaml</code>로 뽑아 고치는 쪽이 훨씬 빠르고 오타가 적다.</p>
+<pre><code>kubectl create deployment web --image=nginx:1.29-alpine \
+  --dry-run=client -o yaml &gt; web-deploy.yaml</code></pre>
+  <p>표준입력으로 바로 넘길 수도 있다. 문서에서 한 번 쓰고 버릴 매니페스트에 쓴다.</p>
+<pre><code>kubectl apply -f - &lt;&lt;'EOF'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sample
+EOF</code></pre>
+  <p>같이 볼 모듈: <a href="m08-k8s-cluster-first-deploy.html">M08</a> 명령형 첫 배포 · <a href="m10-k8s-deployment-rollout.html">M10</a> 같은 것을 YAML로 · <a href="m28-k8s-helm-kustomize.html">M28</a> Kustomize 오버레이</p>
+</section>
+
+<section id="modify">
+  <h2 class="sec"><span class="num">7</span>고치기 — set · patch · edit</h2>
+  <p class="lead">이미 떠 있는 것을 고치는 방법이 셋이다. 셋 다 클러스터의 상태를 바꾸지만 <strong>깃에 있는 파일은 바꾸지 않는다.</strong> 이 어긋남이 나중에 <code>apply</code> 한 번으로 되돌아가는 사고의 원인이다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th><th>쓰는 곳</th></tr>
+    <tr><td><code>kubectl set image deploy/journal-api app=journal-api:v2</code></td><td>이미지만 교체</td><td>롤아웃 관찰 실습. 배포 파이프라인</td></tr>
+    <tr><td><code>kubectl set env deploy/web LOG_LEVEL=debug</code></td><td>환경변수 추가·변경</td><td>일시적인 디버깅</td></tr>
+    <tr><td><code>kubectl set resources deploy/web --limits=cpu=200m</code></td><td>리소스 한계 변경</td><td>스로틀링 재현</td></tr>
+    <tr><td><code>kubectl patch deploy web -p '{"spec":{"replicas":3}}'</code></td><td>전략적 병합 패치. 준 필드만 바꾼다</td><td>스크립트에서 한 필드만</td></tr>
+    <tr><td><code>kubectl patch deploy web --type=json -p '[{"op":"remove","path":"/spec/template/spec/nodeSelector"}]'</code></td><td>JSON 패치. <strong>삭제</strong>는 이쪽이어야 한다</td><td>필드를 없앨 때</td></tr>
+    <tr><td><code>kubectl edit deploy web</code></td><td>에디터로 연다. 저장하면 즉시 적용</td><td>급할 때만</td></tr>
+    <tr><td><code>kubectl label pod web tier=front --overwrite</code></td><td>레이블 추가·덮어쓰기. <code>--overwrite</code> 없으면 기존 키에 실패한다</td><td>셀렉터 실험</td></tr>
+    <tr><td><code>kubectl label ns journal pod-security.kubernetes.io/enforce=restricted</code></td><td>네임스페이스 레이블. PSA는 이걸로 켠다</td><td>파드 보안 표준</td></tr>
+    <tr><td><code>kubectl annotate deploy/web kubernetes.io/change-cause="v2 배포"</code></td><td>어노테이션. <code>rollout history</code>의 CHANGE-CAUSE에 나온다</td><td>배포 이력 남기기</td></tr>
+  </table>
+
+  <div class="note-2026">
+    <span class="lbl">edit 은 마지막 수단이다</span>
+    <code>edit</code>으로 고친 값은 어디에도 기록되지 않는다. 다음 사람이 <code>apply</code>를 한 번 돌리면 조용히 사라지고, 왜 사라졌는지 아무도 모른다. GitOps를 쓰는 클러스터라면 더 빠르다 — <a href="m31-k8s-gitops.html">M31</a>에서 <code>kubectl</code>로 만든 변경이 <strong>5초 만에</strong> 되돌아가는 것을 측정한다. 고쳐야 한다면 파일을 고치고 <code>apply</code>한다.
+  </div>
+  <p>같이 볼 모듈: <a href="m10-k8s-deployment-rollout.html">M10</a> set image 와 롤아웃 · <a href="m24-k8s-pod-container-security.html">M24</a> PSA 라벨 · <a href="m31-k8s-gitops.html">M31</a> 드리프트 교정</p>
+</section>
+
+<section id="rollout">
+  <h2 class="sec"><span class="num">8</span>워크로드 운영 — rollout · scale · wait</h2>
+  <p class="lead">배포는 명령이 돌아온 시점에 끝난 것이 아니다. <code>apply</code>는 "원하는 상태를 접수했다"까지고, 실제로 새 파드가 뜨고 준비 상태가 되기까지는 시간이 걸린다. 그 사이를 보는 명령들이다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl rollout status deploy/journal-api --timeout=120s</code></td><td>롤아웃이 끝날 때까지 블록. 실패하면 0이 아닌 종료 코드 — <strong>CI에서 쓸 수 있다</strong></td></tr>
+    <tr><td><code>kubectl rollout history deploy/journal-api</code></td><td>리비전 목록</td></tr>
+    <tr><td><code>kubectl rollout history deploy/journal-api --revision=2</code></td><td>그 리비전의 파드 템플릿</td></tr>
+    <tr><td><code>kubectl rollout undo deploy/journal-api</code></td><td>직전 리비전으로 되돌린다</td></tr>
+    <tr><td><code>kubectl rollout undo deploy/journal-api --to-revision=2</code></td><td>특정 리비전으로</td></tr>
+    <tr><td><code>kubectl rollout restart deploy/journal-api</code></td><td>스펙을 바꾸지 않고 파드를 새로 뜨게 한다. 컨피그맵 갱신 반영에 쓴다</td></tr>
+    <tr><td><code>kubectl rollout pause deploy/web</code> / <code>resume</code></td><td>롤아웃 중단·재개. 여러 필드를 고치는 동안 배포가 여러 번 일어나는 것을 막는다</td></tr>
+    <tr><td><code>kubectl scale deploy/web --replicas=0</code></td><td>0으로 줄여 잠시 끈다. 지우지 않고 멈추는 방법</td></tr>
+    <tr><td><code>kubectl wait --for=condition=Available deploy/web --timeout=120s</code></td><td>조건 충족까지 대기</td></tr>
+    <tr><td><code>kubectl wait --for=condition=Ready pod -l app=web --timeout=60s</code></td><td>레이블로 고른 파드 전부가 준비될 때까지</td></tr>
+    <tr><td><code>kubectl wait --for=delete pod/&lt;이름&gt; --timeout=60s</code></td><td>삭제 완료까지. 정리 스크립트에서 다음 단계와 겹치지 않게 한다</td></tr>
+    <tr><td><code>kubectl wait --for=jsonpath='{.status.phase}'=Running pod/&lt;이름&gt;</code></td><td>임의 필드로 대기. 조건이 정의되지 않은 커스텀 리소스에 쓴다</td></tr>
+  </table>
+
+  <p><code>rollout restart</code>가 컨피그맵 갱신에 필요한 이유가 있다. 볼륨으로 마운트한 컨피그맵은 값이 바뀌면 파일이 갱신되지만, <code>env</code>로 주입한 값은 <strong>프로세스가 시작할 때 한 번</strong> 읽히고 끝이다. 컨피그맵을 고쳤는데 앱이 옛 값을 쓰고 있다면 대개 이 차이다.</p>
+  <p>같이 볼 모듈: <a href="m10-k8s-deployment-rollout.html">M10</a> 롤아웃과 되돌리기 · <a href="m13-k8s-configmap-secret.html">M13</a> 갱신 반영 차이 · <a href="m30-k8s-deploy-strategies.html">M30</a> 카나리 자동 판정</p>
+</section>
+
+<section id="config">
+  <h2 class="sec"><span class="num">9</span>설정과 시크릿</h2>
+  <p class="lead">시크릿은 암호화가 아니라 <strong>base64 인코딩</strong>이다. 클러스터에 접근할 수 있으면 누구나 읽는다. 이름이 주는 안심과 실제 보호 수준이 다르다는 것이 이 절의 핵심이다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl create configmap app-config --from-literal=LOG_LEVEL=info</code></td><td>키·값 하나씩</td></tr>
+    <tr><td><code>kubectl create configmap app-config --from-file=./app.properties</code></td><td>파일 이름이 키, 내용이 값</td></tr>
+    <tr><td><code>kubectl create configmap app-config --from-env-file=./.env</code></td><td><code>KEY=VALUE</code> 줄마다 키가 하나씩</td></tr>
+    <tr><td><code>kubectl create secret generic db --from-literal=password=s3cr3t</code></td><td>제네릭 시크릿</td></tr>
+    <tr><td><code>kubectl create secret docker-registry ghcr --docker-server=ghcr.io --docker-username=&lt;유저&gt; --docker-password=&lt;토큰&gt;</code></td><td>프라이빗 레지스트리 인증</td></tr>
+    <tr><td><code>kubectl get secret db -o jsonpath='{.data.password}' | base64 -d</code></td><td>값을 되읽는다. <strong>base64는 보호가 아니다</strong></td></tr>
+    <tr><td><code>kubectl create token &lt;서비스어카운트&gt; --duration=1h</code></td><td>수명 있는 SA 토큰 발급</td></tr>
+    <tr><td><code>kubectl create configmap app-config --from-file=./app.properties --dry-run=client -o yaml | kubectl apply -f -</code></td><td>기존 컨피그맵 <strong>갱신</strong>. <code>create</code>만으로는 이미 있으면 실패한다</td></tr>
+  </table>
+
+  <div class="note-2026">
+    <span class="lbl">낡은 정보 정정 — 서비스어카운트 토큰</span>
+    검색하면 <code>kubectl get sa &lt;이름&gt; -o jsonpath='{.secrets[0].name}'</code>으로 토큰 시크릿을 찾는 방법이 나온다. <strong>1.24부터 서비스어카운트에 토큰 시크릿이 자동으로 만들어지지 않는다.</strong> 이 명령은 빈 값을 돌려주고, 그것을 "권한 문제"로 오해하면서 시간을 버린다. 지금은 <code>kubectl create token</code>으로 필요할 때 수명 있는 토큰을 받는다.
+    <span class="src">근거: kubernetes.io/docs/concepts/security/service-accounts (2026-09-09 확인)</span>
+  </div>
+  <p>같이 볼 모듈: <a href="m13-k8s-configmap-secret.html">M13</a> 설정을 이미지 밖으로 · <a href="m23-k8s-rbac-authz.html">M23</a> 서비스어카운트 · <a href="m31-k8s-gitops.html">M31</a> SOPS로 커밋 가능한 시크릿</p>
+</section>
+
+<section id="node">
+  <h2 class="sec"><span class="num">10</span>노드 운영 — top · cordon · drain · taint</h2>
+  <p class="lead">노드를 점검하거나 교체할 때 파드를 먼저 비워야 한다. 순서를 틀리면 파드가 새로 뜨자마자 다시 그 노드로 스케줄된다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl top nodes</code></td><td>노드별 CPU·메모리 실사용. <strong>metrics-server가 있어야 한다</strong></td></tr>
+    <tr><td><code>kubectl top pods --containers --sort-by=memory</code></td><td>컨테이너 단위로 쪼개 메모리 순 정렬</td></tr>
+    <tr><td><code>kubectl describe node study-worker</code></td><td>할당량·테인트·조건. <code>Allocated resources</code> 블록이 요청 합계다</td></tr>
+    <tr><td><code>kubectl cordon study-worker</code></td><td>새 파드를 받지 않게 표시. <strong>기존 파드는 그대로 둔다</strong></td></tr>
+    <tr><td><code>kubectl drain study-worker --ignore-daemonsets --delete-emptydir-data --timeout=120s</code></td><td>cordon + 기존 파드 축출. 데몬셋은 어차피 못 옮기므로 무시해야 진행된다</td></tr>
+    <tr><td><code>kubectl uncordon study-worker</code></td><td>다시 스케줄 가능하게. <strong>점검이 끝나면 반드시</strong></td></tr>
+    <tr><td><code>kubectl taint node study-worker gpu=true:NoSchedule</code></td><td>톨러레이션이 없는 파드를 밀어낸다</td></tr>
+    <tr><td><code>kubectl taint node study-worker gpu=true:NoSchedule-</code></td><td>테인트 제거. <strong>끝의 하이픈</strong>이 제거를 뜻한다</td></tr>
+    <tr><td><code>kubectl label node study-worker disk=ssd</code></td><td>노드 레이블. <code>nodeSelector</code>·어피니티가 이걸 본다</td></tr>
+  </table>
+
+  <p><code>top</code>이 <code>error: Metrics API not available</code>을 낸다면 클러스터에 metrics-server가 없는 것이다. kind에는 기본으로 들어 있지 않고, kubelet 인증서에 IP SAN이 없어 <code>--kubelet-insecure-tls</code> 없이는 파드가 Ready가 되지 않는다.</p>
+  <p><code>drain</code>이 진행되지 않고 멈춰 있다면 대개 PodDisruptionBudget이 막고 있는 것이다. 이는 고장이 아니라 <strong>PDB가 제 일을 하는 것</strong>이다 — 레플리카가 최소 개수뿐이면 축출할 수 없다.</p>
+  <p>같이 볼 모듈: <a href="m16-k8s-resources-scheduling.html">M16</a> drain·taint·PDB · <a href="m01-setup-environment.html">M01</a> metrics-server 설치</p>
+</section>
+
+<section id="auth">
+  <h2 class="sec"><span class="num">11</span>권한 확인 — auth can-i</h2>
+  <p class="lead">RBAC를 고칠 때 파드를 띄워 시험하지 않는다. <code>auth can-i</code>는 실제로 아무것도 하지 않고 <strong>API 서버의 인가 판정만</strong> 받아 온다. 특히 <code>--as</code>로 남의 신분을 빌려 물어볼 수 있어, 권한을 준 뒤 그 사람이 실제로 무엇을 할 수 있는지 즉시 확인된다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl auth can-i create pods -n journal</code></td><td><code>yes</code> 또는 <code>no</code> 한 줄</td></tr>
+    <tr><td><code>kubectl auth can-i --list -n journal</code></td><td>이 네임스페이스에서 내가 할 수 있는 것 전부</td></tr>
+    <tr><td><code>kubectl auth can-i get secrets --as=system:serviceaccount:journal:journal-api</code></td><td><strong>그 서비스어카운트 입장에서</strong> 물어본다</td></tr>
+    <tr><td><code>kubectl auth can-i '*' '*' --all-namespaces</code></td><td>사실상 cluster-admin인지 확인</td></tr>
+    <tr><td><code>kubectl auth can-i delete pods --as=dev --as-group=developers</code></td><td>그룹까지 흉내</td></tr>
+    <tr><td><code>kubectl auth whoami</code></td><td>지금 내가 누구로 인증됐는지. 1.37에서 <code>Experimental</code> 표기</td></tr>
+    <tr><td><code>kubectl get clusterrole view -o yaml</code></td><td>내장 롤이 실제로 무엇을 허용하는지 읽는다</td></tr>
+  </table>
+
+  <p><code>--as</code>를 쓰려면 나에게 <code>impersonate</code> 권한이 있어야 한다. 사칭은 감사 로그에 원래 사용자와 사칭 대상이 모두 남는다.</p>
+  <p>같이 볼 모듈: <a href="m23-k8s-rbac-authz.html">M23</a> 권한 밖 명령의 거부 메시지 · <a href="m27-k8s-cluster-security-posture.html">M27</a> 감사 로그</p>
+</section>
+
+<section id="api">
+  <h2 class="sec"><span class="num">12</span>API 탐색 — api-resources · explain</h2>
+  <p class="lead">필드 이름이 기억나지 않을 때 검색하지 않는다. 검색 결과는 대개 몇 버전 전의 것이고, <code>explain</code>은 <strong>지금 이 클러스터가 실제로 받는 필드</strong>를 답한다. 오퍼레이터가 설치한 커스텀 리소스도 마찬가지로 설명된다.</p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl api-resources</code></td><td>이 클러스터가 아는 리소스 전부. 축약형(SHORTNAMES)과 API 그룹이 함께 나온다</td></tr>
+    <tr><td><code>kubectl api-resources --namespaced=false</code></td><td>클러스터 스코프 리소스만. <code>-n</code>이 안 먹히는 것들</td></tr>
+    <tr><td><code>kubectl api-resources --api-group=apps</code></td><td>그룹으로 좁힌다</td></tr>
+    <tr><td><code>kubectl api-versions</code></td><td>사용 가능한 <code>apiVersion</code> 목록</td></tr>
+    <tr><td><code>kubectl explain deployment.spec.strategy</code></td><td>필드 설명과 하위 필드</td></tr>
+    <tr><td><code>kubectl explain pod.spec.containers --recursive</code></td><td>하위 전체를 트리로. 필드 이름만 훑을 때</td></tr>
+    <tr><td><code>kubectl explain journalsite.spec --api-version=study.example.com/v1</code></td><td>커스텀 리소스도 설명된다. CRD의 스키마를 읽어 온다</td></tr>
+    <tr><td><code>kubectl get --raw /readyz?verbose</code></td><td>API 서버 준비 상태를 항목별로</td></tr>
+    <tr><td><code>kubectl get --raw /metrics | head</code></td><td>API 서버 자체 메트릭</td></tr>
+  </table>
+  <p>같이 볼 모듈: <a href="m08-k8s-cluster-first-deploy.html">M08</a> explain 으로 필드 찾기 · <a href="m33-k8s-crd-operator.html">M33</a> CRD 스키마와 CEL 검증</p>
+</section>
+
+<section id="delete">
+  <h2 class="sec"><span class="num">13</span>삭제와 정리</h2>
+  <p class="lead">파드를 지웠는데 다시 살아난다면 고장이 아니다. 디플로이먼트가 원하는 상태를 유지하는 것이고, 그것이 바로 이 시스템이 하는 일이다. <strong>지워야 할 것은 파드가 아니라 그것을 만드는 컨트롤러다.</strong></p>
+
+  <table>
+    <tr><th>명령</th><th>하는 일</th></tr>
+    <tr><td><code>kubectl delete -f manifest.yaml</code></td><td>만든 것과 같은 파일로 지운다. 가장 안전한 정리</td></tr>
+    <tr><td><code>kubectl delete -k course/labs/k8s/journal/</code></td><td>kustomize로 만든 것을 통째로</td></tr>
+    <tr><td><code>kubectl delete deploy journal-api</code></td><td>컨트롤러를 지운다. 레플리카셋과 파드가 딸려 사라진다</td></tr>
+    <tr><td><code>kubectl delete pods -l app=web</code></td><td>레이블로 골라서. 컨트롤러가 있으면 곧바로 새로 뜬다</td></tr>
+    <tr><td><code>kubectl delete ns journal</code></td><td><strong>네임스페이스 안의 모든 것</strong>이 사라진다. 실습 탈출구</td></tr>
+    <tr><td><code>kubectl delete pod &lt;이름&gt; --grace-period=0 --force</code></td><td>즉시 강제 삭제. 아래 경고 참조</td></tr>
+    <tr><td><code>kubectl delete pod &lt;이름&gt; --wait=false</code></td><td>삭제 요청만 보내고 기다리지 않는다</td></tr>
+  </table>
+
+  <div class="note-2026">
+    <span class="lbl">--force 는 문제를 옮기는 것이다</span>
+    <code>--grace-period=0 --force</code>는 kubelet의 확인 없이 <strong>API에서 오브젝트만 지운다</strong>. 컨테이너는 노드에서 계속 돌고 있을 수 있다. 스테이트풀셋에서는 같은 아이덴티티의 파드가 둘이 되어 데이터를 동시에 쓰는 상태를 만들 수 있다. 파드가 <code>Terminating</code>에서 멈춰 있다면 대개 종료 훅이나 파이널라이저가 원인이므로, <strong>왜 안 끝나는지</strong>를 먼저 본다.
+  </div>
+
+  <p>네임스페이스가 <code>Terminating</code>에서 멈추면 대개 파이널라이저가 걸린 리소스가 남은 것이다. 무엇이 남았는지는 이렇게 본다.</p>
+<pre><code>kubectl api-resources --verbs=list --namespaced -o name \
+  | xargs -n1 kubectl get --show-kind --ignore-not-found -n journal</code></pre>
+  <p>같이 볼 모듈: <a href="m09-k8s-pod-label-namespace.html">M09</a> 네임스페이스 통째 삭제 · <a href="m18-k8s-storage-stateful.html">M18</a> 스테이트풀셋의 아이덴티티</p>
+</section>
+
+<section id="output">
+  <h2 class="sec"><span class="num">14</span>출력 가공 — jsonpath · custom-columns</h2>
+  <p class="lead">치트시트에서 가장 오래 쓰게 되는 절이다. 파드 이름을 눈으로 읽어 복사하는 대신 <code>-o name</code>으로 뽑아 다음 명령에 넘기면, 열 개짜리 작업이 한 줄이 된다.</p>
+
+  <table>
+    <tr><th>표현</th><th>결과</th></tr>
+    <tr><td><code>-o name</code></td><td><code>pod/web-5d8f7c9b4-x2kqp</code> 형태. 다른 명령에 그대로 넘길 수 있다</td></tr>
+    <tr><td><code>--no-headers</code></td><td>헤더 줄 제거. <code>awk</code>와 조합할 때</td></tr>
+    <tr><td><code>-o jsonpath='{.items[*].metadata.name}'</code></td><td>이름만 공백으로 이어서</td></tr>
+    <tr><td><code>-o jsonpath='{.status.podIP}'</code></td><td>단일 오브젝트의 한 필드</td></tr>
+    <tr><td><code>-o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName</code></td><td>원하는 컬럼만 표로</td></tr>
+    <tr><td><code>-o jsonpath-as-json</code></td><td>jsonpath 결과를 JSON 배열로. <code>jq</code>에 넘길 때</td></tr>
+  </table>
+
+  <h3>줄 단위로 뽑기</h3>
+  <p><code>range</code>를 쓰면 여러 오브젝트를 한 줄씩 출력한다. 파드와 노드의 대응을 볼 때 <code>-o wide</code>보다 좁고 읽기 쉽다.</p>
+<pre><code>kubectl get pods -n journal -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.nodeName}{"\t"}{.status.podIP}{"\n"}{end}'</code></pre>
+
+  <h3>다음 명령에 넘기기</h3>
+<pre><code>kubectl delete $(kubectl get pod -n journal -l app=web -o name)</code></pre>
+  <p>컨테이너 이미지를 전부 뽑아 <code>latest</code> 태그가 섞여 있는지 확인하는 것도 한 줄이다. 이 과정은 <code>latest</code>를 금지하고, <a href="m26-k8s-admission-policy.html">M26</a>에서 아예 API 서버가 거부하게 만든다.</p>
+<pre><code>kubectl get pods -A -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.image}{"\n"}{end}{end}' | sort -u</code></pre>
+
+  <h3>재시작한 컨테이너만 골라내기</h3>
+<pre><code>kubectl get pods -A --no-headers | awk '$5 != "0" {print}'</code></pre>
+  <p>같이 볼 모듈: <a href="m20-k8s-promql-instrumentation.html">M20</a> 스크레이프 대상 확인 · <a href="m27-k8s-cluster-security-posture.html">M27</a> 위반 리소스 세기</p>
+</section>
+
+<section id="confuse">
+  <h2 class="sec"><span class="num">15</span>헷갈리는 것 다섯</h2>
+
+  <h3>apply · create · replace</h3>
+  <p><code>create</code>는 없을 때만 성공하고 이미 있으면 <code>AlreadyExists</code>로 실패한다. <code>replace</code>는 오브젝트를 <strong>통째로 바꾼다</strong> — 파일에 없는 필드는 사라진다. <code>apply</code>는 없으면 만들고 있으면 파일에 적힌 필드만 맞춘다. 반복 실행해도 결과가 같아야 하는 자동화에서는 <code>apply</code>만 쓴다.</p>
+
+  <h3>파드를 지웠는데 다시 생긴다</h3>
+  <p>디플로이먼트가 파드 수를 유지하고 있다. 지우려면 컨트롤러를 지워야 한다. 반대로 <strong>재시작이 목적이라면</strong> 파드를 지우는 것도 방법이지만, 의도를 드러내는 쪽은 <code>kubectl rollout restart</code>다.</p>
+
+  <h3><code>get all</code>은 전부가 아니다</h3>
+  <p><code>all</code>은 주요 워크로드와 서비스를 가리키는 별칭일 뿐이다. 컨피그맵·시크릿·PVC·인그레스·네트워크 정책·CRD는 <strong>여기에 안 나온다</strong>. 지웠다고 생각한 것이 남아 다음 실습을 방해하는 원인이 대개 이것이다. 실제로 무엇이 남았는지는 13절 마지막 명령으로 센다.</p>
+
+  <h3><code>-n</code> · <code>-A</code> · <code>--context</code></h3>
+  <p><code>-n</code>은 네임스페이스, <code>-A</code>는 모든 네임스페이스, <code>--context</code>는 <strong>클러스터 자체</strong>가 바뀐다. 앞의 둘을 아무리 정확히 써도 컨텍스트가 틀렸으면 남의 클러스터를 보고 있는 것이다.</p>
+
+  <h3>Pending 과 CrashLoopBackOff</h3>
+  <p><code>Pending</code>은 <strong>아직 시작하지 않았다</strong>는 뜻이고 답은 이벤트에 있다 — 스케줄할 노드가 없거나, 이미지를 못 받거나, PVC가 바인딩되지 않았다. <code>CrashLoopBackOff</code>는 <strong>시작했다가 죽기를 반복</strong>하는 것이고 답은 <code>logs --previous</code>에 있다. 둘은 보는 곳이 다르다.</p>
+</section>
+
+<section id="obsolete">
+  <h2 class="sec"><span class="num">16</span>지금 쓰면 안 되는 명령</h2>
+  <p class="lead">검색 결과 상위에 아직 남아 있지만 지금 클러스터에서는 동작하지 않거나 권장되지 않는 것들이다. 이 과정이 낡은 정보를 <strong>이름을 박아 정정하는</strong> 이유는, 되지 않는 명령을 붙잡고 원인을 자기 환경 탓으로 돌리는 시간이 가장 아깝기 때문이다.</p>
+
+  <table>
+    <tr><th>낡은 것</th><th>무슨 일이 나나</th><th>지금은</th></tr>
+    <tr><td><code>kubectl run --generator=deployment/v1beta1</code></td><td>1.18에서 제거. <code>unknown flag</code></td><td><code>kubectl create deployment</code>. <code>run</code>은 파드 하나만 만든다</td></tr>
+    <tr><td><code>kubectl get pod x -o yaml --export</code></td><td>1.18에서 제거</td><td><code>-o yaml</code>로 받아 필요 없는 필드를 지운다</td></tr>
+    <tr><td><code>kubectl get componentstatuses</code> (<code>cs</code>)</td><td>1.19부터 폐기. 컨트롤 플레인 상태를 정확히 반영하지 않는다</td><td><code>kubectl get --raw /readyz?verbose</code></td></tr>
+    <tr><td><code>kubectl get sa x -o jsonpath='{.secrets[0].name}'</code></td><td>1.24부터 토큰 시크릿이 자동 생성되지 않아 빈 값</td><td><code>kubectl create token &lt;sa&gt;</code></td></tr>
+    <tr><td><code>kubectl apply --prune</code></td><td><strong>1.37에서도 Alpha다.</strong> 의도보다 많이 지울 수 있다</td><td>지울 것을 아는 도구에 맡긴다 — kustomize 라벨 기준 삭제, Helm, Argo CD</td></tr>
+    <tr><td><code>kubectl alpha debug</code></td><td>승격되면서 <code>alpha</code> 접두어가 사라졌다</td><td><code>kubectl debug</code></td></tr>
+    <tr><td>이미지 <code>latest</code> 태그</td><td>노드마다 다른 이미지가 돌 수 있고, 롤백할 지점이 없다</td><td>태그를 박거나 다이제스트로. <a href="m26-k8s-admission-policy.html">M26</a>에서 API 서버가 거부하게 만든다</td></tr>
+  </table>
+
+  <div class="note-2026">
+    <span class="lbl">버전 스큐</span>
+    kubectl은 API 서버와 <strong>마이너 한 칸</strong> 차이까지만 지원된다. 1.37 서버에는 1.36~1.38 클라이언트가 안전하다. 사내 클러스터가 1.35인데 로컬 kubectl이 1.37이면 대체로 동작하지만, 새 서브커맨드가 서버에 없는 API를 부르면 그때 깨진다. 사고가 나면 <code>kubectl version</code>부터 확인한다.
+    <span class="src">근거: kubernetes.io/releases/version-skew-policy (2026-09-09 확인)</span>
+  </div>
+</section>
+
+<section id="shell">
+  <h2 class="sec"><span class="num">17</span>셸 설정</h2>
+  <p class="lead">하루에 <code>kubectl</code>을 백 번 친다면 자동완성과 별칭이 오타를 줄인다. 특히 네임스페이스 이름과 파드 접미사는 손으로 칠 값이 아니다.</p>
+
+  <p>zsh 자동완성. <code>~/.zshrc</code>에 넣는다.</p>
+<pre><code>source &lt;(kubectl completion zsh)
+alias k=kubectl
+compdef __start_kubectl k</code></pre>
+
+  <p>bash라면 이렇게 한다.</p>
+<pre><code>source &lt;(kubectl completion bash)
+alias k=kubectl
+complete -o default -F __start_kubectl k</code></pre>
+
+  <table>
+    <tr><th>설정</th><th>효과</th></tr>
+    <tr><td><code>export KUBE_EDITOR="code --wait"</code></td><td><code>kubectl edit</code>이 쓸 에디터</td></tr>
+    <tr><td><code>export KUBECONFIG=~/.kube/config:~/.kube/edge.yaml</code></td><td>여러 kubeconfig를 <strong>콜론으로 병합</strong>. 컨텍스트가 합쳐져 보인다</td></tr>
+    <tr><td><code>kubectl --v=6 get pods</code></td><td>실제로 어떤 URL을 호출했는지. RBAC 거부의 원인을 찾을 때</td></tr>
+    <tr><td><code>kubectl --v=8 get pods</code></td><td>요청·응답 본문까지. 시끄럽지만 API 동작을 배울 때 쓸모 있다</td></tr>
+    <tr><td><code>kubectl get pods --request-timeout=5s</code></td><td>응답 없는 클러스터에서 매달리지 않는다</td></tr>
+  </table>
+
+  <p>자동완성을 켜면 <code>kubectl -n &lt;탭&gt;</code>으로 네임스페이스가, <code>kubectl logs &lt;탭&gt;</code>으로 파드 이름이 채워진다. 파드 접미사를 눈으로 옮겨 적다가 한 글자 틀리는 사고가 여기서 사라진다.</p>
+</section>
+
+<footer>
+  <h3>참고</h3>
+  <ul>
+    <li>kubectl 공식 레퍼런스: https://kubernetes.io/docs/reference/kubectl/ (2026-09-09 확인)</li>
+    <li>kubectl 치트시트(공식): https://kubernetes.io/docs/reference/kubectl/quick-reference/ (2026-09-09 확인)</li>
+    <li>JSONPath 지원 범위: https://kubernetes.io/docs/reference/kubectl/jsonpath/ (2026-09-09 확인)</li>
+    <li>버전 스큐 정책: https://kubernetes.io/docs/setup/release/version-skew-policy/ (2026-09-09 확인)</li>
+    <li>서비스어카운트와 토큰: https://kubernetes.io/docs/concepts/security/service-accounts/ (2026-09-09 확인)</li>
+  </ul>
+  <p>이 문서의 명령은 <code>kubectl v1.37.0</code>의 <code>--help</code>로 플래그 존재를 확인했고, 사용 맥락은 이 과정 38개 모듈 본문에서 가져왔다. 실행 결과와 실패 사례는 각 절 끝에 링크된 모듈에 있다.</p>
+  <div class="navlinks">
+    <a href="index.html">← 과정 전체 로드맵</a>
+    <a href="m01-setup-environment.html">M01 환경 구축부터 시작 →</a>
+  </div>
+</footer>
+</div>
+</body>
+</html>

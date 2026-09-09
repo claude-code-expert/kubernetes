@@ -178,6 +178,7 @@
   <a href="#howto"><span class="num">4</span>문서 읽는 법</a>
   <a href="#labs"><span class="num">5</span>실습 파일 구조</a>
   <a href="#schedule"><span class="num">6</span>진행 방식</a>
+  <a href="#reference"><span class="num">7</span>참고 자료 — kubectl 치트시트</a>
 </nav>
 
 <section id="roadmap">
@@ -322,6 +323,7 @@
     <tr><td>체크포인트</td><td>무엇이 보이면 성공인지. 판정 가능한 문장으로</td></tr>
     <tr><td>정리</td><td>리소스 삭제. 부하 루프를 띄웠다면 종료 방법</td></tr>
   </table>
+  <p>모듈을 따라가다 명령 자체가 기억나지 않을 때는 <a href="cheatsheet-kubectl.html">kubectl 치트시트</a>를 편다. 38개 모듈에서 실제로 쓴 명령을 용도별로 다시 묶어 둔 문서라 실습 순서와 무관하게 필요한 절만 봐도 된다.</p>
   <p>명령 블록에는 프롬프트 기호를 붙이지 않았다. 블록 전체를 복사해 붙여넣으면 된다. 실행 결과는 점선 테두리 블록으로 구분돼 있고, 환경마다 달라지는 값(파드 이름 접미사, IP, 시각)은 그대로 두었다 — 같을 필요가 없는 값이다.</p>
 </section>
 
@@ -348,6 +350,16 @@
     <tr><td>자습</td><td>38일</td><td>1~1.5시간</td></tr>
   </table>
   <p>스터디로 운영한다면 발표자를 모듈마다 돌리되, 발표자는 <strong>일부러 실패시키기 블록을 미리 실행해 보고</strong> 에러 메시지를 캡처해 오는 것을 준비물로 삼는다. 성공 시연은 문서만 따라 하면 되지만 실패 시연은 환경마다 메시지가 조금씩 다르기 때문이다.</p>
+</section>
+
+<section id="reference">
+  <h2 class="sec"><span class="num">7</span>참고 자료 — kubectl 치트시트</h2>
+  <p class="lead">모듈 교안이 아니라 레퍼런스다. 38개 모듈 본문에서 실제로 실행한 명령만 뽑아 <strong>실습 순서가 아니라 용도별로</strong> 다시 묶었다. 손이 멈췄을 때 해당 절만 펴 보는 용도이고, 각 절 끝에는 그 명령을 실행 결과·실패 사례와 함께 다루는 모듈 링크가 붙어 있다.</p>
+  <table>
+    <tr><th>문서</th><th>무엇이 들어 있나</th></tr>
+    <tr><td><a href="cheatsheet-kubectl.html">kubectl 치트시트</a></td><td>컨텍스트 · 조회 · 셀렉터 · 진단 · exec · 생성 · 수정 · 롤아웃 · 설정 · 노드 · 권한 · API 탐색 · 삭제 · 출력 가공 17개 절. 헷갈리는 것 다섯 가지와 <strong>지금 쓰면 안 되는 명령</strong> 정정표를 포함한다</td></tr>
+  </table>
+  <p>치트시트에는 실행 결과를 싣지 않는다. 명령이 무엇을 하는지와 언제 쓰는지만 적고, 화면에 무엇이 나오는지는 모듈 본문이 갖는다. 두 곳에 같은 출력을 두면 한쪽이 낡기 때문이다.</p>
 </section>
 
 <footer>
