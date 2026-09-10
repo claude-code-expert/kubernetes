@@ -388,9 +388,10 @@ echo $?</code></pre>
   <div class="step">
     <h4>7단계. v2 이미지를 확인한다</h4>
     <p class="purpose"><span class="lbl">목적</span>M04 4.5절에서 만든 v2가 있는지 확인하고, 없으면 같은 명령으로 만든다. 소스는 같고 <code>APP_VERSION</code>만 다른 이미지다.</p>
+    <p>두 줄을 <strong>같은 터미널에서 차례대로</strong> 친다. 앞 단계에서 <code>cd</code>한 <code>course/labs/apps/journal-api</code> 안이어야 한다 — 끝의 <code>.</code>이 현재 디렉터리를 빌드 컨텍스트로 넘기기 때문이다. <code>--build-arg</code>가 Dockerfile의 <code>ARG APP_VERSION</code> 기본값을 이 빌드에서만 덮어쓰고, <code>--rm</code>은 확인이 끝난 컨테이너를 지운다.</p>
 <pre><code>docker build --build-arg APP_VERSION=v2 -t journal-api:v2 .
 docker run --rm journal-api:v2 node -e 'console.log(process.env.APP_VERSION)'</code></pre>
-    <span class="out-lbl">실행 결과</span>
+    <span class="out-lbl">실행 결과 (두 명령이 이어서 낸 것)</span>
     <div class="out"><code>#16 DONE 0.1s
 v2</code></div>
     <div class="verdict"><span class="lbl">판정</span>M04에서 이미 만들었다면 빌드가 전부 캐시로 끝나고(마지막 줄 <code>DONE 0.1s</code>), 컨테이너가 <code>v2</code>를 출력한다. 단계 번호는 환경마다 다르다.</div>

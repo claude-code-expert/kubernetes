@@ -366,14 +366,29 @@ spec:
     <h4>1단계. 버전이 다른 이미지 두 개를 만든다</h4>
     <p class="purpose"><span class="lbl">목적</span>롤아웃을 관찰하려면 구분되는 버전이 필요하다. M07에서 v1·v2를 이미 적재했다면 이 단계는 확인만 하면 된다.</p>
     <p>M04의 Dockerfile 마지막 스테이지에는 버전을 새기는 두 줄이 들어 있다. 빌드 인자 하나로 같은 소스에서 다른 버전의 이미지를 만드는 장치이며, M10은 그것을 이용해 v2를 굽는다.</p>
-<pre><code># course/labs/apps/journal-api/Dockerfile 마지막 스테이지 (M04에서 넣어 둔 것)
+    <p>아래 블록은 <strong>치는 명령이 아니라 이미 파일에 들어 있는 내용</strong>이다. 열어서 두 줄이 있는지만 확인하고 넘어간다. 없으면 <a href="m04-docker-dockerfile-build.html">M04</a>로 돌아간다.</p>
+<pre><code># course/labs/apps/journal-api/Dockerfile — 마지막 스테이지 발췌
 ARG APP_VERSION=v1
 ENV NODE_ENV=production APP_VERSION=${APP_VERSION}</code></pre>
-<pre><code>cd course/labs/apps/journal-api
-docker build --build-arg APP_VERSION=v1 -t journal-api:v1 .
-docker build --build-arg APP_VERSION=v2 -t journal-api:v2 .
-docker run --rm journal-api:v2 node -e "console.log(process.env.APP_VERSION)"</code></pre>
-    <span class="out-lbl">실행 결과 (마지막 명령)</span>
+    <p>여기서부터가 실제로 치는 명령이다. <strong>터미널 하나에서 위에서 아래로 차례대로</strong> 실행한다. 앞 명령이 끝나야 다음이 의미를 갖는다 — 빌드가 끝나야 그 이미지를 실행할 수 있다.</p>
+<pre><code>cd course/labs/apps/journal-api</code></pre>
+<pre><code>docker build --build-arg APP_VERSION=v1 -t journal-api:v1 .
+docker build --build-arg APP_VERSION=v2 -t journal-api:v2 .</code></pre>
+    <table>
+      <tr><th>플래그</th><th>하는 일</th></tr>
+      <tr><td><code>--build-arg APP_VERSION=v2</code></td><td>Dockerfile의 <code>ARG</code> 기본값 <code>v1</code>을 이 빌드에서만 덮어쓴다. <strong>같은 소스에서 다른 이미지가 나오는 유일한 차이</strong>가 이것이다</td></tr>
+      <tr><td><code>-t journal-api:v2</code></td><td>만들 이미지의 이름과 태그. 태그를 안 주면 <code>latest</code>가 붙는데, 이 과정은 그것을 금지한다</td></tr>
+      <tr><td><code>.</code></td><td>빌드 컨텍스트. 현재 디렉터리를 도커에 넘긴다 — 앞에서 <code>cd</code>한 이유다</td></tr>
+    </table>
+    <p>두 빌드는 소스가 같아 두 번째는 캐시를 타고 몇 초 만에 끝난다. <code>ARG</code>가 바뀐 마지막 레이어만 다시 만들어진다.</p>
+    <p>새겨졌는지는 이미지를 <strong>잠깐 띄워서</strong> 물어본다. 클러스터와 무관하게 도커에서 바로 확인하는 것이다.</p>
+<pre><code>docker run --rm journal-api:v2 node -e "console.log(process.env.APP_VERSION)"</code></pre>
+    <table>
+      <tr><th>플래그</th><th>하는 일</th></tr>
+      <tr><td><code>--rm</code></td><td>명령이 끝나면 컨테이너를 지운다. 확인용 일회성이라 남길 이유가 없다</td></tr>
+      <tr><td><code>node -e "..."</code></td><td>이미지의 기본 실행 명령 대신 이 한 줄만 실행한다. 앱을 띄우지 않고 환경변수만 읽는다</td></tr>
+    </table>
+    <span class="out-lbl">실행 결과</span>
     <div class="out"><code>v2</code></div>
 <pre><code>kind load docker-image journal-api:v1 journal-api:v2 --name study</code></pre>
     <span class="out-lbl">실행 결과</span>
