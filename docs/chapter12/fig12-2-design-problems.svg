@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .t-tool { font-size: 10.5px; fill: #2456c4; }
+  </style>
+
+  <!-- 데이터 복제 -->
+  <rect class="box" x="20" y="20" width="410" height="100" rx="4"/>
+  <text class="t-title" x="40" y="46">① 데이터 복제 · 일관성</text>
+  <text class="t-sub" x="40" y="68">어느 리전에서 쓰기가 일어나고, 최종 일관성을</text>
+  <text class="t-sub" x="40" y="84">감내할 수 있는가? 리전 간 레이턴시는?</text>
+  <text class="t-tool" x="40" y="104">예: Cloud Spanner, CosmosDB (복제를 위임)</text>
+
+  <!-- 서비스 디스커버리 -->
+  <rect class="box" x="450" y="20" width="410" height="100" rx="4"/>
+  <text class="t-title" x="470" y="46">② 서비스 디스커버리</text>
+  <text class="t-sub" x="470" y="68">클러스터마다 자기 레지스트리뿐 — 다른 클러스터와</text>
+  <text class="t-sub" x="470" y="84">자동 동기화되지 않는다</text>
+  <text class="t-tool" x="470" y="104">예: Consul, Istio·Linkerd·Cilium 멀티클러스터 기능</text>
+
+  <!-- 네트워크 라우팅 -->
+  <rect class="box" x="20" y="136" width="410" height="100" rx="4"/>
+  <text class="t-title" x="40" y="162">③ 네트워크 라우팅</text>
+  <text class="t-sub" x="40" y="184">클러스터 내부는 쉽지만, 인그레스는 클러스터와</text>
+  <text class="t-sub" x="40" y="200">1:1 — 클러스터 간 트래픽 라우팅은 별도로 설계</text>
+  <text class="t-tool" x="40" y="220">9장의 서비스 타입 논의가 여기서 다시 등장</text>
+
+  <!-- 운영 관리 -->
+  <rect class="box" x="450" y="136" width="410" height="100" rx="4"/>
+  <text class="t-title" x="470" y="162">④ 운영 관리</text>
+  <text class="t-sub" x="470" y="184">가장 큰 오버헤드 — 클러스터가 하나 늘 때마다</text>
+  <text class="t-sub" x="470" y="200">패치·업그레이드·모니터링 대상이 곱절로 는다</text>
+  <text class="t-tool" x="470" y="220">오퍼레이터로 반복 작업 자동화 (12.4절)</text>
+
+  <!-- 지속적 배포 -->
+  <rect class="box-accent" x="235" y="252" width="410" height="100" rx="4"/>
+  <text class="t-title" x="255" y="278">⑤ 지속적 배포</text>
+  <text class="t-sub" x="255" y="300">여러 클러스터에 걸친 롤아웃을 어떻게 조율할까 —</text>
+  <text class="t-sub" x="255" y="316">단일 클러스터의 CD(5장)를 그대로 복붙하면 안 된다</text>
+  <text class="t-tool" x="255" y="336">7장의 카나리 리전 웨이브 전략과 직결</text>
+
+  <text class="t-cap" x="450" y="392" text-anchor="middle">다섯 문제 모두 "단일 클러스터에선 고민할 필요조차 없던 것들"이다 — 멀티클러스터가</text>
+  <text class="t-cap" x="450" y="414" text-anchor="middle">공짜가 아니라는 사실을 이 목록이 가장 잘 보여준다. 그림 12-1의 이유가 이 비용을 넘어설 때만 선택한다.</text>
+</svg>

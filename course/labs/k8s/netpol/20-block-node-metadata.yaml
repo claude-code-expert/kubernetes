@@ -1,0 +1,35 @@
+# M27 — 파드가 노드와 클라우드 메타데이터에 직접 닿지 못하게 한다.
+#
+# 클라우드에서 169.254.169.254 는 인증 없이 인스턴스 자격 증명을 내준다.
+# 파드 하나가 뚫리면 그 자격 증명으로 클라우드 계정까지 번진다.
+# kind 에는 그 주소가 없으므로 여기서는 **노드 대역**으로 같은 차단을 확인한다.
+#
+# 두 가지를 놓치기 쉽다.
+#  1) ipBlock 은 클러스터 밖 IP 를 위한 것이다. 파드끼리의 통신은 ipBlock 으로 열리지 않는다
+#     — 그래서 DNS 와 클러스터 내부용 규칙을 podSelector/namespaceSelector 로 따로 쓴다.
+#  2) except 는 같은 항목의 cidr 안에서만 의미가 있다. 다른 to 항목이 그 대역을 열면 무력화된다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: block-node-and-metadata
+  namespace: m27
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    # ① 클러스터 밖으로 나가는 것 — 노드 대역과 메타데이터 주소만 뺀다
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32   # 클라우드 메타데이터
+              - 172.20.0.0/16        # kind 노드 대역. 실제 클러스터에서는 노드 서브넷
+    # ② DNS
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}

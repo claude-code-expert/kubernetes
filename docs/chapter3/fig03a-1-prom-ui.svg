@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .frame { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .bar { fill: #f7f7f5; stroke: #c8c8c8; stroke-width: 1; }
+    .ui { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .ui-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-logo { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-menu { font-size: 13px; fill: #555555; }
+    .t-menu-on { font-size: 13px; font-weight: 700; fill: #2456c4; }
+    .t-ui { font-size: 12.5px; fill: #555555; }
+    .t-ui-b { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-note { font-size: 12px; fill: #444444; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- 브라우저 프레임 -->
+  <rect class="frame" x="20" y="20" width="860" height="352" rx="6"/>
+
+  <!-- 상단 메뉴 바 -->
+  <rect class="bar" x="21" y="21" width="858" height="44"/>
+  <text class="t-logo" x="44" y="48">Prometheus</text>
+  <text class="t-menu-on" x="210" y="48">Query</text>
+  <text class="t-menu" x="300" y="48">Alerts</text>
+  <text class="t-menu" x="380" y="48">Status ▾</text>
+  <text class="t-ui" x="700" y="48">(v3 기본 UI)</text>
+
+  <!-- 쿼리 입력창 + 실행 버튼 -->
+  <rect class="ui" x="44" y="86" width="692" height="40" rx="4"/>
+  <text class="t-ui" x="58" y="111">PromQL 입력 — 타이핑하면 메트릭·함수 자동완성</text>
+  <rect class="ui-accent" x="748" y="86" width="108" height="40" rx="4"/>
+  <text class="t-ui-b" x="802" y="111" text-anchor="middle">Execute</text>
+
+  <!-- 결과 탭 -->
+  <rect class="ui" x="44" y="142" width="90" height="30" rx="4"/>
+  <text class="t-ui" x="89" y="162" text-anchor="middle">Table</text>
+  <rect class="ui-accent" x="144" y="142" width="90" height="30" rx="4"/>
+  <text class="t-ui-b" x="189" y="162" text-anchor="middle">Graph</text>
+  <rect class="ui" x="244" y="142" width="90" height="30" rx="4"/>
+  <text class="t-ui" x="289" y="162" text-anchor="middle">Explain</text>
+  <text class="t-note" x="356" y="162">← Table: 현재값 목록 · Graph: 시계열 그래프 · Explain: 쿼리 구조 해설(v3 신규)</text>
+
+  <!-- 그래프 영역 -->
+  <rect class="ui" x="44" y="188" width="812" height="110" rx="4"/>
+  <text class="t-ui" x="450" y="238" text-anchor="middle">그래프 영역 — 마우스 드래그로 구간 확대, 상단에서 시간 범위·해상도 조절</text>
+  <text class="t-ui" x="450" y="262" text-anchor="middle">＋ Add query panel 버튼으로 쿼리 패널을 여러 개 쌓아 비교</text>
+
+  <!-- 주석 영역 -->
+  <text class="t-note" x="44" y="326">Status ▾ 하위: Targets(수집 대상 up/down) · Rules · Service Discovery · Configuration · TSDB Status · Flags</text>
+  <text class="t-note" x="44" y="350">입력창 옆 메트릭 탐색기 버튼: 전체 메트릭 목록과 레이블을 훑어보며 클릭으로 쿼리 시작</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="404" text-anchor="middle">프로메테우스 v3 UI 화면 지도. 메뉴는 셋뿐이다 — 질의(Query), 알림 상태(Alerts), 서버 자체 상태(Status).</text>
+  <text class="t-cap" x="450" y="426" text-anchor="middle">대시보드는 여기서 만들지 않는다. 이 UI는 쿼리 실험과 수집 상태 점검용이고, 시각화는 그라파나의 몫이다.</text>
+</svg>

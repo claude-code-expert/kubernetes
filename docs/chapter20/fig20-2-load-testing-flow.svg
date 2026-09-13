@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow202" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-step { font-size: 11px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-step" x="115" y="30" text-anchor="middle">STEP 1</text>
+  <rect class="box" x="20" y="42" width="190" height="84" rx="4"/>
+  <text class="t-title" x="115" y="68" text-anchor="middle">실제와 가까운</text>
+  <text class="t-title" x="115" y="86" text-anchor="middle">트래픽 패턴 생성</text>
+  <text class="t-sub" x="115" y="106" text-anchor="middle">확률 분포 · 실기록 재생 (20.2.3)</text>
+
+  <line class="line" x1="210" y1="84" x2="246" y2="84" marker-end="url(#arrow202)"/>
+
+  <text class="t-step" x="345" y="30" text-anchor="middle">STEP 2</text>
+  <rect class="box" x="250" y="42" width="190" height="84" rx="4"/>
+  <text class="t-title" x="345" y="68" text-anchor="middle">격리된 애플리케이션</text>
+  <text class="t-title" x="345" y="86" text-anchor="middle">사본 준비</text>
+  <text class="t-sub" x="345" y="106" text-anchor="middle">프로덕션 DB 오염 방지</text>
+
+  <line class="line" x1="440" y1="84" x2="476" y2="84" marker-end="url(#arrow202)"/>
+
+  <text class="t-step" x="575" y="30" text-anchor="middle">STEP 3</text>
+  <rect class="box" x="480" y="42" width="190" height="84" rx="4"/>
+  <text class="t-title" x="575" y="68" text-anchor="middle">분산 부하 파드로</text>
+  <text class="t-title" x="575" y="86" text-anchor="middle">대량 요청 전송</text>
+  <text class="t-sub" x="575" y="106" text-anchor="middle">클러스터 내부·외부 선택 (20.2.4)</text>
+
+  <line class="line" x1="670" y1="84" x2="706" y2="84" marker-end="url(#arrow202)"/>
+
+  <text class="t-step" x="795" y="30" text-anchor="middle">STEP 4</text>
+  <rect class="box-accent" x="710" y="42" width="170" height="84" rx="4"/>
+  <text class="t-title" x="795" y="68" text-anchor="middle">병목 발견 +</text>
+  <text class="t-title" x="795" y="86" text-anchor="middle">리소스 튜닝</text>
+  <text class="t-sub" x="795" y="106" text-anchor="middle">8장 QoS·오토스케일링 연결</text>
+
+  <!-- 툴 3종 -->
+  <text class="t-h" x="20" y="166" font-size="13" font-weight="700" fill="#333">STEP 3에 쓰는 분산 로드 테스팅 툴</text>
+
+  <rect class="box" x="20" y="182" width="270" height="100" rx="4"/>
+  <text class="t-title" x="155" y="208" text-anchor="middle">JMeter</text>
+  <text class="t-sub" x="155" y="228" text-anchor="middle">GUI 기반, 프로토콜 폭 넓음</text>
+  <text class="t-sub" x="155" y="244" text-anchor="middle">(JDBC·JMS 등)</text>
+  <text class="t-sub" x="155" y="264" text-anchor="middle">엔터프라이즈·레거시 프로토콜에 강함</text>
+
+  <rect class="box" x="315" y="182" width="270" height="100" rx="4"/>
+  <text class="t-title" x="450" y="208" text-anchor="middle">Locust</text>
+  <text class="t-sub" x="450" y="228" text-anchor="middle">파이썬 코드로 시나리오 작성</text>
+  <text class="t-sub" x="450" y="244" text-anchor="middle">내장 분산 마스터/워커 모드</text>
+  <text class="t-sub" x="450" y="264" text-anchor="middle">파이썬 팀에 적합</text>
+
+  <rect class="box-accent" x="610" y="182" width="270" height="100" rx="4"/>
+  <text class="t-title" x="745" y="208" text-anchor="middle">k6 (2026 기준 추가)</text>
+  <text class="t-sub" x="745" y="228" text-anchor="middle">Grafana Labs · 코드형 테스트</text>
+  <text class="t-sub" x="745" y="244" text-anchor="middle">CI 네이티브, 3장 프로메테우스 연동</text>
+  <text class="t-sub" x="745" y="264" text-anchor="middle">단일 Go 바이너리 — 설치 간단</text>
+
+  <text class="t-cap" x="450" y="320" text-anchor="middle">셋 다 "부하를 코드로 기술한다"는 원칙은 같다 — 프로토콜 폭이 필요하면 JMeter,</text>
+  <text class="t-cap" x="450" y="342" text-anchor="middle">파이썬 생태계면 Locust, CI 통합과 개발자 경험을 우선하면 k6가 2026년 현재 첫 선택지로 꼽힌다.</text>
+</svg>

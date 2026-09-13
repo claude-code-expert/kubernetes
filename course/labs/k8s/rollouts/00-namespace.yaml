@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: m30
+  labels:
+    # M24 의 기준을 그대로 건다. 배포 전략 실습이라고 보안을 낮추지 않는다.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest

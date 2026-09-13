@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow213" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-h" x="20" y="26">21.5 리소스 검사 — 리던던시를 갖춘 2계층</text>
+
+  <rect class="box" x="20" y="40" width="200" height="70" rx="4"/>
+  <text class="t-title" x="120" y="66" text-anchor="middle">유저의 CR 요청</text>
+
+  <line class="line" x1="220" y1="75" x2="256" y2="75" marker-end="url(#arrow213)"/>
+
+  <rect class="box-accent" x="260" y="40" width="280" height="70" rx="4"/>
+  <text class="t-title" x="400" y="62" text-anchor="middle">① OpenAPI 스키마 검증</text>
+  <text class="t-sub" x="400" y="82" text-anchor="middle">CRD spec에 정의 — 타입·필수값 등</text>
+  <text class="t-sub" x="400" y="96" text-anchor="middle">잘못된 형식이 etcd에 닿기 전 차단</text>
+
+  <line class="line" x1="540" y1="75" x2="576" y2="75" marker-end="url(#arrow213)"/>
+
+  <rect class="box-accent" x="580" y="40" width="280" height="70" rx="4"/>
+  <text class="t-title" x="720" y="62" text-anchor="middle">② 검증 어드미션 웹훅</text>
+  <text class="t-sub" x="720" y="82" text-anchor="middle">스키마로 표현 못 하는 복잡한 규칙</text>
+  <text class="t-sub" x="720" y="96" text-anchor="middle">(17장의 그 웹훅)</text>
+
+  <text class="t-sub" x="450" y="132" text-anchor="middle">조정 루프 안에도 검사를 넣을 수 있지만, 그건 "이미 클러스터에 있는" 리소스의 뒤늦은 검증이다 —</text>
+  <text class="t-sub" x="450" y="148" text-anchor="middle">최대한 앞단(①②)에서 막는 것이 항상 낫다.</text>
+
+  <line x1="20" y1="172" x2="880" y2="172" stroke="#d8d8d8" stroke-dasharray="2 4"/>
+
+  <text class="t-h" x="20" y="200">21.7 오퍼레이터가 정말 필요한가 — 판단 기준</text>
+
+  <rect class="box" x="20" y="216" width="270" height="130" rx="6"/>
+  <text class="t-title" x="155" y="242" text-anchor="middle">헬름 차트로 충분</text>
+  <text class="t-sub" x="155" y="264" text-anchor="middle">배포 시 한 번 값을 채우면 끝</text>
+  <text class="t-sub" x="155" y="280" text-anchor="middle">"살아있는 동안 계속 돌봐야</text>
+  <text class="t-sub" x="155" y="296" text-anchor="middle">할 일"이 없는 애플리케이션</text>
+  <text class="t-sub" x="155" y="318" text-anchor="middle">→ 대부분의 무상태 서비스</text>
+
+  <rect class="box" x="315" y="216" width="270" height="130" rx="6"/>
+  <text class="t-title" x="450" y="242" text-anchor="middle">쿠스토마이즈·테라폼으로 충분</text>
+  <text class="t-sub" x="450" y="264" text-anchor="middle">환경별 값 차이만 있고</text>
+  <text class="t-sub" x="450" y="280" text-anchor="middle">런타임에 스스로 판단할</text>
+  <text class="t-sub" x="450" y="296" text-anchor="middle">일이 없는 인프라</text>
+  <text class="t-sub" x="450" y="318" text-anchor="middle">→ 정적 구성 위주</text>
+
+  <rect class="box-accent" x="610" y="216" width="270" height="130" rx="6"/>
+  <text class="t-title" x="745" y="242" text-anchor="middle">오퍼레이터가 필요</text>
+  <text class="t-sub" x="745" y="264" text-anchor="middle">배포 이후에도 백업·페일오버·</text>
+  <text class="t-sub" x="745" y="280" text-anchor="middle">리더 선출처럼 "지속적으로</text>
+  <text class="t-sub" x="745" y="296" text-anchor="middle">판단하고 행동"해야 함</text>
+  <text class="t-sub" x="745" y="318" text-anchor="middle">→ 16장의 스테이트풀 시스템</text>
+
+  <text class="t-cap" x="450" y="384" text-anchor="middle">오퍼레이터 개발·유지보수는 결코 가벼운 일이 아니다 — 처음부터 모든 운영 문제를 오퍼레이터로</text>
+  <text class="t-cap" x="450" y="404" text-anchor="middle">풀려 하지 말고, 가장 큰 걸림돌 하나부터 해결하며 반복적으로 넓혀 간다.</text>
+</svg>

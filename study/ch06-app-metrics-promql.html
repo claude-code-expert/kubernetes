@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 · 앱 메트릭과 PromQL — 쿠버네티스 관측성</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+.why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="index.html">← 목차로</a>
+  <span class="where">CHAPTER 06 / 11</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>앱 메트릭 연동과 PromQL</h1>
+  <p class="lede">02장에서 연 <code>/actuator/prometheus</code> 를 04장의 프로메테우스에 붙인다. 연결 고리는 <strong>라벨 세 겹</strong>이고, 대부분 첫 번째 겹에서 막힌다. 일부러 한 번 실패시킨 뒤 고친다.</p>
+</header>
+
+<h2><span class="n">01</span>왜 이 장이 필요한가</h2>
+
+<p>04장에서 프로메테우스가 섰지만 타깃 목록에 우리 앱이 없었다. 02장에서 앱이 <code>/actuator/prometheus</code> 를 열어 뒀는데도 그렇다. 둘 사이를 잇는 선언이 없기 때문이다.</p>
+
+<p>그 선언이 <code>ServiceMonitor</code> 인데, 여기에 이 시리즈에서 가장 악명 높은 함정이 있다. <strong>연결이 세 겹의 라벨 일치로만 이루어지고, 하나라도 어긋나면 에러 메시지가 없다.</strong> 리소스는 정상으로 만들어지고, 로그도 조용하고, 타깃만 안 생긴다.</p>
+
+<p>그래서 이 장은 성공부터 하지 않는다. <strong>먼저 실패시키고</strong> 그 침묵을 확인한 뒤 고친다. 5분이면 되는 경험이 나중에 몇 시간을 아낀다.</p>
+
+
+<h2><span class="n">02</span>알아야 할 개념</h2>
+
+<h3>연결은 세 겹이다</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>겹</th><th>무엇이 무엇을 고르나</th><th>어긋나면</th><th>확인하는 명령</th></tr>
+  <tr><td>①</td><td>프로메테우스 CR 의 <code>serviceMonitorSelector</code> 가 <strong>ServiceMonitor</strong> 를 고른다</td><td>ServiceMonitor 가 아예 읽히지 않는다</td><td>생성된 스크레이프 설정에 <code>job_name</code> 이 있는지</td></tr>
+  <tr><td>②</td><td><code>ServiceMonitor</code> 의 <code>selector</code> 가 <strong>Service</strong> 를 고른다</td><td>타깃 그룹은 생기는데 대상이 0개</td><td><code>kubectl -n apps get svc --show-labels</code></td></tr>
+  <tr><td>③</td><td>Service 의 <code>selector</code> 가 <strong>파드</strong>를 고른다</td><td>엔드포인트가 빈다</td><td><code>kubectl -n apps get endpointslices</code></td></tr>
+</table>
+</div>
+
+<p>이 장에서 새로 만드는 것은 <strong>①과 ServiceMonitor 뿐</strong>이다. ②와 ③은 03장에서 서비스에 라벨을 붙이고 포트에 <code>http</code> 라는 이름을 준 시점에 이미 준비됐다.</p>
+
+<blockquote class="warn">
+  <span class="label">포트는 이름으로 고른다</span>
+  <p><code>ServiceMonitor</code> 의 <code>endpoints.port</code> 는 포트 <em>번호</em>가 아니라 서비스에 정의된 포트 <strong>이름</strong>이다. <code>8080</code> 이라고 숫자를 적으면 조용히 안 붙는다.</p>
+</blockquote>
+
+<h3>프로메테우스가 라벨을 덧붙인다</h3>
+
+<p>앱은 <code>orders_created_total{channel="api"}</code> 하나만 내보냈는데, 저장된 시계열에는 <code>namespace</code> · <code>pod</code> · <code>service</code> · <code>job</code> 이 붙어 있다. 쿠버네티스 서비스 디스커버리가 스크레이프 시점에 넣어 주는 것이다.</p>
+
+<p>이 라벨들 덕분에 파드가 죽고 다시 떠도 같은 <code>job</code> 으로 묶여 하나의 흐름처럼 보인다. PromQL 에서 집계 축을 고를 때 쓰는 것이 대부분 이 라벨이다. <strong>02장에서 앱에 공통 태그를 넣지 않은 이유</strong>가 여기 있다 — 넣었다면 의미가 겹치는 라벨이 두 벌 생겼을 것이다.</p>
+
+<h3>카운터는 그대로 보면 쓸모가 없다</h3>
+
+<p>카운터는 늘기만 한다. “지금 트래픽이 많은가”를 읽으려면 <strong>기울기</strong>를 봐야 하고, 그것이 <code>rate()</code> 다. 대괄호 안의 시간은 “이만큼을 돌아보며 평균 낸다”는 뜻이며 <strong>스크레이프 간격의 4배 이상</strong>을 권한다. 우리는 30초 간격이므로 최소 2분이다.</p>
+
+<h3>용어 정리</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
+  <tr><td>ServiceMonitor</td><td>Service Monitor</td><td>“이 라벨을 가진 서비스의 이 포트를 긁어라”를 선언하는 커스텀 리소스</td></tr>
+  <tr><td>PodMonitor</td><td>Pod Monitor</td><td>같은 역할이되 Service 대신 파드 라벨로 고른다. 배치 작업처럼 Service 가 없을 때 쓴다</td></tr>
+  <tr><td>셀렉터</td><td>Selector</td><td>라벨로 대상을 고르는 조건. 이 장의 세 겹이 전부 셀렉터다</td></tr>
+  <tr><td>서비스 디스커버리</td><td>Service Discovery</td><td>긁을 대상을 자동으로 찾아내는 기능. 쿠버네티스 API 를 보고 파드 목록을 만든다</td></tr>
+  <tr><td>PromQL</td><td>Prometheus Query Language</td><td>프로메테우스의 질의 언어</td></tr>
+  <tr><td><code>rate()</code></td><td>rate</td><td>카운터의 초당 증가량. 파드 재시작으로 0 이 되는 것도 보정한다</td></tr>
+  <tr><td><code>sum by</code></td><td>sum by</td><td>지정한 라벨만 남기고 합친다. <code>without</code> 은 반대로 지정한 것만 빼고 묶는다</td></tr>
+  <tr><td><code>histogram_quantile()</code></td><td>histogram quantile</td><td>버킷에서 분위수를 계산한다. <code>le</code> 라벨을 반드시 남겨야 한다</td></tr>
+  <tr><td><code>le</code></td><td>less or equal</td><td>히스토그램 버킷의 경계값 라벨. “이 시간 이하로 끝난 건수”</td></tr>
+  <tr><td>RED</td><td>Rate · Errors · Duration</td><td>애플리케이션을 보는 세 지표</td></tr>
+  <tr><td>카디널리티</td><td>Cardinality</td><td>라벨 조합의 가짓수 = 시계열 개수. 앱 메트릭이 붙는 순간 급증한다 (09장)</td></tr>
+  <tr><td>네이티브 히스토그램</td><td>Native Histogram</td><td>버킷을 미리 정하지 않고 지수적으로 자동 분할하는 방식. Prometheus 3.8 정식</td></tr>
+</table>
+</div>
+
+<div class="goals">
+  <h3>이 장을 마치면 할 수 있는 것</h3>
+  <ol>
+    <li>라벨 세 겹 중 어디가 끊겼는지를 <strong>각각 다른 명령</strong>으로 좁힐 수 있다.</li>
+    <li>생성된 스크레이프 설정을 직접 열어 <code>job_name</code> 유무로 ①번 고리를 판정할 수 있다.</li>
+    <li>메트릭에 붙은 라벨이 어디서 왔는지 하나씩 짚을 수 있다.</li>
+    <li>RED 세 질의를 직접 쓰고, 결과가 비는 이유(분모 0, <code>le</code> 누락)를 설명할 수 있다.</li>
+    <li>백엔드 지연이 게이트웨이로 전파되는 모습을 두 그래프로 대조할 수 있다.</li>
+  </ol>
+</div>
+
+
+<h2><span class="n">03</span>최종적으로 만들 것</h2>
+
+<p>이 장이 끝나면 <code>up{namespace="apps"}</code> 가 파드 3개를 모두 1 로 돌려주고, RED 세 질의가 값을 낸다. 그 질의들이 07장 대시보드의 패널이 된다.</p>
+
+<h3>라벨 세 겹</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" role="img" aria-label="프로메테우스 CR이 ServiceMonitor를 고르고 ServiceMonitor가 Service를 고르고 Service가 파드를 고르는 세 겹의 라벨 연결">
+  <rect width="1000" height="560" fill="#ffffff"/>
+  <text x="24" y="42" font-size="16.5" font-weight="700" fill="#15181d">세 겹이 모두 맞아야 타깃이 생긴다. 하나라도 어긋나면 조용히 실패한다</text>
+
+  <defs>
+    <marker id="k1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+    </marker>
+    <marker id="k2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#1f4d8f"/>
+    </marker>
+    <marker id="k3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="70" width="520" height="104" rx="6" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.8"/>
+  <text x="42" y="102" font-size="14" font-weight="700" fill="#15181d">Prometheus (CR) — 04장 차트가 만든 것</text>
+  <text x="42" y="130" font-size="12" font-family="monospace" fill="#585f6b">serviceMonitorSelector:</text>
+  <text x="42" y="154" font-size="12" font-family="monospace" fill="#6a4a9c">  matchLabels: {release: kps}</text>
+
+  <line x1="200" y1="176" x2="200" y2="210" stroke="#6a4a9c" stroke-width="2" marker-end="url(#k1)"/>
+  <circle cx="230" cy="192" r="13" fill="#6a4a9c"/>
+  <text x="230" y="197" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="252" y="197" font-size="12.5" fill="#585f6b">오퍼레이터가 이것을 고를 것인가</text>
+
+  <rect x="24" y="214" width="520" height="150" rx="6" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.8"/>
+  <text x="42" y="246" font-size="14" font-weight="700" fill="#15181d">ServiceMonitor — 이 장에서 만든다</text>
+  <text x="42" y="274" font-size="12" font-family="monospace" fill="#6a4a9c">labels: {release: kps}</text>
+  <text x="42" y="300" font-size="12" font-family="monospace" fill="#585f6b">selector.matchLabels:</text>
+  <text x="42" y="322" font-size="12" font-family="monospace" fill="#1f4d8f">  app.kubernetes.io/name: order-api</text>
+  <text x="42" y="348" font-size="12" font-family="monospace" fill="#2e7d4f">endpoints[0].port: http</text>
+
+  <line x1="200" y1="366" x2="200" y2="400" stroke="#1f4d8f" stroke-width="2" marker-end="url(#k2)"/>
+  <circle cx="230" cy="382" r="13" fill="#1f4d8f"/>
+  <text x="230" y="387" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="252" y="387" font-size="12.5" fill="#585f6b">이 라벨을 가진 Service 가 있는가</text>
+
+  <rect x="24" y="404" width="520" height="116" rx="6" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+  <text x="42" y="436" font-size="14" font-weight="700" fill="#15181d">Service — 03장에서 만든 것</text>
+  <text x="42" y="464" font-size="12" font-family="monospace" fill="#1f4d8f">labels: {app.kubernetes.io/name: order-api}</text>
+  <text x="42" y="490" font-size="12" font-family="monospace" fill="#2e7d4f">ports: [{name: http, port: 8080}]</text>
+
+  <line x1="548" y1="462" x2="592" y2="462" stroke="#2e7d4f" stroke-width="2" marker-end="url(#k3)"/>
+  <circle cx="570" cy="430" r="13" fill="#2e7d4f"/>
+  <text x="570" y="435" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+
+  <rect x="600" y="404" width="376" height="116" rx="6" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.5"/>
+  <text x="618" y="436" font-size="13.5" font-weight="700" fill="#15181d">파드의 엔드포인트</text>
+  <text x="618" y="464" font-size="11.5" font-family="monospace" fill="#585f6b">10.244.1.7:8080/actuator/prometheus</text>
+  <text x="618" y="490" font-size="11.5" font-family="monospace" fill="#585f6b">10.244.1.9:8080/actuator/prometheus</text>
+
+  <rect x="600" y="70" width="376" height="294" rx="6" fill="#f5f6f7" stroke="#d8dbe0" stroke-width="1"/>
+  <text x="618" y="104" font-size="13.5" font-weight="700" fill="#15181d">어긋났을 때의 증상</text>
+
+  <text x="618" y="142" font-size="12" font-family="monospace" fill="#6a4a9c">1 실패</text>
+  <text x="618" y="166" font-size="12.5" fill="#585f6b">타깃 목록에 아예 나타나지 않는다</text>
+
+  <text x="618" y="204" font-size="12" font-family="monospace" fill="#1f4d8f">2 실패</text>
+  <text x="618" y="228" font-size="12.5" fill="#585f6b">타깃 그룹은 생기지만 대상이 0개다</text>
+
+  <text x="618" y="266" font-size="12" font-family="monospace" fill="#2e7d4f">3 실패</text>
+  <text x="618" y="290" font-size="12.5" fill="#585f6b">스크레이프 주소가 만들어지지 않는다</text>
+
+  <text x="618" y="334" font-size="12.5" fill="#8f4408">셋 다 조용히 실패한다 — 확인 순서가 중요하다</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> 03장에서 Service 에 라벨을 붙이고 포트에 <code>http</code> 라는 이름을 준 이유가 여기 있다.
+  ②와 ③은 그때 이미 준비해 둔 것이고, 이번에 새로 만드는 것은 <strong>①과 ServiceMonitor 뿐</strong>이다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b" style="background:#6a4a9c">1</span><span>
+    <strong>오퍼레이터가 골랐는지.</strong> 생성된 스크레이프 설정에 <code>job_name</code> 이 있으면 통과다.
+    <span class="chk">확인 <code>kubectl -n monitoring get secret prometheus-kps-kube-prometheus-prometheus -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip | grep -o 'job_name: serviceMonitor/apps/[a-z-]*/0'</code> → <code>job_name: serviceMonitor/apps/order-api/0</code></span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>ServiceMonitor 가 Service 를 찾았는지.</strong> 라벨을 눈으로 대조한다.
+    <span class="chk">확인 <code>kubectl -n apps get svc --show-labels</code> → <code>app.kubernetes.io/name=order-api</code></span>
+  </span></li>
+  <li><span class="b" style="background:#2e7d4f">3</span><span>
+    <strong>Service 가 파드를 잡았는지.</strong> 여기가 비면 스크레이프할 주소 자체가 없다.
+    <span class="chk">확인 <code>kubectl -n apps get endpointslices</code> → <code>ENDPOINTS</code> 열에 파드 IP</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>세 겹을 잇는 파일 — 90-servicemonitors.yaml</h4>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/monitoring/90-servicemonitors.yaml — 번호가 그림의 번호다</span>
+<pre><code class="language-yaml">apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    # ① 04장 헬름 릴리스 이름과 일치해야 오퍼레이터가 고른다
+    release: kps
+spec:
+  # ② 이 라벨을 가진 Service를 찾는다 (03장에서 붙여둔 것)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  namespaceSelector:
+    matchNames:
+      - apps
+  endpoints:
+    # ③ Service의 포트 '이름'이다. 숫자가 아니다.
+    - port: http
+      path: /actuator/prometheus
+      # 04장 전역 설정과 같은 값. 명시해두면 나중에 이 서비스만 조정하기 쉽다.
+      interval: 30s
+      scrapeTimeout: 10s</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>줄</th><th>그림의 어느 고리인가</th><th>틀렸을 때 나타나는 곳</th></tr>
+  <tr><td><code>labels.release: kps</code></td><td>①</td><td>스크레이프 설정에 <code>job_name</code> 이 없다</td></tr>
+  <tr><td><code>selector.matchLabels</code></td><td>②</td><td>타깃 그룹은 생기는데 대상 0개</td></tr>
+  <tr><td><code>namespaceSelector.matchNames</code></td><td>②</td><td>다른 네임스페이스를 뒤져 아무것도 못 찾는다</td></tr>
+  <tr><td><code>endpoints.port: http</code></td><td>③</td><td>주소가 만들어지지 않는다. 숫자를 쓴 경우가 대부분</td></tr>
+  <tr><td><code>path</code></td><td>—</td><td>주소는 생기지만 <code>404</code> 로 실패한다</td></tr>
+</table>
+</div>
+
+
+<h3>카운터를 그대로 보면 안 되는 이유</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" role="img" aria-label="계속 증가하는 카운터 그래프와 rate를 적용한 초당 증가량 그래프의 비교">
+  <rect width="1000" height="400" fill="#ffffff"/>
+
+  <text x="60" y="44" font-size="14" fill="#15181d">원본 카운터 — <tspan font-family="monospace" font-size="13">orders_created_total</tspan></text>
+  <line x1="60" y1="170" x2="620" y2="170" stroke="#585f6b" stroke-width="1.4"/>
+  <line x1="60" y1="64" x2="60" y2="170" stroke="#585f6b" stroke-width="1.4"/>
+  <polyline points="60,162 130,162 130,148 200,148 200,130 270,130 270,120 340,120 340,100 410,100 410,88 480,88 480,76 550,76 550,70 620,70"
+            fill="none" stroke="#1f4d8f" stroke-width="2"/>
+  <text x="644" y="88" font-size="12.5" fill="#585f6b">계속 증가하기만 한다</text>
+  <text x="644" y="112" font-size="12.5" fill="#585f6b">“지금 트래픽이 많은가”를</text>
+  <text x="644" y="136" font-size="12.5" fill="#585f6b">읽어 낼 수 없다</text>
+
+  <text x="60" y="242" font-size="14" fill="#15181d">rate() 적용 — <tspan font-family="monospace" font-size="13">rate(orders_created_total[2m])</tspan></text>
+  <line x1="60" y1="356" x2="620" y2="356" stroke="#585f6b" stroke-width="1.4"/>
+  <line x1="60" y1="262" x2="60" y2="356" stroke="#585f6b" stroke-width="1.4"/>
+  <polyline points="60,332 130,332 200,312 270,340 340,290 410,306 480,296 550,322 620,312"
+            fill="none" stroke="#2e7d4f" stroke-width="2"/>
+  <text x="644" y="286" font-size="12.5" fill="#585f6b">초당 증가량 — 트래픽의 모양</text>
+  <text x="644" y="310" font-size="12.5" fill="#585f6b">파드가 재시작해 카운터가</text>
+  <text x="644" y="334" font-size="12.5" fill="#585f6b">0 으로 돌아가도 보정해 준다</text>
+</svg>
+<figcaption>
+  <b>그림 2.</b> 카운터를 다룰 때는 거의 항상 <code>rate()</code> 를 씌운다.
+  대괄호 안의 시간은 “이만큼을 돌아보며 평균 낸다”는 뜻이고, <strong>스크레이프 간격의 4배 이상</strong>을 권한다 — 30초 간격이므로 최소 2분이다.
+</figcaption>
+</figure>
+
+<h4><span class="why">WHY</span>2분이라는 숫자 — 스크레이프 간격에서 나온다</h4>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/kps-values.yaml · 90-servicemonitors.yaml</span>
+<pre><code class="language-yaml"># 전역 (04장)
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 30s
+
+# 이 서비스만 따로 (06장)
+endpoints:
+  - port: http
+    interval: 30s        # 30초마다 한 점
+    scrapeTimeout: 10s</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>rate 윈도</th><th>윈도 안의 점 개수</th><th>결과</th></tr>
+  <tr><td><code>[30s]</code></td><td>1개</td><td>계산 불가. 빈 결과가 된다</td></tr>
+  <tr><td><code>[1m]</code></td><td>2개</td><td>점 하나만 놓쳐도 끊긴다. 톱니 그래프의 원인</td></tr>
+  <tr><td><code>[2m]</code></td><td>4개</td><td>실습의 기본값. 한 점이 빠져도 값이 나온다</td></tr>
+  <tr><td><code>[5m]</code></td><td>10개</td><td>더 매끈하지만 변화가 늦게 보인다. 비율·분위수 계산에 쓴다</td></tr>
+</table>
+</div>
+
+<p>이 장의 질의에서 <code>[2m]</code> 과 <code>[5m]</code> 이 섞여 나오는 것은 그래서다 — <strong>처리율은 반응이 빨라야 하고, 비율과 분위수는 안정적이어야 한다.</strong></p>
+
+
+<h2><span class="n">04</span>실습 파일 위치</h2>
+
+<div class="srcbox">
+  <span class="fp">저장소 안의 위치</span>
+<pre><code class="language-text">study/labs/k8s/monitoring/
+├── 90-servicemonitors.yaml   ← 이 장에서 적용한다 (order-api · gateway)
+└── 91-prometheusrule.yaml    07장 알림 규칙</code></pre>
+</div>
+
+
+<h2><span class="n">05</span>일부러 실패시키기 — release 라벨 없이</h2>
+
+<p class="cap">목적: 침묵을 먼저 겪는다. 아래 출력은 kube-prometheus-stack 이 설치된 kind 클러스터에서 재현했다 (확인 2026-09-13).</p>
+
+<h3>라벨을 빼고 적용한다</h3>
+
+<pre><code class="language-bash">cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api-broken
+  namespace: apps
+  # labels 블록이 통째로 없다 — release: kps 가 빠진 상태
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  namespaceSelector:
+    matchNames: [apps]
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+EOF
+
+kubectl -n apps get servicemonitor</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">servicemonitor.monitoring.coreos.com/order-api-broken created
+
+NAME               AGE
+order-api          8d
+order-api-broken   0s</code></pre>
+
+<p><strong>정상적으로 만들어진다.</strong> 경고도 이벤트도 없다. 40초쯤 기다린 뒤 타깃을 세어 본다.</p>
+
+<pre><code class="language-bash">curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=count by (job) (up{namespace="apps"})' \
+  | jq -r '.data.result[] | "\(.metric.job)\t\(.value[1])"'</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">order-api   2</code></pre>
+
+<blockquote class="warn">
+  <span class="label">읽는 법</span>
+  <p>이미 제대로 붙어 있던 <code>order-api</code> 만 보인다. 방금 만든 <code>order-api-broken</code> 은 <strong>job 목록에 아예 없다</strong>. 빈 결과가 아니라 <em>존재하지 않는</em> 것이다 — 프로메테우스 입장에서는 그런 대상을 긁으라는 지시를 받은 적이 없다.</p>
+</blockquote>
+
+<h3>어느 고리에서 끊겼는지 확정한다</h3>
+
+<p class="cap">목적: 추측하지 않고 생성된 설정을 직접 연다. 프로메테우스가 실제로 읽는 설정은 시크릿에 gzip 으로 들어 있다.</p>
+
+<pre><code class="language-bash">kubectl -n monitoring get secret prometheus-kps-kube-prometheus-prometheus \
+  -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip \
+  | grep -c 'order-api-broken'
+
+kubectl -n monitoring get secret prometheus-kps-kube-prometheus-prometheus \
+  -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip \
+  | grep -o 'job_name: serviceMonitor/apps/[a-z-]*/0' | sort -u</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">0
+
+job_name: serviceMonitor/apps/order-api/0</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>첫 결과가 <code>0</code> — 생성된 설정 어디에도 <code>order-api-broken</code> 이라는 문자열이 없다. <strong>오퍼레이터가 그 리소스를 읽지 않았다는 뜻이고, ①번 고리에서 끊긴 것이 확정된다.</strong> 둘째 명령은 제대로 붙은 쪽이 어떤 모양인지 보여 준다 — <code>serviceMonitor/&lt;네임스페이스&gt;/&lt;이름&gt;/&lt;엔드포인트 번호&gt;</code> 형식이다.</p>
+  <p>이 명령 하나로 원인이 절반으로 갈린다. <strong>여기에 없으면 ①번(라벨), 있는데도 타깃이 0개면 ②·③번</strong>이다.</p>
+</blockquote>
+
+<h3>왜 이런 기본값인가</h3>
+
+<pre><code class="language-bash">kubectl -n monitoring get prometheus -o yaml | grep -A3 'serviceMonitorSelector'</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-yaml">    serviceMonitorSelector:
+      matchLabels:
+        release: kps</code></pre>
+
+<blockquote>
+  <span class="label">차트가 이렇게 만드는 이유</span>
+  <p>차트는 <code>serviceMonitorSelectorNilUsesHelmValues: true</code> 를 기본으로 둔다. “이 헬름 릴리스가 관리하는 것만 본다”는 뜻이고, 한 클러스터에 프로메테우스를 여러 개 띄우는 상황(팀별 분리 등)에서 서로의 타깃을 침범하지 않게 하려는 장치다.</p>
+  <p>값 파일에 <code>serviceMonitorSelectorNilUsesHelmValues: false</code> 를 넣으면 무력화된다. <strong>실습에서는 넣지 않는다</strong> — 라벨을 붙이는 쪽이 원리를 드러내고, 운영 클러스터에서도 그쪽이 표준이다.</p>
+</blockquote>
+
+<pre><code class="language-bash">kubectl -n apps delete servicemonitor order-api-broken</code></pre>
+
+
+<h2><span class="n">06</span>ServiceMonitor 적용</h2>
+
+<p>03절에서 본 파일을 적용한다. <code>gateway</code> 용도 같은 형식으로 들어 있다.</p>
+
+<pre><code class="language-bash">kubectl apply -f study/labs/k8s/monitoring/90-servicemonitors.yaml
+kubectl -n apps get servicemonitor</code></pre>
+
+<blockquote>
+  <span class="label">Service 가 없을 때는 PodMonitor</span>
+  <p>배치 작업처럼 Service 를 붙이지 않는 워크로드는 <code>PodMonitor</code> 를 쓴다. 구조는 같고 ②번 고리가 Service 대신 파드 라벨로 바뀐다. Service 가 있다면 ServiceMonitor 를 쓰는 편이 낫다 — 엔드포인트 정보를 쿠버네티스가 관리해 주기 때문이다.</p>
+</blockquote>
+
+
+<h2><span class="n">07</span>연결 검증</h2>
+
+<h3>1. 타깃이 생겼는가</h3>
+
+<pre><code class="language-bash">curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=up{namespace="apps"}' \
+  | jq -r '.data.result[] | "\(.metric.job)\t\(.metric.pod)\t\(.value[1])"'</code></pre>
+
+<p class="cap">--- 출력 (파드 접미사는 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">gateway     gateway-7d9c4b8f6-qk2xp     1
+order-api   order-api-6b8f7d5c9-h4nm2   1
+order-api   order-api-6b8f7d5c9-t8wcv   1</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>파드 <strong>3개</strong>가 각각 하나의 타깃이다. 서비스 단위가 아니라 <strong>파드 단위로 긁는다</strong>는 점이 중요하다 — 레플리카를 늘리면 타깃도 자동으로 는다. 값이 전부 1 이어야 한다.</p>
+</blockquote>
+
+<h3>2. 앱 메트릭이 실제로 들어왔는가</h3>
+
+<pre><code class="language-bash">curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=orders_created_total' \
+  | jq -r '.data.result[] | "\(.metric.pod)\t\(.value[1])"'</code></pre>
+
+<p>03장에서 부하를 넣었다면 값이 보인다. 비어 있으면 요청을 몇 번 더 보내고 40초 기다린다 — 스크레이프 간격이 30초이므로 한 번은 지나가야 한다.</p>
+
+<h3>3. 붙은 라벨을 확인한다</h3>
+
+<pre><code class="language-bash">curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=http_server_requests_seconds_count{namespace="apps"}' \
+  | jq '.data.result[0].metric'</code></pre>
+
+<p class="cap">--- 출력 (IP · 파드 이름은 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-json">{
+  "__name__": "http_server_requests_seconds_count",
+  "container": "order-api",
+  "endpoint": "http",
+  "error": "none",
+  "exception": "none",
+  "instance": "10.244.2.152:8080",
+  "job": "order-api",
+  "method": "GET",
+  "namespace": "apps",
+  "outcome": "SUCCESS",
+  "pod": "order-api-77bf967968-ttlp2",
+  "service": "order-api",
+  "status": "200",
+  "uri": "/actuator/health/**"
+}</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>라벨</th><th>어디서 왔나</th></tr>
+  <tr><td><code>method</code> · <code>status</code> · <code>uri</code> · <code>outcome</code> · <code>exception</code></td><td>앱이 붙인다 (02장 마이크로미터 타이머)</td></tr>
+  <tr><td><code>job</code></td><td>Service 이름. ServiceMonitor 기반 타깃의 기본 규칙</td></tr>
+  <tr><td><code>namespace</code> · <code>pod</code> · <code>service</code> · <code>container</code></td><td>쿠버네티스 서비스 디스커버리가 자동 부여</td></tr>
+  <tr><td><code>endpoint</code></td><td>ServiceMonitor 에 쓴 포트 <strong>이름</strong></td></tr>
+  <tr><td><code>instance</code></td><td>스크레이프 대상 주소 (파드 IP + 포트)</td></tr>
+</table>
+</div>
+
+<blockquote class="ok">
+  <span class="label">여기서 uri 를 눈여겨본다</span>
+  <p>위 출력의 <code>uri</code> 가 <code>/actuator/health/**</code> 다 — 프로브가 보낸 요청이 잡힌 것이다. 값이 <strong>템플릿 형태</strong>라는 점이 중요하다. 실제 경로마다 다른 값이 찍힌다면 시계열이 무한히 늘어난다. 02장에서 <code>@PathVariable</code> 로 매핑한 덕분에 <code>/api/orders/{id}</code> 역시 템플릿으로 남는다.</p>
+</blockquote>
+
+
+<h2><span class="n">08</span>PromQL 최소 문법</h2>
+
+<p>여기서부터는 <code>localhost:30900/graph</code> 에 직접 입력하며 읽는다. 필요한 개념은 네 개뿐이다.</p>
+
+<h3>1. 카운터에는 rate 를 씌운다</h3>
+
+<p>그림 2 에서 본 것이다. 대괄호 안의 윈도는 스크레이프 간격의 4배 이상.</p>
+
+<pre><code class="language-promql">rate(orders_created_total[2m])</code></pre>
+
+<h3>2. sum by — 필요한 축만 남긴다</h3>
+
+<pre><code class="language-promql"># 파드별로 흩어진 값을 서비스 단위로 합친다
+sum by (service) (rate(orders_created_total[2m]))
+
+# by 대신 without 을 쓰면 "이 라벨만 빼고 나머지로 묶어라"가 된다
+sum without (pod, instance) (rate(orders_created_total[2m]))</code></pre>
+
+<p>파드가 늘고 줄어도 그래프가 흔들리지 않게 하려면 <code>pod</code> 와 <code>instance</code> 를 지우는 쪽이 안전하다. 파드가 하나 재시작할 때마다 새 시계열이 생기기 때문이다.</p>
+
+<h3>3. 히스토그램에서 분위수 뽑기</h3>
+
+<pre><code class="language-promql"># le(less or equal) 라벨을 반드시 남겨야 한다. 빠지면 계산이 안 된다.
+histogram_quantile(
+  0.95,
+  sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace="apps"}[5m]))
+)</code></pre>
+
+<blockquote class="warn">
+  <span class="label">le 를 빠뜨리면 NaN 이 나온다</span>
+  <p><code>sum by (service)</code> 라고만 쓰면 버킷 경계 정보가 사라져 분위수를 계산할 재료가 없어진다. 에러가 아니라 <code>NaN</code> 이 나오므로 원인을 찾기 어렵다. <strong><code>histogram_quantile</code> 안쪽의 <code>sum by</code> 에는 항상 <code>le</code> 를 넣는다.</strong></p>
+</blockquote>
+
+<h3>4. 비율 계산에서 조심할 것</h3>
+
+<pre><code class="language-promql"># 트래픽이 없으면 분모가 0이 되어 결과가 비어버린다.
+# 대시보드에서 'No data'가 뜨는 흔한 원인이다.
+sum(rate(http_server_requests_seconds_count{namespace="apps", status=~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count{namespace="apps"}[5m]))</code></pre>
+
+<blockquote>
+  <span class="label">네이티브 히스토그램은 아직 쓰지 않는다</span>
+  <p>Prometheus 3.8 부터 <dfn class="term">네이티브 히스토그램</dfn>이 정식 기능이 됐다. 버킷 시계열이 폭증하는 문제를 근본적으로 줄여 준다. 다만 그라파나 패널과 기존 대시보드가 아직 고전 버킷 기준인 경우가 많아 이 실습은 <code>_bucket</code> 으로 진행한다. 09장 카디널리티 논의에서 전환 판단 기준을 다시 다룬다.</p>
+</blockquote>
+
+
+<h2><span class="n">09</span>RED 지표 완성</h2>
+
+<p><strong>R</strong>ate(처리율) · <strong>E</strong>rrors(에러율) · <strong>D</strong>uration(지연). 애플리케이션 관측은 이 셋으로 시작해 이 셋으로 끝난다. 아래 질의들이 07장 대시보드의 패널이 된다.</p>
+
+<h3>R — 서비스별 초당 요청 수</h3>
+
+<pre><code class="language-promql">sum by (service) (
+  rate(http_server_requests_seconds_count{namespace="apps"}[2m])
+)</code></pre>
+
+<h3>E — 서비스별 5xx 비율 (%)</h3>
+
+<pre><code class="language-promql">100 * (
+  sum by (service) (
+    rate(http_server_requests_seconds_count{namespace="apps", status=~"5.."}[5m])
+  )
+  /
+  sum by (service) (
+    rate(http_server_requests_seconds_count{namespace="apps"}[5m])
+  )
+)</code></pre>
+
+<h3>D — 서비스별 P95 응답 시간 (초)</h3>
+
+<pre><code class="language-promql">histogram_quantile(
+  0.95,
+  sum by (le, service) (
+    rate(http_server_requests_seconds_bucket{namespace="apps"}[5m])
+  )
+)</code></pre>
+
+<h3>D 심화 — 엔드포인트별 P99, 느린 순서대로</h3>
+
+<pre><code class="language-promql">topk(5,
+  histogram_quantile(
+    0.99,
+    sum by (le, uri) (
+      rate(http_server_requests_seconds_bucket{namespace="apps", service="order-api"}[5m])
+    )
+  )
+)</code></pre>
+
+<p><code>uri</code> 라벨이 <code>/api/orders/{id}</code> 처럼 템플릿으로 찍혀 있는 것을 확인한다. 02장에서 <code>@PathVariable</code> 로 매핑한 덕분이다.</p>
+
+<h3>비즈니스 지표 — 분당 주문 수와 거부율</h3>
+
+<pre><code class="language-promql"># 분당 주문 건수
+sum(rate(orders_created_total[5m])) * 60
+
+# 거부 비율(%) — 검증에 걸린 주문의 비중
+100 * (
+  sum(rate(orders_rejected_total[5m]))
+  /
+  (sum(rate(orders_created_total[5m])) + sum(rate(orders_rejected_total[5m])))
+)</code></pre>
+
+<blockquote class="ok">
+  <span class="label">RED 와 비즈니스 지표를 나란히 두는 이유</span>
+  <p>기술 지표만 보면 “에러율 0%, P95 정상”인데 매출이 떨어지는 상황을 놓친다. 주문 수가 평소의 30% 로 줄었는데 응답 시간은 오히려 좋아진 경우가 그렇다 — <strong>사용자가 들어오지 못하고 있다</strong>는 뜻일 수 있다. 대시보드 맨 위에 비즈니스 지표를 두는 팀이 늘어나는 이유다.</p>
+</blockquote>
+
+
+<h2><span class="n">10</span>지연 전파 관찰</h2>
+
+<p>서비스를 둘로 나눈 이유를 확인할 차례다. 백엔드를 느리게 만들고 게이트웨이의 지연이 어떻게 따라 움직이는지 본다.</p>
+
+<pre><code class="language-bash"># 터미널 1 — 평상시 트래픽을 계속 흘린다
+while true; do
+  curl -s -o /dev/null -X POST http://localhost:30080/api/orders \
+    -H 'Content-Type: application/json' \
+    -d '{"item":"latte","quantity":2}'
+  sleep 0.3
+done</code></pre>
+
+<pre><code class="language-bash"># 터미널 2 — 3분 동안 느린 요청을 섞는다
+end=$((SECONDS+180))
+while [ "$SECONDS" -lt "$end" ]; do
+  curl -s -o /dev/null "http://localhost:30080/api/chaos/slow?ms=900"
+  sleep 1
+done
+echo "지연 주입 종료"</code></pre>
+
+<p>두 질의를 그래프에 함께 띄워 비교한다.</p>
+
+<pre><code class="language-promql"># 게이트웨이가 본 P95 (클라이언트 관점)
+histogram_quantile(0.95,
+  sum by (le) (rate(http_server_requests_seconds_bucket{service="gateway"}[2m]))
+)
+
+# 백엔드가 본 P95 (서버 관점)
+histogram_quantile(0.95,
+  sum by (le) (rate(http_server_requests_seconds_bucket{service="order-api"}[2m]))
+)</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>관찰되는 패턴</th><th>해석</th></tr>
+  <tr><td>두 값이 거의 같이 오른다</td><td>백엔드가 원인. 게이트웨이는 기다렸을 뿐이다</td></tr>
+  <tr><td>게이트웨이만 오르고 백엔드는 평온</td><td>게이트웨이 자체 병목 — 커넥션 풀, CPU, 라우팅 필터를 의심</td></tr>
+  <tr><td>백엔드가 올랐는데 게이트웨이는 그대로</td><td>느린 경로가 게이트웨이를 거치지 않았거나, 타임아웃으로 잘리고 있다</td></tr>
+</table>
+</div>
+
+<p>게이트웨이의 라우트 단위 지표로 한 번 더 확인할 수 있다. 02장에서 <code>id: order-api</code> 로 정한 값이 <code>routeId</code> 태그가 된다.</p>
+
+<pre><code class="language-promql">histogram_quantile(0.95,
+  sum by (le, routeId) (rate(spring_cloud_gateway_requests_seconds_bucket[5m]))
+)</code></pre>
+
+<blockquote class="warn">
+  <span class="label">실습이 끝나면 반드시 부하 루프를 끈다</span>
+  <p>터미널 1의 무한 루프를 켜 둔 채 잊으면 노트북 팬이 계속 돌고, 프로메테우스 저장 공간(04장에서 8Gi)이 예상보다 빨리 찬다. <code>Ctrl+C</code> 로 종료한다.</p>
+</blockquote>
+
+
+<h2><span class="n">11</span>자주 겪는 문제</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>증상</th><th>확인 순서</th></tr>
+  <tr><td>타깃 목록에 앱이 아예 없다</td><td>①번 고리. 생성된 스크레이프 설정에 <code>job_name</code> 이 있는지부터 본다 (05절)</td></tr>
+  <tr><td>타깃 그룹은 있는데 대상이 0개</td><td>②번 고리. <code>kubectl -n apps get svc --show-labels</code> 로 Service 라벨 확인</td></tr>
+  <tr><td><code>server returned HTTP status 404</code></td><td><code>path</code> 가 <code>/actuator/prometheus</code> 인지, 앱의 <code>exposure.include</code> 에 <code>prometheus</code> 가 있는지</td></tr>
+  <tr><td><code>connection refused</code></td><td>포트 이름이 가리키는 실제 포트가 앱의 리슨 포트와 다르다</td></tr>
+  <tr><td>메트릭은 있는데 <code>_bucket</code> 만 없다</td><td>앱 설정 문제. 02장 <code>percentiles-histogram</code> 을 확인하고 이미지를 다시 빌드</td></tr>
+  <tr><td><code>histogram_quantile</code> 결과가 <code>NaN</code></td><td><code>sum by</code> 에서 <code>le</code> 를 빠뜨렸거나 해당 구간에 샘플이 없다</td></tr>
+  <tr><td>비율 질의가 빈 결과</td><td>분모가 0. 트래픽을 넣거나 <code>or vector(0)</code> 로 기본값을 준다</td></tr>
+  <tr><td>그래프가 톱니처럼 끊긴다</td><td>rate 윈도가 스크레이프 간격에 비해 짧다. <code>[2m]</code> 이상으로 늘린다</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">지금부터 조심해야 할 것 — 카디널리티</span>
+  <p>앱 메트릭이 붙는 순간 시계열 개수가 급증한다. <code>http_server_requests_seconds_bucket</code> 하나가 <strong>(엔드포인트 수) × (상태 코드 수) × (버킷 수) × (파드 수)</strong> 만큼의 시계열을 만든다. 실습 규모에서는 문제없지만, 운영에서 <code>uri</code> 태그에 ID 가 섞이는 순간 프로메테우스가 메모리 부족으로 죽는다. 09장의 주제다.</p>
+</blockquote>
+
+<p>지금 숫자를 재 두면 나중에 비교하기 좋다.</p>
+
+<pre><code class="language-promql"># 현재 시계열 총 개수
+prometheus_tsdb_head_series
+
+# 메트릭 이름별 시계열 수 상위 10개
+topk(10, count by (__name__) ({__name__=~".+"}))</code></pre>
+
+
+<div class="appendix">
+
+<h2>부록 A. 완료 체크리스트</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>확인</th><th>기대값</th></tr>
+  <tr><td>라벨 없는 ServiceMonitor 실험</td><td>타깃이 안 생긴다는 것을 직접 봤다 (이해 확인)</td></tr>
+  <tr><td>생성된 설정에서 <code>job_name</code> grep</td><td><code>serviceMonitor/apps/order-api/0</code></td></tr>
+  <tr><td><code>up{namespace="apps"}</code></td><td>파드 3개가 모두 <code>1</code></td></tr>
+  <tr><td><code>orders_created_total</code></td><td>값이 있다 (없으면 트래픽을 넣고 40초)</td></tr>
+  <tr><td>메트릭의 라벨</td><td><code>job</code> · <code>namespace</code> · <code>pod</code> · <code>service</code> 가 붙어 있다</td></tr>
+  <tr><td>RED 질의 3개</td><td>모두 값을 반환한다</td></tr>
+  <tr><td><code>uri</code> 라벨</td><td><code>/api/orders/{id}</code> 형태로 템플릿화돼 있다</td></tr>
+  <tr><td>지연 주입 실습</td><td>게이트웨이와 백엔드의 P95 곡선을 함께 봤다</td></tr>
+  <tr><td>부하 루프</td><td><strong>종료했다</strong></td></tr>
+  <tr><td><code>prometheus_tsdb_head_series</code></td><td>숫자를 기록해 뒀다 (09장에서 비교한다)</td></tr>
+</table>
+</div>
+
+<h2>부록 B. 명령어 레퍼런스</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>명령</th><th>하는 일</th></tr>
+  <tr><td><code>kubectl apply -f 90-servicemonitors.yaml</code></td><td>ServiceMonitor 적용. 라벨 세 겹이 맞아야 타깃이 붙는다</td></tr>
+  <tr><td><code>kubectl -n apps get servicemonitor</code></td><td>만들어졌는지. <strong>만들어진 것과 읽히는 것은 다르다</strong></td></tr>
+  <tr><td><code>kubectl -n monitoring get prometheus -o yaml | grep -A3 serviceMonitorSelector</code></td><td>①겹 — 프로메테우스가 어떤 라벨을 찾는지</td></tr>
+  <tr><td><code>kubectl -n monitoring get secret prometheus-... -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip</code></td><td>①겹 확정 — 생성된 스크레이프 설정 전문</td></tr>
+  <tr><td><code>kubectl -n apps get svc --show-labels</code></td><td>②겹 — Service 라벨 확인</td></tr>
+  <tr><td><code>kubectl -n apps get endpointslices</code></td><td>③겹 — 서비스가 파드를 실제로 잡았는지</td></tr>
+  <tr><td><code>curl -s --get localhost:30900/api/v1/query --data-urlencode 'query=...'</code></td><td>PromQL 을 API 로 질의. UI 없이 판정할 수 있다</td></tr>
+  <tr><td><code>... 'query=count by (job) (up{namespace="apps"})'</code></td><td>job 별 타깃 수. 붙었는지 한 줄로 본다</td></tr>
+</table>
+</div>
+
+<h2>부록 C. 참고 출처</h2>
+
+<div class="src">
+<ul>
+  <li>Prometheus Operator — ServiceMonitor 설계 — https://prometheus-operator.dev/docs/developer/getting-started/</li>
+  <li>kube-prometheus-stack 값 파일 (selector 기본 동작) — https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml</li>
+  <li>ServiceMonitor 라벨 요구사항 사례 — https://github.com/prometheus-community/helm-charts/issues/1911</li>
+  <li>PromQL 기본 — https://prometheus.io/docs/prometheus/latest/querying/basics/</li>
+  <li>rate 와 카운터 — https://prometheus.io/docs/prometheus/latest/querying/functions/#rate</li>
+  <li>histogram_quantile — https://prometheus.io/docs/prometheus/latest/querying/functions/#histogram_quantile</li>
+  <li>Spring Boot 메트릭 레퍼런스 — https://docs.spring.io/spring-boot/reference/actuator/metrics.html</li>
+</ul>
+</div>
+
+</div>
+
+<div class="pager">
+  <a href="ch05-grafana-dashboards.html">
+    <span class="dir">← 이전</span>
+    <span class="t">05 · 그라파나와 대시보드</span>
+  </a>
+  <a class="next" href="ch07-alerting.html">
+    <span class="dir">다음 →</span>
+    <span class="t">07 · 대시보드와 알림</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

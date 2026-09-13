@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .cluster { fill: #ffffff; stroke: #444444; stroke-width: 1.2; }
+    .ns { fill: #fafaf8; stroke: #c8c8c8; stroke-width: 1; }
+    .t-h { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .t-accent { fill: #2456c4; }
+  </style>
+
+  <!-- 전략 A: 개발자별 클러스터 -->
+  <text class="t-h" x="220" y="44" text-anchor="middle">전략 A — 개발자마다 클러스터</text>
+
+  <rect class="cluster" x="50" y="66" width="340" height="70" rx="4"/>
+  <text class="t-title" x="220" y="95" text-anchor="middle">클러스터 — 개발자 A 전용</text>
+  <text class="t-sub" x="220" y="115" text-anchor="middle">컨트롤 플레인 + 노드 전부 별도</text>
+
+  <rect class="cluster" x="50" y="156" width="340" height="70" rx="4"/>
+  <text class="t-title" x="220" y="185" text-anchor="middle">클러스터 — 개발자 B 전용</text>
+  <text class="t-sub" x="220" y="205" text-anchor="middle">완전 격리, 그러나 비용도 N배</text>
+
+  <rect class="cluster" x="50" y="246" width="340" height="70" rx="4"/>
+  <text class="t-title" x="220" y="275" text-anchor="middle">클러스터 — 개발자 C 전용</text>
+  <text class="t-sub" x="220" y="295" text-anchor="middle">버전·설정이 제각각 어긋나기 쉬움</text>
+
+  <!-- 전략 B: 공용 클러스터 + 네임스페이스 -->
+  <text class="t-h t-accent" x="680" y="44" text-anchor="middle">전략 B — 공용 클러스터 + 네임스페이스 (권장)</text>
+
+  <rect class="cluster" x="480" y="66" width="400" height="250" rx="4" style="stroke:#2456c4; stroke-width:1.5"/>
+  <text class="t-sub" x="496" y="90">공용 클러스터 1개 — 프로덕션과 유사한 환경 유지</text>
+
+  <rect class="ns" x="510" y="104" width="340" height="56" rx="4"/>
+  <text class="t-title" x="680" y="127" text-anchor="middle">네임스페이스 dev-A</text>
+  <text class="t-sub" x="680" y="145" text-anchor="middle">RBAC + 리소스쿼터로 격리</text>
+
+  <rect class="ns" x="510" y="172" width="340" height="56" rx="4"/>
+  <text class="t-title" x="680" y="195" text-anchor="middle">네임스페이스 dev-B</text>
+  <text class="t-sub" x="680" y="213" text-anchor="middle">서로의 서비스가 간섭하지 않음</text>
+
+  <rect class="ns" x="510" y="240" width="340" height="56" rx="4"/>
+  <text class="t-title" x="680" y="263" text-anchor="middle">네임스페이스 dev-C</text>
+  <text class="t-sub" x="680" y="281" text-anchor="middle">TTL로 만료 시 자동 정리</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="356" text-anchor="middle">A는 격리가 완벽하지만 비용·관리 부담이 개발자 수에 비례해 늘고, 환경이 서로 어긋난다.</text>
+  <text class="t-cap" x="450" y="378" text-anchor="middle">B는 클러스터 하나를 네임스페이스 + RBAC + 쿼터로 나눈다 — 이 장의 기본 전제.</text>
+</svg>

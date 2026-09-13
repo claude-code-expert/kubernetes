@@ -1,0 +1,25 @@
+# 실험 1 — order-api 파드 1개 강제 종료 (일회성)
+#
+# 가설: replicas 2 + readinessProbe 덕분에 파드 1개가 죽어도
+#       gateway의 5xx 비율은 AppHighErrorRate 임계값(5%) 아래에 머문다.
+#
+# 적용:   kubectl apply -f 10-podchaos-order-api-kill.yaml
+# 확인:   kubectl -n chaos-mesh describe podchaos order-api-pod-kill
+# 정리:   kubectl delete -f 10-podchaos-order-api-kill.yaml
+#
+# mode: one — 폭발 반경 최소화. 대상 파드 중 무작위 1개만 종료한다.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: order-api-pod-kill
+  namespace: chaos-mesh
+  labels:
+    app.kubernetes.io/part-of: obs-study
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - apps
+    labelSelectors:
+      app.kubernetes.io/name: order-api

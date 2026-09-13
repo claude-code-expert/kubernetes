@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 6 · 배포 자동화] M31 GitOps — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 31 / 38 · PART 6 배포 자동화</div>
+  <h1>GitOps</h1>
+  <p class="ch-desc">M29의 파이프라인은 이미지까지 만들고 멈췄고, M30에서는 <code>kubectl patch</code>를 손으로 쳤다. 지금 클러스터의 상태가 <strong>저장소의 어느 커밋에 해당하는지 아무도 답할 수 없다.</strong> 이 모듈에서 저장소를 상태의 정본으로 만든다. 클러스터 안의 컨트롤러가 저장소를 지켜보다가 차이를 없애고, 사람이 <code>kubectl</code>로 바꾼 것을 <strong>5초 만에 되돌려 놓는다.</strong> 그 되돌림을 직접 겪는 것이 이 모듈의 핵심이다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">110분</span><span class="tag">Argo CD v3.5.2</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · SOPS 3.13.3 · age 1.3.2) · 버전은 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m28-k8s-helm-kustomize.html">M28</a> 완료 — <code>k8s/journal/</code>이 kustomize base로 정리돼 있다</li>
+    <li><a href="m30-k8s-deploy-strategies.html">M30</a>에서 <code>--server-side</code>를 왜 쓰는지 봤다. 이 모듈의 설치도 같은 이유로 필요하다</li>
+    <li>로컬에 <code>git</code>이 있다. SOPS 절에서는 <code>sops</code>·<code>age</code>도 쓴다 (<code>brew install sops age</code>)</li>
+    <li>새로 만들 파일: <code>course/labs/k8s/gitops/</code> · <code>course/labs/apps/gitserver/Dockerfile</code> · <code>course/labs/scripts/gitops-push.sh</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 클러스터 안에 깃 서버를 세우고 Argo CD를 붙여, <strong>커밋 하나가 8초 만에 배포되는 것</strong>을 시각으로 확인한다.</p>
+  <p>2. <code>kubectl</code>로 레플리카를 바꾸고 리소스를 지워 보고, 그것이 <strong>5초·6초 만에 되돌아가는 것</strong>을 측정한다.</p>
+  <p>3. 비밀번호가 든 시크릿을 SOPS로 암호화해 <strong>커밋해도 되는 형태</strong>로 만들고, 키가 없으면 못 읽는 것을 확인한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">31.1</span>지금 클러스터가 어느 커밋인지 모른다</a>
+  <a href="#s2"><span class="num">31.2</span>이론 — 풀 기반과 네 가지 원칙</a>
+  <a href="#s3"><span class="num">31.3</span>따라하기 ① 저장소와 컨트롤러</a>
+  <a href="#s4"><span class="num">31.4</span>따라하기 ② 커밋이 배포다</a>
+  <a href="#s5"><span class="num">31.5</span>따라하기 ③ 드리프트를 만들어 본다</a>
+  <a href="#s6"><span class="num">31.6</span>따라하기 ④ 시크릿을 커밋 가능하게</a>
+  <a href="#s7"><span class="num">31.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">31.8</span>운영 관점 — 저장소 구조와 긴급 상황</a>
+  <a href="#s9"><span class="num">31.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">31.1</span>지금 클러스터가 어느 커밋인지 모른다</h2>
+  <p class="lead">M27에서 감사 로그로 "누가 무엇을 지웠나"를 답할 수 있게 됐다. 그런데 더 기본적인 질문에는 아직 답하지 못한다 — <strong>지금 클러스터에 배포된 것이 저장소의 어느 상태인가.</strong></p>
+  <p>이 교재를 여기까지 따라오면서 클러스터에 손을 댄 방법을 세어 보면 이렇다. <code>kubectl apply -f</code>, <code>kubectl apply -k</code>, <code>helm install</code>, <code>helm upgrade</code>, <code>kubectl patch</code>, <code>kubectl scale</code>, <code>kubectl edit</code>, 그리고 M27에서는 <code>docker exec</code>로 노드 안의 파일까지 고쳤다. <strong>이 중 어느 것도 저장소에 기록을 남기지 않았다.</strong></p>
+  <p>결과는 두 가지 문제로 나타난다. 하나는 <strong>재현 불가</strong>다 — 클러스터를 새로 만들어 같은 상태로 되돌리려면 지난 30개 모듈을 순서대로 다시 해야 한다. <code>rebuild.sh</code>가 M14 시점까지만 복구하는 것이 그 한계를 그대로 보여 준다. 다른 하나는 <strong>드리프트</strong>다 — 급해서 손으로 고친 것이 매니페스트에 반영되지 않은 채 남아 있고, 다음 배포가 그것을 조용히 덮는다.</p>
+  <p>GitOps는 이 문제를 <strong>방향을 뒤집어</strong> 푼다. 사람이 클러스터를 바꾸는 대신 <strong>저장소를 바꾸고</strong>, 클러스터 안의 컨트롤러가 저장소를 따라가게 한다. 그러면 "지금 어느 커밋인가"에 항상 답할 수 있고, <strong>손으로 바꾼 것은 되돌아간다</strong> — 이 두 번째 성질이 처음에는 불편하게 느껴진다. 그 불편함을 31.5에서 직접 겪는다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">31.2</span>이론 — 풀 기반과 네 가지 원칙</h2>
+  <p><span class="lbl">책 매핑</span>18.1~18.3 깃옵스 원칙·풀 기반과 푸시 기반·저장소 구조 전략 · 18.4 시크릿 관리 스펙트럼</p>
+
+  <h3>네 가지 원칙</h3>
+  <p>GitOps를 규정하는 네 문장이 있다. <strong>선언적</strong>일 것(원하는 상태를 명령이 아니라 선언으로 적는다), <strong>버전이 있고 불변</strong>일 것(그 선언이 커밋으로 남는다), <strong>자동으로 당겨질</strong> 것(에이전트가 스스로 가져간다), <strong>계속 조정될</strong> 것(차이가 생기면 없앤다).</p>
+  <p>앞의 둘은 이미 하고 있다. 매니페스트는 선언이고 저장소에 있다. 이 모듈이 더하는 것은 뒤의 둘 — <strong>당기기와 조정</strong>이다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+        <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+      <text class="t-h" x="40" y="46">자격 증명이 어디에 있는가로 갈린다</text>
+
+      <!-- 푸시 -->
+      <rect class="soft" x="40" y="66" width="400" height="140" rx="4"/>
+      <text class="t-title" x="56" y="90">푸시 — CI 가 클러스터에 apply</text>
+      <rect class="warnbox" x="56" y="102" width="150" height="46" rx="3"/>
+      <text class="t-mono" x="66" y="122">CI 러너</text>
+      <text class="t-warn" x="66" y="139">kubeconfig 를 갖는다</text>
+      <path class="wline" d="M 206 125 L 258 125" marker-end="url(#ar3)"/>
+      <text class="t-warn" x="232" y="117" text-anchor="middle">apply</text>
+      <rect class="nsbox" x="260" y="102" width="164" height="46" rx="3"/>
+      <text class="t-mono" x="342" y="130" text-anchor="middle">클러스터</text>
+      <text class="t-sub" x="56" y="172">외부에서 안으로 들어온다 — 방화벽에 구멍이 필요하다</text>
+      <text class="t-warn" x="56" y="192">클러스터 자격 증명이 가장 넓게 노출된 곳에 있다</text>
+
+      <!-- 풀 -->
+      <rect class="soft" x="456" y="66" width="384" height="140" rx="4"/>
+      <text class="t-title" x="472" y="90">풀 — 클러스터가 저장소를 당긴다</text>
+      <rect class="box" x="472" y="102" width="140" height="46" rx="3"/>
+      <text class="t-mono" x="482" y="122">깃 저장소</text>
+      <text class="t-sub" x="482" y="139">읽기 권한만 준다</text>
+      <path class="aline" d="M 664 125 L 616 125" marker-end="url(#ar2)"/>
+      <text class="t-acc" x="640" y="117" text-anchor="middle">clone</text>
+      <rect class="accent" x="666" y="102" width="158" height="46" rx="3"/>
+      <text class="t-mono" x="745" y="122" text-anchor="middle">클러스터 안 컨트롤러</text>
+      <text class="t-acc" x="745" y="139" text-anchor="middle">권한이 안에만 있다</text>
+      <text class="t-sub" x="472" y="172">안에서 밖으로 나간다 — 인바운드 구멍이 없다</text>
+      <text class="t-acc" x="472" y="192">클러스터를 늘려도 저장소 설정은 그대로다</text>
+
+      <!-- 되돌림 루프 -->
+      <text class="t-h" x="56" y="238">selfHeal — 손으로 바꾼 것은 되돌아간다</text>
+      <rect class="node" x="56" y="250" width="150" height="46" rx="3"/>
+      <text class="t-mono" x="131" y="270" text-anchor="middle">kubectl scale 5</text>
+      <text class="t-sub" x="131" y="287" text-anchor="middle">01:04:20</text>
+      <path class="line" d="M 206 273 L 240 273" marker-end="url(#ar1)"/>
+      <rect class="accent" x="242" y="250" width="176" height="46" rx="3"/>
+      <text class="t-mono" x="330" y="270" text-anchor="middle">컨트롤러가 차이를 본다</text>
+      <text class="t-sub" x="330" y="287" text-anchor="middle">OutOfSync</text>
+      <path class="line" d="M 418 273 L 452 273" marker-end="url(#ar1)"/>
+      <rect class="accent" x="454" y="250" width="176" height="46" rx="3"/>
+      <text class="t-mono" x="542" y="270" text-anchor="middle">저장소 상태로 덮는다</text>
+      <text class="t-acc" x="542" y="287" text-anchor="middle">replicas=2 · 01:04:25</text>
+      <rect class="warnbox" x="654" y="250" width="186" height="46" rx="3"/>
+      <text class="t-warn" x="664" y="270">긴급 수정도 사라진다</text>
+      <text class="t-sub" x="664" y="287">고치려면 커밋해야 한다</text>
+
+      <!-- 시크릿 -->
+      <rect class="soft" x="56" y="316" width="784" height="106" rx="4"/>
+      <text class="t-h" x="70" y="340">시크릿을 저장소에 두는 방법</text>
+      <rect class="warnbox" x="70" y="352" width="240" height="58" rx="3"/>
+      <text class="t-mono" x="80" y="372">평문 커밋</text>
+      <text class="t-warn" x="80" y="390">이력에 영원히 남는다</text>
+      <text class="t-sub" x="80" y="404">지워도 과거 커밋에 있다</text>
+      <rect class="accent" x="322" y="352" width="240" height="58" rx="3"/>
+      <text class="t-mono" x="332" y="372">SOPS — 값만 암호화</text>
+      <text class="t-acc" x="332" y="390">메타데이터는 평문이라 diff 가 읽힌다</text>
+      <text class="t-sub" x="332" y="404">복호화 키 관리가 남는다</text>
+      <rect class="box" x="574" y="352" width="252" height="58" rx="3"/>
+      <text class="t-mono" x="584" y="372">외부 저장소 참조</text>
+      <text class="t-sub" x="584" y="390">저장소에는 이름만 둔다</text>
+      <text class="t-sub" x="584" y="404">비밀 관리 시스템이 따로 필요하다</text>
+    </svg>
+    <figcaption>그림 31.1 — 푸시와 풀의 차이는 자격 증명의 위치다. 아래는 selfHeal이 실제로 되돌린 시각과 시크릿을 저장소에 두는 세 방법.</figcaption>
+  </figure>
+
+  <h3>풀이 푸시와 다른 점</h3>
+  <p>M29에서 파이프라인을 이미지까지만 만들고 멈춘 이유를 여기서 설명한다. CI가 <code>kubectl apply</code>를 하려면 <strong>CI 러너가 클러스터 자격 증명을 갖고 있어야</strong> 한다. 그것은 M23의 관점에서 가장 큰 권한을 가장 넓게 노출된 곳에 두는 일이다 — CI 러너는 외부 네트워크에 있고, 서드파티 액션을 실행하고, 포크한 PR도 돌린다.</p>
+  <p>풀 방식에서는 <strong>클러스터 안의 컨트롤러</strong>가 저장소를 읽는다. 저장소에는 읽기 권한만 주면 되고, 클러스터로 들어오는 인바운드 구멍이 필요 없다. 클러스터를 열 개로 늘려도 각 클러스터가 알아서 당겨가므로 CI 설정은 그대로다 — M32의 글로벌 롤아웃이 이 성질에 기댄다.</p>
+  <p>대가도 있다. <strong>배포가 언제 끝났는지 CI가 모른다.</strong> 파이프라인은 커밋에서 끝나고, 실제 반영은 나중에 클러스터에서 일어난다. 배포 완료를 기다려야 하는 워크플로(예: 배포 후 E2E 테스트)는 별도로 확인 단계를 붙여야 한다.</p>
+
+  <h3>조정은 계속 돈다</h3>
+  <p><dfn class="term">조정<span class="en">reconciliation</span></dfn>은 한 번 하고 끝나는 것이 아니라 <strong>주기적으로 도는 루프</strong>다. 저장소가 안 바뀌어도 컨트롤러는 계속 비교하고, 클러스터 쪽이 달라져 있으면 되돌린다. M08에서 배운 컨트롤 루프가 <strong>저장소까지 확장된</strong> 형태다.</p>
+  <p>여기서 나오는 두 옵션이 이 모듈의 실습 대상이다. <code>selfHeal</code>은 <strong>클러스터에서 바뀐 것을 되돌리고</strong>, <code>prune</code>은 <strong>저장소에서 사라진 것을 클러스터에서도 지운다.</strong> 둘 다 기본값이 꺼져 있는데, 켜지 않으면 "저장소가 정본"이라는 말이 절반만 참이 된다.</p>
+
+  <h3>시크릿이라는 예외</h3>
+  <p>모든 것을 저장소에 둔다는 원칙에는 <strong>비밀번호</strong>라는 예외가 생긴다. 시크릿을 평문으로 커밋하면 저장소를 읽을 수 있는 모두가 볼 수 있고, <strong>한 번 커밋되면 이력에서 지우기 어렵다</strong> — 나중에 파일을 지워도 과거 커밋에 남는다.</p>
+  <p>대응은 세 갈래다. <strong>암호화해서 커밋</strong>(SOPS·Sealed Secrets), <strong>참조만 커밋</strong>(External Secrets가 외부 비밀 관리 시스템에서 가져온다), 그리고 <strong>아예 다른 경로로 전달</strong>(설치 시 <code>--set</code>). 31.6에서 첫 번째를 실습하고, 나머지는 판단 기준만 정리한다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">31.3</span>따라하기 ① 저장소와 컨트롤러</h2>
+
+  <div class="step">
+    <h4>1단계 — 클러스터 안에 깃 서버를 세운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>실습을 자기 완결로 만든다. 깃허브를 쓰면 토큰과 네트워크가 실습의 변수가 된다.</p>
+<pre><code># git daemon 은 별도 패키지다. alpine/git 이미지에는 없어서 직접 만든다.
+cat &gt; course/labs/apps/gitserver/Dockerfile &lt;&lt;'EOF'
+FROM alpine:3.22
+RUN apk add --no-cache git git-daemon &amp;&amp; \
+    adduser -D -u 1000 -h /repos git &amp;&amp; \
+    mkdir -p /repos &amp;&amp; chown -R 1000:1000 /repos
+USER 1000
+EXPOSE 9418
+ENTRYPOINT ["git", "daemon", "--verbose", "--export-all", "--base-path=/repos", \
+            "--reuseaddr", "--enable=upload-pack", "--port=9418"]
+EOF
+docker build -t gitserver:1 course/labs/apps/gitserver
+kind load docker-image gitserver:1 --name study
+kubectl apply -f course/labs/k8s/gitops/00-gitserver.yaml</code></pre>
+    <p>매니페스트에 들어간 환경 변수 셋이 눈에 띌 것이다. 31.7의 두 번째 실패에서 만든 것이다.</p>
+<pre><code>          env:
+            - {name: GIT_CONFIG_COUNT,  value: "1"}
+            - {name: GIT_CONFIG_KEY_0,  value: "safe.directory"}
+            - {name: GIT_CONFIG_VALUE_0, value: "*"}</code></pre>
+    <p><code>git daemon</code>을 고른 이유가 있다. HTTP로 저장소를 내주려면 <code>git-http-backend</code>를 CGI로 돌려야 하는데, 그러려면 웹 서버 설정이 실습의 절반을 차지한다. <code>git://</code>는 인증이 없어서 <strong>운영에는 절대 쓰지 않지만</strong> 클러스터 내부 실습에는 충분하다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 저장소 내용을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>배포할 것을 정한다. M28에서 만든 kustomize base를 그대로 쓴다.</p>
+<pre><code>mkdir -p /tmp/gitops/app-repo/apps/journal
+cp course/labs/k8s/journal/{10-config,20-redis,30-journal-api,40-web-static,60-pdb,70-hpa}.yaml \
+   course/labs/k8s/journal/index.html /tmp/gitops/app-repo/apps/journal/
+
+cat &gt; /tmp/gitops/app-repo/apps/journal/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gitops-journal
+resources:
+  - 10-config.yaml
+  - 20-redis.yaml
+  - 30-journal-api.yaml
+  - 40-web-static.yaml
+  - 60-pdb.yaml
+  - 70-hpa.yaml
+configMapGenerator:
+  - name: web-content
+    files: [index.html]
+images:
+  - name: journal-api
+    newTag: v1
+EOF
+
+cd /tmp/gitops/app-repo &amp;&amp; git init -q -b main &amp;&amp; git add -A
+git commit -qm "저널 앱 초기 상태"</code></pre>
+    <p><code>00-namespace.yaml</code>과 <code>50-ingress.yaml</code>을 뺐다. 네임스페이스는 <strong>PSA 라벨을 붙여서 우리가 만들고</strong>, 인그레스는 <code>journal.local</code> 호스트가 기존 배포와 겹치기 때문이다. <strong>무엇을 GitOps에 넣고 무엇을 뺄지</strong>가 실제로는 이런 구체적인 이유로 정해진다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — Argo CD를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>조정 루프를 클러스터 안에 넣는다.</p>
+<pre><code>kubectl create ns argocd
+kubectl apply -n argocd --server-side \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.2/manifests/install.yaml
+kubectl -n argocd get deploy,sts --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>argocd-applicationset-controller   1/1   1   1
+argocd-dex-server                  1/1   1   1
+argocd-notifications-controller    1/1   1   1
+argocd-redis                       1/1   1   1
+argocd-repo-server                 1/1   1   1
+argocd-server                      1/1   1   1
+argocd-application-controller      1/1       (StatefulSet)</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>--server-side</code>가 여기서도 필요하다. M30에서 본 것과 같은 이유(CRD 주석 크기)이고, <strong>큰 프로젝트를 설치할 때의 기본값</strong>이라고 생각하는 편이 낫다.</div>
+    <p>설치가 네임스페이스에 <strong>NetworkPolicy 7개</strong>를 함께 넣는다. M25에서 손으로 만든 것을 이 프로젝트는 기본으로 배포한다 — 구성요소마다 필요한 통신만 열어 둔 형태이고, 좋은 예제이므로 <code>kubectl -n argocd get netpol -o yaml</code>로 한 번 읽어 볼 값이 있다.</p>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 애플리케이션을 선언한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"저장소의 이 경로가 클러스터의 이 네임스페이스"를 오브젝트로 적는다.</p>
+<pre><code>kubectl create ns gitops-journal
+kubectl label ns gitops-journal \
+  pod-security.kubernetes.io/enforce=restricted \
+  pod-security.kubernetes.io/enforce-version=latest
+
+cat &gt; course/labs/k8s/gitops/10-application.yaml &lt;&lt;'EOF'
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: journal
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git://gitserver.gitops.svc/repo.git
+    targetRevision: main
+    path: apps/journal
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitops-journal
+  syncPolicy:
+    automated:
+      prune: true       # 저장소에서 사라진 리소스를 클러스터에서도 지운다
+      selfHeal: true    # 클러스터에서 손으로 바꾼 것을 되돌린다
+    syncOptions:
+      - CreateNamespace=false
+EOF
+kubectl apply -f course/labs/k8s/gitops/10-application.yaml</code></pre>
+<pre><code>kubectl -n argocd get application journal \
+  -o jsonpath='{.status.sync.status}{" / "}{.status.health.status}{"\n"}'
+kubectl -n gitops-journal get po,deploy,sts,hpa,pdb --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Synced / Healthy
+pod/journal-api-6589b668c6-4ntm9   1/1   Running   0   44s
+pod/journal-api-6589b668c6-6g8cj   1/1   Running   0   44s
+pod/journal-api-6589b668c6-8d46q   1/1   Running   0   44s
+pod/redis-0                        1/1   Running   0   44s
+pod/web-static-88f866755-977vh     1/1   Running   0   44s
+pod/web-static-88f866755-pph7l     1/1   Running   0   44s
+deployment.apps/journal-api   3/3   3   3   44s
+deployment.apps/web-static    2/2   2   2   44s
+statefulset.apps/redis   1/1   44s
+horizontalpodautoscaler.autoscaling/journal-api   cpu: &lt;unknown&gt;/50%   3   8   3
+poddisruptionbudget.policy/journal-api   2   N/A   1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>아무도 <code>kubectl apply</code>를 치지 않았는데 워크로드 전체가 떴다. <code>Application</code> 하나가 <strong>커밋과 네임스페이스를 잇는 유일한 선언</strong>이고, 그 뒤로는 사람이 개입하지 않는다. <code>restricted</code> 네임스페이스에서 뜬 것도 확인해 둔다 — M24의 기준을 GitOps 경로로도 통과한다.</div>
+    <p>중간에 <code>Health</code>가 <code>Degraded</code>로 보일 수 있다. 파드가 뜨는 중에는 정상이며, 몇십 초 뒤 <code>Healthy</code>가 된다. <strong><code>Sync</code>와 <code>Health</code>는 다른 축</strong>이다 — 저장소와 같은가(Sync)와 워크로드가 건강한가(Health)를 각각 본다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">31.4</span>따라하기 ② 커밋이 배포다</h2>
+
+  <div class="step">
+    <h4>1단계 — 저장소를 고치고 커밋한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>배포 절차가 <strong>커밋 하나</strong>가 되는 것을 확인한다.</p>
+<pre><code>cd /tmp/gitops/app-repo
+sed -i '' 's/LOG_LEVEL: "info"/LOG_LEVEL: "warn"/' apps/journal/10-config.yaml
+sed -i '' 's/    newTag: v1/    newTag: v2/' apps/journal/kustomization.yaml
+git add -A &amp;&amp; git commit -qm "운영 준비: 로그 수준 warn, 이미지 v2"</code></pre>
+    <p>실제 GitOps라면 여기서 <code>git push</code>로 끝난다. 이 실습의 깃 서버는 읽기 전용이라 베어 저장소를 다시 만들어 복사하는 스크립트를 쓴다 — <strong>절차의 본질(커밋이 배포다)은 같다.</strong></p>
+<pre><code>bash course/labs/scripts/gitops-push.sh /tmp/gitops/app-repo</code></pre>
+    <p>스크립트 마지막 줄이 <code>argocd.argoproj.io/refresh: hard</code> 주석을 붙인다. Argo CD는 기본으로 <strong>3분마다</strong> 저장소를 확인하는데, 실습에서 3분을 기다리지 않으려는 것이다. 운영에서는 저장소의 웹훅으로 이 확인을 즉시 트리거한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 반영되는 것을 시각으로 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"얼마나 걸리는가"를 감이 아니라 시각으로 남긴다.</p>
+<pre><code>for i in $(seq 1 10); do
+  L=$(kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LOG_LEVEL}')
+  I=$(kubectl -n gitops-journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}')
+  echo "  $(date +%H:%M:%S)  LOG_LEVEL=$L  image=$I"
+  [ "$L" = "warn" ] &amp;&amp; break
+  sleep 8
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  01:06:29  LOG_LEVEL=info  image=journal-api:v1
+  01:06:37  LOG_LEVEL=warn  image=journal-api:v2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>8초 만에 컨피그맵과 이미지가 함께 바뀌었다. <strong>둘이 같은 커밋에 있었기 때문에 같이 반영된다</strong> — 코드 변경과 설정 변경의 순서를 사람이 맞출 필요가 없다는 것이 M29 8절에서 말한 "한 저장소"의 실질적인 값이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 저장소에서 지우면 클러스터에서도 지워진다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>prune: true</code>가 무엇을 하는지 확인한다. <strong>이 옵션이 없으면 저장소가 절반만 정본이다.</strong></p>
+<pre><code>cd /tmp/gitops/app-repo
+# kustomization.yaml 의 resources 에서 60-pdb.yaml 을 빼고 파일도 지운다
+rm apps/journal/60-pdb.yaml
+git add -A &amp;&amp; git commit -qm "PDB 제거 — 파드가 2개뿐이라 드레인을 막는다"
+bash course/labs/scripts/gitops-push.sh /tmp/gitops/app-repo</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  01:07:19  PDB 수=1
+  01:07:27  PDB 수=0</code></div>
+    <div class="verdict"><span class="lbl">판정</span>커밋에서 지운 것이 8초 뒤 클러스터에서도 사라졌다. <code>prune: false</code>였다면 PDB는 <strong>영원히 남는다</strong> — 저장소에는 없고 클러스터에는 있는 리소스가 쌓이고, 시간이 지나면 그것이 왜 있는지 아무도 모르게 된다.</div>
+    <p><code>prune</code>을 켜는 것이 무서운 이유도 분명하다. <strong>실수로 파일을 지운 커밋이 곧바로 클러스터의 삭제</strong>가 된다. 그래서 실무에서는 <code>prune</code>을 켜되 <strong>중요 리소스에 <code>Prune=false</code> 주석</strong>을 붙이거나(예: PVC), <code>prune</code> 결과를 사람이 승인하게 한다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">31.5</span>따라하기 ③ 드리프트를 만들어 본다</h2>
+  <p>이 절이 이 모듈의 핵심이다. <strong>지금까지 30개 모듈 동안 해 온 방식이 더 이상 통하지 않는다는 것</strong>을 몸으로 확인한다.</p>
+
+  <div class="step">
+    <h4>1단계 — 레플리카를 손으로 바꾼다</h4>
+    <p class="purpose"><span class="lbl">목적</span>가장 흔한 긴급 대응 — "일단 늘려 놓자" — 가 어떻게 되는지 본다.</p>
+<pre><code>date +%H:%M:%S
+kubectl -n gitops-journal scale deploy web-static --replicas=5
+for i in $(seq 1 12); do
+  R=$(kubectl -n gitops-journal get deploy web-static -o jsonpath='{.spec.replicas}')
+  echo "  $(date +%H:%M:%S)  replicas=$R"
+  [ "$R" = "2" ] &amp;&amp; break
+  sleep 5
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>01:04:20
+deployment.apps/web-static scaled
+  01:04:20  replicas=5
+  01:04:25  replicas=2</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>5초.</strong> 명령은 성공했고 아무 오류도 없었는데 5초 뒤 원래대로 돌아갔다. 이것이 GitOps를 도입한 팀에서 가장 먼저 나오는 불만이고, <strong>동시에 도입한 이유</strong>다 — 저장소에 없는 변경은 남지 않는다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 리소스를 지워 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>삭제도 되돌아오는지 확인한다. <strong>클러스터가 저장소보다 적을 때</strong>의 동작이다.</p>
+<pre><code>kubectl -n gitops-journal delete svc web-static
+for i in $(seq 1 12); do
+  if kubectl -n gitops-journal get svc web-static &gt;/dev/null 2&gt;&amp;1; then
+    echo "  $(date +%H:%M:%S)  서비스 되살아남"; break
+  fi
+  echo "  $(date +%H:%M:%S)  아직 없음"; sleep 5
+done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>service "web-static" deleted from gitops-journal namespace
+  01:04:32  아직 없음
+  01:04:37  서비스 되살아남</code></div>
+    <div class="verdict"><span class="lbl">판정</span>6초 만에 되살아났다. <strong>ClusterIP는 새로 할당된다</strong>는 점에 주의한다 — 같은 이름의 다른 서비스가 만들어진 것이고, 그 사이 그 IP를 캐시하고 있던 클라이언트는 잠깐 실패한다. "되돌아온다"가 "아무 일도 없었다"는 뜻은 아니다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 설정값을 바꿔 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>복구 시점이 <strong>즉시가 아니라는 것</strong>을 확인한다. 조정 루프에는 주기가 있다.</p>
+<pre><code>kubectl -n gitops-journal patch cm journal-config -p '{"data":{"LOG_LEVEL":"debug"}}'
+sleep 12; kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LOG_LEVEL}{"\n"}'
+sleep 20; kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LOG_LEVEL}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>debug
+info</code></div>
+    <div class="verdict"><span class="lbl">판정</span>12초 뒤에는 아직 <code>debug</code>였고 32초 뒤에 <code>info</code>로 돌아왔다. <strong>selfHeal은 즉시가 아니다.</strong> 그 사이에 파드가 재시작하면 바뀐 값을 읽어 갈 수도 있다 — 손으로 바꾼 것이 <strong>짧게 유효했다가 사라지는</strong> 이 상태가 디버깅을 어렵게 만든다.</div>
+    <p>그래서 GitOps 클러스터에서 <strong>디버깅용 임시 변경은 하지 않는다.</strong> 정말 필요하면 애플리케이션의 자동 동기화를 잠깐 끄고(<code>syncPolicy</code>에서 <code>automated</code> 제거), 끝나면 다시 켠다. 끄는 것도 <strong>기록에 남는 행위</strong>여야 한다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">31.6</span>따라하기 ④ 시크릿을 커밋 가능하게</h2>
+  <p>지금 저장소의 <code>20-redis.yaml</code>에는 <strong>비밀번호가 평문으로</strong> 들어 있다. 실습이니 그렇게 두었지만, 저장소가 정본이 된 이상 이 문제를 정면으로 봐야 한다.</p>
+
+  <div class="step">
+    <h4>1단계 — 키를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>암호화의 대상이 되는 키를 만든다. <strong>이 키는 저장소에 들어가지 않는다.</strong></p>
+<pre><code>brew install sops age      # 없으면
+age-keygen -o age.key</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Public key: age1d7gyfuu6e9de0h6dz949x0h840ka49ctu9napu04p567yzspu3rqdrrmhp</code></div>
+    <p><code>age</code>는 GPG를 대신하는 단순한 파일 암호화 도구다. 키가 <strong>한 줄짜리 문자열</strong>이라 다루기 쉽고, 공개 키로 암호화하고 개인 키로 푼다. <code>age.key</code> 파일에 둘 다 들어 있으므로 <strong>이 파일은 절대 커밋하지 않는다</strong> — <code>.gitignore</code>에 먼저 넣는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 값만 암호화한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파일 전체를 암호화하지 않는다. <strong>diff가 읽히는 형태</strong>로 만드는 것이 요점이다.</p>
+<pre><code>sops --encrypt --age "$PUB" \
+  --encrypted-regex '^(data|stringData)$' \
+  secret.yaml &gt; secret.enc.yaml</code></pre>
+    <span class="out-lbl">출력 (secret.enc.yaml)</span>
+    <div class="out"><code>apiVersion: v1
+kind: Secret
+metadata:
+    name: journal-secret
+    namespace: gitops-journal
+type: Opaque
+stringData:
+    REDIS_PASSWORD: ENC[AES256_GCM,data:MTzKK6B81UQRa9s=,iv:kzLZ1GPMhUGjxVYFmmV+x6BGo/m8+4N/gG3EnwNx1Go=,tag:YfbNaJ70duLK5hKnR4H/cA==,type:str]
+sops:
+    age:
+        - recipient: age1d7gyfuu6e9de0h6dz949x0h840ka49ctu9napu04p567yzspu3rqdrrmhp
+    encrypted_regex: ^(data|stringData)$</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>--encrypted-regex</code>가 핵심이다. 이름·네임스페이스·타입은 <strong>평문으로 남아서</strong> 리뷰어가 "어느 시크릿을 바꿨는지" 볼 수 있고, 값만 암호문이다. 파일 전체를 암호화하면 모든 변경이 <strong>알아볼 수 없는 diff</strong>가 되어 리뷰가 불가능해진다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 안전한지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"암호화했다"를 믿지 않고 확인한다.</p>
+<pre><code>grep -c 's3cr3t-pass' secret.enc.yaml
+export SOPS_AGE_KEY_FILE=$PWD/age.key
+sops --decrypt secret.enc.yaml | grep REDIS_PASSWORD
+SOPS_AGE_KEY_FILE=/dev/null sops --decrypt secret.enc.yaml</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>0
+    REDIS_PASSWORD: s3cr3t-pass
+order for SOPS to recover the file, at least one key has to be successful,
+but none were.</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 줄이 각각 다른 것을 확인한다. 평문이 <strong>파일에 없고</strong>, 키가 있으면 <strong>원래 값이 복원되고</strong>, 키가 없으면 <strong>읽히지 않는다.</strong> 이 세 가지를 확인하지 않고 커밋하는 것은 위험하다 — <code>--encrypted-regex</code>를 잘못 쓰면 아무것도 암호화되지 않은 채 "sops" 섹션만 붙은 파일이 나온다.</div>
+  </div>
+
+  <div class="note-2026">
+    <p>Argo CD는 SOPS를 <strong>기본으로 풀지 못한다.</strong> 복호화하려면 <code>ksops</code> 같은 플러그인을 repo-server에 넣거나, <code>argocd-vault-plugin</code>을 쓰거나, 아예 다른 접근(External Secrets Operator가 외부 비밀 저장소에서 가져오기)을 쓴다. 즉 <strong>암호화는 저장소 문제를 풀지만 클러스터 쪽 복호화 경로는 별도로 만들어야 한다.</strong></p>
+    <p>이 교재는 여기까지만 한다. 복호화 플러그인 설치는 도구마다 절차가 다르고, 어느 것을 고르든 <strong>키를 클러스터 어딘가에 두어야 하는 문제</strong>는 남는다. 그 키를 어떻게 보호할 것인지가 진짜 질문이고, 답은 대개 클라우드의 KMS로 옮기는 것이다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">31.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — 정적 파일로 내준 저장소는 읽지 못한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>깃 서버를 처음 세울 때 가장 먼저 시도하는 방법이 왜 안 되는지 본다.</p>
+    <p>nginx로 <code>.git</code> 디렉터리를 그대로 내주고 <code>git update-server-info</code>를 돌리면 이른바 dumb HTTP 저장소가 된다. HTTP 응답은 정상이다.</p>
+<pre><code>curl -s -o /dev/null -w '%{http_code}\n' http://gitserver.gitops.svc/repo.git/info/refs</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>200</code></div>
+    <p>그런데 Argo CD는 읽지 못한다.</p>
+    <span class="out-lbl">출력 (Application의 status.conditions)</span>
+    <div class="out"><code>Failed to load target state: failed to generate manifest for source 1 of 1: rpc error: code = Unknown desc = failed to list refs: unexpected EOF</code></div>
+    <div class="verdict"><span class="lbl">판정</span>메시지가 원인을 가리키지 않는다 — <code>unexpected EOF</code>는 "파일이 없다"가 아니라 <strong>기대한 프로토콜 응답이 아니다</strong>라는 뜻이다. Argo CD의 깃 클라이언트는 smart 프로토콜(<code>git-upload-pack</code>과 대화하는 방식)만 말하고, <strong>정적 파일 나열은 프로토콜이 아니다.</strong></div>
+    <p>이 오류를 만났을 때 확인할 것은 하나다 — <strong>같은 URL로 <code>git ls-remote</code>가 되는가.</strong> 되지 않으면 저장소 서버 쪽 문제이고, 되는데 Argo CD만 안 되면 인증이나 네트워크 문제다.</p>
+<pre><code>kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server -- \
+  git ls-remote git://gitserver.gitops.svc/repo.git</code></pre>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 소유자가 다르면 git이 저장소를 거부한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨테이너와 볼륨을 함께 쓸 때 반복해서 만나는 문제를 깃에서 확인한다.</p>
+<pre><code>kubectl -n gitops logs deploy/gitserver --tail=8</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>[37] Request upload-pack for '/repo.git'
+fatal: detected dubious ownership in repository at '/repos/repo.git'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /repos/repo.git
+[11] [37] Disconnected (with error)</code></div>
+<pre><code>kubectl -n gitops exec deploy/gitserver -- ls -ld /repos /repos/repo.git
+kubectl -n gitops exec deploy/gitserver -- id</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>drwxrwxrwx    3 root     root     4096 /repos
+drwxr-xr-x    6 101      101      4096 /repos/repo.git
+uid=1000(git) gid=1000(git) groups=1000(git)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>저장소 디렉터리의 소유자가 <code>101</code>인데 프로세스는 <code>1000</code>이다. <strong>이전에 이 PVC를 쓴 파드(nginx-unprivileged, uid 101)가 남긴 소유권</strong>이다. git은 다른 사용자 소유의 저장소를 신뢰하지 않는다 — 훅 스크립트를 통한 공격을 막기 위한 2022년 이후의 기본 동작이고, <strong>컨테이너 환경에서는 이 보호가 자주 오작동처럼 느껴진다.</strong></div>
+    <p>두 가지 해법이 있다. <strong>소유권을 맞추는 것</strong>이 정석이고(<code>fsGroup</code>과 <code>chown</code>), 실습에서는 예외를 여는 쪽을 택했다.</p>
+<pre><code>          env:
+            - {name: GIT_CONFIG_COUNT,  value: "1"}
+            - {name: GIT_CONFIG_KEY_0,  value: "safe.directory"}
+            - {name: GIT_CONFIG_VALUE_0, value: "*"}</code></pre>
+    <p><code>GIT_CONFIG_COUNT</code>·<code>GIT_CONFIG_KEY_n</code>·<code>GIT_CONFIG_VALUE_n</code>은 <strong>설정 파일 없이 환경 변수로 git 설정을 주입</strong>하는 방법이다. 읽기 전용 파일시스템으로 도는 컨테이너에서 유용하다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ — 긴급 수정이 사라진다</h4>
+    <p class="purpose"><span class="lbl">목적</span>31.5의 측정을 <strong>장애 상황의 이야기</strong>로 다시 읽는다. 이것이 GitOps 도입 후 가장 자주 겪는 사고다.</p>
+    <p>새벽에 트래픽이 몰려 <code>web-static</code>을 5개로 늘렸다고 하자. 명령은 성공했고 파드도 떴다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>01:04:20  replicas=5
+01:04:25  replicas=2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>5초 뒤 원래대로다. <strong>대응한 사람은 대개 이것을 즉시 알아채지 못한다</strong> — 명령이 성공했고 오류가 없었기 때문이다. 몇 분 뒤 "왜 아직 느리지"로 돌아오고, 그때 <code>kubectl get</code>을 다시 쳐 보고서야 안다.</div>
+    <p>올바른 절차는 셋 중 하나다. <strong>커밋한다</strong>(가장 옳지만 새벽에 리뷰를 받아야 한다). <strong>자동 동기화를 끈다</strong>(<code>kubectl -n argocd patch app journal --type=json -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'</code>) — 끄고 나면 <strong>다시 켜는 것을 잊지 않도록</strong> 어딘가에 기록한다. 아니면 애초에 <strong>사람이 손댈 값을 저장소 밖에 둔다</strong>(HPA에 맡기는 것이 그 예다 — <code>journal-api</code>의 레플리카는 M17 이후 저장소에 없다).</p>
+    <p>세 번째가 설계로 푸는 방법이다. <strong>자주 손대야 하는 값이 있다면 그것은 매니페스트가 아니라 컨트롤러가 정해야 한다는 신호다.</strong></p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">31.8</span>운영 관점 — 저장소 구조와 긴급 상황</h2>
+
+  <h3>저장소를 어떻게 나눌 것인가</h3>
+  <p>세 가지 배치가 흔하고, 선택 기준은 <strong>누가 무엇을 승인하는가</strong>다.</p>
+  <p><strong>앱과 매니페스트를 한 저장소에</strong>(이 교재의 배치) 두면 코드와 설정이 한 커밋에 들어간다. 팀이 자기 서비스를 온전히 소유할 때 가장 단순하다. 단점은 <strong>배포 권한과 코드 권한이 같아진다</strong>는 것 — 코드를 고칠 수 있는 사람이 곧 배포할 수 있는 사람이다.</p>
+  <p><strong>매니페스트만 별도 저장소에</strong> 두면 그 저장소의 승인 규칙으로 배포를 통제할 수 있다. CI는 이미지를 만들고 <strong>매니페스트 저장소에 태그를 커밋</strong>한다. 규제가 있는 환경에서 흔하고, 대가는 변경 하나가 두 개의 PR이 되는 것이다.</p>
+  <p><strong>환경마다 별도 저장소나 브랜치</strong>는 겉보기에 깔끔하지만 <strong>권하지 않는 경우가 많다.</strong> 브랜치로 환경을 나누면 dev의 변경을 prod로 옮길 때 병합이 필요하고, 그 병합에 <strong>환경별 차이가 섞여</strong> 충돌이 반복된다. M28의 오버레이처럼 <strong>같은 브랜치에서 디렉터리로</strong> 나누는 편이 낫다.</p>
+
+  <h3>동기화 주기와 웹훅</h3>
+  <p>Argo CD의 기본 폴링 주기는 3분이다. 배포가 3분씩 걸린다는 뜻이라 대개 웹훅을 붙인다 — 저장소가 푸시를 알리면 즉시 확인한다. 다만 <strong>웹훅은 최적화이지 정확성의 근거가 아니다.</strong> 웹훅이 실패해도 폴링이 결국 따라잡으므로, 웹훅 장애가 배포 누락으로 이어지지 않는다. 이것이 풀 기반의 성질이다.</p>
+  <p>반대로 <strong>selfHeal의 주기는 배포 주기가 아니다.</strong> 31.5에서 5초·6초·32초로 제각각이었던 이유는 이벤트로 감지한 것과 주기적 비교로 감지한 것이 섞였기 때문이다. 드리프트 복구 시간을 SLO로 약속하면 안 된다.</p>
+
+  <h3>이 교재의 배치</h3>
+  <p><code>journal</code> 네임스페이스의 원래 배포는 <strong>GitOps로 옮기지 않는다.</strong> 이 모듈의 실습은 <code>gitops-journal</code>에서 따로 했다. 이유는 실용적이다 — 남은 모듈에서 <code>kubectl</code>로 직접 실험할 일이 계속 있고(M36의 카오스 주입이 특히 그렇다), selfHeal이 그것을 계속 되돌리면 실습이 성립하지 않는다.</p>
+  <p>이것은 <strong>교재의 사정이지 권고가 아니다.</strong> 실제 운영 클러스터에서 "손으로 실험할 일이 많아서 GitOps를 안 쓴다"는 이유는 성립하지 않는다 — 그 실험이 많다는 것 자체가 문제의 신호다.</p>
+
+  <h3>GitOps가 답이 아닌 것</h3>
+  <p>GitOps는 <strong>선언할 수 있는 것</strong>에만 적용된다. M27에서 고친 컨트롤 플레인 매니페스트, 노드의 커널 파라미터, 클라우드 리소스는 이 루프 밖에 있다. 그것들을 같은 방식으로 다루려면 별도의 도구(클러스터 API, 테라폼과 그 오퍼레이터)가 필요하고, 도구가 늘어나면 <strong>"어느 도구가 이 리소스의 주인인가"</strong>라는 문제가 새로 생긴다.</p>
+  <p>M32에서 클러스터를 여럿으로 늘릴 때 이 질문이 다시 나온다. 그때는 <strong>클러스터 자체를 선언으로 만드는</strong> 방향을 본다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">31.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n gitops get po -l app=gitserver --no-headers | grep -c Running</code> → <code>1</code></li>
+      <li><code>kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server -- git ls-remote git://gitserver.gitops.svc/repo.git | wc -l</code> → <code>2</code> (HEAD와 refs/heads/main)</li>
+      <li><code>kubectl -n argocd get application journal -o jsonpath='{.status.sync.status}'</code> → <code>Synced</code></li>
+      <li><code>kubectl -n argocd get application journal -o jsonpath='{.status.health.status}'</code> → <code>Healthy</code></li>
+      <li><code>kubectl -n argocd get application journal -o jsonpath='{.spec.syncPolicy.automated.selfHeal}'</code> → <code>true</code></li>
+      <li><code>kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LOG_LEVEL}'</code> → <code>warn</code> (커밋으로 바꾼 값)</li>
+      <li><code>kubectl -n gitops-journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>journal-api:v2</code></li>
+      <li><code>kubectl -n gitops-journal get pdb --no-headers | wc -l</code> → <code>0</code> (prune으로 사라졌다)</li>
+      <li><code>kubectl -n gitops-journal scale deploy web-static --replicas=4; sleep 20; kubectl -n gitops-journal get deploy web-static -o jsonpath='{.spec.replicas}'</code> → <code>2</code></li>
+      <li><code>kubectl -n gitops-journal get po --no-headers | grep -c '1/1'</code> → <code>5</code> 이상 (restricted 네임스페이스에서 떴다)</li>
+      <li><code>grep -c 's3cr3t-pass' secret.enc.yaml</code> → <code>0</code></li>
+      <li><code>SOPS_AGE_KEY_FILE=./age.key sops --decrypt secret.enc.yaml | grep -c REDIS_PASSWORD</code> → <code>1</code></li>
+      <li><code>ls course/labs/k8s/gitops/</code> → <code>00-gitserver.yaml 10-application.yaml README.md repo-template</code></li>
+      <li>(이해 확인) <code>prune: true</code>가 위험한 상황을 하나 적고, 그것을 막는 방법을 함께 적는다</li>
+      <li>(이해 확인) 새벽에 긴급하게 레플리카를 늘려야 할 때 GitOps 클러스터에서 무엇을 하는지 순서로 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/apps/gitserver/Dockerfile</code> — <code>git daemon</code> 이미지</li>
+      <li><code>course/labs/k8s/gitops/00-gitserver.yaml</code> — 깃 서버 · PVC · 서비스</li>
+      <li><code>course/labs/k8s/gitops/10-application.yaml</code> — Argo CD Application (<code>prune</code>·<code>selfHeal</code> 켬)</li>
+      <li><code>course/labs/k8s/gitops/repo-template/</code> — 저장소에 넣을 내용의 스냅숏</li>
+      <li><code>course/labs/scripts/gitops-push.sh</code> — 로컬 작업본을 클러스터 안 저장소로</li>
+      <li>클러스터: <code>argocd</code>(컨트롤러 7종) · <code>gitops</code>(깃 서버) · <code>gitops-journal</code>(GitOps로 배포된 앱)</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 애플리케이션을 먼저 지운다 (prune 이 켜져 있으므로 리소스가 함께 정리된다)
+kubectl -n argocd delete application journal
+
+# 네임스페이스 셋을 지운다
+kubectl delete ns gitops-journal gitops --ignore-not-found
+
+# Argo CD 는 남긴다. 남아 있는지 확인
+kubectl -n argocd get deploy --no-headers | wc -l</code></pre>
+  <p>Argo CD 컨트롤러는 <strong>지우지 않는다.</strong> M32에서 여러 클러스터에 같은 애플리케이션을 배포할 때 다시 쓰고, M38 캡스톤의 배포 경로가 이것이다.</p>
+  <p><code>age.key</code>는 <strong>저장소에 커밋하지 않았는지</strong> 마지막으로 확인한다. <code>git log --all --full-history -- '*age.key'</code>가 비어 있어야 한다 — 한 번 들어가면 이력에서 지우는 것이 매우 번거롭다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m30-k8s-deploy-strategies.html">← M30 배포 전략과 롤아웃 판정</a>
+  <a href="m32-k8s-global-rollout.html">M32 글로벌 롤아웃과 사고 대응 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금까지 클러스터는 하나였다. 저장소 하나가 클러스터 하나를 정의했고, 배포는 그 안에서 끝났다. 실제 서비스는 <strong>지역마다 클러스터가 따로</strong> 있고, 같은 변경을 여러 클러스터에 순서대로 내보내면서 <strong>중간에 멈출 수 있어야</strong> 한다.</p>
+  <p>M32에서 그 순서를 만든다. 한 클러스터에서 확인하고 다음으로 넘어가는 절차, 지역별 차이를 오버레이로 다루는 방법, 그리고 <strong>사고가 났을 때 되돌리는 순서</strong>를 다룬다. 이 모듈에서 만든 <code>Application</code>이 <code>ApplicationSet</code>으로 확장되는 지점이다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>Argo CD: https://argo-cd.readthedocs.io/en/stable/</li>
+    <li>동기화 옵션: https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/</li>
+    <li>자동 동기화(prune·selfHeal): https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/</li>
+    <li>OpenGitOps 원칙: https://opengitops.dev/</li>
+    <li>SOPS: https://github.com/getsops/sops</li>
+    <li>age: https://github.com/FiloSottile/age</li>
+    <li>External Secrets Operator: https://external-secrets.io/</li>
+    <li><code>git config</code> 환경 변수: https://git-scm.com/docs/git-config#ENVIRONMENT</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 18.1~18.4 GitOps와 시크릿 관리</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Argo CD v3.5.2 · SOPS 3.13.3 · age 1.3.2</p>
+</footer>
+
+</div>
+</body>
+</html>

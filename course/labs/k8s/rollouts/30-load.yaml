@@ -1,0 +1,25 @@
+# M30 — 판정에 쓸 트래픽을 만든다. 메트릭이 없으면 분석은 판정할 수 없다.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: load, namespace: m30}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: load}}
+  template:
+    metadata: {labels: {app: load}}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: load
+          image: curlimages/curl:8.19.0
+          command: ["sh","-c","while true; do curl -s -o /dev/null -m 3 http://canary:8080/api/entries; sleep 0.05; done"]
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}

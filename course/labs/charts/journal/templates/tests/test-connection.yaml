@@ -1,0 +1,46 @@
+# helm test 로 도는 파드. 릴리스가 "떴다"와 "동작한다"는 다르다 (책 5.3).
+# 훅이므로 평소에는 클러스터에 없고, helm test 를 칠 때만 만들어진다.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "journal.fullname" . }}-test
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    # 다음 test 실행 직전에 지운다. 실패했을 때 로그를 볼 시간이 남는다.
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: test
+      image: curlimages/curl:8.19.0
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      args:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "1) API 준비 상태"
+          curl -sf -m 5 http://{{ include "journal.fullname" . }}-api:8080/readyz
+          echo
+          echo "2) 엔트리 쓰기"
+          curl -sf -m 5 -X POST -H 'Content-Type: application/json' \
+            -d '{"text":"helm test"}' \
+            http://{{ include "journal.fullname" . }}-api:8080/api/entries
+          echo
+          echo "3) 쓴 것이 읽히는가 (레디스까지 왕복한다)"
+          curl -sf -m 5 http://{{ include "journal.fullname" . }}-api:8080/api/entries | grep -q "helm test"
+          echo "   OK"
+          echo "4) 정적 파일"
+          curl -sf -m 5 -o /dev/null http://{{ include "journal.fullname" . }}-web:8080/
+          echo "   OK"

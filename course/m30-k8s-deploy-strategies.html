@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 6 · 배포 자동화] M30 배포 전략과 롤아웃 판정 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 30 / 38 · PART 6 배포 자동화</div>
+  <h1>배포 전략과 롤아웃 판정</h1>
+  <p class="ch-desc">M29의 파이프라인은 이미지를 만들어 놓고 멈춘다. 클러스터에 내보내는 방법은 아직 하나뿐이고 — M10의 롤링 업데이트 — 그것은 <strong>나쁜 버전을 전체로 퍼뜨리는 중에</strong> 나쁘다는 것을 알게 한다. 이 모듈에서 트래픽을 조금만 보내고 <strong>M20에서 만든 메트릭으로 계속할지 정하는</strong> 구조를 만든다. 판정 기준을 사람이 아니라 PromQL로 쓴다.</p>
+  <div class="meta">
+    <span class="tag">후반</span><span class="tag">120분</span><span class="tag">Argo Rollouts v1.10.0</span>
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전 숫자는 실습 당일 릴리스 페이지에서 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m20-k8s-promql-instrumentation.html">M20</a>의 <code>http_server_requests_seconds</code> 지표가 살아 있다. 이 모듈의 판정이 이 지표에 전적으로 의존한다</li>
+    <li>kube-prometheus-stack이 <code>release: kps</code> 라벨로 ServiceMonitor를 고른다. 확인: <code>kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}'</code></li>
+    <li><a href="m29-k8s-ci-pipeline.html">M29</a> 완료 — <code>journal-api:v2</code>가 새 베이스로 다시 빌드돼 있다</li>
+    <li>새로 만들 파일: <code>course/labs/k8s/rollouts/</code>의 <code>00-namespace.yaml</code>·<code>10-bluegreen.yaml</code>·<code>20-canary.yaml</code>·<code>30-load.yaml</code>, 앱에 <code>FAULT_RATE</code> 손잡이</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 블루/그린을 서비스 셀렉터 교체만으로 만들고, 전환이 <strong>즉시가 아니라는 것</strong>을 응답으로 확인한다.</p>
+  <p>2. Argo Rollouts로 20%→60%→100% 카나리를 돌리고, 성공률 <code>0.95</code> 기준을 PromQL로 써서 <strong>기계가 판정</strong>하게 한다.</p>
+  <p>3. 일부러 40% 확률로 500을 내는 버전을 배포해 <strong>자동으로 되돌아가는 것</strong>을 측정값(0.615 · 0.658)과 함께 본다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">30.1</span>롤링은 나쁜 버전을 퍼뜨리면서 알려 준다</a>
+  <a href="#s2"><span class="num">30.2</span>이론 — 세 전략과 판정 메트릭</a>
+  <a href="#s3"><span class="num">30.3</span>따라하기 ① 블루/그린</a>
+  <a href="#s4"><span class="num">30.4</span>따라하기 ② 카나리 준비</a>
+  <a href="#s5"><span class="num">30.5</span>따라하기 ③ 나쁜 버전을 배포한다</a>
+  <a href="#s6"><span class="num">30.6</span>따라하기 ④ 고친 버전과 수동 조작</a>
+  <a href="#s7"><span class="num">30.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">30.8</span>운영 관점 — 무엇으로 판정할 것인가</a>
+  <a href="#s9"><span class="num">30.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">30.1</span>롤링은 나쁜 버전을 퍼뜨리면서 알려 준다</h2>
+  <p class="lead">M10에서 롤링 업데이트를 봤다. <code>maxSurge: 1</code>·<code>maxUnavailable: 0</code>으로 파드를 하나씩 교체하고, 프로브가 통과하지 못하면 롤아웃이 멈춘다. 여기까지는 안전장치가 있다.</p>
+  <p>문제는 <strong>프로브가 통과하는 나쁜 버전</strong>이다. 앱이 뜨고 <code>/readyz</code>가 200을 주는데 요청의 40%가 500을 내는 상황에서, 롤링 업데이트는 <strong>아무것도 눈치채지 못하고 끝까지 진행한다.</strong> 프로브는 "이 파드가 살아 있는가"만 보고 "이 버전이 좋은가"는 보지 않기 때문이다.</p>
+  <p>그때 무슨 일이 일어나는지 세어 보면 이렇다. 파드가 3개일 때 첫 파드가 교체되면 <strong>요청의 3분의 1</strong>이 나쁜 버전으로 간다. 알림이 울리기까지 M21에서 정한 <code>for: 2m</code>이 걸리고, 그 2분 사이에 롤아웃은 나머지 둘도 교체한다. <strong>알림을 받았을 때는 이미 100%가 나쁜 버전</strong>이다.</p>
+  <p>필요한 것은 두 가지다. <strong>영향 범위를 비율로 묶는 것</strong>과 <strong>진행할지 말지를 판정할 근거</strong>다. 근거는 이미 있다 — M20에서 만든 <code>http_server_requests_seconds</code>가 상태 코드별로 요청을 세고 있다. 이 모듈은 그 지표를 <strong>배포 결정에 연결한다.</strong></p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">30.2</span>이론 — 세 전략과 판정 메트릭</h2>
+  <p><span class="lbl">책 매핑</span>5.7 롤링·블루그린·카나리 각각의 대가 · 6장 버저닝과 릴리스 레이블 규약</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+      <text class="t-h" x="40" y="46">세 전략이 각각 무엇을 사고 무엇을 판다</text>
+
+      <!-- 롤링 -->
+      <rect class="soft" x="40" y="66" width="264" height="150" rx="4"/>
+      <text class="t-title" x="56" y="90">롤링</text>
+      <text class="t-mono" x="56" y="110">디플로이먼트 기본</text>
+      <rect class="box" x="56" y="120" width="232" height="30" rx="3"/>
+      <text class="t-sub" x="66" y="140">자원 추가 거의 없음</text>
+      <rect class="warnbox" x="56" y="156" width="232" height="48" rx="3"/>
+      <text class="t-warn" x="66" y="176">되돌리는 데 같은 시간이 든다</text>
+      <text class="t-sub" x="66" y="194">나쁜 버전이 전체로 번지는 중에 안다</text>
+
+      <!-- 블루/그린 -->
+      <rect class="soft" x="318" y="66" width="264" height="150" rx="4"/>
+      <text class="t-title" x="334" y="90">블루/그린</text>
+      <text class="t-mono" x="334" y="110">서비스 셀렉터 교체</text>
+      <rect class="accent" x="334" y="120" width="232" height="30" rx="3"/>
+      <text class="t-acc" x="344" y="140">전환도 복구도 patch 한 번</text>
+      <rect class="warnbox" x="334" y="156" width="232" height="48" rx="3"/>
+      <text class="t-warn" x="344" y="176">자원을 두 배로 상시 점유</text>
+      <text class="t-sub" x="344" y="194">전환은 전부 아니면 전무다</text>
+
+      <!-- 카나리 -->
+      <rect class="soft" x="596" y="66" width="264" height="150" rx="4"/>
+      <text class="t-title" x="612" y="90">카나리</text>
+      <text class="t-mono" x="612" y="110">Argo Rollouts + 분석</text>
+      <rect class="accent" x="612" y="120" width="232" height="30" rx="3"/>
+      <text class="t-acc" x="622" y="140">영향 범위를 비율로 제한</text>
+      <rect class="warnbox" x="612" y="156" width="232" height="48" rx="3"/>
+      <text class="t-warn" x="622" y="176">판정할 메트릭이 있어야 성립</text>
+      <text class="t-sub" x="622" y="194">배포 시간이 길어진다</text>
+
+      <!-- 카나리 판정 흐름 -->
+      <text class="t-h" x="56" y="248">판정은 사람이 아니라 PromQL 이 한다</text>
+      <rect class="node" x="56" y="260" width="128" height="52" rx="4"/>
+      <text class="t-mono" x="120" y="282" text-anchor="middle">setWeight 20</text>
+      <text class="t-sub" x="120" y="299" text-anchor="middle">5개 중 1개</text>
+      <path class="line" d="M 184 286 L 214 286" marker-end="url(#ar1)"/>
+      <rect class="accent" x="216" y="260" width="180" height="52" rx="4"/>
+      <text class="t-mono" x="306" y="280" text-anchor="middle">AnalysisRun</text>
+      <text class="t-sub" x="306" y="298" text-anchor="middle">20초 x 3회 성공률 질의</text>
+      <path class="line" d="M 396 274 L 426 262" marker-end="url(#ar1)"/>
+      <path class="wline" d="M 396 298 L 426 312" marker-end="url(#ar2)"/>
+
+      <rect class="accent" x="428" y="238" width="196" height="46" rx="4"/>
+      <text class="t-mono" x="438" y="258">result[0] &gt;= 0.95</text>
+      <text class="t-acc" x="438" y="275">다음 단계로 승격</text>
+
+      <rect class="warnbox" x="428" y="290" width="196" height="46" rx="4"/>
+      <text class="t-mono" x="438" y="310">failed 2 &gt; failureLimit 1</text>
+      <text class="t-warn" x="438" y="327">즉시 중단하고 stable 로</text>
+
+      <rect class="box" x="644" y="238" width="216" height="98" rx="4"/>
+      <text class="t-h" x="656" y="260">실측값</text>
+      <text class="t-mono" x="656" y="280">나쁜 버전: 0.615 / 0.658</text>
+      <text class="t-mono" x="656" y="300">고친 버전: 1 / 1 / 1</text>
+      <text class="t-sub" x="656" y="322">FAULT_RATE 0.4 가 만든 차이</text>
+
+      <!-- abort vs undo -->
+      <rect class="soft" x="56" y="352" width="804" height="72" rx="4"/>
+      <text class="t-h" x="70" y="376">abort 와 undo 는 다른 명령이다</text>
+      <text class="t-mono" x="70" y="396">abort — 진행을 멈추고 트래픽을 stable 로. 상태는 Degraded 로 남는다</text>
+      <text class="t-mono" x="70" y="414">undo  — 스펙을 이전 리비전으로 되돌린다. 그래야 Healthy 가 된다</text>
+    </svg>
+    <figcaption>그림 30.1 — 세 전략은 자원·복구 속도·판정 능력을 서로 맞바꾼다. 아래쪽이 카나리의 판정 흐름과 이 모듈에서 실제로 나온 값이다.</figcaption>
+  </figure>
+
+  <h3>무엇을 사고 무엇을 파는가</h3>
+  <p><strong>롤링</strong>은 자원을 거의 더 쓰지 않는다. 대신 되돌리는 데 <strong>내보낼 때와 같은 시간</strong>이 든다 — 되돌리기도 롤링이기 때문이다. 급할 때 이 시간이 길게 느껴진다.</p>
+  <p><strong>블루/그린</strong>은 두 버전을 동시에 띄워 두고 스위치를 넘긴다. 전환도 복구도 순간이고, 전환 전에 새 버전을 <strong>실제 클러스터에서 미리 확인</strong>할 수 있다. 대가는 자원이다 — 항상 두 배를 점유한다.</p>
+  <p><strong>카나리</strong>는 트래픽 일부만 새 버전으로 보낸다. 나쁜 버전이 영향을 주는 범위가 비율로 제한되고, 그 사이에 판정할 시간이 생긴다. 대가는 <strong>배포 시간</strong>과 <strong>판정할 메트릭이 반드시 있어야 한다는 전제</strong>다.</p>
+  <p>마지막 전제가 이 모듈이 Part 4(관측) 뒤에 있는 이유다. <strong>메트릭이 없으면 카나리는 그냥 느린 롤링이다</strong> — 사람이 눈으로 대시보드를 보다가 "괜찮은 것 같은데요"로 승격하는 절차가 되고, 그건 자동화가 아니다.</p>
+
+  <h3>트래픽을 나누는 두 방법</h3>
+  <p>"20%를 새 버전으로"를 구현하는 방법은 둘이다. <strong>레플리카 수로</strong> 나누는 것과 <strong>라우팅 규칙으로</strong> 나누는 것.</p>
+  <p>앞의 것은 추가 구성요소가 필요 없다. 파드 5개 중 1개를 새 버전으로 만들면 <code>Service</code>가 균등 분배하므로 대략 20%가 간다. 정확하지 않고(반올림), 파드 수가 적으면 세밀하게 나눌 수 없다 — 파드 3개로는 33% 단위가 최소다.</p>
+  <p>뒤의 것은 인그레스 컨트롤러나 메시가 가중치를 받아 준다. 파드 수와 무관하게 1%도 가능하다. 대신 그 구성요소와의 연동 설정이 필요하고, M25에서 본 대로 메시는 그 자체로 비용이다.</p>
+  <p>이 모듈은 <strong>앞의 방법</strong>을 쓴다. 판정에 필요한 만큼의 트래픽만 흐르면 되고, 실습 클러스터에서 추가 구성요소 없이 원리를 볼 수 있기 때문이다.</p>
+
+  <h3>Rollout은 Deployment를 대신한다</h3>
+  <p>여기서 <dfn class="term">커스텀 리소스<span class="en">custom resource</span></dfn>가 처음 나온다. 쿠버네티스는 <code>Deployment</code>·<code>Service</code>처럼 <strong>기본으로 아는 리소스 종류</strong> 외에, <strong>누구나 새 종류를 등록</strong>할 수 있게 열어 두었다. 등록하는 오브젝트가 <code>CustomResourceDefinition</code>(CRD)이고, 등록하고 나면 <code>kubectl get rollouts</code>처럼 <strong>기본 리소스와 똑같이</strong> 다룰 수 있다. Argo Rollouts를 설치하면 CRD 다섯 개가 함께 들어온다.</p>
+  <p>지금은 <strong>남이 만든 것을 쓰는 쪽</strong>이다. <strong>직접 만드는 쪽</strong>(CRD를 정의하고 그것을 지켜보는 컨트롤러를 쓰는 일)은 <strong>M33에서 다룬다</strong> — 그때 이 <code>Rollout</code>이 안쪽에서 어떻게 동작하는지가 보인다.</p>
+  <p><dfn class="term">Rollout<span class="en">argoproj.io/v1alpha1</span></dfn>은 <code>Deployment</code>를 <strong>대체하는</strong> 커스텀 리소스다. 안에 두는 것은 같다 — <code>replicas</code>·<code>selector</code>·<code>template</code>. 다른 것은 <code>strategy</code>이고, 거기에 단계와 분석을 쓴다. 컨트롤러는 여전히 <code>ReplicaSet</code>을 만들어 파드를 관리하므로, <strong>아래층은 우리가 아는 그대로다.</strong></p>
+  <p>대체라는 점이 중요하다. 기존 <code>Deployment</code>를 <code>Rollout</code>으로 바꾸면 <strong>같은 이름의 두 리소스가 같은 파드를 두고 다투는</strong> 상황이 생길 수 있다. 전환할 때는 디플로이먼트를 먼저 지우거나, Argo Rollouts가 제공하는 <code>workloadRef</code>로 기존 디플로이먼트를 참조하게 한다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">30.3</span>따라하기 ① 블루/그린</h2>
+  <p>추가 도구 없이 쿠버네티스 기본 기능만으로 만든다. <strong>디플로이먼트 둘 + 서비스 둘</strong>이 전부다.</p>
+
+  <div class="step">
+    <h4>1단계 — 네임스페이스부터 restricted로</h4>
+    <p class="purpose"><span class="lbl">목적</span>배포 전략 실습이라고 보안을 낮추지 않는다. M24의 기준을 그대로 건다.</p>
+<pre><code>cat &gt; course/labs/k8s/rollouts/00-namespace.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: m30
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+EOF
+kubectl apply -f course/labs/k8s/rollouts/00-namespace.yaml</code></pre>
+    <div class="note-2026">
+      <p>이 라벨 때문에 <code>kubectl run</code>으로 진단 파드를 띄울 수 없다. M25에서 겪은 것과 같고, 이 모듈에서는 <code>securityContext</code>를 갖춘 파드 매니페스트를 직접 쓴다. <strong>보안 설정이 실습을 불편하게 만드는 것이 아니라, 불편함이 그 설정이 동작한다는 증거다.</strong></p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 두 벌을 띄우고 서비스를 하나만 연결한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>블루/그린의 구조를 만든다. <strong><code>color</code> 라벨 하나가 스위치다.</strong></p>
+<pre><code># 핵심만 (전문은 course/labs/k8s/rollouts/10-bluegreen.yaml)
+apiVersion: v1
+kind: Service
+metadata: {name: bg, namespace: m30}
+spec:
+  selector: {app: bg, color: blue}      # &lt;- 이 줄이 스위치
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: bg-preview, namespace: m30}
+spec:
+  selector: {app: bg, color: green}     # &lt;- 전환 전에 확인하는 입구
+  ports: [{name: http, port: 8080, targetPort: http}]</code></pre>
+<pre><code>kubectl apply -f course/labs/k8s/rollouts/10-bluegreen.yaml
+kubectl -n m30 get po --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>bg-blue-778ccc6864-lr672   1/1   Running   0   25s
+bg-blue-778ccc6864-qnmst   1/1   Running   0   25s
+bg-green-7d6768b6f-6xpsd   1/1   Running   0   25s
+bg-green-7d6768b6f-h4wpv   1/1   Running   0   25s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드가 넷이다. 트래픽을 받는 것은 둘뿐인데 <strong>넷 분량의 자원을 쓴다</strong> — 이것이 블루/그린의 가격표다. 실습에서는 파드 넷이지만 운영 규모에서는 클러스터 절반이 놀고 있는 상태가 된다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 전환 전에 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>블루/그린의 실질적인 장점을 쓴다. <strong>진짜 클러스터에서</strong> 새 버전을 확인한다.</p>
+<pre><code>for i in 1 2 3 4; do kubectl -n m30 exec c -- curl -s -m 4 http://bg:8080/healthz; echo; done
+kubectl -n m30 exec c -- curl -s -m 4 http://bg-preview:8080/healthz</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"status":"ok","version":"blue","pod":"bg-blue-778ccc6864-qnmst"}
+{"status":"ok","version":"blue","pod":"bg-blue-778ccc6864-qnmst"}
+{"status":"ok","version":"blue","pod":"bg-blue-778ccc6864-lr672"}
+{"status":"ok","version":"blue","pod":"bg-blue-778ccc6864-lr672"}
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-6xpsd"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>실사용 입구는 <code>blue</code>만, 프리뷰 입구는 <code>green</code>만 준다. <strong>green은 이미 클러스터에서 돌고 있고 레디스에도 붙어 있다</strong> — 스테이징에서 확인하는 것과 근본적으로 다른 점이다. 같은 네트워크 정책, 같은 시크릿, 같은 노드에서 검증한다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 전환하고 되돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>전환 속도와 <strong>전환이 반영되는 속도</strong>가 다르다는 것을 확인한다.</p>
+<pre><code>kubectl -n m30 patch svc bg -p '{"spec":{"selector":{"app":"bg","color":"green"}}}'
+for i in $(seq 1 6); do kubectl -n m30 exec c -- curl -s -m 4 http://bg:8080/healthz; echo; done</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>service/bg patched
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-h4wpv"}
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-h4wpv"}
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-6xpsd"}
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-h4wpv"}
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-6xpsd"}
+{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-h4wpv"}</code></div>
+    <p>되돌리는 것도 같은 명령이다.</p>
+<pre><code>kubectl -n m30 patch svc bg -p '{"spec":{"selector":{"app":"bg","color":"blue"}}}'
+kubectl -n m30 exec c -- curl -s -m 4 http://bg:8080/healthz</code></pre>
+    <span class="out-lbl">출력 (patch 직후 첫 요청)</span>
+    <div class="out"><code>{"status":"ok","version":"green","pod":"bg-green-7d6768b6f-h4wpv"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>되돌렸는데 아직 green이 나온다.</strong> 셀렉터가 바뀌면 엔드포인트슬라이스를 다시 계산해야 하고, 그것을 각 노드의 kube-proxy가 받아 규칙을 고쳐야 한다. 그 사이의 요청은 옛 대상으로 간다.</div>
+    <p>몇 초 뒤 다시 세어 본다.</p>
+<pre><code>for i in $(seq 1 8); do
+  kubectl -n m30 exec c -- curl -s -m 4 http://bg:8080/healthz | python3 -c 'import json,sys;print(json.load(sys.stdin)["version"])'
+done
+kubectl -n m30 get endpointslices -l kubernetes.io/service-name=bg \
+  -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.endpoints[*].targetRef.name}{"\n"}{end}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>blue
+blue
+blue
+blue
+blue
+blue
+blue
+blue
+bg-t2qzk bg-blue-778ccc6864-qnmst bg-blue-778ccc6864-lr672</code></div>
+    <div class="verdict"><span class="lbl">판정</span>수렴했다. 이 지연은 보통 1초 안쪽이지만 <strong>0은 아니다.</strong> "블루/그린은 무중단"이라는 표현이 정확하지 않은 이유이고, 전환 순간에 진행 중이던 요청은 M15에서 다룬 종료 창의 문제를 그대로 겪는다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">30.4</span>따라하기 ② 카나리 준비</h2>
+
+  <div class="step">
+    <h4>1단계 — Argo Rollouts를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>컨트롤러와 CRD를 넣는다. 첫 명령이 실패하는데, 그 실패가 이 절의 교재다.</p>
+<pre><code>kubectl create ns argo-rollouts
+kubectl apply -n argo-rollouts \
+  -f https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/install.yaml</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/argo-rollouts created
+Error from server (Invalid): error when creating "https://...install.yaml": CustomResourceDefinition.apiextensions.k8s.io "rollouts.argoproj.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes</code></div>
+    <div class="verdict"><span class="lbl">판정</span>디플로이먼트는 만들어졌는데 <strong>CRD 두 개가 실패했다.</strong> <code>kubectl apply</code>는 적용한 매니페스트 전체를 <code>kubectl.kubernetes.io/last-applied-configuration</code> 주석에 저장하는데, 큰 CRD는 그 주석이 <strong>256KiB 한계</strong>를 넘는다. Argo Rollouts처럼 스키마가 방대한 CRD에서 자주 만나는 오류다.</div>
+<pre><code>kubectl apply -n argo-rollouts --server-side \
+  -f https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/install.yaml</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>customresourcedefinition.apiextensions.k8s.io/rollouts.argoproj.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/analysistemplates.argoproj.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/analysisruns.argoproj.io serverside-applied</code></div>
+    <p><code>--server-side</code>는 <strong>주석 대신 서버가 필드 소유권을 기록</strong>한다. 클라이언트가 매니페스트를 통째로 들고 있을 필요가 없어서 크기 제한이 사라진다. M28에서 <code>--dry-run=server</code>를 쓴 것과 같은 계열의 기능이고, 큰 CRD를 다룰 때는 이쪽이 기본값이라고 생각하는 편이 낫다.</p>
+<pre><code># kubectl 플러그인 (진행 상황을 보기 위해)
+curl -sSL -o kubectl-argo-rollouts \
+  https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/kubectl-argo-rollouts-darwin-arm64
+chmod +x kubectl-argo-rollouts &amp;&amp; sudo mv kubectl-argo-rollouts /usr/local/bin/
+kubectl argo rollouts version</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>kubectl-argo-rollouts: v1.10.0+d90700a</code></div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 판정 기준을 PromQL로 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이 모듈에서 가장 중요한 파일이다. <strong>"좋은 배포"의 정의</strong>를 코드로 적는다.</p>
+<pre><code>apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata: {name: success-rate, namespace: m30}
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: success-rate
+      interval: 20s
+      count: 3                 # 20초 간격으로 3회 본다
+      failureLimit: 1          # 3회 중 1회까지는 봐준다
+      successCondition: "result[0] &gt;= 0.95"
+      provider:
+        prometheus:
+          address: http://kps-kube-prometheus-stack-prometheus.monitoring.svc:9090
+          query: |
+            sum(rate(http_server_requests_seconds_count{
+              namespace="m30",
+              pod=~"canary-{{args.canary-hash}}-.*",
+              status!~"5.."}[45s]))
+            /
+            sum(rate(http_server_requests_seconds_count{
+              namespace="m30",
+              pod=~"canary-{{args.canary-hash}}-.*"}[45s]))</code></pre>
+    <table>
+      <thead><tr><th>필드</th><th>정하는 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>count</code> · <code>interval</code></td><td>몇 번, 얼마 간격으로 볼 것인가. 판정에 걸리는 최소 시간이 여기서 정해진다(20초×3 = 1분)</td></tr>
+        <tr><td><code>failureLimit</code></td><td>몇 번까지 봐줄 것인가. <strong><code>0</code>이면 순간적인 흔들림 하나로 롤백된다</strong></td></tr>
+        <tr><td><code>successCondition</code></td><td>쿼리 결과에 대한 조건. <code>result[0]</code>이 첫 시계열의 값이다</td></tr>
+        <tr><td><code>{{args.canary-hash}}</code></td><td>Argo가 채우는 값. <strong>카나리 파드만</strong> 세기 위해 필요하다</td></tr>
+      </tbody>
+    </table>
+    <p><code>[45s]</code>를 <code>interval</code>인 20초보다 길게 잡은 이유가 있다. 스크레이프 간격이 10초이므로 <code>rate()</code>의 창이 20초면 <strong>표본이 두 개뿐</strong>이고, 하나만 놓쳐도 값이 없거나 튄다. <strong>창은 스크레이프 간격의 최소 4배</strong>로 잡는 것이 M20에서 정한 규칙이다.</p>
+    <p>분모와 분자에 같은 <code>pod=~</code> 필터가 들어가는 것이 핵심이다. 이것이 없으면 <strong>stable 파드의 성공까지 함께 세어</strong> 카나리가 아무리 나빠도 전체 성공률이 크게 떨어지지 않는다 — 카나리가 20%일 때 100% 실패해도 전체는 80%다.</p>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — Rollout과 ServiceMonitor를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>단계와 분석을 연결한다. 그리고 <strong>메트릭이 프로메테우스에 들어가는 경로</strong>를 만든다.</p>
+<pre><code>spec:
+  replicas: 5
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: success-rate
+        startingStep: 2          # 20% 단계부터 분석을 시작한다
+        args:
+          - name: canary-hash
+            valueFrom:
+              podTemplateHashValue: Latest
+      steps:
+        - setWeight: 20
+        - pause: {duration: 60s}
+        - setWeight: 60
+        - pause: {duration: 60s}
+        - setWeight: 100</code></pre>
+    <p>ServiceMonitor는 M20에서 만든 것과 같은 형태다. <strong><code>release: kps</code> 라벨이 빠지면</strong> 오브젝트는 만들어지고 타깃은 생기지 않으며, 분석은 데이터가 없어 실패한다 — M20의 3단 라벨 사슬이 여기서 배포 결정에 직접 영향을 준다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/rollouts/20-canary.yaml
+kubectl argo rollouts get rollout canary -n m30</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Name:            canary
+Status:          ✔ Healthy
+Strategy:        Canary
+  Step:          5/5
+  SetWeight:     100
+  ActualWeight:  100
+Images:          journal-api:v2 (stable)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>첫 배포인데 <strong>단계를 전부 건너뛰고 5/5</strong>다. 비교할 stable 버전이 없으므로 카나리가 성립하지 않기 때문이고, 이것이 올바른 동작이다. 카나리는 <strong>두 번째 배포부터</strong> 의미가 있다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — 판정에 쓸 트래픽을 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span><strong>메트릭이 없으면 분석은 판정할 수 없다.</strong> 실습 클러스터에는 사용자가 없으므로 만들어 준다.</p>
+<pre><code># course/labs/k8s/rollouts/30-load.yaml — curl 루프 파드 2개
+kubectl apply -f course/labs/k8s/rollouts/30-load.yaml
+# 프로메테우스에서 확인
+sum(rate(http_server_requests_seconds_count{namespace="m30"}[1m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>m30 요청률: 30.4
+m30 타깃 수: 5</code></div>
+    <div class="verdict"><span class="lbl">판정</span>초당 30건, 타깃 5개. 카나리가 20%면 초당 6건이 새 버전으로 간다. <strong>분석 창 45초 동안 270건</strong>이므로 성공률을 판정하기에 충분하다. 트래픽이 이보다 훨씬 적으면 표본이 부족해 판정이 흔들리고, 그때는 <code>interval</code>과 창을 늘려야 한다.</div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">30.5</span>따라하기 ③ 나쁜 버전을 배포한다</h2>
+
+  <div class="step">
+    <h4>1단계 — 앱에 고장 손잡이를 넣는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"프로브는 통과하는데 요청은 실패하는" 버전을 만든다. 30.1에서 말한 그 상황이다.</p>
+<pre><code>// M30 — 나쁜 버전을 만들기 위한 손잡이. 0 이면 아무 일도 하지 않는다.
+const FAULT_RATE = Number(process.env.FAULT_RATE ?? 0);
+
+app.get('/api/entries', async (_req, res) =&gt; {
+  if (FAULT_RATE &gt; 0 &amp;&amp; Math.random() &lt; FAULT_RATE) {
+    log('error', 'injected fault', { rate: FAULT_RATE });
+    res.status(500).json({ error: 'injected fault' });
+    return;
+  }
+  ...
+});</code></pre>
+    <p><code>/healthz</code>와 <code>/readyz</code>는 건드리지 않았다. <strong>프로브는 계속 통과한다</strong> — 그래야 이 실험이 성립한다.</p>
+    <div class="note-2026">
+      <p>카오스 주입 코드를 애플리케이션에 두는 것은 <strong>실습을 위한 선택</strong>이다. 운영 코드에 두면 언젠가 실수로 켜진다. M36에서는 이 방식 대신 <strong>애플리케이션 밖에서</strong> 장애를 주입하는 도구(Chaos Mesh)를 쓴다.</p>
+    </div>
+<pre><code>docker build -t journal-api:v3 --build-arg APP_VERSION=v3 course/labs/apps/journal-api
+kind load docker-image journal-api:v3 --name study</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 배포하고 20%에서 멈추는 것을 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>영향 범위가 실제로 제한되는지 파드 수로 확인한다.</p>
+<pre><code>kubectl -n m30 patch rollout canary --type=json -p '[
+ {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"journal-api:v3"},
+ {"op":"replace","path":"/spec/template/spec/containers/0/env",
+  "value":[{"name":"APP_VERSION","value":"v3"},{"name":"FAULT_RATE","value":"0.4"}]}
+]'
+kubectl argo rollouts get rollout canary -n m30</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Status:          ॥ Paused
+Message:         CanaryPauseStep
+Strategy:        Canary
+  Step:          1/5
+  SetWeight:     20
+  ActualWeight:  20
+Images:          journal-api:v2 (stable)
+                 journal-api:v3 (canary)
+Replicas:
+  Desired:       5
+  Updated:       1
+  Ready:         5</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Updated: 1 / Desired: 5</code> — 다섯 중 하나만 새 버전이다. <code>Ready: 5</code>인 것에 주의한다. <strong>나쁜 버전의 파드도 Ready다</strong> — 프로브를 통과하기 때문이다. 롤링 업데이트였다면 여기서 아무 저항 없이 나머지 넷도 교체됐을 것이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 분석이 판정한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>사람이 개입하지 않고 되돌아가는지 확인한다.</p>
+<pre><code>kubectl argo rollouts get rollout canary -n m30</code></pre>
+    <span class="out-lbl">출력 (약 90초 뒤)</span>
+    <div class="out"><code>Status:          ✖ Degraded
+Message:         RolloutAborted: Rollout aborted update to revision 2: Background analysis phase error/failed: Metric "success-rate" assessed Failed due to failed (2) &gt; failureLimit (1)
+Strategy:        Canary
+  Step:          0/5
+  SetWeight:     0
+  ActualWeight:  0
+Images:          journal-api:v2 (stable)
+Replicas:
+  Desired:       5
+  Updated:       0
+  Ready:         5
+
+NAME                                KIND         STATUS        AGE
+├──# revision:2
+│  ├──⧉ canary-84b759b894           ReplicaSet   • ScaledDown  2m14s  canary
+│  └──α canary-84b759b894-2         AnalysisRun  ✖ Failed      74s    ✖ 2
+└──# revision:1
+   └──⧉ canary-586fbb4df5           ReplicaSet   ✔ Healthy     3m52s  stable</code></div>
+    <div class="verdict"><span class="lbl">판정</span>메시지에 판정 근거가 그대로 있다 — <code>failed (2) &gt; failureLimit (1)</code>. 카나리 레플리카셋은 <code>ScaledDown</code>이고 stable이 5개를 유지한다. <strong>사람이 아무것도 하지 않았다.</strong></div>
+    <p>실제 측정값을 본다.</p>
+<pre><code>kubectl -n m30 get analysisrun canary-84b759b894-2 -o jsonpath='{.status.metricResults[0]}' | python3 -m json.tool</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{
+    "count": 2,
+    "failed": 2,
+    "measurements": [
+        { "phase": "Failed", "value": "[0.6153846153846154]" },
+        { "phase": "Failed", "value": "[0.6584031997502411]" }
+    ],
+    "metadata": {
+        "ResolvedPrometheusQuery": "sum(rate(http_server_requests_seconds_count{namespace=\"m30\", pod=~\"canary-84b759b894-.*\", status!~\"5..\"}[45s])) / sum(rate(...)[45s]))"
+    },
+    "phase": "Failed"
+}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>성공률 <code>0.615</code>·<code>0.658</code>. <code>FAULT_RATE=0.4</code>를 넣었으니 이론값 0.6에 가깝다 — <strong>주입한 고장이 지표에 그대로 나타났다.</strong> <code>ResolvedPrometheusQuery</code>에 <code>{{args.canary-hash}}</code>가 실제 해시로 치환된 것이 보인다. 분석이 왜 그렇게 판정했는지 <strong>쿼리까지 남는다</strong>는 점이 중요하다 — 나중에 "왜 롤백됐지"를 재현할 수 있다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">30.6</span>따라하기 ④ 고친 버전과 수동 조작</h2>
+
+  <div class="step">
+    <h4>1단계 — 고쳐서 다시 배포한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 파이프라인이 <strong>좋은 버전은 통과시키는지</strong> 확인한다. 막기만 하는 관문은 곧 꺼진다.</p>
+<pre><code>kubectl -n m30 patch rollout canary --type=json -p '[
+ {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"journal-api:v3"},
+ {"op":"replace","path":"/spec/template/spec/containers/0/env",
+  "value":[{"name":"APP_VERSION","value":"v3"}]}
+]'</code></pre>
+    <span class="out-lbl">출력 (약 3분 뒤)</span>
+    <div class="out"><code>Status:          ✔ Healthy
+Strategy:        Canary
+  Step:          5/5
+  SetWeight:     100
+  ActualWeight:  100
+Images:          journal-api:v3 (stable)
+Replicas:
+  Desired:       5
+  Updated:       5
+  Ready:         5</code></div>
+<pre><code>kubectl -n m30 get analysisrun canary-59b668c68c-3 -o jsonpath='{.status.metricResults[0]}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>count: 3  successful: 3  phase: Successful
+   Successful [1]
+   Successful [1]
+   Successful [1]</code></div>
+    <div class="verdict"><span class="lbl">판정</span>성공률이 정확히 <code>1</code>이다. 3회 모두 통과했고 <code>v3</code>가 stable이 됐다. 배포에 3분이 걸렸는데(20%에서 1분, 60%에서 1분, 분석 시간), <strong>이 시간이 카나리의 가격</strong>이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 기다리지 않고 승격한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>급할 때 쓰는 명령을 <strong>급하지 않을 때</strong> 익힌다.</p>
+<pre><code>kubectl argo rollouts promote canary -n m30</code></pre>
+    <span class="out-lbl">출력 (승격 전 → 후)</span>
+    <div class="out"><code>rollout 'canary' promoted
+
+  Step:          1/5          Step:          3/5
+  SetWeight:     20     →     SetWeight:     60
+  ActualWeight:  20           ActualWeight:  60</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>pause</code>를 건너뛰고 다음 단계로 갔다. <code>promote --full</code>을 쓰면 남은 단계를 <strong>전부</strong> 건너뛴다. 자동 판정이 있는데도 이 명령이 필요한 경우는 <strong>장애 대응 중 핫픽스를 내보낼 때</strong>다 — 그때는 분석을 기다리는 1분이 길다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 중단하고 되돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>abort</code>와 <code>undo</code>가 <strong>다른 명령</strong>이라는 것을 확인한다. 장애 대응에서 헷갈리면 곤란하다.</p>
+<pre><code>kubectl argo rollouts abort canary -n m30
+kubectl argo rollouts get rollout canary -n m30</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>rollout 'canary' aborted
+Status:          ✖ Degraded
+Message:         RolloutAborted: Rollout aborted update to revision 4
+  SetWeight:     0
+  ActualWeight:  0
+Images:          journal-api:v3 (stable)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>트래픽은 즉시 stable로 돌아갔는데 상태가 <code>Degraded</code>다. <strong><code>abort</code>는 진행을 멈추는 명령이지 스펙을 되돌리는 명령이 아니다</strong> — <code>spec.template</code>에는 여전히 새 버전이 적혀 있고, 그래서 "원하는 상태"와 "실제 상태"가 어긋난 채로 남는다.</div>
+<pre><code>kubectl argo rollouts undo canary -n m30
+kubectl argo rollouts get rollout canary -n m30</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>rollout 'canary' undo
+Status:          ✔ Healthy
+  Step:          5/5
+  SetWeight:     100
+Images:          journal-api:v3 (stable)</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>undo</code>가 스펙을 이전 리비전으로 되돌려 <code>Healthy</code>가 됐다. <strong>실무의 순서는 <code>abort</code> → 원인 파악 → <code>undo</code> 또는 고쳐서 재배포</strong>다. <code>abort</code>만 하고 방치하면 다음 사람이 <code>Degraded</code>를 보고 무슨 일인지 모른다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">30.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① — CRD가 커서 apply가 거부된다</h4>
+    <p class="purpose"><span class="lbl">목적</span>30.4에서 만난 오류를 이유까지 정리한다. 다른 프로젝트를 설치할 때 반드시 다시 만난다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (Invalid): CustomResourceDefinition.apiextensions.k8s.io "rollouts.argoproj.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes</code></div>
+    <div class="verdict"><span class="lbl">판정</span>API 서버가 거부한 것은 CRD 자체가 아니라 <strong>주석의 크기</strong>다. <code>kubectl apply</code>는 다음 번 3방향 병합을 위해 <strong>적용한 매니페스트 전체를 주석에 복사</strong>하는데, etcd의 값 크기 제한에 걸린다. 이 오류는 <strong>매니페스트가 잘못된 것처럼 보이지만 도구의 방식 때문</strong>이라 검색해도 엉뚱한 답이 많이 나온다.</div>
+    <p>세 가지 해법이 있고 성질이 다르다. <code>--server-side</code>는 <strong>병합을 서버가 하게</strong> 해서 주석을 없앤다(권장). <code>kubectl create</code>는 주석을 만들지 않지만 <strong>다음 업그레이드에서 <code>apply</code>가 안 된다.</strong> <code>--force-conflicts</code>는 다른 문제(필드 소유권 충돌)의 해법이라 여기서는 도움이 안 된다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② — 분모에 stable을 섞으면 카나리가 통과한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>판정 쿼리를 잘못 쓰면 <strong>관문이 조용히 열린다</strong>는 것을 계산으로 확인한다.</p>
+    <p>다음처럼 <code>pod</code> 필터 없이 쓰기 쉽다. 네임스페이스 전체의 성공률을 보는 것이니 그럴듯해 보인다.</p>
+<pre><code>            sum(rate(http_server_requests_seconds_count{
+              namespace="m30", status!~"5.."}[45s]))
+            /
+            sum(rate(http_server_requests_seconds_count{
+              namespace="m30"}[45s]))</code></pre>
+    <p>30.5의 상황에 이 쿼리를 대입한다. 카나리가 20%, 그 카나리의 성공률이 0.6이면 전체 성공률은 이렇게 된다.</p>
+<pre><code>(0.8 × 1.0) + (0.2 × 0.6) = 0.92        # 아직 0.95 미만이라 걸린다
+# 그런데 카나리가 10% 라면
+(0.9 × 1.0) + (0.1 × 0.6) = 0.96        # 통과한다</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>같은 나쁜 버전인데 <strong>카나리 비율이 작을수록 통과하기 쉬워진다.</strong> 비율을 낮춰 안전하게 하려는 의도가 정반대의 결과를 낳는다 — 영향은 줄지만 <strong>탐지도 함께 줄어든다.</strong> 분모와 분자를 모두 카나리로 한정해야 이 왜곡이 사라진다.</div>
+    <p>실측 쿼리가 <code>ResolvedPrometheusQuery</code>에 남는 것이 여기서 값을 낸다. 롤백이 안 됐을 때 <strong>"무엇을 물어봤는지"</strong>부터 확인할 수 있기 때문이다.</p>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ — 트래픽이 없으면 판정할 수 없다</h4>
+    <p class="purpose"><span class="lbl">목적</span>메트릭 기반 판정이 <strong>메트릭이 없을 때</strong> 어떻게 되는지 확인한다.</p>
+<pre><code># 부하 생성기를 멈추고 배포한다
+kubectl -n m30 scale deploy load --replicas=0</code></pre>
+    <p>분모가 0이 되므로 PromQL의 나눗셈 결과는 <strong>빈 결과</strong>다. <code>successCondition: result[0] &gt;= 0.95</code>는 <code>result[0]</code>이 없으므로 평가할 수 없고, Argo는 이것을 <code>Error</code>로 처리한다. <code>failureLimit</code>과 별개로 <code>consecutiveErrorLimit</code>(기본 4)에 걸리면 롤아웃이 중단된다.</p>
+    <div class="verdict"><span class="lbl">판정</span><strong>트래픽이 없는 서비스는 카나리로 배포할 수 없다.</strong> 야간에 요청이 0에 수렴하는 내부 서비스가 여기 해당한다. 대응은 셋이다 — 분석에 <code>or vector(1)</code>을 넣어 빈 결과를 성공으로 보거나(M21에서 쓴 기법), 합성 트래픽을 만들거나, 그런 서비스는 블루/그린으로 배포한다.</div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">30.8</span>운영 관점 — 무엇으로 판정할 것인가</h2>
+
+  <h3>성공률만으로는 부족하다</h3>
+  <p>이 모듈은 성공률 하나로 판정했다. 실무에서는 최소 둘을 본다 — <strong>에러율과 지연</strong>이다. 새 버전이 500을 내지 않으면서 P99가 3배가 되는 경우가 실제로 흔하고, 그건 성공률로는 잡히지 않는다. M20에서 만든 히스토그램이 있으므로 메트릭을 하나 더하면 된다.</p>
+<pre><code>    - name: latency-p99
+      successCondition: "result[0] &lt;= 0.5"
+      provider:
+        prometheus:
+          query: |
+            histogram_quantile(0.99, sum by (le) (rate(
+              http_server_requests_seconds_bucket{namespace="m30",
+                pod=~"canary-{{args.canary-hash}}-.*"}[45s])))</code></pre>
+  <p>메트릭이 여러 개면 <strong>모두 통과해야</strong> 승격한다. 여기서 흔한 실수는 임계값을 <strong>절대값으로</strong> 쓰는 것이다 — 부하가 몰리는 시간대에는 stable도 P99가 오르므로, 절대값 기준은 그 시간대에 정상 배포까지 막는다. 더 나은 방법은 <strong>stable과 비교하는 것</strong>이다(카나리 P99가 stable P99의 1.2배 이하).</p>
+
+  <h3>판정 시간과 표본 수</h3>
+  <p>30.4에서 <code>[45s]</code> 창과 20초 간격을 정할 때 쓴 계산을 일반화하면 이렇다. <strong>초당 요청 수 × 카나리 비율 × 창 길이</strong>가 판정에 쓰이는 표본 수다. 이 값이 수백 미만이면 성공률이 통계적으로 흔들려서, 정상 배포가 우연히 롤백되거나 나쁜 배포가 통과한다.</p>
+  <p>표본이 부족할 때 늘릴 수 있는 것은 셋이다 — <strong>창</strong>(느려진다), <strong>카나리 비율</strong>(영향이 커진다), <strong>합성 트래픽</strong>(만들어야 한다). 셋 다 대가가 있고, 이 선택이 서비스마다 다른 것이 정상이다.</p>
+
+  <h3>어느 전략을 언제 쓰는가</h3>
+  <p>세 전략은 대체재가 아니라 <strong>상황별 선택</strong>이다. 판단 기준은 두 질문으로 좁혀진다.</p>
+  <p><strong>되돌리는 데 걸리는 시간이 중요한가.</strong> 그렇다면 블루/그린이다. 결제나 정산처럼 몇 초의 오작동도 비싼 곳에서, 스위치 한 번으로 돌아가는 값이 두 배 자원보다 크다.</p>
+  <p><strong>새 버전을 판정할 지표가 있는가.</strong> 있으면 카나리다. 없으면 카나리를 도입하기 전에 <strong>지표부터 만든다</strong> — 순서가 반대면 "카나리를 켰는데 아무것도 안 잡힌다"가 된다.</p>
+  <p>둘 다 아니면 롤링으로 충분하다. 대부분의 내부 서비스가 여기 해당하고, <strong>모든 서비스에 카나리를 다는 것은 과한 투자</strong>다. Argo Rollouts를 클러스터에 넣는 것 자체도 운영해야 할 컨트롤러가 하나 느는 일이다.</p>
+
+  <h3>이 교재의 저널 앱은</h3>
+  <p><code>journal</code> 네임스페이스의 배포는 <strong>롤링 그대로 둔다.</strong> M10에서 만든 <code>maxSurge: 1</code>·<code>maxUnavailable: 0</code>이고, 이 모듈의 실습은 별도 네임스페이스에서 했다. 이유는 위 기준 그대로다 — 실습용 앱의 배포 위험은 낮고, 카나리를 붙이면 이후 모든 모듈에서 배포가 3분씩 걸린다.</p>
+  <p>M31에서 GitOps를 붙일 때 이 결정을 한 번 더 본다. <strong>배포 전략과 배포 트리거는 다른 축</strong>이라, 깃 커밋이 배포를 일으키는 것과 그 배포가 카나리인지 롤링인지는 따로 정한다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">30.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n argo-rollouts get deploy argo-rollouts -o jsonpath='{.status.readyReplicas}'</code> → <code>1</code></li>
+      <li><code>kubectl get crd rollouts.argoproj.io -o jsonpath='{.metadata.name}'</code> → <code>rollouts.argoproj.io</code></li>
+      <li><code>kubectl argo rollouts version | head -1</code> → <code>v1.10.0</code>으로 시작한다</li>
+      <li><code>kubectl -n m30 get svc bg -o jsonpath='{.spec.selector.color}'</code> → <code>blue</code></li>
+      <li><code>kubectl -n m30 get svc bg-preview -o jsonpath='{.spec.selector.color}'</code> → <code>green</code></li>
+      <li><code>kubectl -n m30 exec c -- curl -s http://bg:8080/healthz</code> → <code>"version":"blue"</code></li>
+      <li><code>kubectl argo rollouts get rollout canary -n m30 | grep Status</code> → <code>Healthy</code></li>
+      <li><code>kubectl -n m30 get rollout canary -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>journal-api:v3</code></li>
+      <li><code>kubectl -n m30 get analysisrun --no-headers | grep -c Failed</code> → <code>1</code> (나쁜 버전이 실제로 걸렸다)</li>
+      <li><code>kubectl -n m30 get analysisrun --no-headers | grep -c Successful</code> → <code>1</code> 이상</li>
+      <li><code>kubectl -n m30 get analysisrun -o jsonpath='{.items[?(@.status.phase=="Failed")].status.metricResults[0].measurements[0].value}'</code> → <code>0.95</code> 미만의 값</li>
+      <li><code>kubectl -n m30 get servicemonitor canary -o jsonpath='{.metadata.labels.release}'</code> → <code>kps</code></li>
+      <li><code>grep -c FAULT_RATE course/labs/apps/journal-api/src/server.ts</code> → <code>3</code></li>
+      <li>(이해 확인) 분모에서 <code>pod=~</code> 필터를 빼면 카나리 비율이 작을 때 왜 통과하기 쉬워지는지 계산으로 적는다</li>
+      <li>(이해 확인) <code>abort</code>한 뒤 <code>undo</code>를 하지 않으면 클러스터가 어떤 상태로 남는지 적는다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/rollouts/00-namespace.yaml</code> — <code>restricted</code> 네임스페이스</li>
+      <li><code>course/labs/k8s/rollouts/10-bluegreen.yaml</code> — 디플로이먼트 2개 + 서비스 2개</li>
+      <li><code>course/labs/k8s/rollouts/20-canary.yaml</code> — Rollout · Service · ServiceMonitor · AnalysisTemplate</li>
+      <li><code>course/labs/k8s/rollouts/30-load.yaml</code> — 판정용 부하 생성기</li>
+      <li><code>course/labs/apps/journal-api/src/server.ts</code> — <code>FAULT_RATE</code> 손잡이</li>
+      <li>클러스터: <code>argo-rollouts</code> 네임스페이스의 컨트롤러와 CRD 5개</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 부하 생성기를 먼저 멈춘다 (계속 돌면 프로메테우스에 계속 쌓인다)
+kubectl -n m30 scale deploy load --replicas=0
+
+# 실습 네임스페이스를 지운다
+kubectl delete ns m30 --ignore-not-found
+
+# 컨트롤러는 남긴다. 남아 있는지 확인
+kubectl -n argo-rollouts get deploy --no-headers</code></pre>
+  <p>Argo Rollouts 컨트롤러와 CRD는 <strong>지우지 않는다.</strong> M32에서 여러 클러스터에 같은 배포를 내보낼 때 다시 쓰고, M38 캡스톤의 배포 절차에 들어간다.</p>
+  <p><code>journal-api:v3</code> 이미지는 남는다. <code>FAULT_RATE</code>를 켜지 않으면 <code>v2</code>와 동작이 같으므로 그대로 둬도 문제가 없고, M36의 카오스 실험에서 <strong>애플리케이션 내부 고장</strong>과 <strong>외부에서 주입한 고장</strong>을 비교할 때 다시 쓴다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m29-k8s-ci-pipeline.html">← M29 CI — 빌드·테스트·이미지</a>
+  <a href="m31-k8s-gitops.html">M31 GitOps →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>배포 전략은 생겼는데 <strong>배포를 누가 시작하는지</strong>는 여전히 사람이다. M29의 파이프라인은 이미지까지 만들고 멈췄고, 이 모듈에서는 <code>kubectl patch</code>를 손으로 쳤다. 그리고 지금 클러스터의 상태가 저장소의 어느 커밋에 해당하는지 <strong>아무도 답할 수 없다.</strong></p>
+  <p>M31에서 저장소를 상태의 정본으로 만든다. 클러스터 안의 컨트롤러가 저장소를 지켜보다가 차이를 없애고, 사람이 <code>kubectl</code>로 바꾼 것을 <strong>되돌려 놓는다.</strong> 그 되돌림을 직접 겪어 보는 것이 이 모듈의 핵심 실습이다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <ul>
+    <li>Argo Rollouts: https://argo-rollouts.readthedocs.io/en/stable/</li>
+    <li>카나리 전략: https://argo-rollouts.readthedocs.io/en/stable/features/canary/</li>
+    <li>분석과 프로그레시브 딜리버리: https://argo-rollouts.readthedocs.io/en/stable/features/analysis/</li>
+    <li>Prometheus 프로바이더: https://argo-rollouts.readthedocs.io/en/stable/analysis/prometheus/</li>
+    <li>서버 사이드 어플라이: https://kubernetes.io/docs/reference/using-api/server-side-apply/</li>
+    <li>디플로이먼트 롤링 업데이트: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5.7 배포 전략 · 6장 버저닝과 릴리스</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Argo Rollouts v1.10.0 · kube-prometheus-stack 89.2.2</p>
+</footer>
+
+</div>
+</body>
+</html>

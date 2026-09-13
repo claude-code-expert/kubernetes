@@ -1,0 +1,13 @@
+# M25 — 기본 거부. 이것부터 걸고 필요한 것만 연다.
+#
+# podSelector: {} 는 "이 네임스페이스의 모든 파드"다.
+# policyTypes 에 적힌 방향에 대해 **허용 규칙이 하나도 없으므로** 전부 막힌다.
+# 네트워크 정책에는 "거부" 규칙이 없다 — 정책이 붙은 순간 화이트리스트로 바뀐다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: journal
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]

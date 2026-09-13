@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 · 그라파나와 대시보드 — 쿠버네티스 관측성</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+.why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="index.html">← 목차로</a>
+  <span class="where">CHAPTER 05 / 11</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>그라파나와 대시보드 프로비저닝</h1>
+  <p class="lede">그라파나는 04장에서 이미 떠 있다. 이 장은 설치가 아니라 <strong>운영 방식</strong>을 정한다 — 대시보드를 클릭으로 만들지 않고 코드로 만든다.</p>
+</header>
+
+<h2><span class="n">01</span>왜 이 장이 필요한가</h2>
+
+<p>그라파나 UI 에서 패널을 끌어다 놓으면 대시보드가 5분 만에 만들어진다. 그 대시보드는 그라파나의 내부 DB 에 저장되고, <strong>클러스터를 지우면 같이 사라진다</strong>. 이 실습은 클러스터를 자주 지우고 다시 만드는 것을 전제하므로 그 방식으로는 진도가 나가지 않는다.</p>
+
+<p>대신 대시보드 JSON 을 컨피그맵에 담고 라벨 하나를 붙인다. 그라파나 사이드카가 그 라벨을 가진 컨피그맵을 찾아 대시보드로 올린다. 클러스터를 새로 만들어도 <code>kubectl apply</code> 한 번이면 돌아온다. 07장에서 만들 RED 대시보드도 같은 방법으로 배포한다.</p>
+
+<p>그런데 이 방식에는 <strong>조용한 실패</strong>가 하나 있다. 라벨을 빠뜨리면 에러도 이벤트도 없이 대시보드만 안 보인다. 이 장에서 일부러 그것을 겪어 본다.</p>
+
+
+<h2><span class="n">02</span>알아야 할 개념</h2>
+
+<h3>사이드카가 라벨을 보고 파일을 쓴다</h3>
+
+<p>그라파나 파드가 <code>3/3</code> 이었던 것을 기억할 것이다. 컨테이너 세 개가 한 파드에 들어 있고, 앞의 둘이 <dfn class="term">사이드카</dfn>다. 이들은 쿠버네티스 API 를 지켜보다가 <strong>특정 라벨이 붙은 ConfigMap</strong> 을 발견하면 그 내용을 파일로 꺼내 공유 볼륨에 쓴다. 그라파나는 그 디렉터리를 읽을 뿐이다.</p>
+
+<h3>데이터소스는 이름이 아니라 uid 로 참조한다</h3>
+
+<p>대시보드 JSON 안에서 데이터소스를 이름(<code>Prometheus</code>)으로 적으면 환경에 따라 깨진다. 팀원끼리 JSON 을 주고받을 때 <code>uid</code> 가 다르면 패널이 전부 비어 보인다. <strong>가장 이식성이 좋은 방법은 아예 적지 않는 것</strong>이다 — 생략하면 기본 데이터소스가 쓰인다. 이 장의 실습이 그 방식이다.</p>
+
+<h3>UI 는 편집기이고 원본은 저장소다</h3>
+
+<p>처음부터 JSON 을 손으로 쓰는 것은 비효율적이다. UI 에서 원하는 패널을 만들고 Export 로 JSON 을 받아 컨피그맵에 넣는 순서가 현실적이다. 다만 <strong>프로비저닝된 대시보드를 UI 에서 고치고 저장하면 다음 적용 때 덮어씌워진다</strong>. “어제 고친 패널이 사라졌다”의 원인이 대부분 이것이다.</p>
+
+<h3>용어 정리</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
+  <tr><td>사이드카</td><td>Sidecar</td><td>주 컨테이너를 보조하려고 같은 파드에 함께 배치되는 컨테이너. 여기서는 ConfigMap 을 감시해 파일로 쓴다</td></tr>
+  <tr><td>프로비저닝</td><td>Provisioning</td><td>대시보드·데이터소스를 UI 가 아니라 파일로 정의해 자동 등록하는 방식</td></tr>
+  <tr><td>ConfigMap</td><td>Config Map</td><td>설정 데이터를 담는 쿠버네티스 리소스. 여기서는 대시보드 JSON 을 담는다</td></tr>
+  <tr><td>uid</td><td>Unique Identifier</td><td>그라파나가 대시보드·데이터소스를 식별하는 문자열. 이름과 달리 바뀌지 않는다</td></tr>
+  <tr><td>데이터소스</td><td>Data Source</td><td>그라파나가 질의를 보낼 대상. 여기서는 프로메테우스와 (08장의) 로키</td></tr>
+  <tr><td>패널</td><td>Panel</td><td>대시보드 안의 그래프 하나. <code>stat</code> · <code>timeseries</code> 같은 종류가 있다</td></tr>
+  <tr><td>gridPos</td><td>Grid Position</td><td>패널의 위치와 크기. 가로는 24칸 기준이고 <code>y</code> 가 겹치면 레이아웃이 깨진다</td></tr>
+  <tr><td>emptyDir</td><td>empty Directory</td><td>파드가 살아 있는 동안만 존재하는 임시 볼륨. 사이드카와 그라파나가 이것을 공유한다</td></tr>
+  <tr><td>애너테이션</td><td>Annotation</td><td>라벨과 달리 선택 조건으로 쓰이지 않는 메타데이터. 여기서는 폴더 이름을 전달한다</td></tr>
+  <tr><td>SSO</td><td>Single Sign-On</td><td>사내 계정으로 한 번 로그인해 여러 서비스를 쓰는 방식</td></tr>
+</table>
+</div>
+
+<div class="goals">
+  <h3>이 장을 마치면 할 수 있는 것</h3>
+  <ol>
+    <li>그라파나 파드의 컨테이너 셋이 각각 무엇을 하는지 말하고, 사이드카 로그로 대시보드 등록을 확인할 수 있다.</li>
+    <li>대시보드 JSON 을 ConfigMap 으로 올려 <strong>그라파나를 재시작하지 않고</strong> 반영할 수 있다.</li>
+    <li>라벨을 빠뜨렸을 때의 조용한 실패를 재현하고, 로그로 그 침묵을 확인할 수 있다.</li>
+    <li>UI 에서 편집한 것을 JSON 으로 내보내 저장소에 반영하는 왕복을 한 번 돌릴 수 있다.</li>
+    <li>스택 내장 그라파나와 별도 설치 중 어느 쪽을 택할지 근거를 들어 판단할 수 있다.</li>
+  </ol>
+</div>
+
+
+<h2><span class="n">03</span>최종적으로 만들 것</h2>
+
+<p>이 장이 끝나면 그라파나에 <strong>Obs Study</strong> 폴더가 생기고 그 안에 우리가 만든 대시보드가 들어 있다. 그리고 그 대시보드의 원본은 그라파나 안이 아니라 <code>kubectl apply</code> 할 수 있는 YAML 파일이다.</p>
+
+<h3>ConfigMap 이 대시보드가 되기까지</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440" role="img" aria-label="라벨이 붙은 ConfigMap을 사이드카가 감시해 공유 볼륨에 파일로 쓰고 그라파나가 읽어 대시보드로 등록하는 구조">
+  <rect width="1000" height="440" fill="#ffffff"/>
+
+  <defs>
+    <marker id="h1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+    </marker>
+    <marker id="h2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="70" width="250" height="178" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="102" font-size="14" font-weight="700" fill="#15181d">ConfigMap</text>
+  <text x="42" y="130" font-size="11.5" font-family="monospace" fill="#585f6b">metadata:</text>
+  <text x="56" y="152" font-size="11.5" font-family="monospace" fill="#1a4fa0">labels:</text>
+  <text x="70" y="174" font-size="11.5" font-family="monospace" fill="#1a4fa0">grafana_dashboard: "1"</text>
+  <text x="42" y="200" font-size="11.5" font-family="monospace" fill="#585f6b">data:</text>
+  <text x="56" y="222" font-size="11.5" font-family="monospace" fill="#585f6b">board.json: { ... }</text>
+
+  <path d="M278 150 L336 150" fill="none" stroke="#6a4a9c" stroke-width="2" marker-end="url(#h1)"/>
+  <text x="307" y="138" font-size="11" font-family="monospace" fill="#6a4a9c" text-anchor="middle">watch</text>
+
+  <rect x="340" y="50" width="636" height="292" rx="6" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="356" y="40" font-size="12" font-family="monospace" fill="#585f6b">grafana 파드 — 컨테이너 3개</text>
+
+  <rect x="364" y="80" width="270" height="90" rx="6" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.6"/>
+  <text x="382" y="110" font-size="13.5" font-weight="700" fill="#6a4a9c">사이드카</text>
+  <text x="382" y="134" font-size="11.5" font-family="monospace" fill="#585f6b">grafana-sc-dashboard</text>
+  <text x="382" y="156" font-size="12" fill="#585f6b">라벨이 붙은 것만 집어 간다</text>
+
+  <path d="M499 172 L499 208" fill="none" stroke="#6a4a9c" stroke-width="2" marker-end="url(#h1)"/>
+  <text x="515" y="196" font-size="11" font-family="monospace" fill="#6a4a9c">write</text>
+
+  <rect x="364" y="212" width="270" height="86" rx="6" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="382" y="244" font-size="13" fill="#15181d">공유 볼륨 (emptyDir)</text>
+  <text x="382" y="272" font-size="11.5" font-family="monospace" fill="#585f6b">/tmp/dashboards/*.json</text>
+
+  <path d="M638 255 L700 255" fill="none" stroke="#2e7d4f" stroke-width="2" marker-end="url(#h2)"/>
+  <text x="669" y="243" font-size="11" font-family="monospace" fill="#2e7d4f" text-anchor="middle">read</text>
+
+  <rect x="704" y="140" width="252" height="158" rx="6" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.8"/>
+  <text x="722" y="174" font-size="14" font-weight="700" fill="#2e7d4f">grafana</text>
+  <text x="722" y="202" font-size="12" fill="#585f6b">프로비저닝 경로를 읽어</text>
+  <text x="722" y="224" font-size="12" fill="#585f6b">대시보드로 등록한다</text>
+  <text x="722" y="256" font-size="11.5" font-family="monospace" fill="#8f4408">재시작이 필요 없다</text>
+  <text x="722" y="280" font-size="11.5" fill="#8f4408">UI 에서 고쳐도 원본은 ConfigMap</text>
+
+  <line x1="24" y1="372" x2="976" y2="372" stroke="#d8dbe0" stroke-width="1"/>
+  <text x="24" y="400" font-size="13" fill="#15181d">파드를 지웠다 살려도 대시보드가 그대로인 이유 — 원본이 클러스터 리소스로 남아 있기 때문이다</text>
+  <text x="24" y="424" font-size="13" fill="#8f4408">라벨이 없으면 이 흐름이 첫 화살표에서 끊긴다. 에러는 나지 않는다</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> 차트가 설치한 기본 대시보드 수십 개도 전부 이 구조로 들어와 있다.
+  즉 <strong>우리도 같은 방법으로 추가할 수 있다</strong> — 그라파나를 재시작할 필요도, UI 에서 임포트할 필요도 없다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>파드 안에 컨테이너가 셋인지.</strong> 앞의 둘이 사이드카다.
+    <span class="chk">확인 <code>kubectl -n monitoring get pod -l app.kubernetes.io/name=grafana -o jsonpath='{range .items[0].spec.containers[*]}{.name}{"\n"}{end}'</code> → <code>grafana-sc-dashboard</code> · <code>grafana-sc-datasources</code> · <code>grafana</code></span>
+  </span></li>
+  <li><span class="b" style="background:#6a4a9c">2</span><span>
+    <strong>사이드카가 집어 가는 ConfigMap 이 몇 개인지.</strong> 차트가 만든 기본 대시보드들이다.
+    <span class="chk">확인 <code>kubectl -n monitoring get cm -l grafana_dashboard=1 --no-headers | wc -l</code> → 수십 개</span>
+  </span></li>
+  <li><span class="b" style="background:#2e7d4f">3</span><span>
+    <strong>그라파나가 실제로 등록했는지.</strong> 브라우저에서 확인한다.
+    <span class="chk">확인 <code>curl -s -o /dev/null -w '%{http_code}\n' http://localhost:30300/login</code> → <code>200</code>, 로그인 후 Dashboards 목록에 수십 개</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>이 흐름을 켜는 설정 — sidecar 블록</h4>
+
+<p>사이드카가 <em>어떤 라벨</em>을 <em>어느 네임스페이스에서</em> 찾을지는 값 파일이 정한다. 기본값은 <strong>그라파나와 같은 네임스페이스만</strong> 본다 — 앱 대시보드를 <code>apps</code> 에 두려면 범위를 넓혀야 한다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/kps-values.yaml — grafana.sidecar</span>
+<pre><code class="language-yaml">grafana:
+  adminPassword: obs-study
+  nodeSelector:
+    workload: observability
+  service:
+    type: NodePort
+    nodePort: 30300
+
+  # 기본 대시보드의 시간대. 한국 시간으로 보면 로그와 대조하기 쉽다.
+  defaultDashboardsTimezone: Asia/Seoul
+
+  sidecar:
+    dashboards:
+      enabled: true
+      # 이 라벨이 붙은 ConfigMap 을 대시보드로 인식한다
+      label: grafana_dashboard
+      labelValue: "1"
+      # 모든 네임스페이스를 감시 — apps 네임스페이스에 둔 대시보드도 잡힌다
+      searchNamespace: ALL
+      # ConfigMap 에 이 애너테이션을 달면 해당 폴더로 들어간다
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      searchNamespace: ALL</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>설정</th><th>정하는 것</th><th>어긋나면</th></tr>
+  <tr><td><code>label: grafana_dashboard</code> + <code>labelValue: "1"</code></td><td>무엇을 집어 갈지</td><td>ConfigMap 에 이 라벨이 없으면 <strong>조용히 무시된다</strong> (07절)</td></tr>
+  <tr><td><code>searchNamespace: ALL</code></td><td>어디를 뒤질지</td><td>기본값은 그라파나와 같은 네임스페이스만. <code>apps</code> 에 둔 대시보드가 안 보인다</td></tr>
+  <tr><td><code>folderAnnotation: grafana_folder</code></td><td>폴더 이름을 어디서 읽을지</td><td>모든 대시보드가 General 폴더에 쌓인다</td></tr>
+  <tr><td><code>defaultDashboardsTimezone</code></td><td>차트 <em>기본</em> 대시보드의 시간대</td><td>직접 만든 JSON 에는 적용되지 않는다 — JSON 안에 따로 적어야 한다</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">searchNamespace: ALL 의 비용</span>
+  <p>사이드카가 클러스터 전체의 ConfigMap 을 감시하게 되므로 그만큼 권한과 API 부하가 는다. 네임스페이스가 수백 개인 운영 클러스터에서는 필요한 것만 콤마로 나열하는 편이 낫다. 실습에서는 네임스페이스가 셋뿐이라 ALL 로 둔다.</p>
+</blockquote>
+
+
+<h3>UI 와 저장소를 오가는 순서</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-label="UI에서 편집하고 JSON으로 내보내 ConfigMap으로 저장하면 사이드카가 반영하는 순환">
+  <rect width="1000" height="300" fill="#ffffff"/>
+  <text x="24" y="42" font-size="14.5" font-weight="700" fill="#15181d">UI 는 편집기로만 쓰고, 진실의 원본은 저장소에 둔다</text>
+
+  <defs>
+    <marker id="h3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="72" width="212" height="84" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="104" font-size="13.5" font-weight="700" fill="#15181d">1. UI 에서 편집</text>
+  <text x="42" y="130" font-size="12" fill="#585f6b">패널과 질의를 눈으로 조정</text>
+
+  <line x1="238" y1="114" x2="274" y2="114" stroke="#585f6b" stroke-width="2" marker-end="url(#h3)"/>
+
+  <rect x="278" y="72" width="212" height="84" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="296" y="104" font-size="13.5" font-weight="700" fill="#15181d">2. JSON 내보내기</text>
+  <text x="296" y="130" font-size="11.5" font-family="monospace" fill="#585f6b">Export → Save to file</text>
+
+  <line x1="492" y1="114" x2="528" y2="114" stroke="#585f6b" stroke-width="2" marker-end="url(#h3)"/>
+
+  <rect x="532" y="72" width="212" height="84" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="550" y="104" font-size="13.5" font-weight="700" fill="#15181d">3. ConfigMap 갱신</text>
+  <text x="550" y="130" font-size="11.5" font-family="monospace" fill="#585f6b">git commit → kubectl apply</text>
+
+  <line x1="746" y1="114" x2="782" y2="114" stroke="#585f6b" stroke-width="2" marker-end="url(#h3)"/>
+
+  <rect x="786" y="72" width="190" height="84" rx="6" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="804" y="104" font-size="13.5" font-weight="700" fill="#2e7d4f">4. 자동 반영</text>
+  <text x="804" y="130" font-size="12" fill="#585f6b">사이드카가 감지한다</text>
+
+  <path d="M881 158 L881 206 L130 206 L130 160" fill="none" stroke="#585f6b" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#h3)"/>
+  <text x="500" y="230" font-size="12.5" fill="#585f6b" text-anchor="middle">다시 고칠 일이 생기면 1번으로</text>
+
+  <text x="24" y="272" font-size="13" fill="#8f4408">3번을 건너뛰고 UI 에서만 저장하면, 다음 apply 때 그 변경은 사라진다</text>
+</svg>
+<figcaption>
+  <b>그림 2.</b> 2번에서 <strong>Export for sharing externally</strong> 옵션을 켜면 데이터소스가 <code>${DS_...}</code> 변수로 치환된다.
+  팀 밖으로 공유할 때만 쓰고, 우리끼리 쓸 때는 끄는 편이 임포트가 간단하다.
+</figcaption>
+</figure>
+
+
+<h2><span class="n">04</span>실습 파일 위치</h2>
+
+<div class="srcbox">
+  <span class="fp">저장소 안의 위치</span>
+<pre><code class="language-text">study/labs/monitoring/
+├── kps-values.yaml           grafana.sidecar 블록이 이 장의 설정이다
+└── dashboards/
+    ├── obs-overview.json     이 장에서 올리는 대시보드
+    └── obs-red.json          07장에서 쓴다</code></pre>
+</div>
+
+
+<h2><span class="n">05</span>첫 로그인과 둘러볼 것</h2>
+
+<pre><code class="language-bash"># 04장에서 NodePort 30300으로 열어뒀다
+open http://localhost:30300
+
+# 비밀번호를 값 파일에 두지 않았다면 시크릿에서 꺼낸다
+kubectl -n monitoring get secret kps-grafana \
+  -o jsonpath='{.data.admin-password}' | base64 -d; echo</code></pre>
+
+<p>계정은 <strong>admin</strong>, 비밀번호는 04장 값 파일에 넣은 <strong>obs-study</strong> 다. 로그인하면 대시보드가 이미 수십 개 들어 있다. 직접 만든 적이 없는데도 그렇다 — 그림 1의 구조로 차트가 넣어 둔 것이다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>먼저 열어 볼 대시보드</th><th>보는 것</th></tr>
+  <tr><td>Kubernetes / Compute Resources / Namespace (Pods)</td><td><code>apps</code> 네임스페이스를 고르면 03장에서 배포한 파드 3개의 CPU·메모리가 보인다</td></tr>
+  <tr><td>Node Exporter / Nodes</td><td>노드별 CPU·메모리·디스크. 실습 중 노트북이 버거워지면 여기부터 본다</td></tr>
+  <tr><td>Kubernetes / Kubelet</td><td>노드별 파드 수, 컨테이너 런타임 동작 상태</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">아직 우리 앱의 지표는 없다</span>
+  <p>위 대시보드에 보이는 것은 <strong>컨테이너 관점</strong>의 자원 사용량이다. “주문 API 가 초당 몇 건을 처리하고 P99 가 몇 ms 인가”는 아직 어디에도 없다. 그 데이터를 만들려면 06장에서 <code>ServiceMonitor</code> 를 붙여야 한다.</p>
+</blockquote>
+
+<h3>데이터소스는 어떻게 연결돼 있나</h3>
+
+<pre><code class="language-bash">kubectl -n monitoring get cm -l grafana_datasource=1 \
+  -o custom-columns=NAME:.metadata.name --no-headers</code></pre>
+
+<pre><code class="language-bash"># 실제 정의를 들여다본다 — uid 와 url 을 확인할 것
+kubectl -n monitoring get cm -l grafana_datasource=1 \
+  -o jsonpath='{.items[0].data}' | head -c 600; echo</code></pre>
+
+<p>프로메테우스 데이터소스의 <code>url</code> 이 클러스터 내부 서비스 주소로 되어 있는 것이 보인다. 그라파나는 브라우저가 아니라 <strong>자기 파드에서</strong> 프로메테우스에 질의하므로 <code>localhost:30900</code> 이 아니라 서비스 이름을 쓴다. 이 구분을 놓치면 “브라우저에서는 되는데 패널은 비어 있다”에서 헤맨다.</p>
+
+
+<h2><span class="n">06</span>대시보드를 코드로 만들기</h2>
+
+<p class="cap">목적: 클러스터를 다시 만들어도 <code>kubectl apply</code> 한 번으로 돌아오는 대시보드를 만든다.</p>
+
+<p>아직 앱 메트릭이 없으므로 클러스터 지표로 구성한다. 07장에서는 같은 방법으로 RED 대시보드를 만든다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/dashboards/obs-overview.json</span>
+<pre><code class="language-json">{
+  "uid": "obs-study-overview",
+  "title": "Obs Study — 클러스터 한눈에",
+  "tags": ["obs-study"],
+  "timezone": "Asia/Seoul",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "스크레이프 실패 타깃 수",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "count(up == 0) or vector(0)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "노드별 여유 메모리 (GiB)",
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "decgbytes" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "node_memory_MemAvailable_bytes{job=\"node-exporter\"} / 1024^3",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "노드별 파드 수",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (node) (kube_pod_info)",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    }
+  ]
+}</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>JSON 의 부분</th><th>왜 그렇게 썼나</th></tr>
+  <tr><td><code>datasource</code> 가 없다</td><td>생략하면 기본 데이터소스가 쓰인다. <strong>uid 가 다른 환경에서도 그대로 동작한다</strong></td></tr>
+  <tr><td><code>"timezone": "Asia/Seoul"</code></td><td>값 파일의 <code>defaultDashboardsTimezone</code> 은 차트 기본 대시보드에만 적용된다. 직접 만든 JSON 에는 따로 적어야 한다</td></tr>
+  <tr><td><code>count(up == 0) or vector(0)</code></td><td><code>up == 0</code> 이 하나도 없으면 결과가 <em>빈 벡터</em>가 되어 패널이 “No data”가 된다. <code>or vector(0)</code> 가 그때 0 을 채운다</td></tr>
+  <tr><td><code>gridPos</code> 의 <code>y</code></td><td>가로는 24칸 기준이다. <code>y</code> 가 겹치면 패널이 서로 밀어낸다 — 첫 줄 <code>y:0</code>, 다음 줄 <code>y:6</code></td></tr>
+</table>
+</div>
+
+<h3>ConfigMap 으로 감싸 적용</h3>
+
+<pre><code class="language-bash">cd study/labs/monitoring
+
+kubectl -n monitoring create configmap obs-overview-dashboard \
+  --from-file=obs-overview.json=dashboards/obs-overview.json \
+  --dry-run=client -o yaml &gt; obs-overview-cm.yaml</code></pre>
+
+<p>생성된 파일에 <strong>라벨과 폴더 애너테이션</strong>을 넣는다. 이 두 줄이 이 장의 전부라고 해도 된다.</p>
+
+<div class="srcbox">
+  <span class="fp">obs-overview-cm.yaml — metadata 부분</span>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: obs-overview-dashboard
+  namespace: monitoring
+  labels:
+    # 이 라벨이 없으면 사이드카가 무시한다
+    grafana_dashboard: "1"
+  annotations:
+    # 이 폴더가 없으면 자동으로 만들어진다
+    grafana_folder: "Obs Study"
+data:
+  obs-overview.json: |
+    { ... JSON 전체 ... }</code></pre>
+</div>
+
+<pre><code class="language-bash">kubectl apply -f obs-overview-cm.yaml
+
+# 사이드카가 감지했는지 로그로 확인 (보통 10초 안에 반영된다)
+kubectl -n monitoring logs -l app.kubernetes.io/name=grafana \
+  -c grafana-sc-dashboard --tail=20</code></pre>
+
+<p class="cap">--- 출력 (시각은 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">{"time": "...", "level": "INFO", "msg": "Writing /tmp/dashboards/obs-overview.json (ascii)"}
+{"time": "...", "level": "INFO", "msg": "None sent to http://localhost:3000/api/admin/provisioning/dashboards/reload.
+ Response: 200 OK {\"message\":\"Dashboards config reloaded\"}"}</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>두 줄이 핵심이다. <code>Writing ...json</code> 은 사이드카가 <strong>ConfigMap 을 집어 파일로 썼다</strong>는 뜻이고, <code>Dashboards config reloaded</code> 는 그라파나가 <strong>다시 읽었다</strong>는 뜻이다. 그라파나 좌측 Dashboards 에 <strong>Obs Study</strong> 폴더가 생기고 그 안에 대시보드가 들어 있다. <strong>그라파나를 재시작하지 않았다는 점</strong>을 확인한다.</p>
+</blockquote>
+
+
+<h2><span class="n">07</span>일부러 실패시키기 — 라벨 없는 ConfigMap</h2>
+
+<p>이 방식의 유일한 함정은 <strong>실패해도 아무 말이 없다는 것</strong>이다. 에러도, 이벤트도, 경고도 없다. 한 번 겪어 두면 나중에 30분을 아낀다.</p>
+
+<p class="cap">아래 출력은 kube-prometheus-stack 의 그라파나 사이드카에서 재현했다 (확인 2026-09-13). 끝에 지운다.</p>
+
+<h3>라벨을 빼고 올린다</h3>
+
+<pre><code class="language-bash">cat &gt; /tmp/lbl-demo.json &lt;&lt;'EOF'
+{"uid":"lbl-demo","title":"Label Demo","schemaVersion":39,
+ "panels":[{"type":"stat","title":"up","gridPos":{"h":6,"w":8,"x":0,"y":0},
+ "targets":[{"refId":"A","expr":"count(up == 0) or vector(0)"}]}]}
+EOF
+
+kubectl -n monitoring create configmap lbl-demo \
+  --from-file=lbl-demo.json=/tmp/lbl-demo.json</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">configmap/lbl-demo created</code></pre>
+
+<p>성공했다고 나온다. 그런데 대시보드는 나타나지 않는다. 무엇이 잘못됐는지 <strong>둘을 나란히 물어보면</strong> 드러난다.</p>
+
+<pre><code class="language-bash"># ConfigMap 자체는 있는가
+kubectl -n monitoring get cm lbl-demo
+
+# 사이드카가 집어 가는 목록에 있는가
+kubectl -n monitoring get cm -l grafana_dashboard=1 --no-headers | grep -c lbl-demo</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">NAME       DATA   AGE
+lbl-demo   1      0s
+
+0</code></pre>
+
+<blockquote class="warn">
+  <span class="label">읽는 법</span>
+  <p>ConfigMap 은 <strong>멀쩡히 존재한다</strong>. 그런데 라벨 셀렉터로 조회하면 <code>0</code> 이다 — 사이드카에게는 <strong>보이지 않는 리소스</strong>라는 뜻이다. 사이드카 로그에도 이 이름이 전혀 나오지 않는다. 무시한 것조차 기록하지 않기 때문이다.</p>
+  <p>그래서 “대시보드가 안 보인다”의 첫 확인은 로그가 아니라 <strong>위 두 명령의 대조</strong>다. 첫 명령은 되는데 둘째가 0 이면 라벨 문제다.</p>
+</blockquote>
+
+<h3>라벨을 붙이면 즉시 반영된다</h3>
+
+<pre><code class="language-bash">kubectl -n monitoring label cm lbl-demo grafana_dashboard=1 --overwrite
+sleep 10
+kubectl -n monitoring logs -l app.kubernetes.io/name=grafana \
+  -c grafana-sc-dashboard --tail=6</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">{"time": "2026-09-13T14:04:44.165438+00:00", "level": "INFO", "msg": "Writing /tmp/dashboards/lbl-demo.json (ascii)"}
+{"time": "2026-09-13T14:04:44.350889+00:00", "level": "INFO", "msg": "None sent to
+ http://localhost:3000/api/admin/provisioning/dashboards/reload.
+ Response: 200 OK {\"message\":\"Dashboards config reloaded\"}"}</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>ConfigMap 을 다시 만들지도, 그라파나를 재시작하지도 않았다. <strong>라벨 한 줄을 붙인 것뿐</strong>인데 10초 안에 반영된다. 사이드카가 보는 것은 내용이 아니라 라벨이라는 사실이 이 실험의 요지다.</p>
+</blockquote>
+
+<p>정리한다. 지우면 사이드카가 파일도 함께 걷어 간다.</p>
+
+<pre><code class="language-bash">kubectl -n monitoring delete cm lbl-demo
+rm -f /tmp/lbl-demo.json</code></pre>
+
+<p class="cap">--- 로그 (삭제 직후) ---</p>
+
+<pre class="out"><code class="language-text">{"time": "2026-09-13T14:04:57.662616+00:00", "level": "INFO", "msg": "Removing /tmp/dashboards/lbl-demo.json"}</code></pre>
+
+
+<h2><span class="n">08</span>UI 에서 만들고 코드로 옮기기</h2>
+
+<p>현실적인 작업 흐름은 그림 2 와 같다. JSON 을 손으로 쓰는 것은 고통스럽고, UI 로만 만들면 재현이 안 된다. 둘을 합친다.</p>
+
+<pre><code class="language-bash">kubectl -n monitoring create configmap obs-overview-dashboard \
+  --from-file=obs-overview.json=dashboards/obs-overview.json \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# 주의: 위 방식은 라벨과 애너테이션을 잃는다. 다시 붙인다.
+kubectl -n monitoring label configmap obs-overview-dashboard \
+  grafana_dashboard=1 --overwrite
+kubectl -n monitoring annotate configmap obs-overview-dashboard \
+  grafana_folder="Obs Study" --overwrite</code></pre>
+
+<blockquote class="warn">
+  <span class="label">UI 에서 저장한 변경은 임시다</span>
+  <p>프로비저닝된 대시보드를 UI 에서 고치고 저장해도, ConfigMap 이 다시 적용되는 순간 덮어씌워진다. UI 편집은 실험으로만 쓰고, 확정되면 반드시 JSON 을 저장소에 반영한다. <strong>07절에서 본 대로 원본은 ConfigMap 이다.</strong></p>
+</blockquote>
+
+
+<h2><span class="n">09</span>Grafana 13 에서 달라진 것</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>항목</th><th>내용</th></tr>
+  <tr><td>Dynamic dashboards</td><td>탭·조건부 표시·유연한 레이아웃이 정식 기능이 됐다. USE·RED 형태의 레이아웃 템플릿도 함께 제공된다</td></tr>
+  <tr><td>양방향 Git 워크플로</td><td>대시보드를 깃 저장소와 동기화하고 UI 변경을 풀 리퀘스트로 만들 수 있다. 이 실습의 ConfigMap 방식보다 진일보한 형태다</td></tr>
+  <tr><td><code>grafana-cli</code> 폐기</td><td><code>grafana cli</code>, <code>grafana server</code> 형태로 통합됐다. 예전 명령을 쓰는 자동화 스크립트가 있다면 손봐야 한다</td></tr>
+  <tr><td>숫자 id 데이터소스 API 비활성</td><td>데이터소스를 숫자 id 로 참조하던 API 가 기본 비활성이다. <strong>uid 로 참조</strong>하는 것이 유일한 방법이라고 보면 된다</td></tr>
+  <tr><td>gzip 기본 활성</td><td>응답이 압축되어 전송된다. 대시보드가 많을 때 체감 로딩이 빨라진다</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">양방향 Git 워크플로를 지금 도입하지 않는 이유</span>
+  <p>“UI 로 편집 → 저장소 반영”의 수작업을 없애 준다. 다만 도입하면 대시보드 관리 방식 자체가 바뀐다. 원리가 드러나는 ConfigMap 방식을 먼저 익히고 나서 검토하는 순서를 권한다 — 자동화가 실패했을 때 무엇이 일어나고 있는지 알아야 고칠 수 있다.</p>
+</blockquote>
+
+
+<h2><span class="n">10</span>스택 내장 vs 별도 설치</h2>
+
+<p>이 실습은 kube-prometheus-stack 에 포함된 그라파나를 쓴다. 별도 차트로 설치하는 선택지도 있으니 판단 기준을 정리한다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>기준</th><th>스택 내장 (지금 방식)</th><th>별도 설치</th></tr>
+  <tr><td>기본 대시보드</td><td>수십 개가 자동으로 따라온다</td><td>직접 가져와야 한다</td></tr>
+  <tr><td>버전 관리</td><td>차트 버전에 그라파나 버전이 묶인다</td><td>독립적으로 올릴 수 있다</td></tr>
+  <tr><td>데이터소스</td><td>프로메테우스가 자동 연결</td><td>직접 프로비저닝</td></tr>
+  <tr><td>여러 클러스터 관측</td><td>부적합 — 클러스터마다 그라파나가 생긴다</td><td>적합 — 그라파나 하나로 여러 프로메테우스를 본다</td></tr>
+  <tr><td>인증 연동(SSO 등)</td><td>가능하지만 값 파일이 복잡해진다</td><td>깔끔하다</td></tr>
+</table>
+</div>
+
+<p><strong>판단 기준은 클러스터 개수다.</strong> 하나면 내장이 편하고, 둘 이상을 한 화면에서 보려는 순간 별도 설치로 옮겨야 한다.</p>
+
+
+<h2><span class="n">11</span>자주 겪는 문제</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>증상</th><th>원인과 조치</th></tr>
+  <tr><td>ConfigMap 을 만들었는데 대시보드가 안 보인다</td><td>① 라벨 <code>grafana_dashboard: "1"</code> 누락 ② 그라파나와 다른 네임스페이스인데 <code>searchNamespace: ALL</code> 이 아님. 07절의 두 명령 대조부터 한다</td></tr>
+  <tr><td>대시보드는 보이는데 패널이 <code>No data</code></td><td>질의는 맞는데 데이터가 없거나 시간 범위가 데이터보다 앞선다. 같은 질의를 프로메테우스 UI(30900)에서 실행해 비교한다</td></tr>
+  <tr><td>패널에 <code>Datasource ... was not found</code></td><td>JSON 이 다른 환경의 데이터소스 uid 를 참조하고 있다. 해당 필드를 <strong>지우는 것</strong>이 가장 간단한 해결이다</td></tr>
+  <tr><td>사이드카 로그에 <code>403 Forbidden</code></td><td><code>searchNamespace: ALL</code> 인데 RBAC 이 좁다. <code>helm upgrade</code> 가 ClusterRole 까지 갱신했는지 확인</td></tr>
+  <tr><td>UI 에서 저장한 대시보드가 사라졌다</td><td>프로비저닝된 대시보드는 원본이 ConfigMap 이다. JSON 을 저장소에 반영해야 한다</td></tr>
+  <tr><td>로그인이 안 된다</td><td>값 파일의 <code>adminPassword</code> 는 <strong>최초 생성 시에만</strong> 반영된다. 이미 만들어진 뒤 바꾸려면 시크릿을 직접 수정하거나 재설치한다</td></tr>
+  <tr><td>시간이 UTC 로 보인다</td><td><code>defaultDashboardsTimezone</code> 은 차트 기본 대시보드에만 적용된다. 직접 만든 JSON 에는 <code>"timezone": "Asia/Seoul"</code> 을 넣는다</td></tr>
+</table>
+</div>
+
+
+<div class="appendix">
+
+<h2>부록 A. 완료 체크리스트</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>확인</th><th>기대값</th></tr>
+  <tr><td><code>curl -s -o /dev/null -w '%{http_code}' localhost:30300/login</code></td><td><code>200</code> (admin / obs-study)</td></tr>
+  <tr><td><code>kubectl -n monitoring get pod -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].spec.containers[*].name}'</code></td><td>컨테이너 이름 3개</td></tr>
+  <tr><td><code>kubectl -n monitoring get cm -l grafana_dashboard=1 --no-headers | wc -l</code></td><td>0 보다 크다</td></tr>
+  <tr><td><code>kubectl -n monitoring get cm -l grafana_datasource=1 --no-headers | wc -l</code></td><td>1 이상</td></tr>
+  <tr><td>값 파일에 <code>searchNamespace: ALL</code> 과 <code>folderAnnotation</code></td><td>넣고 <code>helm upgrade</code> 로 재적용했다</td></tr>
+  <tr><td><code>kubectl -n monitoring get cm obs-overview-dashboard -o jsonpath='{.metadata.labels}'</code></td><td><code>grafana_dashboard:"1"</code></td></tr>
+  <tr><td>사이드카 로그</td><td><code>Writing /tmp/dashboards/obs-overview.json</code> 줄이 있다</td></tr>
+  <tr><td>그라파나 Dashboards</td><td><strong>Obs Study</strong> 폴더에 대시보드가 있고 패널 3개가 모두 데이터를 그린다</td></tr>
+  <tr><td>라벨 없는 ConfigMap 실험</td><td>한 번 해 보고 지웠다 (이해 확인)</td></tr>
+</table>
+</div>
+
+<h2>부록 B. 명령어 레퍼런스</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>명령</th><th>하는 일</th></tr>
+  <tr><td><code>kubectl -n monitoring get secret kps-grafana -o jsonpath='{.data.admin-password}' | base64 -d</code></td><td>admin 비밀번호를 꺼낸다</td></tr>
+  <tr><td><code>kubectl -n monitoring get cm -l grafana_dashboard=1</code></td><td>사이드카가 집어 가는 것만 골라 본다. <strong>안 보일 때 첫 확인</strong></td></tr>
+  <tr><td><code>kubectl -n monitoring get cm -l grafana_datasource=1</code></td><td>데이터소스 정의 확인</td></tr>
+  <tr><td><code>kubectl -n monitoring logs -l app.kubernetes.io/name=grafana -c grafana-sc-dashboard</code></td><td>사이드카 로그. <code>Writing</code> 줄이 반영 증거다</td></tr>
+  <tr><td><code>kubectl create configmap &lt;이름&gt; --from-file=&lt;키&gt;=&lt;파일&gt; --dry-run=client -o yaml</code></td><td>파일을 ConfigMap YAML 로 만든다</td></tr>
+  <tr><td><code>kubectl -n monitoring label cm &lt;이름&gt; grafana_dashboard=1 --overwrite</code></td><td>라벨만 붙인다. 10초 안에 반영된다</td></tr>
+  <tr><td><code>kubectl -n monitoring annotate cm &lt;이름&gt; grafana_folder="Obs Study" --overwrite</code></td><td>폴더 지정</td></tr>
+  <tr><td><code>helm upgrade kps ... -f kps-values.yaml</code></td><td>사이드카 설정을 바꾼 뒤 재적용</td></tr>
+</table>
+</div>
+
+<h2>부록 C. 참고 출처</h2>
+
+<div class="src">
+<ul>
+  <li>Grafana v13.0 변경점 — https://grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v13-0/</li>
+  <li>그라파나 프로비저닝 문서 — https://grafana.com/docs/grafana/latest/administration/provisioning/</li>
+  <li>kube-prometheus-stack 값 파일 (grafana.sidecar 블록) — https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml</li>
+  <li>그라파나 차트의 사이드카 설정 — https://github.com/grafana/helm-charts/tree/main/charts/grafana</li>
+  <li>대시보드 JSON 모델 — https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/view-dashboard-json-model/</li>
+</ul>
+</div>
+
+</div>
+
+<div class="pager">
+  <a href="ch04-prometheus-stack.html">
+    <span class="dir">← 이전</span>
+    <span class="t">04 · 프로메테우스 스택 설치</span>
+  </a>
+  <a class="next" href="ch06-app-metrics-promql.html">
+    <span class="dir">다음 →</span>
+    <span class="t">06 · 앱 메트릭과 PromQL</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

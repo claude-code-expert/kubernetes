@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow203" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-app { fill: #ffffff; stroke: #3a8a5c; stroke-width: 1.2; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 방법 1 -->
+  <rect class="box" x="20" y="20" width="410" height="230" rx="6"/>
+  <text class="t-title" x="225" y="46" text-anchor="middle">방법 ① 한 바이너리에 두 경험</text>
+
+  <rect class="box-app" x="60" y="62" width="330" height="70" rx="4"/>
+  <text class="t-title" x="225" y="86" text-anchor="middle">단일 서비스</text>
+  <text class="t-sub" x="225" y="106" text-anchor="middle">기능 플래그로 요청마다 A/B 분기</text>
+  <text class="t-sub" x="225" y="122" text-anchor="middle">(HTTP 헤더·쿠키·쿼리 파라미터 기준)</text>
+
+  <text class="t-sub" x="40" y="156">✓ 롤아웃이 단순 — 배포는 하나</text>
+  <text class="t-sub" x="40" y="174">✗ 실험 코드 크래시가 프로덕션 전체에 영향</text>
+  <text class="t-sub" x="40" y="192">✗ 릴리스 전체와 묶여 실험 갱신이 느림</text>
+  <text class="t-sub" x="40" y="216">→ 기능 플래그 도구: Flagger 등 (5·7장 연결)</text>
+  <text class="t-sub" x="40" y="234">→ 빠르게 켜고 끌 수 있음</text>
+
+  <!-- 방법 2 -->
+  <rect class="box-accent" x="470" y="20" width="410" height="230" rx="6"/>
+  <text class="t-title" x="675" y="46" text-anchor="middle">방법 ② 서비스 메시로 트래픽 분할</text>
+
+  <rect class="box-app" x="490" y="62" width="150" height="70" rx="4"/>
+  <text class="t-title" x="565" y="86" text-anchor="middle">제어군</text>
+  <text class="t-sub" x="565" y="106" text-anchor="middle">대부분의 트래픽</text>
+
+  <rect class="box-app" x="660" y="62" width="150" height="70" rx="4"/>
+  <text class="t-title" x="735" y="86" text-anchor="middle">실험군</text>
+  <text class="t-sub" x="735" y="106" text-anchor="middle">소량 트래픽만</text>
+
+  <text class="t-sub" x="490" y="156">✓ 실험 크래시가 제어군에 영향 없음</text>
+  <text class="t-sub" x="490" y="174">✓ 언제든 새 실험 버전 배포 (릴리스 독립)</text>
+  <text class="t-sub" x="490" y="192">✗ 별도 서비스 배포 — 초기 구축 비용 큼</text>
+  <text class="t-sub" x="490" y="216">→ 9장의 서비스 메시가 트래픽 분할 담당</text>
+  <text class="t-sub" x="490" y="234">→ 요청 성공 여부도 메시가 직접 판단 가능</text>
+
+  <!-- 하단 -->
+  <rect class="box" x="20" y="270" width="860" height="70" rx="6"/>
+  <text class="t-sub" x="40" y="296">카오스·로드 테스팅은 "아키텍처와 운영이 견고한가"를 묻지만, 실험은 다른 질문이다 — "이 변경이</text>
+  <text class="t-sub" x="40" y="314">유저 경험을 실제로 개선하는가?" 좋은 가설(20.3.2)에서 시작해야 실험이 의미 있다.</text>
+
+  <text class="t-cap" x="450" y="366" text-anchor="middle">6장의 카나리 배포·7장의 리전 웨이브와 기술적으로 닮았다 — 다른 점은 목적이다. 저건 안전, 이건 학습이다.</text>
+</svg>

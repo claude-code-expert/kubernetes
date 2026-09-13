@@ -1,0 +1,25 @@
+# M31 — Argo CD 애플리케이션. "저장소의 이 경로가 클러스터의 이 네임스페이스다" 를 선언한다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: journal
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # 클러스터 안의 깃 서버. 실제로는 깃허브/깃랩 URL 이 온다.
+    repoURL: http://gitserver.gitops.svc/repo.git
+    targetRevision: main
+    path: apps/journal
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitops-journal
+  syncPolicy:
+    automated:
+      # 저장소에서 사라진 리소스를 클러스터에서도 지운다.
+      # 끄면 "지운 것이 계속 남아 있는" 상태가 되고, 그때 클러스터는 저장소와 다르다.
+      prune: true
+      # 클러스터에서 손으로 바꾼 것을 저장소 상태로 되돌린다. 이 모듈의 핵심 실습이다.
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false      # 네임스페이스는 우리가 만든다 (PSA 라벨을 붙여야 하므로)

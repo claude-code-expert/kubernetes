@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="m14ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .cluster { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+    .ns { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .store { fill:#f7f7f5; stroke:#999999; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:13px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+  </style>
+
+  <rect class="accent" x="20" y="180" width="150" height="66" rx="4"/>
+  <text class="t-title" x="95" y="206" text-anchor="middle">curl · 브라우저</text>
+  <text class="t-mono" x="95" y="226" text-anchor="middle">localhost:18080</text>
+
+  <rect class="cluster" x="196" y="26" width="684" height="374" rx="6"/>
+  <text class="t-h" x="212" y="50">kind 클러스터 study — 노드 3개</text>
+
+  <rect class="ns" x="214" y="64" width="152" height="316" rx="4"/>
+  <text class="t-sub" x="226" y="84">ns: ingress-nginx</text>
+  <rect class="accent" x="228" y="180" width="124" height="66" rx="3"/>
+  <text class="t-title" x="290" y="204" text-anchor="middle">컨트롤러</text>
+  <text class="t-mono" x="290" y="224" text-anchor="middle">Ingress journal</text>
+  <text class="t-sub" x="290" y="360" text-anchor="middle">노드 :80</text>
+
+  <rect class="ns" x="384" y="64" width="478" height="316" rx="4"/>
+  <text class="t-sub" x="396" y="84">ns: journal — kubectl apply -k 로 한 번에</text>
+
+  <rect class="box" x="404" y="96" width="192" height="62" rx="3"/>
+  <text class="t-title" x="500" y="120" text-anchor="middle">web-static ×2</text>
+  <text class="t-mono" x="500" y="140" text-anchor="middle">nginx:1.29-alpine</text>
+
+  <rect class="box" x="404" y="186" width="192" height="62" rx="3"/>
+  <text class="t-title" x="500" y="210" text-anchor="middle">journal-api ×3</text>
+  <text class="t-mono" x="500" y="230" text-anchor="middle">journal-api:v1</text>
+
+  <rect class="box" x="646" y="186" width="192" height="62" rx="3"/>
+  <text class="t-title" x="742" y="210" text-anchor="middle">redis-0 · StatefulSet</text>
+  <text class="t-mono" x="742" y="230" text-anchor="middle">redis:8.2-alpine</text>
+
+  <rect class="store" x="646" y="292" width="192" height="60" rx="3"/>
+  <text class="t-title" x="742" y="316" text-anchor="middle">PVC data-redis-0</text>
+  <text class="t-mono" x="742" y="336" text-anchor="middle">1Gi · standard</text>
+
+  <rect class="store" x="404" y="292" width="192" height="60" rx="3"/>
+  <text class="t-title" x="500" y="316" text-anchor="middle">ConfigMap · Secret</text>
+  <text class="t-mono" x="500" y="336" text-anchor="middle">journal-config / -secret</text>
+
+  <path class="line" d="M 170 213 L 222 213" marker-end="url(#m14ar)"/>
+  <path class="line" d="M 352 200 L 378 200 L 378 127 L 398 127" marker-end="url(#m14ar)"/>
+  <text class="t-mono" x="386" y="112">/</text>
+  <path class="line" d="M 352 226 L 378 226 L 378 217 L 398 217" marker-end="url(#m14ar)"/>
+  <text class="t-mono" x="376" y="250">/api</text>
+  <path class="line" d="M 596 217 L 640 217" marker-end="url(#m14ar)"/>
+  <text class="t-mono" x="618" y="208" text-anchor="middle">:6379</text>
+  <path class="line" d="M 742 248 L 742 286" marker-end="url(#m14ar)"/>
+  <text class="t-mono" x="752" y="272">/data</text>
+  <path class="line" d="M 500 248 L 500 286" marker-end="url(#m14ar)"/>
+  <text class="t-mono" x="510" y="272">env</text>
+</svg>

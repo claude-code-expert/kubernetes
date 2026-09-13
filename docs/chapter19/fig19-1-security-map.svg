@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow191" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 12px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-ref { font-size: 9.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 코드 -->
+  <rect class="lane" x="20" y="20" width="260" height="330" rx="6"/>
+  <text class="t-lane" x="36" y="44">19.4 코드 보안</text>
+  <text class="t-sub" x="36" y="60">(코드가 클러스터에 닿기 전)</text>
+
+  <rect class="box" x="36" y="76" width="228" height="60" rx="4"/>
+  <text class="t-title" x="150" y="98" text-anchor="middle">넌루트 · 무배포 이미지</text>
+  <text class="t-ref" x="150" y="118" text-anchor="middle">5장 멀티스테이지·distroless</text>
+
+  <rect class="box" x="36" y="150" width="228" height="60" rx="4"/>
+  <text class="t-title" x="150" y="172" text-anchor="middle">취약점 스캔 (Trivy)</text>
+  <text class="t-ref" x="150" y="192" text-anchor="middle">CI 파이프라인에 삽입 (5장)</text>
+
+  <rect class="box-accent" x="36" y="224" width="228" height="60" rx="4"/>
+  <text class="t-title" x="150" y="246" text-anchor="middle">SLSA · OpenSSF Scorecard</text>
+  <text class="t-ref" x="150" y="266" text-anchor="middle">서명·SBOM (5장 Cosign)</text>
+
+  <!-- 클러스터 -->
+  <rect class="lane" x="320" y="20" width="260" height="330" rx="6"/>
+  <text class="t-lane" x="336" y="44">19.1 클러스터 보안</text>
+  <text class="t-sub" x="336" y="60">(인프라 자체를 지킨다)</text>
+
+  <rect class="box" x="336" y="76" width="228" height="52" rx="4"/>
+  <text class="t-title" x="450" y="96" text-anchor="middle">etcd · TLS · 인증</text>
+  <text class="t-ref" x="450" y="114" text-anchor="middle">2장 인증 · 4장 RBAC</text>
+
+  <rect class="box" x="336" y="140" width="228" height="52" rx="4"/>
+  <text class="t-title" x="450" y="160" text-anchor="middle">kubelet · 클라우드 메타데이터</text>
+  <text class="t-ref" x="450" y="178" text-anchor="middle">이 장의 신규 내용</text>
+
+  <rect class="box" x="336" y="204" width="228" height="52" rx="4"/>
+  <text class="t-title" x="450" y="224" text-anchor="middle">시크릿 암호화 · 감사 로깅</text>
+  <text class="t-ref" x="450" y="242" text-anchor="middle">4장 시크릿 · 3장 로깅</text>
+
+  <rect class="box-accent" x="336" y="268" width="228" height="52" rx="4"/>
+  <text class="t-title" x="450" y="288" text-anchor="middle">클러스터 보안 태세 툴</text>
+  <text class="t-ref" x="450" y="306" text-anchor="middle">Kubescape (아래 갱신 주석)</text>
+
+  <line class="line" x1="580" y1="185" x2="616" y2="185" marker-end="url(#arrow191)"/>
+
+  <!-- 워크로드 -->
+  <rect class="lane" x="620" y="20" width="260" height="330" rx="6"/>
+  <text class="t-lane" x="636" y="44">19.3 워크로드 컨테이너 보안</text>
+  <text class="t-sub" x="636" y="60">(뜬 파드 하나하나를 지킨다)</text>
+
+  <rect class="box" x="636" y="76" width="228" height="52" rx="4"/>
+  <text class="t-title" x="750" y="96" text-anchor="middle">파드 시큐리티 어드미션</text>
+  <text class="t-ref" x="750" y="114" text-anchor="middle">10장에서 이미 상세히</text>
+
+  <rect class="box-accent" x="636" y="140" width="228" height="52" rx="4"/>
+  <text class="t-title" x="750" y="160" text-anchor="middle">Seccomp · AppArmor · SELinux</text>
+  <text class="t-ref" x="750" y="178" text-anchor="middle">이 장의 신규 내용</text>
+
+  <rect class="box" x="636" y="204" width="228" height="52" rx="4"/>
+  <text class="t-title" x="750" y="224" text-anchor="middle">네트워크 정책 · 런타임 보안</text>
+  <text class="t-ref" x="750" y="242" text-anchor="middle">9장 · 10장 Falco/Tetragon</text>
+
+  <rect class="box" x="636" y="268" width="228" height="52" rx="4"/>
+  <text class="t-title" x="750" y="288" text-anchor="middle">오퍼레이터 보안</text>
+  <text class="t-ref" x="750" y="306" text-anchor="middle">16장 스테이트풀 연결</text>
+
+  <text class="t-cap" x="450" y="380" text-anchor="middle">이 장의 진짜 역할은 새 지식보다 "지도 그리기"다 — 이미 배운 조각들이 코드·클러스터·워크로드 세 계층 중 어디에 속하는지 정리한다.</text>
+</svg>

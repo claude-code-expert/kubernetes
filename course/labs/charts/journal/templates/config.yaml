@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "journal.fullname" . }}-config
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.api.logLevel | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "journal.fullname" . }}-secret
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  # required 는 값이 비면 렌더링을 실패시킨다. 오타가 조용히 빈 값이 되는 것을 막는다.
+  REDIS_PASSWORD: {{ required "redis.password 를 반드시 지정해야 한다" .Values.redis.password | quote }}

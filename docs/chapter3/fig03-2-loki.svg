@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 310" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow32" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-lbl { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="90" width="170" height="76" rx="4"/>
+  <text class="t-title" x="105" y="120" text-anchor="middle">앱 파드</text>
+  <text class="t-sub" x="105" y="140" text-anchor="middle">STDOUT으로 로그 출력</text>
+
+  <line class="line" x1="190" y1="128" x2="246" y2="128" marker-end="url(#arrow32)"/>
+
+  <rect class="box" x="250" y="90" width="180" height="76" rx="4"/>
+  <text class="t-title" x="340" y="120" text-anchor="middle">노드 로그 파일</text>
+  <text class="t-sub" x="340" y="140" text-anchor="middle">/var/log/pods/…</text>
+
+  <line class="line" x1="430" y1="128" x2="486" y2="128" marker-end="url(#arrow32)"/>
+
+  <rect class="box-accent" x="490" y="90" width="180" height="76" rx="4"/>
+  <text class="t-title" x="580" y="114" text-anchor="middle">Alloy (수집기)</text>
+  <text class="t-sub" x="580" y="133" text-anchor="middle">데몬셋 — 노드마다 1개</text>
+  <text class="t-sub" x="580" y="150" text-anchor="middle">레이블 부착 후 전송</text>
+
+  <line class="line" x1="670" y1="128" x2="726" y2="128" marker-end="url(#arrow32)"/>
+
+  <rect class="box" x="730" y="90" width="150" height="76" rx="4"/>
+  <text class="t-title" x="805" y="120" text-anchor="middle">Loki</text>
+  <text class="t-sub" x="805" y="140" text-anchor="middle">레이블만 인덱싱 · 저장</text>
+
+  <!-- Loki → Grafana (LogQL) -->
+  <polyline class="line" points="805,166 805,246 676,246" marker-end="url(#arrow32)"/>
+  <text class="t-lbl" x="745" y="234" text-anchor="middle">LogQL 조회</text>
+
+  <rect class="box" x="500" y="216" width="172" height="60" rx="4"/>
+  <text class="t-title" x="586" y="240" text-anchor="middle">그라파나</text>
+  <text class="t-sub" x="586" y="259" text-anchor="middle">메트릭과 같은 화면에서 로그 탐색</text>
+
+  <text class="t-cap" x="450" y="300" text-anchor="middle">전문(full-text)을 통째로 인덱싱하는 일래스틱서치와 달리, Loki는 레이블만 인덱싱해 가볍고 싸다 — 프로메테우스의 로그 버전.</text>
+</svg>

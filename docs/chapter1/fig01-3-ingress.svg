@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-path { font-size: 12.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 사용자 -->
+  <rect class="box" x="20" y="150" width="110" height="60" rx="4"/>
+  <text class="t-title" x="75" y="175" text-anchor="middle">사용자</text>
+  <text class="t-sub" x="75" y="194" text-anchor="middle">브라우저</text>
+
+  <!-- 사용자 → 인그레스 -->
+  <text class="t-sub" x="165" y="168" text-anchor="middle">HTTP</text>
+  <line class="line" x1="130" y1="180" x2="196" y2="180" marker-end="url(#arrow)"/>
+
+  <!-- 인그레스 -->
+  <rect class="box-accent" x="200" y="150" width="170" height="60" rx="4"/>
+  <text class="t-title" x="285" y="175" text-anchor="middle">Ingress</text>
+  <text class="t-sub" x="285" y="194" text-anchor="middle">경로 기반 라우팅</text>
+
+  <!-- 상단 분기: /api/* → frontend 서비스 → frontend 파드 -->
+  <polyline class="line" points="370,168 420,168 420,84 466,84" marker-end="url(#arrow)"/>
+  <text class="t-path" x="432" y="130">/api/*</text>
+
+  <rect class="box" x="470" y="54" width="170" height="60" rx="4"/>
+  <text class="t-title" x="555" y="79" text-anchor="middle">Service</text>
+  <text class="t-sub" x="555" y="98" text-anchor="middle">frontend (ClusterIP)</text>
+
+  <line class="line" x1="640" y1="84" x2="706" y2="84" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="710" y="54" width="170" height="60" rx="4"/>
+  <text class="t-title" x="795" y="79" text-anchor="middle">frontend 파드</text>
+  <text class="t-sub" x="795" y="98" text-anchor="middle">Node.js API (Deployment)</text>
+
+  <!-- 하단 분기: 그 외 경로 → fileserver 서비스 → NGINX 파드 -->
+  <polyline class="line" points="370,192 420,192 420,296 466,296" marker-end="url(#arrow)"/>
+  <text class="t-path" x="432" y="250">/ (그 외)</text>
+
+  <rect class="box" x="470" y="266" width="170" height="60" rx="4"/>
+  <text class="t-title" x="555" y="291" text-anchor="middle">Service</text>
+  <text class="t-sub" x="555" y="310" text-anchor="middle">fileserver (ClusterIP)</text>
+
+  <line class="line" x1="640" y1="296" x2="706" y2="296" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="710" y="266" width="170" height="60" rx="4"/>
+  <text class="t-title" x="795" y="291" text-anchor="middle">NGINX 파드</text>
+  <text class="t-sub" x="795" y="310" text-anchor="middle">HTML · CSS · JS 정적 파일</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="362" text-anchor="middle">인그레스 하나로 API와 정적 파일 서버를 같은 도메인 아래 서로 다른 백엔드로 나눈다 (1.4절 · 1.9절).</text>
+</svg>

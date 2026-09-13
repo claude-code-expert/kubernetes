@@ -1,0 +1,56 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: obs
+
+# ── 컨트롤 플레인 메트릭을 클러스터 내부에서 스크레이프 가능하게 만드는 패치 ──
+# kind v0.32.0 + Kubernetes 1.36 조합에서는 kubeadm v1beta4 포맷을 쓴다.
+# v1beta3와 달리 extraArgs가 맵이 아니라 name/value 목록이다.
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    controllerManager:
+      extraArgs:
+        - name: bind-address
+          value: "0.0.0.0"
+    scheduler:
+      extraArgs:
+        - name: bind-address
+          value: "0.0.0.0"
+    etcd:
+      local:
+        extraArgs:
+          - name: listen-metrics-urls
+            value: "http://0.0.0.0:2381"
+  - |
+    kind: KubeProxyConfiguration
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    metricsBindAddress: "0.0.0.0:10249"
+
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+    # 포트 매핑은 클러스터 생성 시점에만 정의할 수 있다. 나중에 못 늘린다.
+    extraPortMappings:
+      - containerPort: 30080      # gateway (03단계)
+        hostPort: 30080
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30300      # Grafana (05단계)
+        hostPort: 30300
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30900      # Prometheus UI (04단계)
+        hostPort: 30900
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+
+  - role: worker
+    image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+    labels:
+      workload: apps
+
+  - role: worker
+    image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+    labels:
+      workload: observability

@@ -1,0 +1,30 @@
+# course/labs/infra/kind-cluster.yaml
+# 노드 3개 (control-plane 1 + worker 2). M16 스케줄링 실습에 워커가 2개 이상 필요하다.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: study
+# 노드 이미지는 태그가 아니라 @sha256 다이제스트까지 고정한다.
+# 태그만 적으면 kind 가 같아도 반년 뒤에 다른 이미지를 받아 재현이 깨진다.
+# 2026-09-03 확인 — 실습 당일 kind 릴리스 노트에서 다시 확인하라.
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    # M12 인그레스 실습에서 호스트 18080/18443을 노드로 넘긴다.
+    # (80·443·8080 은 맥에서 다른 프로세스가 이미 쓰는 경우가 많다)
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 18080
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 18443
+        protocol: TCP
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5

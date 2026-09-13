@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 1 · 도커] M05 데이터와 네트워크 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 05 / 38 · PART 1 도커</div>
+  <h1>데이터와 네트워크</h1>
+  <p class="ch-desc">컨테이너를 지우면 안에 쓴 것은 사라진다. 그리고 기본 네트워크에서는 컨테이너끼리 이름으로 부르지 못한다. 두 문제를 볼륨과 사용자 정의 네트워크로 해결하면서, 쿠버네티스의 퍼시스턴트 볼륨과 서비스 디스커버리가 왜 그렇게 생겼는지 미리 본다.</p>
+  <div class="meta">
+    <span class="tag">초반</span><span class="tag">50분</span><span class="tag">Docker Engine 29.2.1</span>
+    <br>2026-09-05 검증 · redis:8.2-alpine · journal-api:v1 (M04 산출물) · 여기 적힌 버전 숫자는 실습 당일 <code>docker version</code>과 각 이미지의 태그 목록에서 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m04-docker-dockerfile-build.html">M04</a> 완료 — 로컬에 <code>journal-api:v1</code> 이미지가 있다 (<code>docker images journal-api</code>로 확인)</li>
+    <li>이 모듈이 새로 받는 이미지: <code>redis:8.2-alpine</code>(5.3절), <code>nginx:1.29-alpine</code>(5.4절), <code>alpine:3.22</code>(5.5절). 미리 받아 두려면 <code>docker pull</code> 세 번</li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 컨테이너의 쓰기 레이어는 컨테이너와 함께 죽는다. 살아남아야 하는 데이터는 <strong>볼륨</strong>에 둔다.</p>
+  <p>2. 기본 <code>bridge</code> 네트워크에는 이름 해석이 없다. <strong>사용자 정의 네트워크</strong>를 만들면 컨테이너 이름이 곧 호스트명이 된다.</p>
+  <p>3. 이 두 가지가 쿠버네티스에서 PersistentVolumeClaim(M18)과 Service(M11)라는 이름으로 다시 나온다. 원리는 같고 규모만 다르다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">5.1</span>왜 이 두 가지가 같은 모듈인가</a>
+  <a href="#s2"><span class="num">5.2</span>이론 — 저장 방식 세 가지</a>
+  <a href="#s3"><span class="num">5.3</span>따라하기 ① 데이터를 잃어보고, 살린다</a>
+  <a href="#s4"><span class="num">5.4</span>따라하기 ② 바인드 마운트</a>
+  <a href="#s5"><span class="num">5.5</span>따라하기 ③ 이름으로 부르기</a>
+  <a href="#s6"><span class="num">5.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">5.7</span>쿠버네티스에서는 어떻게 되는가</a>
+  <a href="#s8"><span class="num">5.8</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">5.1</span>왜 이 두 가지가 같은 모듈인가</h2>
+  <p class="lead">M04에서 만든 저널 API는 엔트리를 메모리 <code>Map</code>에 담는다. 컨테이너를 재시작하면 전부 사라진다. 실제 서비스라면 저장소가 필요하고, 그 저장소는 별도 컨테이너(레디스)가 된다.</p>
+  <p>저장소를 분리하는 순간 두 문제가 동시에 생긴다. <strong>레디스의 데이터를 어떻게 살릴 것인가</strong>, 그리고 <strong>API가 레디스를 어떻게 찾을 것인가</strong>. 앞의 것이 볼륨, 뒤의 것이 네트워크다. 두 문제는 한 애플리케이션을 여러 컨테이너로 쪼개는 순간 항상 함께 온다 — 그래서 한 모듈에서 다룬다.</p>
+  <p>이 모듈이 끝나면 저널 API가 레디스에 데이터를 쓰고, 레디스 컨테이너를 삭제한 뒤 다시 만들어도 그 데이터가 남아 있는 것을 확인한다. M06에서 이 구성을 파일 하나로 묶고, M14에서 같은 구성을 쿠버네티스에 올린다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">5.2</span>이론 — 저장 방식 세 가지</h2>
+  <p>M03에서 본 것처럼 컨테이너는 이미지 레이어 위에 쓰기 가능한 레이어 하나를 얹은 것이다. 그 레이어는 <code>docker rm</code>과 함께 사라진다. 밖에 두는 방법이 셋 있다.</p>
+  <table>
+    <tr><th>방식</th><th>실체</th><th>쓰는 곳</th><th>주의</th></tr>
+    <tr><td><dfn class="term">볼륨 <span class="en">(Volume)</span></dfn></td><td>도커가 관리하는 저장 영역. 이름으로 부른다</td><td>데이터베이스 데이터 등 <strong>운영 데이터</strong></td><td>호스트 경로를 몰라도 된다. 백업은 별도 방법으로</td></tr>
+    <tr><td><dfn class="term">바인드 마운트 <span class="en">(Bind Mount)</span></dfn></td><td>호스트의 특정 디렉터리를 그대로 연결</td><td>개발 중 소스 코드, 설정 파일 주입</td><td>호스트 경로에 의존한다. 다른 사람의 노트북에서 깨진다</td></tr>
+    <tr><td><code>tmpfs</code></td><td>메모리에만 존재</td><td>임시 파일, 비밀 값을 디스크에 안 남기고 싶을 때</td><td>컨테이너가 죽으면 사라진다</td></tr>
+  </table>
+  <p>고르는 기준은 단순하다. <strong>사라지면 곤란한 데이터는 볼륨</strong>, <strong>내 노트북에서만 필요한 연결은 바인드 마운트</strong>. 실무에서 사고가 나는 경우는 대개 그 반대로 쓸 때다 — 프로덕션 데이터베이스를 바인드 마운트로 띄웠다가 호스트를 옮기며 데이터를 잃는 식이다.</p>
+  <h3>네트워크</h3>
+  <p>도커는 기본 네트워크 <code>bridge</code>를 하나 갖고 있고, 별다른 지정이 없으면 컨테이너가 여기 붙는다. 이 기본 네트워크에는 <strong>내장 DNS가 없다</strong> — 컨테이너 이름으로 상대를 찾을 수 없고 IP를 직접 알아야 한다. 그런데 컨테이너 IP는 재시작할 때마다 바뀐다.</p>
+  <p><code>docker network create</code>로 만든 사용자 정의 네트워크는 다르다. 도커의 내장 DNS가 컨테이너 이름을 IP로 풀어준다. 같은 네트워크에 있는 컨테이너끼리 <code>redis1:6379</code>처럼 이름으로 접속할 수 있고, IP가 바뀌어도 이름은 그대로다.</p>
+  <p>이 구조를 기억해 둔다. 쿠버네티스에서 파드 IP는 훨씬 더 자주 바뀌고(파드는 언제든 죽고 다시 만들어진다), 그래서 Service라는 안정적인 이름과 주소를 앞에 세운다(M11). 문제와 해결 방식이 같다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">5.3</span>따라하기 ① 데이터를 잃어보고, 살린다</h2>
+
+  <div class="step">
+    <h4>1단계. 볼륨 없이 레디스를 띄우고 데이터를 잃는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>문제를 먼저 겪는다. 해결책부터 배우면 왜 필요한지 잊는다.</p>
+<pre><code>docker run -d --name tmpredis redis:8.2-alpine
+docker exec tmpredis redis-cli set gone '{"text":"lost"}'
+docker exec tmpredis redis-cli get gone</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>OK
+{"text":"lost"}</code></div>
+<pre><code># 컨테이너를 지우고 같은 명령으로 다시 만든다
+docker rm -f tmpredis
+docker run -d --name tmpredis redis:8.2-alpine
+docker exec tmpredis redis-cli get gone</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>(빈 줄 — 아무것도 없다)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>키가 사라졌다. 에러도 경고도 없이 그냥 없다. 컨테이너의 쓰기 레이어와 함께 지워졌기 때문이다.</div>
+<pre><code>docker rm -f tmpredis</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 볼륨을 만들고 붙인다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 실험을 볼륨과 함께 반복해 결과를 비교한다.</p>
+<pre><code>docker volume create journal-data
+docker volume inspect journal-data</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>journal-data
+[
+    {
+        "CreatedAt": "2026-09-03T12:50:57Z",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/journal-data/_data",
+        "Name": "journal-data",
+        "Options": null,
+        "Scope": "local"
+    }
+]</code></div>
+    <p><code>Mountpoint</code>는 <strong>리눅스 VM 안의 경로</strong>다(M02 참조). 맥 터미널에서 그 경로로 <code>cd</code>해도 없다. 볼륨을 쓸 때 호스트 경로를 신경 쓰지 않아도 되는 것이 바인드 마운트와의 차이다. <code>CreatedAt</code>은 환경마다 다르다.</p>
+<pre><code>docker run -d --name redis1 -v journal-data:/data redis:8.2-alpine redis-server --save 60 1
+sleep 2
+docker exec redis1 redis-cli set entry:1 '{"text":"survives"}'
+docker exec redis1 redis-cli save
+docker exec redis1 redis-cli get entry:1</code></pre>
+    <ul class="tight">
+      <li><code>-v journal-data:/data</code> — <strong>볼륨이름:컨테이너경로</strong>. 레디스 이미지는 <code>/data</code>에 파일을 쓰도록 만들어져 있다</li>
+      <li><code>redis-server --save 60 1</code> — 60초 안에 1개 이상 변경되면 디스크에 저장. 실습에서 즉시 확인하려고 <code>redis-cli save</code>로 한 번 강제 저장한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>OK
+OK
+{"text":"survives"}</code></div>
+<pre><code># 컨테이너를 지우고 같은 볼륨으로 다시 만든다
+docker rm -f redis1
+docker run -d --name redis1 -v journal-data:/data redis:8.2-alpine
+sleep 2
+docker exec redis1 redis-cli get entry:1</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"text":"survives"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>컨테이너는 새것인데 데이터가 남아 있다. 볼륨은 컨테이너 수명과 무관하게 존재한다.</div>
+    <p>이 실험의 마지막 문장이 M18의 전부다. 쿠버네티스에서 파드는 훨씬 더 자주 죽고, 그래서 데이터는 파드가 아니라 PersistentVolume에 둔다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">5.4</span>따라하기 ② 바인드 마운트</h2>
+
+  <div class="step">
+    <h4>3단계. 호스트 디렉터리를 컨테이너에 연결한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이미지를 다시 빌드하지 않고 콘텐츠를 바꾸는 개발 루프를 만든다.</p>
+<pre><code>mkdir -p /tmp/site
+echo '&lt;h1&gt;bind mount from host&lt;/h1&gt;' &gt; /tmp/site/index.html
+
+docker run -d --name bindweb -p 8084:80 \
+  -v /tmp/site:/usr/share/nginx/html:ro nginx:1.29-alpine
+sleep 1
+curl -s localhost:8084/</code></pre>
+    <ul class="tight">
+      <li><code>-v /tmp/site:/usr/share/nginx/html:ro</code> — 앞이 <strong>호스트 절대 경로</strong>라는 점이 볼륨과 다르다. 슬래시로 시작하면 바인드 마운트, 이름이면 볼륨이다</li>
+      <li><code>:ro</code> — 읽기 전용. 컨테이너가 호스트 파일을 고치지 못하게 한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>&lt;h1&gt;bind mount from host&lt;/h1&gt;</code></div>
+<pre><code># 호스트에서 파일을 고치고 다시 요청한다 — 재빌드도 재시작도 없다
+echo '&lt;h1&gt;edited on host&lt;/h1&gt;' &gt; /tmp/site/index.html
+curl -s localhost:8084/</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>&lt;h1&gt;edited on host&lt;/h1&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span>컨테이너를 건드리지 않았는데 응답이 바뀌었다. 같은 디렉터리를 양쪽이 보고 있기 때문이다.</div>
+    <p><code>:ro</code>가 실제로 막는지도 확인한다.</p>
+<pre><code>docker exec bindweb sh -c 'echo x &gt; /usr/share/nginx/html/test.html'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>sh: can't create /usr/share/nginx/html/test.html: Read-only file system</code></div>
+    <p>읽기 전용 마운트는 방어의 한 겹이다. 침입한 프로세스가 웹 루트에 파일을 심는 것을 막는다. 쿠버네티스에서 같은 발상이 <code>readOnlyRootFilesystem: true</code>로 나타난다(M24).</p>
+<pre><code>docker rm -f bindweb</code></pre>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">5.5</span>따라하기 ③ 이름으로 부르기</h2>
+
+  <div class="step">
+    <h4>4단계. 기본 네트워크에서 이름 해석이 안 되는 것을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>사용자 정의 네트워크가 왜 필요한지 먼저 확인한다.</p>
+<pre><code># redis1 은 기본 bridge 에 붙어 있다
+docker run --rm alpine:3.22 sh -c "nslookup redis1"</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Non-authoritative answer:
+
+** server can't find redis1: NXDOMAIN</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>NXDOMAIN</code> — 그런 이름은 없다. 기본 <code>bridge</code> 네트워크에는 컨테이너 이름을 풀어줄 DNS가 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계. 네트워크를 만들고 다시 시도한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>사용자 정의 네트워크를 만들고, 레디스를 그 안으로 옮겨 이름이 풀리는지 확인한다. 볼륨은 그대로 붙이므로 데이터는 유지된다.</p>
+<pre><code>docker network create journal-net
+
+docker rm -f redis1
+docker run -d --name redis1 --network journal-net -v journal-data:/data redis:8.2-alpine
+
+docker run --rm --network journal-net alpine:3.22 sh -c "nslookup redis1"</code></pre>
+    <ul class="tight">
+      <li><code>--network journal-net</code> — 컨테이너를 기본 <code>bridge</code>가 아니라 이 네트워크에 붙인다. 같은 네트워크의 컨테이너끼리만 이름으로 서로 보인다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Non-authoritative answer:
+Name:	redis1
+Address: 172.21.0.2</code></div>
+    <div class="verdict"><span class="lbl">판정</span>이름이 IP로 풀렸다. <code>--network journal-net</code>을 붙인 컨테이너끼리만 서로 보인다 — 네트워크가 격리 경계이기도 하다. IP 값은 환경마다 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>6단계. 저널 API를 레디스에 연결한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M04에서 만든 애플리케이션을 실제 저장소에 붙여, 두 컨테이너짜리 시스템을 완성한다.</p>
+<pre><code>docker run -d --name app1 --network journal-net \
+  -e REDIS_URL=redis://redis1:6379 -p 8083:8080 journal-api:v1
+sleep 2
+curl -s localhost:8083/readyz; echo
+curl -s localhost:8083/api/entries; echo
+docker logs app1 | head -3</code></pre>
+    <ul class="tight">
+      <li><code>-e REDIS_URL=redis://redis1:6379</code> — 환경 변수로 설정을 주입한다. 이미지를 다시 빌드하지 않고 접속 대상을 바꿀 수 있다. 이 방식이 쿠버네티스에서 ConfigMap이 된다(M13)</li>
+      <li>주소에 IP가 아니라 <code>redis1</code>이라는 <strong>이름</strong>이 들어간 것이 핵심이다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"ready"}
+{"entries":["{\"text\":\"survives\"}"]}
+
+{"level":"info","msg":"listening","port":8080,"version":"v1"}
+{"level":"info","msg":"redis connected","url":"redis://redis1:6379"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>/readyz</code>가 <code>ready</code>이고, <code>/api/entries</code>에 <strong>5.3절에서 넣은 데이터</strong>가 그대로 나온다. 그 사이 레디스 컨테이너는 두 번 삭제되고 다시 만들어졌는데도 그렇다 — 볼륨과 이름 기반 연결이 함께 동작한 결과다.</div>
+<pre><code>docker network inspect journal-net -f '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>app1 172.21.0.3/16
+redis1 172.21.0.2/16</code></div>
+    <p>두 컨테이너가 같은 네트워크의 이웃한 IP를 받았다. 애플리케이션은 이 숫자를 전혀 몰라도 된다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">5.6</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 네트워크를 안 맞추고 이름으로 부른다</span>
+    <p>가장 흔한 실수다. 애플리케이션만 네트워크를 지정하지 않고 띄운다.</p>
+<pre><code>docker run -d --name app-bad -e REDIS_URL=redis://redis1:6379 -p 8085:8080 journal-api:v1
+sleep 4
+curl -s -w ' [http %{http_code}]\n' localhost:8085/readyz
+curl -s -w ' [http %{http_code}]\n' localhost:8085/healthz
+docker logs app-bad | head -3</code></pre>
+    <ul class="tight">
+      <li><code>-w ' [http %{http_code}]\n'</code> — 응답 본문 뒤에 HTTP 상태 코드를 붙여 출력한다. 본문만 보면 200과 503을 구분하기 어렵다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"not ready","reason":"redis not connected"} [http 503]
+{"status":"ok","version":"v1","pod":"c8382eaf294d"} [http 200]
+{"level":"info","msg":"listening","port":8080,"version":"v1"}
+{"level":"error","msg":"redis error","detail":"Error: getaddrinfo ENOTFOUND redis1"}
+{"level":"error","msg":"redis error","detail":"Error: getaddrinfo ENOTFOUND redis1"}</code></div>
+    <p><code>app-bad</code>는 기본 <code>bridge</code>에, <code>redis1</code>은 <code>journal-net</code>에 있다. 이름이 풀리지 않아 <code>getaddrinfo ENOTFOUND redis1</code>이 반복된다. <code>pod</code> 값은 컨테이너 ID 앞 12자리라 환경마다 다르다(M04 4.4절).</p>
+    <div class="verdict"><span class="lbl">판정</span>두 엔드포인트의 답이 다르다는 것이 핵심이다. <code>/healthz</code>는 <strong>200</strong> — 프로세스는 멀쩡히 살아 있다. <code>/readyz</code>는 <strong>503</strong> — 하지만 저장소에 못 붙어서 일을 할 수는 없다.</div>
+    <p>이 구분이 M15의 주제다. 살아 있음(liveness)과 준비됨(readiness)을 한 신호로 합치면 둘 중 하나가 틀린다. 여기서 라이브니스가 실패하도록 만들었다면 쿠버네티스는 컨테이너를 <strong>재시작</strong>했을 것이고, 레디스가 돌아올 때까지 무한 재시작에 빠졌을 것이다. 반대로 레디니스만 실패시키면 트래픽에서 빠진 채 조용히 기다리다가 레디스가 살아나는 순간 복귀한다.</p>
+    <p>해결은 네트워크를 맞추는 것이다. 컨테이너를 지우고 <code>--network</code>를 붙여 다시 만든다.</p>
+<pre><code>docker rm -f app-bad
+docker run -d --name app-bad --network journal-net \
+  -e REDIS_URL=redis://redis1:6379 -p 8085:8080 journal-api:v1
+sleep 2
+curl -s -w ' [http %{http_code}]\n' localhost:8085/readyz
+docker logs app-bad | head -3</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"status":"ready"} [http 200]
+{"level":"info","msg":"listening","port":8080,"version":"v1"}
+{"level":"info","msg":"redis connected","url":"redis://redis1:6379"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>/readyz</code>가 <strong>503 → 200</strong>으로 바뀌고, 로그의 <code>ENOTFOUND</code>가 <code>redis connected</code>로 바뀌었다. 이미지도 환경 변수도 그대로다 — 달라진 것은 <code>--network journal-net</code> 하나다.</div>
+    <p>이미 떠 있는 컨테이너를 지우지 않고 네트워크에 나중에 붙이는 방법도 있다: <code>docker network connect journal-net app-bad</code>. 컨테이너는 여러 네트워크에 동시에 속할 수 있다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 볼륨이 붙어 있는데 지우려 한다</span>
+<pre><code>docker volume rm journal-data</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Error response from daemon: remove journal-data: volume is in use - [bb355b24588d...]</code></div>
+    <p>사용 중인 볼륨은 지워지지 않는다. 대괄호 안이 그 볼륨을 쓰는 컨테이너 ID다(환경마다 다르다). <code>docker ps -a --filter volume=journal-data</code>로 확인하고 컨테이너를 먼저 정리한다.</p>
+    <p>반대 방향의 사고가 더 위험하다. <code>docker compose down -v</code>나 <code>docker system prune --volumes</code>는 <strong>확인 없이 볼륨을 지운다</strong>. 실습 환경이라 다행이지만, 같은 명령을 데이터가 든 환경에서 치면 되돌릴 방법이 없다. 볼륨을 지우는 명령에는 항상 <code>-v</code>나 <code>--volumes</code>가 들어 있으니 그 플래그를 보면 한 번 멈추는 습관을 들인다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">5.7</span>쿠버네티스에서는 어떻게 되는가</h2>
+  <p>지금 만든 두 컨테이너 구성이 뒤쪽 모듈에서 어떻게 번역되는지 미리 표로 본다. 새로 배우는 개념이 아니라 <strong>같은 문제의 큰 버전</strong>이라는 것을 알아두면 M11 · M18이 훨씬 가볍다.</p>
+  <table>
+    <tr><th>도커에서</th><th>쿠버네티스에서</th><th>달라지는 점</th></tr>
+    <tr><td><code>-v journal-data:/data</code></td><td>PersistentVolumeClaim + 볼륨 마운트 (M18)</td><td>노드가 여러 대라 "어느 노드에서든 붙을 수 있는가"가 문제가 된다</td></tr>
+    <tr><td><code>--network journal-net</code></td><td>같은 네임스페이스 — 쿠버네티스에서 리소스를 묶는 논리적 구획으로, M02의 리눅스 커널 네임스페이스와는 이름만 같은 다른 개념이다 (M08). 기본적으로 모두 통신 가능</td><td>기본이 <strong>전부 허용</strong>이라 오히려 NetworkPolicy로 막아야 한다 (M25)</td></tr>
+    <tr><td><code>redis://redis1:6379</code></td><td><code>redis://redis:6379</code> — Service 이름 (M11)</td><td>이름 뒤에 파드가 여러 개 있고 로드밸런싱된다</td></tr>
+    <tr><td><code>-e REDIS_URL=...</code></td><td>ConfigMap · Secret 주입 (M13)</td><td>값을 이미지·매니페스트와 분리해 버전 관리한다</td></tr>
+    <tr><td><code>-p 8083:8080</code></td><td>Service + Ingress/Gateway (M11 · M12)</td><td>포트를 사람이 고르지 않는다</td></tr>
+  </table>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">5.8</span>체크포인트와 정리</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>docker volume ls --filter name=journal-data --format '{{.Name}}'</code> → <code>journal-data</code></li>
+      <li><code>docker exec redis1 redis-cli get entry:1</code> → <code>{"text":"survives"}</code> — 레디스 컨테이너를 두 번 지우고 다시 만든 뒤에도 남아 있는 값이다</li>
+      <li><code>docker run --rm --network journal-net alpine:3.22 nslookup redis1</code> → 출력에 <code>Name: redis1</code>과 그 아래 <code>Address: 172.…</code> 줄이 있다 (IP는 환경마다 다르다)</li>
+      <li><code>docker run --rm alpine:3.22 nslookup redis1 2&gt;&amp;1 | grep NXDOMAIN</code> → <code>** server can't find redis1: NXDOMAIN</code>이 한 줄 이상 나온다 (기본 bridge에서는 안 풀린다)</li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}\n' localhost:8083/readyz</code> → <code>200</code> (<code>app1</code>이 <code>redis1</code>에 이름으로 붙어 있다)</li>
+      <li><code>docker volume rm journal-data</code> → <code>volume is in use</code> 에러 (붙어 있는 컨테이너가 있는 한 지워지지 않는다)</li>
+      <li>(이해 확인) <code>-v /tmp/site:/usr/share/nginx/html</code>과 <code>-v journal-data:/data</code>는 각각 무엇인가 — 슬래시로 시작하면 바인드 마운트, 이름이면 볼륨</li>
+      <li>(이해 확인) 실패 ①에서 <code>/healthz</code>가 200인데 <code>/readyz</code>가 503인 이유</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li>볼륨 <code>journal-data</code>(안에 <code>entry:1</code>), 네트워크 <code>journal-net</code>, 컨테이너 <code>redis1</code> · <code>app1</code> · <code>app-bad</code></li>
+      <li>파일은 없다. 이 구성을 파일로 옮기는 것이 M06이다 — <code>compose.yaml</code>이 여기서 친 네 명령을 대신한다. 지금 상태를 그대로 두고 넘어가도 되고, 아래처럼 정리해도 된다</li>
+    </ul>
+  </div>
+<pre><code># 컨테이너만 정리 (볼륨의 데이터는 남는다)
+docker rm -f app1 app-bad redis1
+
+# 전부 정리하려면 — 볼륨의 데이터가 사라진다
+# docker network rm journal-net
+# docker volume rm journal-data</code></pre>
+</section>
+
+<div class="navlinks">
+  <a href="m04-docker-dockerfile-build.html">← M04 Dockerfile 빌드와 최적화</a>
+  <a href="m06-docker-compose.html">M06 Compose로 다중 서비스 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금 구성을 다시 만들려면 <code>docker run</code>을 두 번, 네트워크와 볼륨 생성까지 네 명령이 필요하고 옵션을 하나라도 빠뜨리면 동작이 달라진다 — 실패 ①이 정확히 그 경우였다. M06에서 이것을 파일 하나에 선언한다. 그리고 그 파일이 쿠버네티스 매니페스트와 무엇이 같고 무엇이 다른지 본다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>볼륨: https://docs.docker.com/engine/storage/volumes/</li>
+    <li>바인드 마운트: https://docs.docker.com/engine/storage/bind-mounts/</li>
+    <li>네트워킹 개요와 브리지 드라이버: https://docs.docker.com/engine/network/drivers/bridge/</li>
+    <li>컨테이너 네트워킹: https://docs.docker.com/engine/network/</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · Docker Engine 29.2.1 · redis:8.2-alpine · nginx:1.29-alpine · alpine:3.22 · 2026-09-05. 출력의 IP · 컨테이너 ID · 타임스탬프는 환경마다 다르다.</p>
+</footer>
+</div>
+</body>
+</html>

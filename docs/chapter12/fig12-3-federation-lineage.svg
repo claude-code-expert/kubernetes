@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow123" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-dead { fill: #fafaf8; stroke: #b23b3b; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-dead { font-size: 11px; fill: #b23b3b; font-weight: 600; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- Federation v1 -->
+  <rect class="box-dead" x="20" y="60" width="180" height="90" rx="4"/>
+  <text class="t-title" x="110" y="88" text-anchor="middle">Federation v1</text>
+  <text class="t-sub" x="110" y="106" text-anchor="middle">쿠버네티스 1.3</text>
+  <text class="t-dead" x="110" y="126" text-anchor="middle">사용 중단</text>
+
+  <line class="line" x1="200" y1="105" x2="236" y2="105" marker-end="url(#arrow123)"/>
+
+  <!-- KubeFed v2 -->
+  <rect class="box-dead" x="240" y="60" width="180" height="90" rx="4"/>
+  <text class="t-title" x="330" y="88" text-anchor="middle">Federation v2</text>
+  <text class="t-sub" x="330" y="104" text-anchor="middle">(KubeFed)</text>
+  <text class="t-dead" x="330" y="126" text-anchor="middle">2020년 이후 개발 정체 → EOL</text>
+
+  <line class="line" x1="420" y1="105" x2="456" y2="105" marker-end="url(#arrow123)"/>
+
+  <!-- 갈림길 -->
+  <rect class="box-accent" x="460" y="30" width="200" height="70" rx="4"/>
+  <text class="t-title" x="560" y="58" text-anchor="middle">Karmada</text>
+  <text class="t-sub" x="560" y="78" text-anchor="middle">CNCF · 화웨이 클라우드 주도</text>
+
+  <rect class="box-accent" x="460" y="120" width="200" height="70" rx="4"/>
+  <text class="t-title" x="560" y="148" text-anchor="middle">OCM</text>
+  <text class="t-sub" x="560" y="164" text-anchor="middle">(Open Cluster Management)</text>
+  <text class="t-sub" x="560" y="178" text-anchor="middle">CNCF · 레드햇 주도</text>
+
+  <!-- 공통 특징 -->
+  <rect class="box" x="700" y="60" width="180" height="90" rx="4"/>
+  <text class="t-title" x="790" y="82" text-anchor="middle">공통 설계</text>
+  <text class="t-sub" x="790" y="102" text-anchor="middle">쿠버네티스 CRD 기반</text>
+  <text class="t-sub" x="790" y="118" text-anchor="middle">(코어 API에 결합됐던</text>
+  <text class="t-sub" x="790" y="134" text-anchor="middle">v1의 실패를 교훈 삼음)</text>
+
+  <line class="line" x1="660" y1="65" x2="696" y2="95" marker-end="url(#arrow123)"/>
+  <line class="line" x1="660" y1="155" x2="696" y2="115" marker-end="url(#arrow123)"/>
+
+  <!-- 하단 설명 -->
+  <rect class="box" x="20" y="210" width="860" height="80" rx="6"/>
+  <text class="t-title" x="40" y="236">왜 실패했다가 다시 나왔나</text>
+  <text class="t-sub" x="40" y="258">v1은 코어 API에 강하게 결합된 모놀리식 구조 — 당시엔 CRD가 없어 다른 선택지가 없었다.</text>
+  <text class="t-sub" x="40" y="274">CRD 등장 이후 나온 Karmada·OCM은 처음부터 확장 가능한 구조로 설계됐다는 점이 근본적으로 다르다.</text>
+
+  <text class="t-cap" x="450" y="320" text-anchor="middle">"멀티클러스터 페더레이션"이라는 문제 자체는 사라지지 않았다 — 답을 내놓는 프로젝트만 바뀌었다.</text>
+</svg>

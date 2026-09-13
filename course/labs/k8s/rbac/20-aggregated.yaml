@@ -1,0 +1,34 @@
+# M23 — 집약 ClusterRole.
+# 라벨이 맞는 ClusterRole 들의 규칙을 컨트롤러가 자동으로 합쳐 준다.
+# 팀마다 자기 리소스의 권한을 따로 정의하고, 관리자는 합쳐진 것 하나만 바인딩한다.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: study-viewer
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.study.io/aggregate-to-viewer: "true"
+rules: []          # 비워 둔다. 컨트롤러가 채운다 — 직접 쓰면 덮어써진다
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: study-viewer-workloads
+  labels:
+    rbac.study.io/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: study-viewer-observability
+  labels:
+    rbac.study.io/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors", "prometheusrules"]
+    verbs: ["get", "list", "watch"]

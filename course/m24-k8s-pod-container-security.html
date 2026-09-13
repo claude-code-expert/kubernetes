@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 5 · 보안과 정책] M24 파드와 컨테이너 보안 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 실행 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 24 / 38 · PART 5 보안과 정책</div>
+  <h1>파드와 컨테이너 보안</h1>
+  <p class="ch-desc">M23의 RBAC은 <strong>API를 통해 무엇을 할 수 있는가</strong>를 정한다. 파드가 일단 뜨고 나면 그 안에서 하는 일 — 루트로 실행하고, 호스트 파일시스템을 마운트하고, 커널 기능을 요구하는 것 — 은 RBAC이 관여하지 않는다. 이 모듈에서 네임스페이스에 라벨 하나를 붙여 그것을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>부터 본다.</p>
+  <div class="meta">
+    <span class="tag">중후반</span><span class="tag">90분</span><span class="tag">Kubernetes 1.37.0</span>
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m23-k8s-rbac-authz.html">M23</a> 완료 — <code>journal</code> 네임스페이스에 <code>dev</code> 계정이 있다</li>
+    <li>세 워크로드가 떠 있다. 확인: <code>kubectl -n journal get deploy,sts</code>에 <code>journal-api</code>·<code>web-static</code>·<code>redis</code></li>
+    <li>이미지를 다시 빌드할 수 있다. 확인: <code>docker images journal-api</code>에 <code>v1</code>·<code>v2</code></li>
+    <li>고칠 파일: <code>course/labs/apps/journal-api/Dockerfile</code> · <code>course/labs/k8s/journal/</code>의 <code>20-redis.yaml</code>·<code>30-journal-api.yaml</code>·<code>40-web-static.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 네임스페이스에 <code>restricted</code> 라벨을 붙여 지금 워크로드가 어떤 항목에서 걸리는지 네 가지를 한 번에 받아 본다.</p>
+  <p>2. 어드미션을 통과한 뒤 <strong>kubelet이 다시 막는</strong> 상황을 재현하고, 두 문지기의 증상이 어떻게 다른지 구분한다.</p>
+  <p>3. 세 워크로드를 전부 통과시킨다 — 그 과정에서 Dockerfile을 고치고 이미지 하나를 바꾼다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">24.1</span>파드 안에서는 무엇이든 할 수 있었다</a>
+  <a href="#s2"><span class="num">24.2</span>이론 — 세 수준과 세 모드</a>
+  <a href="#s3"><span class="num">24.3</span>따라하기 ① 거부당해 본다</a>
+  <a href="#s4"><span class="num">24.4</span>따라하기 ② 두 번째 문지기</a>
+  <a href="#s5"><span class="num">24.5</span>따라하기 ③ 세 수준을 비교한다</a>
+  <a href="#s6"><span class="num">24.6</span>따라하기 ④ 실제 워크로드를 통과시킨다</a>
+  <a href="#s7"><span class="num">24.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">24.8</span>운영 관점 — 어디까지 강제할 것인가</a>
+  <a href="#s9"><span class="num">24.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">24.1</span>파드 안에서는 무엇이든 할 수 있었다</h2>
+  <p class="lead">M23에서 <code>dev</code> 계정의 권한을 좁혔다. 그 계정은 시크릿을 읽을 수 없고 다른 네임스페이스를 볼 수 없다. 그런데 그 계정으로 <strong>디플로이먼트를 수정할 수는 있다</strong> — 그리고 파드 스펙에는 이런 것을 적을 수 있다.</p>
+<pre><code>      securityContext:
+        privileged: true
+      volumes:
+        - name: h
+          hostPath: {path: /}</code></pre>
+  <p>이 두 줄이면 컨테이너가 노드의 파일시스템 전체를 읽고, 커널 기능을 제한 없이 쓴다. M19에서 우리가 <code>docker exec</code>로 했던 일 — 정적 파드 매니페스트 수정 — 을 파드 안에서 할 수 있다는 뜻이다. <strong>네임스페이스 하나의 배포 권한이 노드 전체의 권한이 된다.</strong></p>
+  <p>지금 우리 클러스터의 파드들이 어떤 상태인지 본다.</p>
+<pre><code>kubectl -n journal get deploy journal-api \
+  -o jsonpath='pod={.spec.template.spec.securityContext}{"\n"}container={.spec.template.spec.containers[0].securityContext}{"\n"}'</code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>pod={}
+container=</code></div>
+  <p>둘 다 비어 있다. 아무것도 제한하지 않았고, 이것이 쿠버네티스의 기본값이다. RBAC이 "누가 무엇을 요청할 수 있는가"를 정한다면, 이 모듈에서 켜는 것은 <strong>"어떤 파드를 만들 수 있는가"</strong>다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">24.2</span>이론 — 세 수준과 세 모드</h2>
+  <p>책 10.1이 다루는 <dfn class="term">파드 시큐리티 어드미션 <span class="en">Pod Security Admission, PSA</span></dfn>은 apiserver에 내장된 어드미션 컨트롤러다. 별도 설치가 필요 없고, <strong>네임스페이스에 라벨을 붙이는 것으로 켠다.</strong></p>
+
+  <h3>세 수준</h3>
+  <table>
+    <tr><th>수준</th><th>막는 것</th><th>쓰는 곳</th></tr>
+    <tr><td><code>privileged</code></td><td>아무것도 막지 않는다</td><td>CNI·CSI·모니터링 에이전트 같은 시스템 구성요소</td></tr>
+    <tr><td><code>baseline</code></td><td>알려진 권한 상승 경로 — <code>hostPath</code>, <code>privileged</code>, <code>hostNetwork</code>, 위험한 capability</td><td>기존 워크로드를 옮길 때의 현실적인 출발점</td></tr>
+    <tr><td><code>restricted</code></td><td>여기에 더해 모범 사례까지 — 비루트 실행, 모든 capability 제거, seccomp 프로파일</td><td>새로 만드는 워크로드의 기본값</td></tr>
+  </table>
+  <p>수준은 <strong>누적</strong>이다. <code>restricted</code>는 <code>baseline</code>이 막는 것을 전부 막고 더 막는다.</p>
+
+  <h3>세 모드</h3>
+  <table>
+    <tr><th>모드</th><th>하는 일</th><th>언제</th></tr>
+    <tr><td><code>enforce</code></td><td>위반하는 파드를 <strong>거부</strong>한다</td><td>준비가 끝난 뒤</td></tr>
+    <tr><td><code>audit</code></td><td>감사 로그에 기록만 한다</td><td>영향 범위를 조사할 때</td></tr>
+    <tr><td><code>warn</code></td><td><code>kubectl</code> 화면에 경고를 띄운다</td><td>사람에게 알릴 때</td></tr>
+  </table>
+  <p>세 모드를 <strong>동시에</strong> 걸 수 있고, 각각 다른 수준을 지정할 수 있다. 흔한 이행 방식이 이것이다 — <code>enforce=baseline</code>으로 최소한을 막으면서 <code>warn=restricted</code>·<code>audit=restricted</code>로 나머지 위반을 수집한다.</p>
+<pre><code>pod-security.kubernetes.io/enforce: baseline
+pod-security.kubernetes.io/warn: restricted
+pod-security.kubernetes.io/audit: restricted</code></pre>
+
+  <h3>문지기는 둘이다</h3>
+  <p>어드미션을 통과했다고 컨테이너가 뜨는 것은 아니다. PSA는 <strong>파드 스펙</strong>만 보고, kubelet은 <strong>실제 이미지</strong>를 본다. 스펙에 <code>runAsNonRoot: true</code>가 있어도 이미지가 정말 비루트로 뜨는지는 kubelet이 확인하고, 확인할 수 없으면 거부한다 — 24.4에서 그 상황을 만든다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
+      <text class="t-h" x="40" y="46">문지기가 둘이다 — 어드미션과 kubelet</text>
+      <text class="t-sub" x="40" y="66">둘 다 통과해야 컨테이너가 뜬다. 막힌 곳에 따라 증상이 다르다</text>
+
+      <!-- 흐름 -->
+      <rect class="node" x="40" y="88" width="130" height="52" rx="4"/>
+      <text class="t-title" x="105" y="110" text-anchor="middle">kubectl apply</text>
+      <text class="t-mono" x="105" y="128" text-anchor="middle">Deployment</text>
+      <path class="line" d="M 170 114 L 208 114" marker-end="url(#ar1)"/>
+
+      <rect class="box" x="210" y="88" width="130" height="52" rx="4"/>
+      <text class="t-title" x="275" y="110" text-anchor="middle">컨트롤러</text>
+      <text class="t-mono" x="275" y="128" text-anchor="middle">ReplicaSet → Pod</text>
+      <path class="line" d="M 340 114 L 378 114" marker-end="url(#ar1)"/>
+
+      <rect class="warnbox" x="380" y="88" width="180" height="52" rx="4"/>
+      <text class="t-title" x="470" y="110" text-anchor="middle">① 어드미션 (PSA)</text>
+      <text class="t-mono" x="470" y="128" text-anchor="middle">파드 스펙을 본다</text>
+      <path class="line" d="M 560 114 L 598 114" marker-end="url(#ar1)"/>
+
+      <rect class="warnbox" x="600" y="88" width="160" height="52" rx="4"/>
+      <text class="t-title" x="680" y="110" text-anchor="middle">② kubelet</text>
+      <text class="t-mono" x="680" y="128" text-anchor="middle">이미지를 본다</text>
+      <path class="line" d="M 760 114 L 798 114" marker-end="url(#ar1)"/>
+      <text class="t-acc" x="828" y="118">실행</text>
+
+      <!-- 막혔을 때 -->
+      <rect class="soft" x="40" y="162" width="820" height="128" rx="4"/>
+      <text class="t-h" x="56" y="186">어디서 막혔는지 어떻게 아는가</text>
+
+      <rect class="box" x="56" y="198" width="392" height="78" rx="3"/>
+      <text class="t-title" x="252" y="218" text-anchor="middle">① 어드미션에서 막히면</text>
+      <text class="t-mono" x="66" y="238">kubectl apply    → Warning 만 나오고 성공</text>
+      <text class="t-mono" x="66" y="254">kubectl get deploy → 0/1, 파드가 없다</text>
+      <text class="t-warn" x="66" y="270">describe rs 의 FailedCreate 에 진짜 이유가 있다</text>
+
+      <rect class="box" x="468" y="198" width="392" height="78" rx="3"/>
+      <text class="t-title" x="664" y="218" text-anchor="middle">② kubelet 에서 막히면</text>
+      <text class="t-mono" x="478" y="238">파드는 만들어진다 (스케줄까지 된다)</text>
+      <text class="t-mono" x="478" y="254">STATUS = CreateContainerConfigError</text>
+      <text class="t-warn" x="478" y="270">describe pod 의 Failed 이벤트에 이유가 있다</text>
+
+      <!-- 세 수준 -->
+      <text class="t-h" x="56" y="322">세 수준이 막는 것</text>
+      <rect class="box" x="56" y="334" width="256" height="70" rx="3"/>
+      <text class="t-title" x="184" y="354" text-anchor="middle">privileged</text>
+      <text class="t-sub" x="184" y="372" text-anchor="middle">아무것도 막지 않는다</text>
+      <text class="t-sub" x="184" y="390" text-anchor="middle">시스템 구성요소용</text>
+
+      <rect class="accent" x="322" y="334" width="256" height="70" rx="3"/>
+      <text class="t-title" x="450" y="354" text-anchor="middle">baseline</text>
+      <text class="t-sub" x="450" y="372" text-anchor="middle">알려진 권한 상승을 막는다</text>
+      <text class="t-mono" x="450" y="390" text-anchor="middle">hostPath · privileged · hostNetwork</text>
+
+      <rect class="warnbox" x="588" y="334" width="272" height="70" rx="3"/>
+      <text class="t-title" x="724" y="354" text-anchor="middle">restricted</text>
+      <text class="t-sub" x="724" y="372" text-anchor="middle">모범 사례까지 강제한다</text>
+      <text class="t-mono" x="724" y="390" text-anchor="middle">비루트 · drop ALL · seccomp</text>
+    </svg>
+    <figcaption>그림 24.1 — 어드미션에서 막히면 파드가 아예 만들어지지 않고, kubelet에서 막히면 파드는 만들어지되 컨테이너가 뜨지 않는다. 증상이 다르므로 볼 곳도 다르다.</figcaption>
+  </figure>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">24.3</span>따라하기 ① 거부당해 본다</h2>
+
+  <div class="step">
+    <h4>1단계 — 실험용 네임스페이스에 restricted를 건다</h4>
+    <p class="purpose"><span class="lbl">목적</span>운영 중인 네임스페이스를 건드리지 않고 위반 항목을 먼저 수집한다.</p>
+<pre><code>kubectl create ns m24
+kubectl label ns m24 \
+  pod-security.kubernetes.io/enforce=restricted \
+  pod-security.kubernetes.io/enforce-version=latest \
+  pod-security.kubernetes.io/warn=restricted \
+  pod-security.kubernetes.io/audit=restricted</code></pre>
+    <p><code>enforce-version=latest</code>는 "이 클러스터 버전의 최신 정의를 쓴다"는 뜻이다. 특정 버전(<code>v1.30</code> 같은)으로 고정할 수도 있는데, 그러면 클러스터를 올려도 판정 기준이 그대로여서 <strong>업그레이드가 워크로드를 깨지 않는다.</strong> 실습에서는 최신을 쓴다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 지금 잘 돌고 있는 것을 그대로 올린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>추상적인 "위반"이 아니라 <strong>우리 앱이 무엇에 걸리는지</strong> 목록으로 받는다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl -n m24 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: journal-api}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: journal-api}}
+  template:
+    metadata: {labels: {app: journal-api}}
+    spec:
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 192Mi}
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "api" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "api" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "api" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "api" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+deployment.apps/journal-api created</code></div>
+    <div class="verdict"><span class="lbl">판정</span>위반 네 가지가 <strong>한 번에</strong> 나온다. 그런데 마지막 줄이 <code>created</code>다 — <code>kubectl apply</code>는 성공했다. <code>Warning</code>은 <code>warn</code> 모드가 띄운 것이고, <code>enforce</code>는 아직 아무것도 거부하지 않았다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 파드가 어디로 갔는지 찾는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"apply는 성공했는데 파드가 없다"는 상황의 진단 경로를 익힌다.</p>
+<pre><code>kubectl -n m24 get deploy,rs,po</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/journal-api          0/1   0   0   20s
+replicaset.apps/journal-api-6f567bb4d4   1   0   0   20s</code></div>
+    <p>디플로이먼트도 레플리카셋도 있는데 <strong>파드가 한 줄도 없다.</strong> 레플리카셋의 이벤트를 본다.</p>
+<pre><code>RS=$(kubectl -n m24 get rs -o jsonpath='{.items[0].metadata.name}')
+kubectl -n m24 describe rs $RS | sed -n '/^Events:/,$p' | head -5</code></pre>
+    <span class="out-lbl">출력 (반복되는 줄은 줄였다)</span>
+    <div class="out"><code>Events:
+  Type     Reason        Age   From                   Message
+  ----     ------        ----  ----                   -------
+  Warning  FailedCreate  20s   replicaset-controller  Error creating: pods "journal-api-6f567bb4d4-9jnlv" is forbidden: violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "api" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "api" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "api" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "api" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")</code></div>
+    <div class="verdict"><span class="lbl">판정</span>여기에 진짜 거부가 있다. <strong>어드미션은 파드에 걸리는데 파드를 만드는 것은 우리가 아니라 레플리카셋 컨트롤러</strong>이기 때문에, 거부가 우리 터미널이 아니라 컨트롤러의 이벤트로 간다. 파드 이름이 여러 개인 것은 컨트롤러가 계속 재시도했기 때문이다.</div>
+    <p>디플로이먼트의 상태 조건에도 남는다. 이쪽이 더 찾기 쉽다.</p>
+<pre><code>kubectl -n m24 get deploy journal-api \
+  -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}{"\n"}{end}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Progressing=True NewReplicaSetCreated
+Available=False MinimumReplicasUnavailable
+ReplicaFailure=True FailedCreate</code></div>
+    <p><code>ReplicaFailure=True</code>가 신호다. 이 조건은 파드를 <strong>만들지도 못했을 때만</strong> 붙는다 — 파드가 떴다가 죽는 것(M15의 CrashLoop)과는 다른 상태다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">24.4</span>따라하기 ② 두 번째 문지기</h2>
+
+  <div class="step">
+    <h4>4단계 — 네 가지를 채운다</h4>
+    <p class="purpose"><span class="lbl">목적</span>거부 메시지가 요구한 것을 그대로 옮겨 어드미션을 통과시킨다.</p>
+    <p>메시지의 항목이 그대로 필드 이름이다. 컨테이너 수준 둘과 파드 수준 둘로 나뉜다.</p>
+<pre><code>kubectl -n m24 patch deploy journal-api --type=json -p='[
+ {"op":"add","path":"/spec/template/spec/containers/0/securityContext",
+  "value":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}},
+ {"op":"add","path":"/spec/template/spec/securityContext",
+  "value":{"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}}}]'</code></pre>
+    <table>
+      <tr><th>필드</th><th>막는 것</th></tr>
+      <tr><td><code>allowPrivilegeEscalation: false</code></td><td>프로세스가 <code>setuid</code> 바이너리로 권한을 올리는 것</td></tr>
+      <tr><td><code>capabilities.drop: ["ALL"]</code></td><td>컨테이너 런타임이 기본으로 주는 커널 기능 전부. 필요하면 <code>add</code>로 하나씩 되돌린다</td></tr>
+      <tr><td><code>runAsNonRoot: true</code></td><td>UID 0으로 실행하는 것</td></tr>
+      <tr><td><code>seccompProfile.type: RuntimeDefault</code></td><td>런타임의 기본 시스템 콜 필터를 적용한다. 없으면 필터가 없다</td></tr>
+    </table>
+<pre><code>kubectl -n m24 get deploy,po</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/journal-api    0/1   1   0   51s
+pod/journal-api-798b755857-kqcsc   0/1   CreateContainerConfigError   0   10s</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>파드가 만들어졌다.</strong> 어드미션은 통과한 것이다. 그런데 <code>CreateContainerConfigError</code>다 — 3단계와 증상이 완전히 다르다. 그때는 파드가 없었고 지금은 파드가 있다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — kubelet이 무엇을 거부했는지 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>두 번째 문지기의 메시지를 확인한다.</p>
+<pre><code>POD=$(kubectl -n m24 get po -o jsonpath='{.items[0].metadata.name}')
+kubectl -n m24 describe pod $POD | sed -n '/^Events:/,$p'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  Normal   Scheduled  17s              default-scheduler  Successfully assigned m24/journal-api-798b755857-kqcsc to study-worker
+  Normal   Pulled     3s (x3 over 17s) kubelet  Container image "journal-api:v1" already present on machine
+  Warning  Failed     3s (x3 over 17s) kubelet  Error: container has runAsNonRoot and image has non-numeric user (node), cannot verify user is non-root</code></div>
+    <span class="lbl">원인</span>
+    <p><code>image has non-numeric user (node)</code>. M04에서 쓴 Dockerfile을 보면 이유가 나온다.</p>
+<pre><code>grep -h '^USER' course/labs/apps/journal-api/Dockerfile course/labs/apps/order-api/Dockerfile</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>USER node
+USER 10001</code></div>
+    <p><code>journal-api</code>는 <strong>이름</strong>으로, <code>order-api</code>는 <strong>숫자</strong>로 지정했다. kubelet은 이미지 안의 <code>/etc/passwd</code>를 읽지 않으므로 <code>node</code>가 UID 몇인지 알 수 없고, <strong>비루트인지 확인할 수 없으면 거부</strong>한다. M19에서 <code>order-api</code>의 Dockerfile을 고치며 <code>USER 10001</code>로 숫자를 쓴 것이 여기서 값을 한다.</p>
+    <span class="lbl">고친다 — 두 가지 방법</span>
+    <p>파드 스펙에서 숫자를 명시하거나, Dockerfile을 고친다. 먼저 스펙 쪽으로 확인한다.</p>
+<pre><code>kubectl -n m24 patch deploy journal-api --type=json \
+  -p='[{"op":"add","path":"/spec/template/spec/securityContext/runAsUser","value":1000}]'
+
+kubectl -n m24 get deploy,po
+kubectl -n m24 exec deploy/journal-api -- id</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/journal-api      1/1   1   1   84s
+pod/journal-api-758b9f55f5-jswwm    1/1   Running   0   12s
+
+uid=1000(node) gid=1000(node) groups=1000(node)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>떴다. 다만 이 방법은 <strong>파드 스펙마다 UID를 적어야</strong> 하고, 이미지가 바뀌어 UID가 달라지면 조용히 어긋난다. 근본은 Dockerfile이므로 그쪽을 고치는 편이 낫다 — 24.6에서 그렇게 한다.</div>
+  </div>
+
+  <div class="step">
+    <h4>6단계 — readOnlyRootFilesystem을 더해 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>restricted</code>가 요구하지는 않지만 함께 쓰는 설정의 영향을 확인한다.</p>
+<pre><code>kubectl -n m24 patch deploy journal-api --type=json \
+  -p='[{"op":"add","path":"/spec/template/spec/containers/0/securityContext/readOnlyRootFilesystem","value":true}]'
+
+kubectl -n m24 exec deploy/journal-api -- sh -c 'touch /tmp/x; touch /app/x'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>touch: /tmp/x: Read-only file system
+touch: /app/x: Read-only file system</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드는 잘 뜨지만 <strong><code>/tmp</code>까지 쓸 수 없다.</strong> 이것을 모르고 켜면 임시 파일을 쓰는 앱이 조용히 실패한다 — 그래서 대개 <code>emptyDir</code>을 <code>/tmp</code>에 붙여 쓰기 가능한 곳만 열어 둔다.</div>
+<pre><code>      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: api
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp</code></pre>
+    <p>우리 앱은 <code>/tmp</code>를 쓰지 않으므로 이 실습에서는 <code>readOnlyRootFilesystem</code>을 최종 매니페스트에 넣지 않는다. <strong>넣을지 말지는 앱이 결정한다</strong>는 것이 요점이고, 이런 판단을 하려면 앱이 어디에 쓰는지 알아야 한다.</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">24.5</span>따라하기 ③ 세 수준을 비교한다</h2>
+
+  <div class="step">
+    <h4>7단계 — 세 네임스페이스를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 파드를 세 수준에 각각 던져 무엇이 어디서 막히는지 표로 만든다.</p>
+<pre><code>for LVL in privileged baseline restricted; do
+  kubectl create ns psa-$LVL
+  kubectl label ns psa-$LVL \
+    pod-security.kubernetes.io/enforce=$LVL \
+    pod-security.kubernetes.io/enforce-version=latest
+done</code></pre>
+    <p>파드 세 종류를 던진다 — 아무 설정 없는 것, <code>hostPath</code>를 쓰는 것, <code>privileged: true</code>인 것.</p>
+    <table>
+      <tr><th>파드</th><th><code>privileged</code></th><th><code>baseline</code></th><th><code>restricted</code></th></tr>
+      <tr><td>아무 설정 없음 (루트로 실행)</td><td>생성</td><td>생성</td><td><strong>거부</strong></td></tr>
+      <tr><td><code>hostPath: /</code> 마운트</td><td>생성</td><td><strong>거부</strong></td><td><strong>거부</strong></td></tr>
+      <tr><td><code>privileged: true</code></td><td>생성</td><td><strong>거부</strong></td><td><strong>거부</strong></td></tr>
+    </table>
+    <span class="out-lbl">거부 메시지</span>
+    <div class="out"><code>pods "hostp" is forbidden: violates PodSecurity "baseline:latest": hostPath volumes (volume "h")
+
+pods "privpod" is forbidden: violates PodSecurity "baseline:latest": privileged (container "c" must not set securityContext.privileged=true)</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>baseline</code>은 <strong>루트 실행을 막지 않는다.</strong> 첫 줄이 그것을 보여준다 — 아무 설정 없는 파드가 <code>baseline</code>에서는 뜬다. 기존 워크로드를 옮길 때 <code>baseline</code>부터 시작하는 것이 현실적인 이유이고, 동시에 <code>baseline</code>이 충분하지 않은 이유이기도 하다.</div>
+  </div>
+
+  <div class="step">
+    <h4>8단계 — privileged 수준이 무엇을 허용하는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"막지 않는다"가 실제로 무슨 뜻인지 확인한다.</p>
+<pre><code>kubectl -n psa-privileged exec hostp -- head -3 /host/var/lib/kubelet/config.yaml</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:</code></div>
+    <div class="verdict"><span class="lbl">판정</span>컨테이너 안에서 <strong>노드의 kubelet 설정을 읽고 있다.</strong> 같은 방식으로 컨트롤 플레인 노드라면 <code>/etc/kubernetes/pki</code>의 인증서에 닿는다. <code>hostPath</code> 하나가 노드 전체의 권한과 같다는 것이 이 출력의 뜻이고, <code>baseline</code>이 그것부터 막는 이유다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">24.6</span>따라하기 ④ 실제 워크로드를 통과시킨다</h2>
+  <p>실험 네임스페이스에서 배운 것을 <code>journal</code>에 적용한다. 순서가 중요하다 — <strong><code>enforce</code>를 먼저 걸면 운영 중인 앱이 롤아웃할 때 죽는다.</strong></p>
+
+  <div class="step">
+    <h4>9단계 — warn 모드로 영향 범위를 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>강제하기 전에 무엇이 걸리는지 수집한다.</p>
+<pre><code>kubectl label ns journal \
+  pod-security.kubernetes.io/warn=restricted \
+  pod-security.kubernetes.io/warn-version=latest \
+  pod-security.kubernetes.io/audit=restricted --overwrite
+
+kubectl apply -k course/labs/k8s/journal</code></pre>
+    <span class="out-lbl">출력 (일부)</span>
+    <div class="out"><code>deployment.apps/journal-api unchanged
+deployment.apps/web-static unchanged
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "redis" must set ...)
+statefulset.apps/redis configured</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>경고가 <code>redis</code>에만 나왔다.</strong> <code>journal-api</code>와 <code>web-static</code>은 <code>unchanged</code>라 검증조차 되지 않았다 — PSA는 <strong>생성하거나 수정할 때</strong>만 본다. <code>warn</code> 모드를 걸었다고 기존 워크로드의 위반이 저절로 드러나지는 않는다.</div>
+    <p>이것이 <code>audit</code> 모드가 함께 필요한 이유다. 감사 로그에는 파드가 실제로 만들어질 때마다 기록이 남으므로, 롤아웃이 한 번 돌면 위반이 드러난다. 감사 로그를 켜는 것은 M27에서 다룬다.</p>
+  </div>
+
+  <div class="step">
+    <h4>10단계 — Dockerfile을 고친다</h4>
+    <p class="purpose"><span class="lbl">목적</span>5단계에서 파드 스펙으로 우회한 것을 근본에서 고친다.</p>
+<pre><code># course/labs/apps/journal-api/Dockerfile
+# 숫자로 지정한다. 이름(node)으로 두면 kubelet 이 runAsNonRoot 를 검증하지 못해
+# CreateContainerConfigError 로 막힌다 (M24):
+#   container has runAsNonRoot and image has non-numeric user (node), cannot verify user is non-root
+USER 1000</code></pre>
+<pre><code>for v in v1 v2; do docker build -t "journal-api:$v" --build-arg "APP_VERSION=$v" course/labs/apps/journal-api; done
+kind load docker-image journal-api:v1 journal-api:v2 --name study</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>이제 이미지 자체가 숫자 UID를 갖는다. 파드 스펙의 <code>runAsUser</code>는 여전히 적는 편이 낫지만 — 명시적이고, 이미지가 바뀌어도 의도가 남는다 — 없어도 동작한다.</div>
+  </div>
+
+  <div class="step">
+    <h4>11단계 — 세 워크로드의 매니페스트를 고친다</h4>
+    <p class="purpose"><span class="lbl">목적</span>실험에서 확인한 설정을 정본에 옮긴다. 이미지마다 UID가 다르다는 것이 여기서 드러난다.</p>
+    <p>먼저 각 이미지가 어떤 사용자를 갖고 있는지 확인한다.</p>
+<pre><code>docker run --rm --entrypoint sh redis:8.2-alpine -c 'getent passwd redis'
+docker run --rm --entrypoint sh nginx:1.29-alpine -c 'getent passwd nginx'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>redis:x:999:1000::/home/redis:/sbin/nologin
+nginx:x:101:101:nginx:/var/cache/nginx:/sbin/nologin</code></div>
+    <p><code>journal-api</code>와 <code>redis</code>에는 같은 형태를 넣는다. <code>30-journal-api.yaml</code>의 파드 스펙이다.</p>
+<pre><code>      # ── 파드 수준 보안 (M24) ────────────────────────────────────────
+      # restricted 프로파일이 요구하는 셋. seccompProfile 은 파드 수준에서 한 번만 쓰면
+      # 모든 컨테이너에 적용된다.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # 이 앱은 쿠버네티스 API 를 호출하지 않는다. 토큰을 넣어 둘 이유가 없다 (M23 8절).
+      automountServiceAccountToken: false</code></pre>
+<pre><code>          # ── 컨테이너 수준 보안 (M24) ─────────────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]</code></pre>
+    <p><code>redis</code>에는 <code>fsGroup</code>이 하나 더 필요하다.</p>
+<pre><code>      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999              # 이미지 안의 redis 사용자
+        fsGroup: 999                # PVC 의 소유자를 이 그룹으로 바꿔 준다 (M18)
+        seccompProfile:
+          type: RuntimeDefault</code></pre>
+    <p><code>fsGroup</code>이 없으면 비루트로 뜬 레디스가 <strong>자기 PVC에 쓰지 못한다.</strong> 볼륨은 기본적으로 루트 소유로 마운트되기 때문이다 — M18의 스토리지와 이 모듈의 보안이 만나는 지점이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>12단계 — 이미지를 바꿔야 하는 경우</h4>
+    <p class="purpose"><span class="lbl">목적</span>설정만으로는 해결되지 않는 상황을 확인한다.</p>
+    <p><code>nginx</code>는 <code>nginx</code> 사용자를 갖고 있지만 <strong>루트로 시작한다</strong> — 마스터 프로세스가 루트로 뜨고 워커만 <code>nginx</code>로 떨어뜨리는 구조다. <code>restricted</code>는 그 시작 자체를 막는다.</p>
+<pre><code>docker run --rm --entrypoint sh nginxinc/nginx-unprivileged:1.29-alpine -c 'id; grep -m1 listen /etc/nginx/conf.d/default.conf'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>uid=101(nginx) gid=101(nginx) groups=101(nginx)
+    listen       8080;</code></div>
+    <p>비루트 이미지는 <strong>8080을 듣는다.</strong> 1024 미만 포트는 비루트가 열 수 없기 때문이고, 이것이 이미지를 바꿀 때 함께 바뀌는 것이다.</p>
+<pre><code>      containers:
+        - name: nginx
+          # 공식 nginx 이미지는 루트로 시작해 워커만 nginx 사용자로 떨어뜨린다.
+          # restricted 프로파일은 그 시작조차 허용하지 않으므로 비루트 이미지를 쓴다.
+          # 대신 80 이 아니라 8080 을 듣는다 — 1024 미만 포트는 비루트가 열 수 없다.
+          image: nginxinc/nginx-unprivileged:1.29-alpine
+          ports:
+            - name: http
+              containerPort: 8080</code></pre>
+    <p>서비스는 고치지 않아도 된다. M11부터 포트를 <strong>이름</strong>(<code>targetPort: http</code>)으로 참조해 왔기 때문에 숫자가 바뀌어도 연결이 유지된다 — 그 습관이 여기서 값을 한다.</p>
+<pre><code>kubectl apply -k course/labs/k8s/journal
+kubectl -n journal rollout status deploy/web-static
+kubectl -n journal rollout status statefulset/redis</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>deployment.apps/web-static configured
+statefulset.apps/redis configured
+deployment "web-static" successfully rolled out
+partitioned roll out complete: 1 new pods have been updated...</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>경고가 하나도 나오지 않는다.</strong> 세 워크로드가 모두 <code>restricted</code>를 만족한다. 앱이 실제로 동작하는지 확인한다.</div>
+<pre><code>curl -s -o /dev/null -w '/api/entries: %{http_code}\n' -H 'Host: journal.local' http://localhost:18080/api/entries
+curl -s -o /dev/null -w '/ (정적):    %{http_code}\n' -H 'Host: journal.local' http://localhost:18080/</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>/api/entries: 200
+/ (정적):    200</code></div>
+  </div>
+
+  <div class="step">
+    <h4>13단계 — enforce로 올린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>경고를 강제로 바꾸고, 그 뒤에도 운영이 되는지 확인한다.</p>
+<pre><code>kubectl label ns journal \
+  pod-security.kubernetes.io/enforce=restricted \
+  pod-security.kubernetes.io/enforce-version=latest --overwrite
+
+kubectl -n journal rollout restart deploy/journal-api
+kubectl -n journal rollout status deploy/journal-api</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>namespace/journal labeled
+deployment "journal-api" successfully rolled out</code></div>
+    <p>이제 규칙을 지키지 않는 파드는 들어올 수 없다.</p>
+<pre><code>kubectl -n journal run rootpod --image=alpine:3.22 --restart=Never -- sleep 60</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>Error from server (Forbidden): pods "rootpod" is forbidden: violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "rootpod" must set ...)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>이번에는 <code>Warning</code>이 아니라 <code>Error from server (Forbidden)</code>이고, 파드가 만들어지지 않는다. <code>kubectl run</code>처럼 <strong>파드를 직접 만드는 명령</strong>은 거부가 터미널에 바로 오지만, 디플로이먼트를 통하면 3단계처럼 컨트롤러 이벤트로 간다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">24.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① apply는 성공했는데 파드가 없다</h4>
+    <p>3단계에서 이미 만났다. 진단 순서를 정리해 둔다.</p>
+    <span class="lbl">증상</span>
+<pre><code>kubectl apply -f deploy.yaml     # created — 성공
+kubectl get pods                 # 아무것도 없다
+kubectl get deploy               # 0/1</code></pre>
+    <span class="lbl">진단 — 세 곳을 순서대로</span>
+    <table>
+      <tr><th>순서</th><th>명령</th><th>보는 것</th></tr>
+      <tr><td>①</td><td><code>kubectl get deploy X -o jsonpath='{.status.conditions[*].type}'</code></td><td><code>ReplicaFailure</code>가 있는가</td></tr>
+      <tr><td>②</td><td><code>kubectl describe rs</code>의 <code>Events</code></td><td><code>FailedCreate</code>의 메시지 전문</td></tr>
+      <tr><td>③</td><td><code>kubectl get ns X --show-labels</code></td><td>어떤 PSA 라벨이 걸려 있는가</td></tr>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span><code>ReplicaFailure=True</code>이면 파드를 <strong>만들지도 못한</strong> 것이다. 파드가 떴다가 죽는 것(<code>CrashLoopBackOff</code>)과는 완전히 다른 상태이고, 볼 곳도 다르다 — 이쪽은 파드 로그가 아예 없다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② 스펙은 맞는데 컨테이너가 안 뜬다</h4>
+    <p>4·5단계에서 만난 상황이다. 어드미션을 통과했으므로 파드는 있는데 <code>CreateContainerConfigError</code>다.</p>
+    <span class="lbl">원인</span>
+    <p>두 문지기의 판단 근거가 다르다. PSA는 <strong>스펙에 <code>runAsNonRoot: true</code>가 적혀 있는가</strong>만 보고, kubelet은 <strong>이미지가 정말 비루트인가</strong>를 확인한다. <code>USER node</code>처럼 이름으로 적힌 이미지는 확인할 수 없으므로 kubelet이 거부한다.</p>
+    <span class="lbl">고친다</span>
+    <p>둘 중 하나면 된다. <strong>Dockerfile에 숫자 UID를 쓰는 것</strong>이 근본이고, 남의 이미지를 쓸 때는 <strong>파드 스펙에 <code>runAsUser</code>를 적는 것</strong>이 방법이다. 남의 이미지의 UID를 확인하는 법은 이렇다.</p>
+<pre><code>docker run --rm --entrypoint sh &lt;이미지&gt; -c 'id'
+docker inspect &lt;이미지&gt; --format '{{.Config.User}}'</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>두 번째 명령이 빈 값이면 그 이미지는 <strong>루트로 실행되도록 만들어진 것</strong>이고, <code>restricted</code>에서 쓰려면 <code>runAsUser</code>를 스펙에서 강제하거나 이미지를 바꿔야 한다. 강제했을 때 앱이 파일 권한 때문에 실패하는 경우가 흔하므로 — 12단계의 nginx가 그 예다 — 비루트로 만들어진 이미지를 찾는 편이 빠르다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ warn을 걸었는데 아무 경고도 안 나온다</h4>
+    <p>9단계에서 <code>journal</code>에 <code>warn=restricted</code>를 걸었는데 <code>redis</code>만 경고가 나왔다.</p>
+    <span class="lbl">원인</span>
+    <p>PSA는 <strong>파드를 만들거나 파드 템플릿을 바꿀 때</strong> 동작하는 어드미션 컨트롤러다. <code>kubectl apply</code>가 <code>unchanged</code>를 돌려주면 apiserver에 쓰기가 일어나지 않았다는 뜻이고, 그러면 검증도 없다. 이미 떠 있는 파드는 <strong>정책을 어기고 있어도 계속 돈다.</strong></p>
+    <span class="lbl">고친다 — 강제로 재검증한다</span>
+<pre><code># 파드 템플릿을 실제로 바꿔 롤아웃을 일으킨다
+kubectl -n journal rollout restart deploy/journal-api
+
+# 또는 드라이런으로 검증만 시킨다 (실제로 바꾸지 않는다)
+kubectl -n journal apply -k course/labs/k8s/journal --dry-run=server</code></pre>
+    <div class="verdict"><span class="lbl">판정</span><code>--dry-run=server</code>는 apiserver에 요청을 보내 어드미션까지 태우고 저장만 하지 않는다. <strong>운영 중인 워크로드를 건드리지 않고 정책 위반을 조사하는 방법</strong>이고, <code>enforce</code>를 켜기 전에 반드시 해야 할 일이다.</div>
+    <p>클러스터 전체를 조사하려면 감사 로그(<code>audit</code> 모드)가 필요하다. 파드가 실제로 만들어질 때마다 기록이 남으므로, 며칠 두면 롤아웃이 도는 워크로드의 위반이 모인다. 감사 로그를 켜고 읽는 것은 M27에서 다룬다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">24.8</span>운영 관점 — 어디까지 강제할 것인가</h2>
+  <p>이 모듈에서 <code>journal</code> 하나를 <code>restricted</code>로 올렸다. 클러스터 전체에 같은 것을 하려면 순서와 예외가 필요하다.</p>
+
+  <h3>이행 순서</h3>
+  <table>
+    <tr><th>단계</th><th>라벨</th><th>얻는 것</th></tr>
+    <tr><td>1</td><td><code>warn=restricted</code> · <code>audit=restricted</code></td><td>위반 수집. 아무것도 막지 않는다</td></tr>
+    <tr><td>2</td><td><code>enforce=baseline</code> 추가</td><td>가장 위험한 것부터 막는다. 대부분의 워크로드가 통과한다</td></tr>
+    <tr><td>3</td><td>워크로드 수정</td><td><code>securityContext</code>·Dockerfile·이미지</td></tr>
+    <tr><td>4</td><td><code>enforce=restricted</code></td><td>완료</td></tr>
+  </table>
+  <p>2단계를 건너뛰고 바로 <code>restricted</code>를 강제하면 롤아웃이 도는 순간 서비스가 멈춘다. 그런데 3단계에서 본 것처럼 <strong>강제한 직후에는 아무 일도 일어나지 않는다</strong> — 이미 떠 있는 파드는 그대로이기 때문이다. 그래서 사고는 며칠 뒤 배포할 때 터진다.</p>
+
+  <h3>예외를 어떻게 다룰 것인가</h3>
+  <p>시스템 구성요소는 <code>restricted</code>를 지킬 수 없다. CNI는 호스트 네트워크가 필요하고, CSI 드라이버는 호스트 경로를 마운트해야 하며, 노드 익스포터는 <code>/proc</code>을 읽는다. 우리 클러스터에서도 <code>kube-system</code>과 <code>logging</code>의 Alloy가 그렇다.</p>
+  <p>이런 것들은 <strong>네임스페이스를 나눠 예외를 격리한다.</strong> 애플리케이션 네임스페이스는 <code>restricted</code>로 두고, 시스템 네임스페이스만 <code>privileged</code>로 남기는 것이다. 예외를 파드 단위로 두면 관리할 수 없다 — PSA가 네임스페이스 단위로만 동작하는 것도 이 설계를 강제하기 위해서다.</p>
+
+  <h3>PSA로 안 되는 것</h3>
+  <p>PSA는 <strong>정해진 세 프로파일만</strong> 적용할 수 있다. "이미지는 사내 레지스트리에서만", "모든 파드에 <code>team</code> 라벨 필수", "<code>latest</code> 태그 금지" 같은 규칙은 표현할 수 없다.</p>
+  <p>그런 것은 M26에서 다룬다 — 내장 <code>ValidatingAdmissionPolicy</code>로 조건을 직접 쓰거나, Kyverno 같은 정책 엔진을 쓴다. PSA는 <strong>가장 흔한 위험을 설치 없이 막는 장치</strong>이고, 그 이상은 다른 도구의 몫이다.</p>
+
+  <h3>보안은 층으로 쌓인다</h3>
+  <p>지금까지 세 층이 쌓였다. M23의 RBAC이 <strong>API 요청</strong>을, 이 모듈의 PSA가 <strong>파드 스펙</strong>을, seccomp가 <strong>시스템 콜</strong>을 제한한다. 여기에 M25가 <strong>네트워크</strong>를 더한다.</p>
+  <p>어느 하나도 충분하지 않다는 것이 요점이다. RBAC이 완벽해도 파드가 <code>hostPath</code>를 쓰면 노드를 가져가고, PSA가 완벽해도 파드가 클러스터의 모든 서비스에 접근할 수 있으면 하나가 뚫렸을 때 전부 뚫린다. <strong>한 층이 무너져도 다음 층이 남는 것</strong>이 목적이다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">24.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get ns journal -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}'</code> → <code>restricted</code></li>
+      <li><code>kubectl -n journal get po --no-headers | grep -vc Running</code> → <code>0</code></li>
+      <li><code>kubectl -n journal exec deploy/journal-api -- id</code> → <code>uid=1000</code></li>
+      <li><code>kubectl -n journal get deploy journal-api -o jsonpath='{.spec.template.spec.automountServiceAccountToken}'</code> → <code>false</code></li>
+      <li><code>kubectl -n journal get deploy web-static -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>nginxinc/nginx-unprivileged:1.29-alpine</code></li>
+      <li><code>kubectl -n journal get sts redis -o jsonpath='{.spec.template.spec.securityContext.fsGroup}'</code> → <code>999</code></li>
+      <li><code>grep '^USER' course/labs/apps/journal-api/Dockerfile</code> → <code>USER 1000</code></li>
+      <li><code>kubectl -n journal run rootpod --image=alpine:3.22 --restart=Never -- sleep 60</code> → <code>Forbidden</code></li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}' -H 'Host: journal.local' http://localhost:18080/api/entries</code> → <code>200</code></li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}' -H 'Host: journal.local' http://localhost:18080/</code> → <code>200</code></li>
+      <li><code>kubectl get ns m24 psa-privileged psa-baseline psa-restricted</code> → 전부 <code>NotFound</code></li>
+      <li>(이해 확인) <code>apply</code>가 성공했는데 파드가 없을 때와 파드가 <code>CreateContainerConfigError</code>일 때, 각각 어디를 봐야 하는지 적어 본다</li>
+      <li>(이해 확인) <code>warn=restricted</code>를 걸었는데 경고가 안 나오는 이유를 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/apps/journal-api/Dockerfile</code> — <code>USER node</code> → <code>USER 1000</code></li>
+      <li><code>course/labs/k8s/journal/30-journal-api.yaml</code> · <code>20-redis.yaml</code> · <code>40-web-static.yaml</code> — <code>securityContext</code>와 <code>automountServiceAccountToken: false</code>. <code>web-static</code>은 이미지와 포트도 바뀌었다</li>
+      <li>클러스터: <code>journal</code> 네임스페이스가 <code>enforce=restricted</code>. 세 워크로드가 비루트로 돈다</li>
+      <li><code>apps</code> 네임스페이스는 아직 걸지 않았다 — <code>order-api</code>는 이미 <code>USER 10001</code>이고 <code>securityContext</code>도 M19에서 넣었으므로, 라벨만 붙이면 통과한다. M27에서 클러스터 전체 태세를 볼 때 함께 다룬다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 실험 네임스페이스 넷을 지운다 (안의 파드도 함께 사라진다)
+kubectl delete ns m24 psa-privileged psa-baseline psa-restricted --ignore-not-found
+
+# 남아 있는지 확인
+kubectl get ns --no-headers | awk '{print $1}'</code></pre>
+  <p><code>journal</code>의 <code>restricted</code> 라벨과 매니페스트 변경은 <strong>되돌리지 않는다.</strong> M25에서 네트워크 정책을 걸 때 같은 네임스페이스를 쓰고, M36 카오스 실험에서도 이 상태가 전제다.</p>
+  <p>실습 중 만든 파드가 <code>journal</code>에 남아 있으면 <code>enforce=restricted</code> 때문에 <strong>재시작되지 못한다.</strong> <code>kubectl -n journal get po</code>로 예상치 못한 파드가 없는지 한 번 확인한다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m23-k8s-rbac-authz.html">← M23 RBAC과 인가</a>
+  <a href="m25-k8s-networkpolicy-mesh.html">M25 네트워크 정책과 서비스 메시 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>파드가 무엇을 할 수 있는지는 제한했다. 그런데 <strong>어디와 통신할 수 있는지</strong>는 아직 아무 제한이 없다. 지금 클러스터에서는 어느 네임스페이스의 어느 파드든 다른 모든 파드에 접근할 수 있다 — <code>apps</code>의 <code>order-api</code>가 <code>journal</code>의 레디스에 붙을 수 있고, 비밀번호만 알면 데이터를 읽는다.</p>
+  <p>M25에서 그것을 먼저 확인하고 <code>default-deny</code>를 건다. 그다음 필요한 경로만 열면서 <strong>DNS를 빠뜨려 모든 이름 해석이 죽는</strong> 흔한 사고를 재현한다 — 이그레스 정책의 대표적인 함정이다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>파드 시큐리티 표준: https://kubernetes.io/docs/concepts/security/pod-security-standards/</li>
+    <li>파드 시큐리티 어드미션: https://kubernetes.io/docs/concepts/security/pod-security-admission/</li>
+    <li>네임스페이스에 정책 적용하기: https://kubernetes.io/docs/tasks/configure-pod-container/enforce-standards-namespace-labels/</li>
+    <li>파드·컨테이너 securityContext: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/</li>
+    <li>seccomp 프로파일 적용: https://kubernetes.io/docs/tutorials/security/seccomp/</li>
+    <li>비루트 nginx 이미지: https://github.com/nginx/docker-nginx-unprivileged</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 10.1 파드 보안 · 10.2 워크로드 격리 · 19.3 컨테이너 보안</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · redis:8.2-alpine · nginxinc/nginx-unprivileged:1.29-alpine</p>
+</footer>
+
+</div>
+</body>
+</html>

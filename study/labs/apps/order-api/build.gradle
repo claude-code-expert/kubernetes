@@ -1,0 +1,44 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.study.obs'
+version = '0.0.1'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // 이 한 줄이 /actuator/prometheus 엔드포인트를 만든다.
+    // 액추에이터는 클래스패스에서 발견한 레지스트리를 자동 구성한다.
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('bootBuildImage') {
+    imageName = "obs/order-api:0.0.1"
+    // 최신 우분투 LTS 기반, 자바 관련 버트팩만 담은 빌더
+    builder = "paketobuildpacks/builder-noble-java-tiny:latest"
+    environment = [
+        "BP_JVM_VERSION": "21",
+        "BP_JVM_TYPE": "JRE",
+        // 서비스 바인딩을 쓰지 않으므로 불필요한 jar 주입을 끈다
+        "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true"
+    ]
+}

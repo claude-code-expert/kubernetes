@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 · 대시보드와 알림 — 쿠버네티스 관측성</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+.why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="index.html">← 목차로</a>
+  <span class="where">CHAPTER 07 / 11</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>대시보드와 알림</h1>
+  <p class="lede">06장에서 쓴 질의를 패널과 알림 규칙으로 옮긴다. 기술은 어렵지 않다. 어려운 것은 <strong>무엇을 넣지 않을지 정하는 일</strong>이다.</p>
+</header>
+
+<h2><span class="n">01</span>왜 이 장이 필요한가</h2>
+
+<p>06장에서 질의 여섯 개를 만들었다. 그런데 그 질의들은 <strong>누군가 터미널에서 실행할 때만</strong> 값을 낸다. 새벽 세 시에 에러율이 20% 로 뛰어도 아무도 모른다.</p>
+
+<p>그래서 두 가지를 만든다. 질의를 <strong>항상 떠 있는 화면</strong>으로 옮기고(대시보드), 조건을 넘으면 <strong>사람을 부르게</strong> 한다(알림).</p>
+
+<p>다만 둘 다 늘리면 늘릴수록 나빠지는 물건이다. 패널이 40개인 대시보드는 아무도 보지 않고, 울리는데 아무도 안 보는 알림은 <strong>없는 것보다 나쁘다</strong> — 진짜 알림까지 같이 무시하게 만들기 때문이다. 이 장에서 만드는 것은 패널 일곱 개와 알림 네 개뿐이고, 그 숫자를 지키는 근거가 이 장의 절반이다.</p>
+
+
+<h2><span class="n">02</span>알아야 할 개념</h2>
+
+<h3>그래프의 장벽</h3>
+
+<p class="cap">책 3.11</p>
+
+<p>정보가 많으면 모니터링이 잘 되는 것 같지만 반대다. <strong>한 화면은 하나의 질문에 답해야 한다.</strong> 이 실습의 RED 대시보드는 “지금 서비스가 정상인가”에만 답한다. JVM 힙이나 GC 는 이 화면이 아니라 별도의 심층 대시보드에 둔다 — “응답이 느리다”를 확인한 <em>다음에</em> 보는 지표이기 때문이다.</p>
+
+<h3>임계를 넘은 순간과 알림이 오는 순간 사이</h3>
+
+<p>네 개의 지연이 겹쳐 있다. 각 구간을 어느 설정이 정하는지 알아야 “왜 5분이나 걸렸나”에 답할 수 있다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>구간</th><th>정하는 설정</th><th>이 실습의 값</th><th>최악의 경우</th></tr>
+  <tr><td>이상이 메트릭에 반영되기까지</td><td><code>scrapeInterval</code> (04장)</td><td>30초</td><td>30초</td></tr>
+  <tr><td>프로메테우스가 조건을 다시 계산하기까지</td><td>규칙 그룹의 <code>interval</code></td><td>30초</td><td>30초</td></tr>
+  <tr><td>조건이 <em>계속</em> 참이어야 하는 시간</td><td><code>for</code></td><td>1~5분</td><td><code>for</code> 값 그대로</td></tr>
+  <tr><td>알림매니저가 같은 그룹을 모으는 시간</td><td><code>group_wait</code></td><td>30초</td><td>30초</td></tr>
+</table>
+</div>
+
+<p><code>for: 2m</code> 인 알림은 최악의 경우 <strong>30초 + 30초 + 2분 + 30초 ≈ 3분 30초</strong> 뒤에 슬랙에 뜬다. <code>for</code> 를 0 으로 두면 스파이크 한 번에 울리고, 10분으로 두면 진짜 장애를 10분 늦게 안다. <strong>공짜인 값이 없다</strong>는 것이 이 표의 요점이다.</p>
+
+<h3>알림에는 세 가지 상태가 있다</h3>
+
+<p>조건이 참이 되는 순간 바로 울리지 않는다. <code>pending</code> 을 거친다. 이 상태를 프로메테우스 <code>/alerts</code> 화면에서 눈으로 보는 것이, 규칙이 동작하는지 확인하는 가장 빠른 방법이다.</p>
+
+<h3>묶기와 억제</h3>
+
+<p>파드 10개가 동시에 죽으면 알림도 10개다. Alertmanager 는 이것을 <dfn class="term">그룹화</dfn>로 한 덩어리로 묶고, <dfn class="term">억제</dfn>로 “심각한 알림이 울리는 동안 같은 대상의 가벼운 알림은 숨긴다”를 처리한다. 프로메테우스는 알림을 <strong>발생</strong>시킬 뿐이고, 묶고 보내는 것은 전부 Alertmanager 의 일이다.</p>
+
+<h3>용어 정리</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
+  <tr><td>PrometheusRule</td><td>Prometheus Rule</td><td>알림 규칙과 기록 규칙을 선언하는 커스텀 리소스</td></tr>
+  <tr><td>Alertmanager</td><td>Alertmanager</td><td>발생한 알림을 묶고 억제하고 라우팅하는 구성요소</td></tr>
+  <tr><td><code>for</code></td><td>for</td><td>조건이 계속 참이어야 발화하는 시간. 순간적인 튐을 걸러낸다</td></tr>
+  <tr><td>pending</td><td>pending</td><td>조건은 참인데 <code>for</code> 를 아직 못 채운 상태</td></tr>
+  <tr><td>firing</td><td>firing</td><td>발화. 이 시점에 Alertmanager 로 전달된다</td></tr>
+  <tr><td>그룹화</td><td>Grouping</td><td>같은 라벨을 가진 알림을 한 통보로 묶는다 (<code>group_by</code>)</td></tr>
+  <tr><td>억제</td><td>Inhibition</td><td>심각한 알림이 울리는 동안 가벼운 알림을 숨긴다 (<code>inhibit_rules</code>)</td></tr>
+  <tr><td>수신자</td><td>Receiver</td><td>알림을 실제로 보낼 곳. 슬랙·이메일·웹훅 등</td></tr>
+  <tr><td>Watchdog</td><td>Watchdog</td><td>“모니터링이 살아 있다”를 알리는 상시 알림. 통보는 버리고 존재만 확인한다</td></tr>
+  <tr><td>amtool</td><td>Alertmanager Tool</td><td>알림을 터뜨리지 않고 라우팅을 시뮬레이션하는 도구</td></tr>
+  <tr><td>템플릿 변수</td><td>Template Variable</td><td>대시보드 상단 드롭다운. 화면 하나로 여러 대상을 본다</td></tr>
+  <tr><td>어드미션 웹훅</td><td>Admission Webhook</td><td>리소스를 저장하기 전에 검사하는 장치. 차트가 규칙 문법 검사에 쓴다</td></tr>
+</table>
+</div>
+
+<div class="goals">
+  <h3>이 장을 마치면 할 수 있는 것</h3>
+  <ol>
+    <li>변수를 쓴 대시보드 하나로 여러 서비스를 보고, 패널을 늘리자는 요청에 근거를 들어 답할 수 있다.</li>
+    <li>알림이 <code>inactive → pending → firing</code> 으로 바뀌는 것을 직접 관찰할 수 있다.</li>
+    <li>“왜 알림이 3분 뒤에 왔나”를 네 구간으로 분해해 설명할 수 있다.</li>
+    <li><code>amtool</code> 로 알림을 터뜨리지 않고 라우팅을 검증할 수 있다.</li>
+    <li>규칙의 PromQL 문법 오류가 <strong>적용 시점에</strong> 걸린다는 것을 확인할 수 있다.</li>
+  </ol>
+</div>
+
+
+<h2><span class="n">03</span>최종적으로 만들 것</h2>
+
+<p>패널 일곱 개짜리 대시보드 한 장과 알림 규칙 네 개. 그리고 에러를 주입해 알림이 실제로 <code>firing</code> 이 되는 것까지 본다.</p>
+
+<h3>대시보드 한 장의 구조</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 450" role="img" aria-label="대시보드를 요약 stat 네 개, 시계열 두 개, 상세 하나 순서로 배치한 레이아웃">
+  <rect width="1000" height="450" fill="#ffffff"/>
+
+  <rect x="24" y="54" width="654" height="44" rx="5" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.4"/>
+  <text x="42" y="82" font-size="12.5" font-family="monospace" fill="#15181d">namespace: apps ▾    service: All ▾    datasource: Prometheus ▾</text>
+  <text x="700" y="82" font-size="12.5" fill="#585f6b">변수 — 화면 하나를 여러 대상에 재사용</text>
+
+  <rect x="24" y="120" width="156" height="80" rx="5" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="102" y="154" font-size="13" fill="#15181d" text-anchor="middle">초당 요청</text>
+  <text x="102" y="178" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">stat</text>
+
+  <rect x="190" y="120" width="156" height="80" rx="5" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="268" y="154" font-size="13" fill="#15181d" text-anchor="middle">에러율</text>
+  <text x="268" y="178" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">stat</text>
+
+  <rect x="356" y="120" width="156" height="80" rx="5" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="434" y="154" font-size="13" fill="#15181d" text-anchor="middle">P95 지연</text>
+  <text x="434" y="178" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">stat</text>
+
+  <rect x="522" y="120" width="156" height="80" rx="5" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="600" y="154" font-size="13" fill="#15181d" text-anchor="middle">분당 주문</text>
+  <text x="600" y="178" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">stat</text>
+
+  <text x="700" y="166" font-size="12.5" fill="#15181d">① 지금 문제가 있는가 — 3초</text>
+
+  <rect x="24" y="216" width="320" height="104" rx="5" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/>
+  <text x="184" y="258" font-size="13" fill="#15181d" text-anchor="middle">서비스별 처리율 추이</text>
+  <text x="184" y="282" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">timeseries</text>
+
+  <rect x="358" y="216" width="320" height="104" rx="5" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/>
+  <text x="518" y="258" font-size="13" fill="#15181d" text-anchor="middle">서비스별 P95 / P99</text>
+  <text x="518" y="282" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">timeseries</text>
+
+  <text x="700" y="272" font-size="12.5" fill="#15181d">② 언제부터, 어느 서비스인가</text>
+
+  <rect x="24" y="336" width="654" height="86" rx="5" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="351" y="374" font-size="13" fill="#15181d" text-anchor="middle">엔드포인트별 P99 상위 5개</text>
+  <text x="351" y="398" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">timeseries</text>
+
+  <text x="700" y="384" font-size="12.5" fill="#15181d">③ 어느 요청이 범인인가</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> 위에서 아래로 읽는 순서가 곧 장애 대응 절차가 되도록 배치한다.
+  더 넣고 싶은 것이 생기면 <strong>새 패널을 추가하기 전에 지울 것을 먼저 찾는다.</strong>
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b" style="background:#2e7d4f">1</span><span>
+    <strong>3초 안에 답이 나오는가.</strong> 맨 윗줄 숫자 네 개만 보고 정상 여부를 판정할 수 있어야 한다.
+    <span class="chk">확인 그라파나에서 대시보드를 열고 상단 stat 4개에 값이 채워져 있다</span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>변수가 동작하는가.</strong> 드롭다운에서 서비스를 바꾸면 아래 그래프가 따라 바뀐다.
+    <span class="chk">확인 <code>service</code> 를 <code>order-api</code> 로 바꾸면 처리율 그래프의 선이 하나만 남는다</span>
+  </span></li>
+  <li><span class="b">3</span><span>
+    <strong>상세까지 내려갈 수 있는가.</strong> 맨 아래 패널이 “어느 요청”을 지목한다.
+    <span class="chk">확인 하단 패널 범례에 <code>/api/orders</code> 같은 <strong>템플릿 경로</strong>가 보인다</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>변수와 배치를 만드는 JSON — 세 곳만 보면 된다</h4>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/dashboards/obs-red.json — 변수 정의</span>
+<pre><code class="language-json">"templating": {
+  "list": [
+    {
+      "name": "datasource",
+      "type": "datasource",
+      "query": "prometheus"
+    },
+    {
+      "name": "namespace",
+      "type": "query",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "query": "label_values(http_server_requests_seconds_count, namespace)",
+      "refresh": 1
+    },
+    {
+      "name": "service",
+      "type": "query",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "query": "label_values(http_server_requests_seconds_count{namespace=\"$namespace\"}, service)",
+      "refresh": 1,
+      "multi": true,
+      "includeAll": true
+    }
+  ]
+}</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>JSON 의 부분</th><th>그림의 무엇을 만드나</th><th>빠지면</th></tr>
+  <tr><td><code>type: "datasource"</code> 변수</td><td>상단 세 번째 드롭다운</td><td>쿼리 변수가 값을 못 채운다 — 아래 설명</td></tr>
+  <tr><td><code>label_values(...)</code></td><td>드롭다운의 <em>선택지</em></td><td>드롭다운이 비어 있다</td></tr>
+  <tr><td><code>multi: true</code> · <code>includeAll: true</code></td><td>여러 개 선택과 <code>All</code></td><td>한 번에 하나만 볼 수 있다</td></tr>
+  <tr><td>패널의 <code>gridPos</code> <code>y</code> 값</td><td>①②③ 세 줄의 순서</td><td>줄이 섞여 읽는 순서가 무너진다</td></tr>
+  <tr><td>쿼리의 <code>service=~"$service"</code></td><td>드롭다운과 그래프의 연결</td><td>드롭다운을 바꿔도 그래프가 그대로다</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">05장과 달라진 점 — 여기서는 datasource 를 적는다</span>
+  <p>05장에서는 <code>datasource</code> 필드를 아예 생략해 기본 데이터소스를 쓰게 했다. 패널만 있을 때는 그것으로 충분하지만, <strong>쿼리 변수는 데이터소스를 명시해야</strong> 값을 채울 수 있다. 그래서 <code>datasource</code> 타입 변수를 만들고 <code>${datasource}</code> 로 참조한다 — 결과적으로 uid 를 박아 넣지 않으면서도 변수가 동작한다.</p>
+</blockquote>
+
+
+<h3>알림이 울리기까지</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" role="img" aria-label="조건이 참이 되어도 for 시간을 채워야 pending에서 firing으로 바뀌는 과정">
+  <rect width="1000" height="400" fill="#ffffff"/>
+  <text x="24" y="44" font-size="15" font-weight="700" fill="#15181d">규칙: 에러율 &gt; 5%, <tspan font-family="monospace" font-size="14">for: 2m</tspan></text>
+
+  <text x="24" y="96" font-size="12.5" fill="#585f6b">조건 충족 여부</text>
+  <rect x="170" y="78" width="100" height="26" rx="3" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+  <text x="220" y="96" font-size="12" fill="#585f6b" text-anchor="middle">거짓</text>
+  <rect x="270" y="78" width="60" height="26" rx="3" fill="#fdf8f4" stroke="#8f4408" stroke-width="1.6"/>
+  <text x="300" y="96" font-size="12" fill="#8f4408" text-anchor="middle">참</text>
+  <rect x="330" y="78" width="60" height="26" rx="3" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+  <text x="360" y="96" font-size="12" fill="#585f6b" text-anchor="middle">거짓</text>
+  <rect x="390" y="78" width="380" height="26" rx="3" fill="#fdf8f4" stroke="#8f4408" stroke-width="1.6"/>
+  <text x="580" y="96" font-size="12" fill="#8f4408" text-anchor="middle">참 — 계속 유지</text>
+  <rect x="770" y="78" width="170" height="26" rx="3" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+  <text x="855" y="96" font-size="12" fill="#585f6b" text-anchor="middle">거짓</text>
+
+  <text x="24" y="176" font-size="12.5" fill="#585f6b">알림 상태</text>
+  <rect x="170" y="156" width="100" height="30" rx="3" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+  <text x="220" y="176" font-size="11.5" font-family="monospace" fill="#585f6b" text-anchor="middle">inactive</text>
+  <rect x="270" y="156" width="60" height="30" rx="3" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/>
+  <text x="300" y="176" font-size="11" font-family="monospace" fill="#1f4d8f" text-anchor="middle">pending</text>
+  <rect x="330" y="156" width="60" height="30" rx="3" fill="#ffffff" stroke="#585f6b" stroke-width="1.2"/>
+  <text x="360" y="176" font-size="10.5" font-family="monospace" fill="#585f6b" text-anchor="middle">inactive</text>
+  <rect x="390" y="156" width="140" height="30" rx="3" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/>
+  <text x="460" y="176" font-size="11.5" font-family="monospace" fill="#1f4d8f" text-anchor="middle">pending (2분)</text>
+  <rect x="530" y="156" width="240" height="30" rx="3" fill="#fdf8f4" stroke="#8f4408" stroke-width="1.8"/>
+  <text x="650" y="176" font-size="12" font-family="monospace" fill="#8f4408" text-anchor="middle">firing</text>
+  <rect x="770" y="156" width="170" height="30" rx="3" fill="#f4faf6" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="855" y="176" font-size="12" font-family="monospace" fill="#2e7d4f" text-anchor="middle">resolved</text>
+
+  <defs>
+    <marker id="n1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+    </marker>
+    <marker id="n2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8f4408"/>
+    </marker>
+  </defs>
+
+  <line x1="300" y1="190" x2="300" y2="222" stroke="#585f6b" stroke-width="1.4" marker-end="url(#n1)"/>
+  <text x="316" y="220" font-size="12.5" fill="#585f6b">2분을 못 채우고 사라졌다 — 알림 없음</text>
+
+  <line x1="530" y1="190" x2="530" y2="276" stroke="#8f4408" stroke-width="1.4" marker-end="url(#n2)"/>
+  <text x="546" y="274" font-size="12.5" fill="#8f4408">2분을 버텼다 — 이 시점에 Alertmanager 로 전달된다</text>
+
+  <line x1="24" y1="316" x2="976" y2="316" stroke="#d8dbe0" stroke-width="1"/>
+  <text x="24" y="346" font-size="13" fill="#15181d">for 가 짧으면 노이즈가, 길면 발견이 늦어진다 — 지표의 변동성을 보고 정한다</text>
+  <text x="24" y="372" font-size="13" fill="#585f6b">firing 이 된 뒤에도 group_wait 만큼 더 기다렸다가 통보가 나간다</text>
+</svg>
+<figcaption>
+  <b>그림 2.</b> <code>pending</code> 상태는 프로메테우스 <code>/alerts</code> 화면에서 확인할 수 있다.
+  알림을 만든 직후 여기서 <code>pending</code> 을 눈으로 보는 것이, 규칙이 동작하는지 확인하는 가장 빠른 방법이다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>규칙이 읽혔는가.</strong> 만들어진 것과 읽힌 것은 다르다 — 06장과 같은 이야기다.
+    <span class="chk">확인 <code>curl -s localhost:30900/api/v1/rules | jq -r '.data.groups[] | select(.name=="obs-study-app") | .rules[] | "\(.name)\t\(.state)"'</code> → 4줄, 전부 <code>inactive</code></span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>조건을 만들면 pending 이 되는가.</strong> 에러를 주입하고 상태를 지켜본다.
+    <span class="chk">확인 같은 명령 → <code>AppHighErrorRate</code> 가 <code>pending</code></span>
+  </span></li>
+  <li><span class="b" style="background:#8f4408">3</span><span>
+    <strong>2분 뒤 firing 이 되는가.</strong> <code>for: 2m</code> 의 효과를 시계로 확인한다.
+    <span class="chk">확인 같은 명령 → <code>firing</code>. Alertmanager <code>/api/v2/alerts</code> 에도 나타난다</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>세 상태를 만드는 설정 — for 와 interval</h4>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/monitoring/91-prometheusrule.yaml — 발췌</span>
+<pre><code class="language-yaml">spec:
+  groups:
+    - name: obs-study-app
+      # 이 그룹의 규칙을 얼마나 자주 평가할지 — 그림의 눈금 간격
+      interval: 30s
+      rules:
+        - alert: AppHighErrorRate
+          expr: |
+            100 * ( ... ) > 5      # 조건 — 그림 윗줄의 참/거짓
+          for: 2m                  # pending 을 버텨야 하는 시간
+          labels:
+            severity: warning      # Alertmanager 라우팅의 기준
+          annotations:
+            summary: "{{ $labels.service }} 에러율 {{ $value | printf \"%.1f\" }}%"</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>필드</th><th>그림의 어느 부분</th><th>바꾸면</th></tr>
+  <tr><td><code>interval: 30s</code></td><td>윗줄 판정이 갱신되는 주기</td><td>짧게 하면 CPU 를 더 쓰고, 길면 발화가 늦어진다</td></tr>
+  <tr><td><code>expr</code></td><td>참/거짓 자체</td><td>임계값을 낮추면 <code>pending</code> 구간이 자주 생긴다</td></tr>
+  <tr><td><code>for: 2m</code></td><td><code>pending</code> 의 길이</td><td>0 이면 왼쪽의 짧은 “참”에도 즉시 발화한다</td></tr>
+  <tr><td><code>labels.severity</code></td><td>—</td><td>08절 라우팅에서 어느 수신자로 갈지 정한다</td></tr>
+  <tr><td><code>annotations.summary</code></td><td>—</td><td>알림 본문. <code>{{ $labels }}</code> 와 <code>{{ $value }}</code> 를 쓸 수 있다</td></tr>
+</table>
+</div>
+
+
+<h2><span class="n">04</span>실습 파일 위치</h2>
+
+<div class="srcbox">
+  <span class="fp">저장소 안의 위치</span>
+<pre><code class="language-text">study/labs/
+├── monitoring/
+│   ├── kps-values.yaml              alertmanager.config 블록이 08절이다
+│   └── dashboards/obs-red.json      ← 이 장의 대시보드
+└── k8s/monitoring/
+    └── 91-prometheusrule.yaml       ← 이 장의 알림 규칙</code></pre>
+</div>
+
+
+<h2><span class="n">05</span>RED 대시보드</h2>
+
+<p>03절에서 변수 부분을 봤다. 패널은 일곱 개이고, 앞의 네 개가 <code>stat</code>, 다음 둘이 시계열, 마지막이 상세다. 질의는 전부 06장에서 만든 것을 <strong>변수로 치환한 것</strong>이다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/dashboards/obs-red.json — 패널 두 개만 발췌</span>
+<pre><code class="language-json">{
+  "type": "stat",
+  "title": "5xx 에러율",
+  "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+  "datasource": { "type": "prometheus", "uid": "${datasource}" },
+  "fieldConfig": {
+    "defaults": {
+      "unit": "percent",
+      "decimals": 2,
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          { "color": "text", "value": null },
+          { "color": "red", "value": 1 }
+        ]
+      }
+    }
+  },
+  "targets": [
+    {
+      "refId": "A",
+      "expr": "100 * (sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\", status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[5m])) or vector(0))"
+    }
+  ]
+},
+{
+  "type": "timeseries",
+  "title": "서비스별 P95 / P99",
+  "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+  "datasource": { "type": "prometheus", "uid": "${datasource}" },
+  "fieldConfig": { "defaults": { "unit": "s" } },
+  "targets": [
+    {
+      "refId": "A",
+      "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))",
+      "legendFormat": "{{service}} P95"
+    },
+    {
+      "refId": "B",
+      "expr": "histogram_quantile(0.99, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))",
+      "legendFormat": "{{service}} P99"
+    }
+  ]
+}</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>필드</th><th>무엇을 정하나</th></tr>
+  <tr><td><code>unit: "percent"</code> · <code>"s"</code> · <code>"reqps"</code></td><td>숫자 뒤에 붙는 단위. 틀리면 0.05초가 “50000”으로 보인다</td></tr>
+  <tr><td><code>thresholds</code></td><td>값에 따른 색. 에러율 1% 부터 빨강이므로 <strong>보자마자 판정된다</strong></td></tr>
+  <tr><td><code>or vector(0)</code></td><td>트래픽이 없을 때 <code>No data</code> 대신 0 을 표시</td></tr>
+  <tr><td><code>legendFormat</code></td><td>범례 이름. <code>{{service}}</code> 로 라벨 값을 꺼낸다</td></tr>
+  <tr><td>한 패널에 <code>targets</code> 두 개</td><td>P95 와 P99 를 같은 축에 겹쳐 그린다</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">빈 값과 0 은 다른 의미다</span>
+  <p>에러율 패널의 <code>or vector(0)</code> 는 “트래픽이 없다”를 “에러가 없다”로 바꿔 보여 준다. 편하지만 <strong>서비스가 죽어서 요청이 0 인 상황도 초록색 0% 로 보인다</strong>. 그래서 초당 요청 수 패널을 그 옆에 나란히 둔다 — 둘을 함께 봐야 판정이 된다.</p>
+</blockquote>
+
+<h3>배포와 확인</h3>
+
+<pre><code class="language-bash">cd study/labs/monitoring
+
+kubectl -n monitoring create configmap obs-red-dashboard \
+  --from-file=obs-red.json=dashboards/obs-red.json \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n monitoring label configmap obs-red-dashboard \
+  grafana_dashboard=1 --overwrite
+kubectl -n monitoring annotate configmap obs-red-dashboard \
+  grafana_folder="Obs Study" --overwrite
+
+# 사이드카가 집었는지 (05장과 같은 방법)
+kubectl -n monitoring logs -l app.kubernetes.io/name=grafana \
+  -c grafana-sc-dashboard --tail=10</code></pre>
+
+<blockquote class="warn">
+  <span class="label">변수 드롭다운이 비어 있다면</span>
+  <p><code>label_values()</code> 는 <strong>해당 메트릭이 존재해야</strong> 값을 반환한다. 06장 이후 트래픽이 없었다면 프로메테우스가 오래된 시계열을 이미 잊었을 수 있다. 요청을 몇 번 보내고 1분 뒤 새로고침한다.</p>
+</blockquote>
+
+
+<h2><span class="n">06</span>PrometheusRule 적용</h2>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/monitoring/91-prometheusrule.yaml — 네 규칙</span>
+<pre><code class="language-yaml">apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: obs-study-app-rules
+  namespace: apps
+  labels:
+    # ServiceMonitor와 같은 이유로 필요하다 (06장 ①번 고리)
+    release: kps
+spec:
+  groups:
+    - name: obs-study-app
+      interval: 30s
+      rules:
+        - alert: AppTargetDown
+          expr: up{namespace="apps"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.service }} 스크레이프 실패"
+            description: "{{ $labels.pod }} 를 1분 이상 긁지 못하고 있습니다."
+
+        - alert: AppHighErrorRate
+          expr: |
+            100 * (
+              sum by (service) (
+                rate(http_server_requests_seconds_count{namespace="apps", status=~"5.."}[5m])
+              )
+              /
+              sum by (service) (
+                rate(http_server_requests_seconds_count{namespace="apps"}[5m])
+              )
+            ) > 5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} 에러율 {{ $value | printf \"%.1f\" }}%"
+
+        - alert: AppHighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le, service) (
+                rate(http_server_requests_seconds_bucket{namespace="apps"}[5m])
+              )
+            ) > 0.5
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} P95 {{ $value | printf \"%.2f\" }}초"
+
+        - alert: OrderRejectionSpike
+          expr: sum(rate(orders_rejected_total[5m])) > 0.2
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "주문 거부가 늘고 있습니다"</code></pre>
+</div>
+
+<pre><code class="language-bash">kubectl apply -f study/labs/k8s/monitoring/91-prometheusrule.yaml
+
+# 프로메테우스가 규칙을 실제로 읽었는지 (읽는 데 30초 정도 걸린다)
+curl -s http://localhost:30900/api/v1/rules \
+  | jq -r '.data.groups[] | select(.name=="obs-study-app") | .rules[] | "\(.name)\t\(.state)"'</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">AppTargetDown         inactive
+AppHighErrorRate      inactive
+AppHighLatencyP95     inactive
+OrderRejectionSpike   inactive</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>네 개가 모두 보이면 성공이다. <strong>아무것도 안 나오면 <code>release: kps</code> 라벨을 확인한다</strong> — ServiceMonitor 와 완전히 같은 이유로 조용히 무시된다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">임계값은 어떻게 정하나</span>
+  <p>위 숫자(5%, 500ms)는 예시일 뿐이다. 실제로는 <strong>과거 데이터를 보고 정한다</strong> — 평소 P95 가 200ms 인 서비스에 500ms 임계값은 합리적이지만, 평소가 800ms 인 서비스에는 매분 울리는 알림이 된다. 06장에서 만든 그래프를 며칠 관찰한 뒤 정하는 것이 정석이고, 급하면 “평소값의 2~3배”에서 시작해 조정한다.</p>
+</blockquote>
+
+
+<h2><span class="n">07</span>Alertmanager 라우팅</h2>
+
+<p>프로메테우스는 알림을 <strong>발생</strong>시키고, Alertmanager 는 그것을 <strong>묶고 억제하고 보낸다</strong>. 값 파일에 라우팅을 정의한다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/kps-values.yaml — alertmanager.config</span>
+<pre><code class="language-yaml">alertmanager:
+  # 이 블록을 쓰면 차트 기본 설정을 전부 대체한다.
+  # Watchdog 처리와 억제 규칙을 빠뜨리면 안 되는 이유다.
+  config:
+    global:
+      resolve_timeout: 5m
+
+    route:
+      # 같은 네임스페이스·같은 알림이면 한 덩어리로 묶어 보낸다
+      group_by: ["namespace", "alertname"]
+      # 첫 알림을 30초 기다렸다가 보낸다 — 연달아 터지는 것을 한 번에 묶기 위해
+      group_wait: 30s
+      # 같은 그룹에 새 알림이 추가되면 5분 간격으로 다시 보낸다
+      group_interval: 5m
+      # 해결되지 않은 알림을 4시간마다 재통보
+      repeat_interval: 4h
+      receiver: study-default
+      routes:
+        # Watchdog은 "모니터링이 살아있다"를 알리는 상시 알림이다. 통보는 버린다.
+        - receiver: "null"
+          matchers:
+            - alertname =~ "InfoInhibitor|Watchdog"
+        - receiver: study-critical
+          matchers:
+            - severity = "critical"
+
+    # critical이 울리는 동안 같은 대상의 warning/info는 숨긴다
+    inhibit_rules:
+      - source_matchers:
+          - severity = "critical"
+        target_matchers:
+          - severity =~ "warning|info"
+        equal: ["namespace", "alertname"]
+
+    receivers:
+      - name: "null"
+      - name: study-default
+      - name: study-critical
+      # 슬랙 웹훅이 있다면 위 receiver에 아래를 붙인다.
+      # slack_configs:
+      #   - api_url: https://hooks.slack.com/services/XXX/YYY/ZZZ
+      #     channel: "#obs-study"
+      #     send_resolved: true</code></pre>
+</div>
+
+<pre><code class="language-bash">helm upgrade kps prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --version 88.3.0 \
+  -f kps-values.yaml --wait --timeout 10m</code></pre>
+
+<h3>라우팅을 시뮬레이션한다 — amtool</h3>
+
+<p class="cap">목적: 알림을 실제로 터뜨리지 않고 “이 라벨이면 어디로 가는가”를 확인한다.</p>
+
+<pre><code class="language-bash">AM_POD=$(kubectl -n monitoring get pod \
+  -l app.kubernetes.io/name=alertmanager \
+  -o jsonpath='{.items[0].metadata.name}')
+CFG=/etc/alertmanager/config_out/alertmanager.env.yaml
+
+kubectl -n monitoring exec "$AM_POD" -c alertmanager -- \
+  amtool config routes --config.file="$CFG"</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">Routing tree:
+.
+└── default-route  receiver: study-default
+    ├── {alertname=~"InfoInhibitor|Watchdog"}  receiver: null
+    └── {severity="critical"}  receiver: study-critical</code></pre>
+
+<pre><code class="language-bash">kubectl -n monitoring exec "$AM_POD" -c alertmanager -- \
+  amtool config routes test --config.file="$CFG" \
+  severity=critical namespace=apps alertname=AppTargetDown</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">study-critical</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>트리 출력의 <strong>들여쓰기가 곧 우선순위</strong>다. 위에서부터 먼저 맞는 가지로 간다 — Watchdog 가지가 <code>critical</code> 가지보다 위에 있으므로, Watchdog 은 severity 와 무관하게 버려진다. <code>routes test</code> 는 라벨 조합을 넣으면 최종 수신자 이름만 돌려준다.</p>
+  <p>설정 파일 경로가 다르면 <code>kubectl -n monitoring exec "$AM_POD" -c alertmanager -- ls /etc/alertmanager/config_out/</code> 로 확인한다. 오퍼레이터 버전에 따라 파일명이 달라질 수 있다.</p>
+</blockquote>
+
+
+<h2><span class="n">08</span>알림을 실제로 터뜨려 보기</h2>
+
+<pre><code class="language-bash"># 에러를 4분간 계속 만든다 (임계값 5%, for 2m)
+end=$((SECONDS+240))
+while [ "$SECONDS" -lt "$end" ]; do
+  curl -s -o /dev/null "http://localhost:30080/api/chaos/error?rate=0.8"
+  sleep 0.5
+done
+echo "에러 주입 종료"</code></pre>
+
+<p>주입하는 동안 다른 터미널에서 상태 변화를 지켜본다.</p>
+
+<pre><code class="language-bash">watch -n 10 "curl -s http://localhost:30900/api/v1/rules \
+  | jq -r '.data.groups[] | select(.name==\"obs-study-app\") | .rules[] | \"\(.name)\t\(.state)\"'"</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p><code>inactive</code> → <code>pending</code> → <code>firing</code> 순으로 바뀐다. <strong><code>pending</code> 에서 <code>firing</code> 까지 2분</strong>이 걸리는 것을 시계로 확인한다 — 그림 2 의 <code>for: 2m</code> 이 이것이다.</p>
+</blockquote>
+
+<h3>Alertmanager 까지 도달했는지</h3>
+
+<pre><code class="language-bash">kubectl -n monitoring port-forward svc/kps-kube-prometheus-alertmanager 9093:9093 &gt;/dev/null 2&gt;&amp;1 &amp;
+
+curl -s http://localhost:9093/api/v2/alerts \
+  | jq -r '.[] | "\(.labels.alertname)\t\(.labels.severity)\t\(.status.state)"'</code></pre>
+
+<blockquote>
+  <span class="label">Watchdog 도 함께 보인다</span>
+  <p>정상이다. 모니터링이 살아 있음을 알리는 상시 알림이고, 우리는 라우팅에서 <code>null</code> 로 버리도록 했다. <strong>목록에는 남고 통보만 되지 않는다</strong>는 점을 확인한다 — “버린다”가 “없앤다”가 아니라는 것이 요점이다.</p>
+</blockquote>
+
+<pre><code class="language-bash"># 실습이 끝나면 포트포워드와 부하 루프를 모두 종료한다
+kill %1</code></pre>
+
+
+<h2><span class="n">09</span>일부러 실패시키기 — 규칙의 문법 오류</h2>
+
+<p>06장에서는 <strong>라벨</strong>을 틀려 조용히 무시되는 것을 봤다. 규칙에는 다른 종류의 실패가 하나 더 있다 — <strong>PromQL 문법 오류</strong>다. 이것은 조용하지 않다. 어떻게 다른지 확인한다.</p>
+
+<p class="cap">아래 출력은 kube-prometheus-stack 이 설치된 kind 클러스터에서 재현했다 (확인 2026-09-13). <code>--dry-run=server</code> 를 쓰므로 클러스터에 저장되지 않는다.</p>
+
+<pre><code class="language-bash">cat &lt;&lt;'EOF' | kubectl apply --dry-run=server -f -
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: bad-rule-demo
+  namespace: apps
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: bad
+      rules:
+        - alert: BadExpr
+          # 괄호가 하나 모자란다 — sum by (le ( ...
+          expr: sum by (le (rate(http_server_requests_seconds_bucket[5m]))
+          for: 1m
+EOF</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">The  "prometheusrules" is invalid: : 5:11: group "bad", rule 1, "BadExpr":
+could not parse expression: 1:12: parse error: unexpected "(" in grouping opts,
+expected "," or ")"</code></pre>
+
+<blockquote class="ok">
+  <span class="label">읽는 법</span>
+  <p>메시지에 좌표가 두 개 나온다. 앞의 <code>5:11</code> 은 <strong>YAML 파일 안의 위치</strong>, 뒤의 <code>1:12</code> 는 <strong>그 표현식 문자열 안의 위치</strong>다. 그리고 <code>group "bad", rule 1, "BadExpr"</code> 로 어느 규칙인지 콕 집어 준다. 규칙이 수십 개인 파일에서 이 정보가 없으면 눈으로 찾아야 한다.</p>
+  <p>중요한 것은 <strong>저장되기 전에 막혔다</strong>는 점이다. 차트가 설치한 어드미션 웹훅이 <code>kubectl apply</code> 시점에 PromQL 을 파싱해 본다. 06장의 라벨 실수와는 성격이 정반대다.</p>
+</blockquote>
+
+<div class="tablewrap">
+<table>
+  <tr><th>실수</th><th>언제 드러나나</th><th>어떻게 아나</th></tr>
+  <tr><td><code>release</code> 라벨 누락</td><td>영원히 드러나지 않는다</td><td><code>/api/v1/rules</code> 에 규칙이 없다 — 직접 확인해야 한다</td></tr>
+  <tr><td>PromQL 문법 오류</td><td><code>kubectl apply</code> 하는 즉시</td><td>에러 메시지가 줄 번호까지 알려 준다</td></tr>
+  <tr><td>임계값이 현실과 안 맞음</td><td>운영 중에</td><td>알림이 매분 울리거나, 장애인데 안 울린다</td></tr>
+  <tr><td><code>for</code> 가 너무 짧음</td><td>운영 중에</td><td>스파이크마다 울렸다 풀렸다 한다</td></tr>
+</table>
+</div>
+
+<p>문법은 기계가 잡아 주지만 <strong>나머지 셋은 사람이 정해야 한다.</strong> 그래서 다음 절이 필요하다.</p>
+
+
+<h2><span class="n">10</span>알림을 몇 개 만들 것인가</h2>
+
+<p>이 장에서 만든 알림은 네 개다. 늘리고 싶은 유혹이 계속 생기는데, 판단 기준을 하나 두면 대부분 정리된다.</p>
+
+<blockquote class="warn">
+  <span class="label">기준 하나 — 사람이 지금 무언가를 해야 하는가</span>
+  <p>“알면 좋은 것”은 알림이 아니라 대시보드에 둔다. 새벽 세 시에 깨울 만한 것만 알림으로 만든다. 이 기준을 적용하면 대부분의 “~가 평소보다 높음” 알림이 사라진다.</p>
+</blockquote>
+
+<div class="tablewrap">
+<table>
+  <tr><th>이 장의 알림</th><th>사람이 할 일이 있나</th><th>severity</th></tr>
+  <tr><td><code>AppTargetDown</code></td><td>있다. 서비스가 안 보인다 — 파드나 네트워크를 봐야 한다</td><td><code>critical</code></td></tr>
+  <tr><td><code>AppHighErrorRate</code></td><td>있다. 사용자가 500 을 받고 있다</td><td><code>warning</code></td></tr>
+  <tr><td><code>AppHighLatencyP95</code></td><td>있다. 느려지고 있다 — 원인을 찾아야 한다</td><td><code>warning</code></td></tr>
+  <tr><td><code>OrderRejectionSpike</code></td><td>애매하다. 클라이언트 오류일 수 있다</td><td><code>info</code> — 통보는 하되 깨우지 않는다</td></tr>
+</table>
+</div>
+
+<p>네 번째가 <code>info</code> 인 이유가 이 표의 요점이다. 확신이 없는 알림을 <code>critical</code> 로 만들면, 몇 주 뒤 팀 전체가 <code>critical</code> 을 무시하게 된다. <strong>심각도는 “얼마나 놀랐는가”가 아니라 “지금 일어나서 고쳐야 하는가”로 정한다.</strong></p>
+
+<h3>Alertmanager 와 Grafana Alerting 중 무엇을 쓰나</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>기준</th><th>Alertmanager (이 실습)</th><th>Grafana Alerting</th></tr>
+  <tr><td>정의 방식</td><td><code>PrometheusRule</code> — 코드로 관리하기 자연스럽다</td><td>UI 중심. 프로비저닝도 되지만 형식이 다르다</td></tr>
+  <tr><td>데이터소스</td><td>프로메테우스 전용</td><td>여러 데이터소스를 한 규칙에서 조합 가능</td></tr>
+  <tr><td>알림 억제</td><td><code>inhibit_rules</code> 로 정교하게</td><td>상대적으로 단순하다</td></tr>
+  <tr><td>적합한 상황</td><td>쿠버네티스 중심, GitOps 운영</td><td>로그·트레이스까지 섞어 판단해야 할 때</td></tr>
+</table>
+</div>
+
+<p><strong>둘을 동시에 쓰는 것은 권하지 않는다.</strong> 같은 장애에 두 경로로 알림이 오면 “이건 어디서 온 알림이지”부터 확인하게 된다. 이 실습이 Alertmanager 를 택한 이유는 규칙이 클러스터 리소스로 남아 저장소에서 이력을 추적할 수 있기 때문이다.</p>
+
+
+<div class="appendix">
+
+<h2>부록 A. 완료 체크리스트</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>확인</th><th>기대값</th></tr>
+  <tr><td>그라파나 <strong>Obs Study</strong> 폴더</td><td>RED 대시보드가 있고 패널 7개가 모두 데이터를 그린다</td></tr>
+  <tr><td>변수 드롭다운</td><td>서비스를 바꾸면 그래프가 따라 바뀐다</td></tr>
+  <tr><td><code>curl -s localhost:30900/api/v1/rules | jq -r '...'</code></td><td>규칙 4개가 조회된다</td></tr>
+  <tr><td>에러 주입 중 상태</td><td><code>pending</code> → <code>firing</code> 전환을 눈으로 봤다</td></tr>
+  <tr><td><code>curl -s localhost:9093/api/v2/alerts</code></td><td>발생한 알림이 보인다</td></tr>
+  <tr><td><code>amtool config routes test ... severity=critical</code></td><td><code>study-critical</code></td></tr>
+  <tr><td>Watchdog</td><td>목록에는 있고 통보는 되지 않는다 (이해 확인)</td></tr>
+  <tr><td>문법 오류 규칙 apply</td><td>줄 번호가 붙은 에러로 <strong>거부</strong>된다</td></tr>
+  <tr><td>부하·에러 주입 루프와 포트포워드</td><td><strong>모두 종료했다</strong></td></tr>
+</table>
+</div>
+
+<h2>부록 B. 명령어 레퍼런스</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>명령</th><th>하는 일</th></tr>
+  <tr><td><code>kubectl apply -f 91-prometheusrule.yaml</code></td><td>알림 규칙 적용. <code>release</code> 라벨이 없으면 무시된다</td></tr>
+  <tr><td><code>kubectl apply --dry-run=server -f &lt;규칙&gt;</code></td><td>저장하지 않고 문법만 검사. 웹훅이 PromQL 을 파싱한다</td></tr>
+  <tr><td><code>curl -s localhost:30900/api/v1/rules</code></td><td>규칙이 로드됐는지와 각 상태</td></tr>
+  <tr><td><code>curl -s localhost:30900/api/v1/alerts</code></td><td>지금 <code>pending</code> · <code>firing</code> 인 알림</td></tr>
+  <tr><td><code>amtool config routes --config.file=&lt;경로&gt;</code></td><td>라우팅 트리 전체를 본다</td></tr>
+  <tr><td><code>amtool config routes test --config.file=&lt;경로&gt; &lt;라벨&gt;...</code></td><td>이 라벨이면 어느 수신자인지 시뮬레이션</td></tr>
+  <tr><td><code>kubectl -n monitoring port-forward svc/kps-kube-prometheus-alertmanager 9093:9093</code></td><td>Alertmanager UI</td></tr>
+  <tr><td><code>curl -s -o /dev/null "localhost:30080/api/chaos/error?rate=0.8"</code></td><td>에러율을 올려 알림을 실제로 터뜨린다</td></tr>
+</table>
+</div>
+
+<h2>부록 C. 참고 출처</h2>
+
+<div class="src">
+<ul>
+  <li>Prometheus 알림 규칙 — https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/</li>
+  <li>Alertmanager 설정 (route · inhibit_rules · group_by) — https://prometheus.io/docs/alerting/latest/configuration/</li>
+  <li>amtool — https://github.com/prometheus/alertmanager#amtool</li>
+  <li>kube-prometheus-stack 값 파일 (alertmanager.config 기본 구조) — https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml</li>
+  <li>Watchdog 알림의 목적 — https://github.com/prometheus-operator/kube-prometheus/discussions/2103</li>
+  <li>Grafana 대시보드 JSON 모델 (templating · thresholds) — https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/view-dashboard-json-model/</li>
+  <li>Grafana v13.0 변경점 — https://grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v13-0/</li>
+</ul>
+</div>
+
+</div>
+
+<div class="pager">
+  <a href="ch06-app-metrics-promql.html">
+    <span class="dir">← 이전</span>
+    <span class="t">06 · 앱 메트릭과 PromQL</span>
+  </a>
+  <a class="next" href="ch08-logging-loki-alloy.html">
+    <span class="dir">다음 →</span>
+    <span class="t">08 · 로그 수집 — Loki + Alloy</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

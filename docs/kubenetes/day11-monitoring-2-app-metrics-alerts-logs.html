@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D11 · 모니터링 ② — 내 앱의 지표를 수집하고, 알리고, 로그와 잇는다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D10과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 3단계 운영 품질 · Day 11</p>
+  <h1>모니터링 ② — 내 앱의 지표를 수집하고, 알리고, 로그와 잇는다</h1>
+  <p class="lede">어제 대시보드는 클러스터 얘기였다. 정작 "주문 API의 p95 지연이 얼마인가, 오류율이 몇 %인가"는 앱이 지표를 내놓아야 보인다. 오늘 order-api와 gateway에 Micrometer를 붙여 <code>/actuator/prometheus</code>를 내놓고, ServiceMonitor로 Prometheus에 등록한다. 등록이 안 되는 실패를 일부러 겪은 뒤 고치고, RED 대시보드와 오류율 알림을 만들고, 로그를 Loki에 모아 같은 시간축에 놓는다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D10 완료 · kps 설치됨 · Docker Desktop VM 메모리 10GB 권장</b></span>
+    <span>버전 <b>kube-prometheus-stack 88.x · Loki (grafana-community 차트 18.x) · Grafana Alloy · Spring Boot 4.1.0 (order-api v6, gateway v2)</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트 C</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<div class="wrap"><div class="note warn" style="margin-top:20px">
+  <h5>메모리</h5>
+  <p>오늘 Loki와 Alloy가 추가된다. 어제 스택까지 합쳐 VM 메모리 8GB에서는 빠듯하다. Settings → Resources에서 10GB로 올리고 시작한다. 파드가 <code>Pending</code>이면 <code>describe</code>의 <code>Insufficient memory</code>부터 본다.</p>
+</div></div>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>앱이 내놓는 <code>/actuator/prometheus</code>를 직접 읽고 counter·gauge·histogram을 가려낸다.</li>
+    <li>ServiceMonitor가 Targets에 안 뜨는 원인을 세 가지(release 라벨·서비스 라벨·포트 이름)로 진단한다.</li>
+    <li>RED 세 패널(요청률·오류율·p95)을 PromQL로 쓰고 Grafana 대시보드로 만든다.</li>
+    <li>PrometheusRule로 오류율 알림을 걸고 Alertmanager에서 firing을 확인한다.</li>
+    <li>Loki에서 같은 시각의 로그를 찾아 지표의 튐과 대조한다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+
+  <h3>1.1 앱이 지표를 내놓는 방식</h3>
+  <p>Spring Boot Actuator는 <dfn title="Micrometer">Micrometer</dfn>라는 지표 추상화를 쓴다. Prometheus 레지스트리 의존성 하나를 더하면 <code>/actuator/prometheus</code>에 Prometheus 텍스트 형식으로 노출된다. 코드를 안 써도 JVM(힙·GC·스레드), HTTP 서버(요청 수·지연), 데이터소스(커넥션 풀), 로그백(로그 레벨별 건수)이 자동으로 나온다. 오늘 쓰는 것은 <code>http_server_requests_seconds</code> 하나다.</p>
+  <table>
+    <thead><tr><th style="width:290px">지표</th><th>타입</th><th>라벨</th></tr></thead>
+    <tbody>
+      <tr><td><code>http_server_requests_seconds_count</code></td><td>counter</td><td rowspan="3"><code>method, uri, status, outcome, exception</code></td></tr>
+      <tr><td><code>http_server_requests_seconds_sum</code></td><td>counter (지연 합계)</td></tr>
+      <tr><td><code>http_server_requests_seconds_bucket{le="…"}</code></td><td>histogram 구간 (설정으로 켠다)</td></tr>
+      <tr><td><code>jvm_memory_used_bytes</code></td><td>gauge</td><td><code>area, id</code></td></tr>
+      <tr><td><code>hikaricp_connections_active</code></td><td>gauge</td><td><code>pool</code></td></tr>
+    </tbody>
+  </table>
+  <p>count와 sum을 나누면 평균 지연이다. 평균은 꼬리를 숨기므로 p95·p99가 필요하고, 그것은 bucket에서 <code>histogram_quantile</code>로 계산한다. bucket은 기본으로 꺼져 있어 <code>management.metrics.distribution.percentiles-histogram.http.server.requests=true</code>로 켠다.</p>
+
+  <h3>1.2 ServiceMonitor: 스크레이프 대상을 오브젝트로</h3>
+  <p>Prometheus 자체 설정 파일에 대상을 적을 수도 있지만, Operator 환경에서는 <dfn title="ServiceMonitor">ServiceMonitor</dfn> 오브젝트를 만든다. Operator가 그것을 읽어 Prometheus 설정을 다시 쓴다. 매칭은 세 층으로 일어나고, 어느 하나가 어긋나면 Targets에 <b>아무 말 없이</b> 안 나타난다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 300" width="100%" role="img" aria-label="ServiceMonitor가 Prometheus에 연결되는 세 층의 매칭">
+    <rect x="20" y="30" width="230" height="110" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="32" y="52" font-size="12" font-weight="600" fill="#6d28d9">Prometheus (kps)</text>
+    <text x="32" y="72" class="mono" font-size="11" fill="#4a4a4a">serviceMonitorSelector:</text>
+    <text x="32" y="88" class="mono" font-size="11" fill="#c2410c">  release: kps</text>
+    <text x="32" y="108" class="mono" font-size="11" fill="#4a4a4a">serviceMonitorNamespaceSelector:</text>
+    <text x="32" y="124" class="mono" font-size="11" fill="#4a4a4a">  {} (모든 네임스페이스)</text>
+    <line x1="250" y1="85" x2="320" y2="85" stroke="#767676" stroke-width="1.2"/><polygon points="314,81 322,85 314,89" fill="#767676"/>
+    <text x="256" y="76" font-size="10" fill="#c2410c">① 라벨 release</text>
+    <rect x="326" y="30" width="250" height="110" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="338" y="52" font-size="12" font-weight="600" fill="#1d4ed8">ServiceMonitor order-api</text>
+    <text x="338" y="72" class="mono" font-size="11" fill="#c2410c">labels: {release: kps}</text>
+    <text x="338" y="88" class="mono" font-size="11" fill="#4a4a4a">selector.matchLabels:</text>
+    <text x="338" y="104" class="mono" font-size="11" fill="#c2410c">  app: order-api</text>
+    <text x="338" y="124" class="mono" font-size="11" fill="#c2410c">endpoints: [{port: http, path: …}]</text>
+    <line x1="576" y1="85" x2="646" y2="85" stroke="#767676" stroke-width="1.2"/><polygon points="640,81 648,85 640,89" fill="#767676"/>
+    <text x="582" y="76" font-size="10" fill="#c2410c">② 서비스 라벨</text>
+    <rect x="652" y="30" width="228" height="110" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="664" y="52" font-size="12" font-weight="600" fill="#6d28d9">Service order-api</text>
+    <text x="664" y="72" class="mono" font-size="11" fill="#c2410c">labels: {app: order-api}</text>
+    <text x="664" y="88" class="mono" font-size="11" fill="#4a4a4a">ports:</text>
+    <text x="664" y="104" class="mono" font-size="11" fill="#c2410c">- name: http</text>
+    <text x="664" y="120" class="mono" font-size="11" fill="#4a4a4a">  port: 8080</text>
+    <line x1="766" y1="140" x2="766" y2="176" stroke="#767676" stroke-width="1.2"/><polygon points="762,170 766,178 770,170" fill="#767676"/>
+    <text x="776" y="162" font-size="10" fill="#c2410c">③ 포트 이름</text>
+    <rect x="652" y="180" width="228" height="90" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="664" y="202" font-size="12" font-weight="600" fill="#15803d">파드 (엔드포인트슬라이스)</text>
+    <text x="664" y="222" class="mono" font-size="11" fill="#4a4a4a">10.244.1.9:8080</text>
+    <text x="664" y="238" class="mono" font-size="11" fill="#4a4a4a">10.244.2.11:8080 …</text>
+    <text x="664" y="258" class="mono" font-size="11" fill="#4a4a4a">/actuator/prometheus</text>
+    <text x="20" y="200" font-size="11" fill="#4a4a4a">Operator는 ①을 통과한 ServiceMonitor만 읽고, ②로 서비스를 찾고,</text>
+    <text x="20" y="218" font-size="11" fill="#4a4a4a">그 서비스의 엔드포인트슬라이스에서 ③ 이름의 포트를 가진 파드 주소를 꺼내 스크레이프한다.</text>
+    <text x="20" y="246" font-size="11" fill="#c2410c">셋 중 하나라도 틀리면 오류 없이 Targets에서 빠진다. D5의 셀렉터 오타와 같은 종류의 고장이다.</text>
+  </svg>
+  <figcaption>도판 1. 주황=일치해야 하는 세 곳. 스크레이프는 서비스 IP가 아니라 파드 IP로 직접 간다.</figcaption>
+  </figure>
+
+  <h3>1.3 RED 세 쿼리</h3>
+  <table>
+    <thead><tr><th style="width:90px">패널</th><th>PromQL</th></tr></thead>
+    <tbody>
+      <tr><td>Rate</td><td><code>sum(rate(http_server_requests_seconds_count{job="order-api"}[1m]))</code></td></tr>
+      <tr><td>Errors</td><td><code>sum(rate(http_server_requests_seconds_count{job="order-api", status=~"5.."}[1m])) / sum(rate(http_server_requests_seconds_count{job="order-api"}[1m]))</code></td></tr>
+      <tr><td>Duration p95</td><td><code>histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job="order-api"}[5m])))</code></td></tr>
+    </tbody>
+  </table>
+  <p><code>job</code> 라벨은 ServiceMonitor가 스크레이프할 때 서비스 이름으로 자동으로 붙는다. <code>histogram_quantile</code>은 구간별 누적 개수(<code>le</code> 라벨)로 분위수를 추정하므로 <code>sum by (le)</code>로 다른 라벨을 먼저 접어야 한다.</p>
+
+  <h3>1.4 알림: 규칙, 라우팅, 피로</h3>
+  <p><dfn title="PrometheusRule">PrometheusRule</dfn>은 "이 PromQL이 이 시간 동안 참이면 알림"을 적은 오브젝트다. Prometheus가 평가해 <dfn title="Alertmanager">Alertmanager</dfn>로 보내고, Alertmanager가 그룹으로 묶고, 반복을 억제하고, 수신자(Slack·메일·페이저)로 보낸다. 알림은 <b>사람이 지금 행동해야 하는 것</b>에만 건다. CPU 80%는 알림이 아니라 대시보드다. "오류율 5% 초과가 2분 지속"은 알림이다. 규칙에는 <code>for</code>(지속 시간)를 두어 한 번의 튐으로 울리지 않게 한다.</p>
+
+  <h3>1.5 로그: stdout에서 Loki까지</h3>
+  <p>컨테이너는 파일이 아니라 <b>stdout/stderr</b>에 로그를 쓴다. 노드의 containerd가 그것을 <code>/var/log/pods/…</code>에 파일로 남기고, <code>kubectl logs</code>는 kubelet을 거쳐 그 파일을 읽는다. 파드가 사라지면 파일도 사라진다. 그래서 수집기가 필요하다. <dfn title="Grafana Alloy">Alloy</dfn>는 노드마다 하나씩(DaemonSet) 돌며 파드 로그를 모아 라벨(네임스페이스·파드·앱)을 붙여 <dfn title="Loki">Loki</dfn>로 보낸다. Loki는 로그 본문이 아니라 <b>라벨만 인덱싱</b>하므로 가볍고, 조회는 LogQL로 라벨을 먼저 좁힌 뒤 본문을 grep한다: <code>{namespace="study", app="order-api"} |= "Exception"</code>. Grafana가 Prometheus와 Loki를 같은 시간축에 놓아 준다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · 두 앱에 Micrometer, 서비스에 라벨과 포트 이름</h2>
+
+  <h3>2.1 order-api v6</h3>
+  <p>의존성 하나, 설정 두 줄, 그리고 오류를 일부러 낼 엔드포인트 <code>/boom</code>.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/day04/order-api
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='pom.xml'; t=open(p).read()
+dep=('    &lt;dependency&gt;\n'
+     '      &lt;groupId&gt;io.micrometer&lt;/groupId&gt;\n'
+     '      &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;\n'
+     '    &lt;/dependency&gt;\n')
+if 'micrometer-registry-prometheus' not in t:
+    t=t.replace('  &lt;dependencies&gt;\n','  &lt;dependencies&gt;\n'+dep,1)
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='src/main/java/study/OrderApiApplication.java'; t=open(p).read()
+boom='''
+    @GetMapping("/boom")
+    public String boom() {
+        throw new IllegalStateException("boom: injected failure on " + host());
+    }
+'''
+if '/boom' not in t:
+    t=t.replace('    @GetMapping("/config")', boom+'\n    @GetMapping("/config")',1)
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> cat &gt;&gt; src/main/resources/application.properties &lt;&lt;'EOF'
+management.endpoints.web.exposure.include=health,prometheus
+management.metrics.distribution.percentiles-histogram.http.server.requests=true
+management.metrics.tags.application=${spring.application.name:order-api}
+EOF
+<span class="p">$</span> sed -i.bak '/^management.endpoints.web.exposure.include=health$/d' src/main/resources/application.properties &amp;&amp; rm src/main/resources/application.properties.bak
+<span class="p">$</span> docker build --build-arg APP_VERSION=v6 -t order-api:v6 .</code></pre>
+
+  <h3>2.2 gateway v2</h3>
+<pre><code><span class="p">$</span> cd ~/k8s-study/day05/gateway
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='pom.xml'; t=open(p).read()
+dep=('    &lt;dependency&gt;\n'
+     '      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;\n'
+     '      &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;\n'
+     '    &lt;/dependency&gt;\n'
+     '    &lt;dependency&gt;\n'
+     '      &lt;groupId&gt;io.micrometer&lt;/groupId&gt;\n'
+     '      &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;\n'
+     '    &lt;/dependency&gt;\n')
+if 'micrometer-registry-prometheus' not in t:
+    t=t.replace('  &lt;dependencies&gt;\n','  &lt;dependencies&gt;\n'+dep,1)
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> cat &gt;&gt; src/main/resources/application.yaml &lt;&lt;'EOF'
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+EOF
+<span class="p">$</span> docker build --build-arg APP_VERSION=v2 -t gateway:v2 .
+<span class="p">$</span> docker run --rm -d --name gw -p 8082:8080 gateway:v2 &amp;&amp; sleep 5
+<span class="p">$</span> curl -s localhost:8082/actuator/prometheus | grep -E '^(jvm_memory_used_bytes|http_server_requests_seconds_count)' | head -3
+<span class="c">jvm_memory_used_bytes{area="heap",id="G1 Eden Space",} 2.5165824E7
+...</span>
+<span class="p">$</span> docker stop gw
+<span class="p">$</span> cd ~/k8s-study/week1</code></pre>
+  <p class="expect"><b>확인</b> — gateway의 <code>exposure.include</code>에 <code>gateway</code>가 <b>없다</b>. D5에서 말한 대로 그 엔드포인트는 열지 않는다. <code>health</code>와 <code>prometheus</code>뿐이다.</p>
+
+  <h3>2.3 서비스에 라벨과 포트 이름, 이미지 갱신</h3>
+  <p>ServiceMonitor는 <b>서비스의 라벨</b>로 서비스를 찾고 <b>포트 이름</b>으로 엔드포인트를 고른다. 지금 서비스에는 둘 다 없다.</p>
+<pre><code><span class="p">$</span> kubectl get svc order-api gateway -o custom-columns='NAME:.metadata.name,LABELS:.metadata.labels,PORTNAME:.spec.ports[0].name'
+<span class="c">NAME        LABELS   PORTNAME
+order-api   &lt;none&gt;   &lt;none&gt;
+gateway     &lt;none&gt;   &lt;none&gt;</span>
+
+<span class="p">$</span> cat &gt; 21-order-api-svc.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: study
+  labels:
+    app: order-api
+spec:
+  selector:
+    app: order-api
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+EOF
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='30-gateway.yaml'; t=open(p).read()
+t=t.replace('image: gateway:v1','image: gateway:v2')
+t=t.replace('''kind: Service
+metadata:
+  name: gateway
+  namespace: study
+spec:''','''kind: Service
+metadata:
+  name: gateway
+  namespace: study
+  labels:
+    app: gateway
+spec:''')
+t=t.replace('''  ports:
+  - port: 8081
+    targetPort: 8080''','''  ports:
+  - name: http
+    port: 8081
+    targetPort: 8080''')
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> sed -i.bak 's/image: order-api:v5/image: order-api:v6/' 20-order-api-deploy.yaml &amp;&amp; rm 20-order-api-deploy.yaml.bak
+<span class="p">$</span> kubectl apply -f 20-order-api-deploy.yaml -f 21-order-api-svc.yaml -f 30-gateway.yaml
+<span class="p">$</span> kubectl rollout status deployment/order-api &amp;&amp; kubectl rollout status deployment/gateway
+<span class="p">$</span> POD=$(kubectl get pod -l app=order-api -o jsonpath='{.items[0].metadata.name}')
+<span class="p">$</span> kubectl exec $POD -- wget -qO- http://localhost:8080/actuator/prometheus 2&gt;/dev/null | grep -c '^http_server_requests_seconds_bucket' ; echo "buckets"
+<span class="c">(수십 개) buckets</span></code></pre>
+  <p class="expect"><b>확인</b> — 앱이 bucket을 내놓는다. 이제 Prometheus가 가져가기만 하면 된다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>ServiceMonitor: 일부러 <code>release</code> 라벨 없이</h3>
+    <p class="why">도판 1의 ①을 빼고 만든다. Targets에 안 뜬다. 왜인지 찾는다.</p>
+<pre><code><span class="p">$</span> cat &gt; 50-servicemonitors.yaml &lt;&lt;'EOF'
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: study
+spec:
+  selector:
+    matchLabels:
+      app: order-api
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gateway
+  namespace: study
+spec:
+  selector:
+    matchLabels:
+      app: gateway
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 15s
+EOF
+<span class="p">$</span> kubectl apply -f 50-servicemonitors.yaml
+<span class="p">$</span> kubectl get servicemonitors
+<span class="c">NAME        AGE
+gateway     3s
+order-api   3s</span>
+
+<span class="c"># 터미널 A</span>
+<span class="p">$</span> kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090
+<span class="c"># 터미널 B</span>
+<span class="p">$</span> sleep 60 &amp;&amp; curl -s localhost:9090/api/v1/targets | python3 -c 'import sys,json; t=json.load(sys.stdin)["data"]["activeTargets"]; print(sorted({x["labels"].get("job","") for x in t}))'
+<span class="c">['apiserver', 'coredns', 'kube-state-metrics', 'kubelet', 'node-exporter', 'prometheus', ...]</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 오브젝트는 만들어졌고(<code>get servicemonitors</code>에 나온다) 오류도 없다. 그런데 60초를 기다려도 <code>order-api</code>·<code>gateway</code> job이 없다. Operator가 이 ServiceMonitor를 <b>읽지 않았다</b>. 어제 본 selector를 다시 확인한다.</p>
+<pre><code><span class="p">$</span> kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}{"\n"}'
+<span class="c">{"matchLabels":{"release":"kps"}}</span>
+<span class="p">$</span> kubectl get servicemonitor order-api -o jsonpath='{.metadata.labels}{"\n"}'
+<span class="c">(빈 줄 — 라벨이 없다)</span>
+<span class="p">$</span> kubectl -n monitoring logs deployment/kps-kube-prometheus-stack-operator --since=3m | grep -i -c 'order-api' ; echo "(0이면 Operator가 이 오브젝트를 후보로 보지도 않았다)"</code></pre>
+<pre><code><span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='50-servicemonitors.yaml'; t=open(p).read()
+t=t.replace('''  namespace: study
+spec:''','''  namespace: study
+  labels:
+    release: kps
+spec:''')
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> grep -c 'release: kps' 50-servicemonitors.yaml
+<span class="c">2</span>
+<span class="p">$</span> kubectl apply -f 50-servicemonitors.yaml
+<span class="p">$</span> sleep 45 &amp;&amp; curl -s localhost:9090/api/v1/targets | python3 -c 'import sys,json; t=json.load(sys.stdin)["data"]["activeTargets"]; [print(x["labels"]["job"], x["labels"].get("pod"), x["health"]) for x in t if x["labels"].get("namespace")=="study"]'
+<span class="c">gateway gateway-… up
+gateway gateway-… up
+order-api order-api-… up
+order-api order-api-… up</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 라벨 한 줄로 해결됐다. job은 서비스 이름, 파드마다 타깃 하나, 전부 <code>up</code>. 같은 증상의 다른 두 원인은 ② 서비스에 <code>app</code> 라벨이 없을 때(2.3절에서 미리 넣었다)와 ③ 포트 이름이 <code>http</code>가 아닐 때다. 셋을 순서대로 확인하는 것이 ServiceMonitor 진단의 전부다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>RED 쿼리 세 개와 부하</h3>
+    <p class="why">부하 없이는 지표가 평평하다. D10의 부하 파드를 다시 띄우고 쿼리한다.</p>
+<pre><code><span class="p">$</span> kubectl apply -f ~/k8s-study/day10/load.yaml
+<span class="p">$</span> q() { curl -s "localhost:9090/api/v1/query" --data-urlencode "query=$1" | python3 -c 'import sys,json; r=json.load(sys.stdin)["data"]["result"]; [print(x["metric"], x["value"][1]) for x in r[:6]]'; }
+<span class="p">$</span> sleep 60
+<span class="p">$</span> q 'sum(rate(http_server_requests_seconds_count{job="order-api"}[1m]))'
+<span class="c">{} 212.4</span>
+<span class="p">$</span> q 'sum(rate(http_server_requests_seconds_count{job="order-api", status=~"5.."}[1m])) / sum(rate(http_server_requests_seconds_count{job="order-api"}[1m]))'
+<span class="c">{} 0</span>
+<span class="p">$</span> q 'histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job="order-api"}[5m])))'
+<span class="c">{} 0.0183</span>
+<span class="p">$</span> q 'sum by (uri, status) (rate(http_server_requests_seconds_count{job="order-api"}[1m]))'
+<span class="c">{'status': '200', 'uri': '/orders'} 212.4
+{'status': '200', 'uri': '/actuator/prometheus'} 0.13
+{'status': '200', 'uri': '/actuator/health/readiness'} 0.4</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 초당 212 요청, 오류 0, p95 18ms. 프로브와 스크레이프 요청도 세어진다(<code>uri</code>별 분해). 대시보드에서 프로브를 빼려면 <code>uri!~"/actuator.*"</code>를 붙인다. p95가 18ms인 것은 D8에서 CPU limit을 걸지 않은 덕도 있다. limit을 100m으로 걸고 다시 재 보면 스로틀링으로 값이 뛰는 것을 볼 수 있다(선택).</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>Grafana RED 대시보드</h3>
+    <p class="why">세 쿼리를 패널로. 손으로 만들고, 파일로도 남긴다(Grafana 사이드카가 ConfigMap을 읽는다).</p>
+    <p>터미널 C에서 <code>kubectl -n monitoring port-forward svc/kps-grafana 3000:80</code>. Grafana → Dashboards → New → New dashboard → Add visualization → 데이터소스 Prometheus. 패널 셋을 만든다.</p>
+    <table>
+      <thead><tr><th style="width:130px">패널</th><th>쿼리 (Legend)</th><th style="width:150px">단위</th></tr></thead>
+      <tbody>
+        <tr><td>Request rate</td><td><code>sum by (job) (rate(http_server_requests_seconds_count{namespace="study", uri!~"/actuator.*"}[1m]))</code> · <code>{{job}}</code></td><td>req/s</td></tr>
+        <tr><td>Error ratio</td><td><code>sum by (job) (rate(http_server_requests_seconds_count{namespace="study", status=~"5.."}[1m])) / sum by (job) (rate(http_server_requests_seconds_count{namespace="study"}[1m]))</code> · <code>{{job}}</code></td><td>Percent (0.0-1.0)</td></tr>
+        <tr><td>p95 latency</td><td><code>histogram_quantile(0.95, sum by (job, le) (rate(http_server_requests_seconds_bucket{namespace="study", uri!~"/actuator.*"}[5m])))</code> · <code>{{job}}</code></td><td>seconds (s)</td></tr>
+      </tbody>
+    </table>
+    <p>저장 이름 <b>Study / RED</b>. 같은 대시보드를 파일로 남기는 방법은 두 가지다. Grafana에서 Export → JSON을 받아 ConfigMap에 넣거나, 아래처럼 최소 JSON을 직접 쓴다. 사이드카가 <code>grafana_dashboard: "1"</code> 라벨을 가진 ConfigMap을 30초 안에 읽어 들인다.</p>
+<pre><code><span class="p">$</span> cat &gt; 51-grafana-red-dashboard.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-red-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  study-red.json: |
+    {
+      "title": "Study / RED (provisioned)",
+      "uid": "study-red",
+      "schemaVersion": 39,
+      "time": {"from": "now-30m", "to": "now"},
+      "panels": [
+        {"id": 1, "type": "timeseries", "title": "Request rate",
+         "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+         "fieldConfig": {"defaults": {"unit": "reqps"}},
+         "targets": [{"refId": "A", "expr": "sum by (job) (rate(http_server_requests_seconds_count{namespace=\"study\", uri!~\"/actuator.*\"}[1m]))", "legendFormat": "{{job}}"}]},
+        {"id": 2, "type": "timeseries", "title": "Error ratio",
+         "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+         "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1, "min": 0}},
+         "targets": [{"refId": "A", "expr": "sum by (job) (rate(http_server_requests_seconds_count{namespace=\"study\", status=~\"5..\"}[1m])) / sum by (job) (rate(http_server_requests_seconds_count{namespace=\"study\"}[1m]))", "legendFormat": "{{job}}"}]},
+        {"id": 3, "type": "timeseries", "title": "p95 latency",
+         "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+         "fieldConfig": {"defaults": {"unit": "s"}},
+         "targets": [{"refId": "A", "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_requests_seconds_bucket{namespace=\"study\", uri!~\"/actuator.*\"}[5m])))", "legendFormat": "{{job}}"}]}
+      ]
+    }
+EOF
+<span class="p">$</span> kubectl apply -f 51-grafana-red-dashboard.yaml
+<span class="p">$</span> sleep 40 &amp;&amp; curl -s -u admin:study 'localhost:3000/api/search?query=RED' | python3 -c 'import sys,json; [print(d["title"]) for d in json.load(sys.stdin)]'
+<span class="c">Study / RED
+Study / RED (provisioned)</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 손으로 만든 것과 파일로 만든 것이 나란히 있다. 파일 쪽은 <code>week1/</code>에 있으니 D14 재구축 때 같이 올라간다. 손으로 만든 것은 Grafana 파드가 재생성되면 사라진다(기본 설치는 저장소가 파드 안이다). 대시보드도 파일이 원본이어야 한다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>알림 규칙과 오류 주입</h3>
+    <p class="why">오류율 5% 초과가 1분 이상이면 알림. <code>/boom</code>을 두드려 실제로 울린다.</p>
+<pre><code><span class="p">$</span> cat &gt; 52-prometheusrule.yaml &lt;&lt;'EOF'
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: study-app-rules
+  namespace: study
+  labels:
+    release: kps
+spec:
+  groups:
+  - name: study.rules
+    rules:
+    - alert: OrderApiHighErrorRate
+      expr: |
+        sum(rate(http_server_requests_seconds_count{job="order-api", status=~"5.."}[1m]))
+          / sum(rate(http_server_requests_seconds_count{job="order-api"}[1m])) &gt; 0.05
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "order-api 5xx 비율 5% 초과"
+        description: "지난 1분 오류율 {{ $value | humanizePercentage }}"
+    - alert: OrderApiDown
+      expr: up{job="order-api"} == 0
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "order-api 스크레이프 실패 ({{ $labels.pod }})"
+EOF
+<span class="p">$</span> kubectl apply -f 52-prometheusrule.yaml
+<span class="p">$</span> sleep 60 &amp;&amp; curl -s localhost:9090/api/v1/rules | python3 -c 'import sys,json; [print(r["name"], r["state"]) for g in json.load(sys.stdin)["data"]["groups"] if g["name"]=="study.rules" for r in g["rules"]]'
+<span class="c">OrderApiHighErrorRate inactive
+OrderApiDown inactive</span>
+
+<span class="c"># 오류 주입: 부하 파드 중 하나를 /boom으로 돌린다</span>
+<span class="p">$</span> kubectl run boom --image=busybox:1.37 --restart=Never -- sh -c 'while true; do wget -qO- http://order-api:8080/boom &gt;/dev/null 2&gt;&amp;1; done'
+<span class="p">$</span> sleep 30 &amp;&amp; q 'sum(rate(http_server_requests_seconds_count{job="order-api", status=~"5.."}[1m])) / sum(rate(http_server_requests_seconds_count{job="order-api"}[1m]))'
+<span class="c">{} 0.19</span>
+<span class="p">$</span> sleep 90 &amp;&amp; curl -s localhost:9090/api/v1/rules | python3 -c 'import sys,json; [print(r["name"], r["state"]) for g in json.load(sys.stdin)["data"]["groups"] if g["name"]=="study.rules" for r in g["rules"]]'
+<span class="c">OrderApiHighErrorRate firing
+OrderApiDown inactive</span>
+
+<span class="c"># 터미널 D</span>
+<span class="p">$</span> kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-alertmanager 9093:9093</code></pre>
+    <p><code>http://localhost:9093</code>에서 <code>OrderApiHighErrorRate</code>가 보인다. 어노테이션의 description에 실제 비율이 들어가 있다. Grafana의 RED 대시보드에서는 Error ratio 패널이 19%로 뛰어 있다.</p>
+    <p class="expect"><b>읽을 것</b> — 규칙은 <code>pending</code>(조건 참, <code>for</code> 대기 중) → <code>firing</code> 순서를 거친다. 오류를 넣은 지 30초에는 아직 firing이 아니다. Alertmanager는 받은 알림을 수신자에게 보내야 하는데, 지금은 수신자 설정이 없어 UI에만 보인다. Slack 웹훅을 붙이는 것은 kps values의 <code>alertmanager.config</code> 한 절이다. 알림이 울린 시각을 적어 둔다. 다음 단계에서 그 시각의 로그를 찾는다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>Loki + Alloy</h3>
+    <p class="why">로그 저장소(Loki)와 수집기(Alloy)를 올리고, Grafana에 데이터소스를 붙인다.</p>
+<pre><code><span class="p">$</span> helm repo add grafana-community https://grafana-community.github.io/helm-charts
+<span class="p">$</span> helm repo add grafana https://grafana.github.io/helm-charts
+<span class="p">$</span> helm repo update
+
+<span class="p">$</span> mkdir -p ~/k8s-study/day11
+<span class="p">$</span> cat &gt; ~/k8s-study/day11/loki-values.yaml &lt;&lt;'EOF'
+deploymentMode: Monolithic
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+    - from: "2024-04-01"
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+  limits_config:
+    retention_period: 48h
+monolithic:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 2Gi
+minio:
+  enabled: false
+gateway:
+  enabled: false
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+EOF
+<span class="p">$</span> helm install loki grafana-community/loki -n monitoring -f ~/k8s-study/day11/loki-values.yaml
+<span class="p">$</span> kubectl -n monitoring rollout status statefulset/loki
+<span class="p">$</span> kubectl -n monitoring get svc loki
+<span class="c">NAME   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
+loki   ClusterIP   10.96.140.77   &lt;none&gt;        3100/TCP,9095/TCP   1m</span></code></pre>
+    <div class="note">
+      <h5>values 키가 다르면</h5>
+      <p>커뮤니티 차트는 메이저 버전이 자주 오른다. <code>helm install</code>이 values 스키마 오류를 내면 <code>helm show values grafana-community/loki | grep -n -E '^(monolithic|singleBinary|deploymentMode|chunksCache|gateway):'</code>로 현재 키 이름을 확인해 맞춘다. 실습에 필요한 것은 "모놀리식 1개 · 파일시스템 저장 · 부가 컴포넌트 끄기" 세 가지뿐이다.</p>
+    </div>
+<pre><code><span class="p">$</span> cat &gt; ~/k8s-study/day11/alloy-values.yaml &lt;&lt;'EOF'
+controller:
+  type: daemonset
+alloy:
+  configMap:
+    content: |
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+      }
+
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.monitoring.svc:3100/loki/api/v1/push"
+        }
+      }
+EOF
+<span class="p">$</span> helm install alloy grafana/alloy -n monitoring -f ~/k8s-study/day11/alloy-values.yaml
+<span class="p">$</span> kubectl -n monitoring rollout status daemonset/alloy
+<span class="p">$</span> kubectl -n monitoring get pods -l app.kubernetes.io/name=alloy
+<span class="c">NAME          READY   STATUS    RESTARTS   AGE
+alloy-7k2xq   2/2     Running   0          40s
+alloy-m9p3r   2/2     Running   0          40s
+alloy-w4n8z   2/2     Running   0          40s</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — Alloy가 노드마다 하나(3개)다. 설정은 파이프라인이다. 파드 발견 → 라벨 정리 → 로그 읽기 → Loki로 쓰기. <code>loki.source.kubernetes</code>는 kubelet API로 로그를 읽으므로 노드의 <code>/var/log</code>를 hostPath로 마운트할 필요가 없다. 라벨 네 개(namespace·pod·container·app)만 붙였다. Loki는 라벨이 적을수록 좋다.</p>
+<pre><code><span class="c"># Grafana에 Loki 데이터소스 추가 — kps values에 한 절을 더해 upgrade</span>
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+import os, yaml
+p=os.path.expanduser('~/k8s-study/day10/kps-values.yaml')
+v=yaml.safe_load(open(p))
+v.setdefault('grafana', {})['additionalDataSources']=[{
+    'name': 'Loki', 'type': 'loki', 'access': 'proxy',
+    'url': 'http://loki.monitoring.svc:3100'}]
+open(p,'w').write(yaml.safe_dump(v, sort_keys=False, allow_unicode=True))
+print(yaml.safe_dump(v['grafana'], sort_keys=False))
+EOF
+<span class="p">$</span> helm upgrade kps prometheus-community/kube-prometheus-stack -n monitoring --version 88.3.0 -f ~/k8s-study/day10/kps-values.yaml
+<span class="p">$</span> kubectl -n monitoring rollout status deployment/kps-grafana</code></pre>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>같은 시각, 지표와 로그</h3>
+    <p class="why">4단계에서 알림이 울린 시각의 로그를 Loki에서 찾는다.</p>
+    <p>Grafana(터미널 C의 port-forward를 다시 켠다) → Explore → 데이터소스 <b>Loki</b>. 시간 범위를 지난 30분으로.</p>
+<pre><code>{namespace="study", app="order-api"} |= "boom"</code></pre>
+    <p>4단계 이후 order-api 파드들이 남긴 <code>IllegalStateException: boom: injected failure on order-api-…</code> 스택 트레이스가 초당 수십 건 흐른다. 오른쪽 위 <b>Split</b>을 누르고 왼쪽에 Prometheus 데이터소스로 Error ratio 쿼리를 넣으면 같은 시간축에 그래프와 로그가 나란히 놓인다. 오류율이 뛰기 시작한 시각과 첫 <code>boom</code> 로그의 시각이 일치한다.</p>
+<pre><code><span class="c"># LogQL로 파드별 오류 로그 건수 (로그에서 지표를 뽑는다)</span>
+sum by (pod) (count_over_time({namespace="study", app="order-api"} |= "boom" [1m]))
+
+<span class="c"># 터미널에서도 확인 — Loki API 직접</span>
+<span class="p">$</span> kubectl -n monitoring port-forward svc/loki 3100:3100 &amp;
+<span class="p">$</span> sleep 1 &amp;&amp; curl -s -G localhost:3100/loki/api/v1/query --data-urlencode 'query=sum(count_over_time({namespace="study", app="order-api"} |= "boom" [5m]))' | python3 -c 'import sys,json; print(json.load(sys.stdin)["data"]["result"][0]["value"][1], "boom lines / 5m")'
+<span class="c">18420 boom lines / 5m</span>
+<span class="p">$</span> kill %1
+<span class="p">$</span> kubectl delete pod boom --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — 지표는 "언제부터 얼마나"를, 로그는 "무엇이"를 말한다. 알림(4단계)이 사람을 부르고, 대시보드(3단계)가 범위를 좁히고, 로그(6단계)가 원인을 준다. 이 셋이 같은 시간축에 있어야 한다. <code>boom</code> 파드를 지우면 몇 분 뒤 알림이 <code>resolved</code>로 바뀐다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트 C · 그라파나에 내 앱 지표</h2>
+  <p class="sub">3단계(D8~D11)의 관문.</p>
+  <div class="check">
+    <ol>
+      <li>ServiceMonitor 하나를 새로 써서(예: postgres용, 스크레이프될 엔드포인트가 없어 <code>down</code>이어도 된다) Targets에 나타나게 한다. 안 나타나면 세 층 중 어디가 틀렸는지 말한다.</li>
+      <li>Grafana에서 order-api와 gateway의 요청률·오류율·p95 패널이 살아 있다.</li>
+      <li>오류를 주입하면 2분 안에 <code>OrderApiHighErrorRate</code>가 firing이 되고, 주입을 멈추면 resolved가 된다.</li>
+      <li>알림이 울린 시각의 <code>boom</code> 로그를 Loki에서 LogQL 한 줄로 찾는다.</li>
+      <li><code>week1/</code>에 ServiceMonitor·대시보드 ConfigMap·PrometheusRule 파일이 있고 <code>kubectl diff -f .</code>가 비어 있다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D12로 간다. 1번이 막히면 도판 1의 ①②③을 순서대로 대조한다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">부하와 오류 주입 파드를 지운다. 모니터링 스택은 전부 남긴다.</p>
+<pre><code><span class="p">$</span> kubectl delete -f ~/k8s-study/day10/load.yaml --ignore-not-found
+<span class="p">$</span> kubectl delete pod boom --ignore-not-found --wait=false
+<span class="p">$</span> kubectl get hpa order-api
+<span class="c">NAME        REFERENCE              TARGETS      MINPODS   MAXPODS   REPLICAS   AGE
+order-api   Deployment/order-api   cpu: 3%/50%  2         8         2          1d</span>
+<span class="p">$</span> cd ~/k8s-study/week1 &amp;&amp; ls | grep -E '^5' &amp;&amp; kubectl diff -f . ; echo "exit=$?"
+<span class="c">50-servicemonitors.yaml
+51-grafana-red-dashboard.yaml
+52-prometheusrule.yaml
+exit=0</span>
+<span class="p">$</span> helm list -n monitoring
+<span class="c">NAME    NAMESPACE    CHART                          STATUS
+alloy   monitoring   alloy-1.x.y                    deployed
+kps     monitoring   kube-prometheus-stack-88.3.0   deployed
+loki    monitoring   loki-18.x.y                    deployed</span></code></pre>
+  <p><code>week1/</code>의 50번대 파일은 study 네임스페이스에 있지만 <code>51</code>은 monitoring에 있다. 디렉터리 하나에 두 네임스페이스가 섞였다. D13에서 차트로 나눌 때 정리한다.</p>
+
+  <div class="note">
+    <h5>D12 예고</h5>
+    <p>지금 우리는 cluster-admin이라 시크릿도 대시보드도 전부 보인다. 내일은 요청이 지나는 세 관문(인증·인가·어드미션)을 배우고, 파드는 보지만 시크릿은 못 보는 계정을 만들어 Headlamp로 확인한다. restricted 파드 시큐리티를 켜서 기존 파드가 거부되는 것을 겪고 securityContext를 고치며, ValidatingAdmissionPolicy로 <code>latest</code> 태그를 막는다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>Spring Boot Actuator 메트릭(Micrometer·Prometheus) — <a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html">docs.spring.io/spring-boot/reference/actuator/metrics.html</a> · Micrometer Prometheus — <a href="https://docs.micrometer.io/micrometer/reference/implementations/prometheus.html">docs.micrometer.io/…/prometheus.html</a></li>
+    <li>Prometheus Operator ServiceMonitor·PrometheusRule — <a href="https://prometheus-operator.dev/docs/developer/getting-started/">prometheus-operator.dev/docs/developer/getting-started/</a> · Alerting rules — <a href="https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/">prometheus.io/docs/…/alerting_rules/</a> · histogram_quantile — <a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#histogram_quantile">prometheus.io/docs/…/functions/#histogram_quantile</a></li>
+    <li>Loki Helm(커뮤니티 차트, 모놀리식) — <a href="https://grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/">grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/</a> · 차트 저장소 — <a href="https://github.com/grafana-community/helm-charts/tree/main/charts/loki">github.com/grafana-community/helm-charts/…/loki</a></li>
+    <li>Grafana Alloy 설치(Helm) — <a href="https://grafana.com/docs/alloy/latest/set-up/install/kubernetes/">grafana.com/docs/alloy/latest/set-up/install/kubernetes/</a> · <code>loki.source.kubernetes</code> — <a href="https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.kubernetes/">grafana.com/docs/alloy/latest/reference/components/loki/loki.source.kubernetes/</a></li>
+    <li>LogQL — <a href="https://grafana.com/docs/loki/latest/query/">grafana.com/docs/loki/latest/query/</a> · Grafana 대시보드 프로비저닝(사이드카) — <a href="https://github.com/grafana/helm-charts/tree/main/charts/grafana#sidecar-for-dashboards">github.com/grafana/helm-charts/…/grafana#sidecar-for-dashboards</a></li>
+    <li>프로젝트 자료 — 관측성 실습 시리즈 트랙 B~D · <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day10-monitoring-1-metrics-hpa.html">← D10 모니터링 ①</a><a href="day12-rbac-pod-security-policy.html">D12 RBAC·파드 시큐리티·정책 →</a></div>
+</div></footer>
+</body>
+</html>

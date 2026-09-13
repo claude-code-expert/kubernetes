@@ -1,0 +1,25 @@
+# M12 — 경로 기반 라우팅. M06 nginx.conf 가 하던 일을 클러스터 리소스로 옮긴다.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: journal
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: journal.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: journal-api
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-static
+                port:
+                  number: 80

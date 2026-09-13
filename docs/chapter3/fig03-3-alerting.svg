@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow33" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="82" width="210" height="76" rx="4"/>
+  <text class="t-title" x="125" y="108" text-anchor="middle">프로메테우스 알림 룰</text>
+  <text class="t-sub" x="125" y="128" text-anchor="middle">PromQL 조건이 일정 시간</text>
+  <text class="t-sub" x="125" y="144" text-anchor="middle">지속되면 알림 발화</text>
+
+  <line class="line" x1="230" y1="120" x2="296" y2="120" marker-end="url(#arrow33)"/>
+
+  <rect class="box-accent" x="300" y="82" width="260" height="76" rx="4"/>
+  <text class="t-title" x="430" y="108" text-anchor="middle">얼럿매니저</text>
+  <text class="t-sub" x="430" y="128" text-anchor="middle">그룹핑 · 중복 제거 · 억제(inhibit)</text>
+  <text class="t-sub" x="430" y="144" text-anchor="middle">심각도별 라우팅 · 무음(silence)</text>
+
+  <!-- 라우팅 버스 -->
+  <line class="line" x1="560" y1="120" x2="610" y2="120"/>
+  <line class="line" x1="610" y1="67" x2="610" y2="207"/>
+  <line class="line" x1="610" y1="67" x2="656" y2="67" marker-end="url(#arrow33)"/>
+  <line class="line" x1="610" y1="137" x2="656" y2="137" marker-end="url(#arrow33)"/>
+  <line class="line" x1="610" y1="207" x2="656" y2="207" marker-end="url(#arrow33)"/>
+
+  <rect class="box" x="660" y="42" width="220" height="50" rx="4"/>
+  <text class="t-title" x="770" y="63" text-anchor="middle">critical → 온콜 호출</text>
+  <text class="t-sub" x="770" y="81" text-anchor="middle">사람이 지금 일어나야 하는 것만</text>
+
+  <rect class="box" x="660" y="112" width="220" height="50" rx="4"/>
+  <text class="t-title" x="770" y="133" text-anchor="middle">warning → 채팅 채널</text>
+  <text class="t-sub" x="770" y="151" text-anchor="middle">업무 시간에 확인하면 되는 것</text>
+
+  <rect class="box" x="660" y="182" width="220" height="50" rx="4"/>
+  <text class="t-title" x="770" y="203" text-anchor="middle">info → 티켓 · 대시보드</text>
+  <text class="t-sub" x="770" y="221" text-anchor="middle">기록만 남기면 되는 것</text>
+
+  <text class="t-cap" x="450" y="266" text-anchor="middle">알림 설계의 핵심은 "무엇을 보낼까"가 아니라 "무엇을 보내지 않을까"다.</text>
+  <text class="t-cap" x="450" y="288" text-anchor="middle">사람이 즉시 행동할 수 없는 알림은 소음이고, 소음은 진짜 알림을 죽인다(알림 피로).</text>
+</svg>

@@ -1,0 +1,22 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+# M20 — 3단 라벨 사슬의 가운데. 이 오브젝트가 만들어지는 것과 타깃이 생기는 것은 다른 일이다.
+#   ① Prometheus 가 serviceMonitorSelector 로 이 오브젝트를 고르고 (release 라벨)
+#   ② 이 오브젝트가 selector 로 서비스를 고르고
+#   ③ 서비스가 selector 로 파드를 고른다
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "journal.fullname" . }}-api
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+    release: {{ .Values.metrics.serviceMonitor.releaseLabel }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "journal.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+{{- end }}

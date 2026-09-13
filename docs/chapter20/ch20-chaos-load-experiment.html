@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH20 카오스 테스팅, 로드 테스팅, 실험 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  .link-back { border: 1px solid var(--line); padding: 12px 18px; margin: 14px 0; font-size: 14px; border-radius: 6px; background: var(--bg-soft); color: var(--sub); }
+  .link-back strong { color: var(--ink); }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 20</div>
+  <h1>카오스 테스팅, 로드 테스팅, 실험</h1>
+  <p class="ch-desc">5장에서 "장애가 나면 시스템이 정말 회복하는가"를 묻는 카오스 실험을 살짝 맛봤다. 이 장은 그 질문을 세 갈래로 넓힌다 — 시스템이 망가진 상태에서 어떻게 행동하는가(카오스), 부하를 받으면 어떻게 행동하는가(로드), 그리고 애초에 유저에게 도움이 되고 있는가(실험). 셋은 방법론이 닮았지만 묻는 질문이 다르다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 카오스 테스팅의 목표는 "실패를 기대하며 관찰"하는 것이다 — 통신·인프라·보안 세 층위에 각각 다르게 장애를 주입한다.</p>
+  <p>2. 로드 테스팅은 격리된 애플리케이션 사본에 실제와 가까운 트래픽을 흘려 병목을 찾는 것이다 — 프로덕션 데이터를 절대 오염시키지 않는다.</p>
+  <p>3. 실험은 안전이 아니라 학습이 목적이다 — 좋은 가설에서 시작해, 기능 플래그(한 바이너리) 또는 서비스 메시 트래픽 분할(두 서비스) 중 하나로 구현한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s20-1"><span class="num">20.1</span>카오스 테스팅</a>
+  <a href="#s20-2"><span class="num">20.2</span>로드 테스팅</a>
+  <a href="#s20-3"><span class="num">20.3</span>실험</a>
+</nav>
+
+<section id="s20-1">
+  <h2 class="sec"><span class="num">20.1</span>카오스 테스팅</h2>
+
+  <h3>20.1.1 카오스 테스팅의 목표</h3>
+  <p class="lead"><dfn class="term">카오스 테스팅 <span class="en">(Chaos Testing)</span></dfn>의 목표는 애플리케이션을 극악의 환경에 빠뜨려, 그 조건에서 어떻게 동작하는지 — 특히 <strong>어떻게 실패하는지</strong> — 관찰하는 것이다. 실패를 두려워하지 않고 오히려 기대하며 접근한다.</p>
+
+  <h3>20.1.2 카오스 테스팅의 전제 조건</h3>
+  <p>무작정 시작하면 안 된다. 먼저 애플리케이션에서 발생 가능한 환경 조건을 이해해야 한다 — 어떤 타입의 에러가 예상되는지, 정상 동작의 기준선이 무엇인지 미리 정의해야 "이게 실패인지 아닌지"를 판단할 수 있다.</p>
+
+  <h3>20.1.3 애플리케이션 통신에 관한 카오스 테스팅</h3>
+  <p>가장 쉬운 주입 지점은 클라이언트와 서비스 사이다. 원서는 <dfn class="term">Toxiproxy</dfn>(쇼피파이 개발)로 서비스 앞에 카오스 프록시를 끼워 넣는 방법을 상세히 설명한다 — 서비스명을 <code>backend</code>에서 <code>backend-real</code>로 바꾸고, 원래 이름 자리에 Toxiproxy 파드를 대신 앉힌 뒤 레이턴시·연결 끊김 같은 장애를 주입하는 방식이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow201" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-h" x="20" y="26">카오스 테스팅 3계층 (20.1.3~20.1.5) — 목표는 "실패를 기대하며 관찰"</text>
+
+  <rect class="box" x="20" y="40" width="270" height="80" rx="4"/>
+  <text class="t-title" x="155" y="66" text-anchor="middle">① 통신 카오스</text>
+  <text class="t-sub" x="155" y="88" text-anchor="middle">레이턴시·연결 끊김 주입</text>
+  <text class="t-sub" x="155" y="104" text-anchor="middle">클라이언트-서비스 사이</text>
+
+  <rect class="box" x="315" y="40" width="270" height="80" rx="4"/>
+  <text class="t-title" x="450" y="66" text-anchor="middle">② 작동 카오스</text>
+  <text class="t-sub" x="450" y="88" text-anchor="middle">노드 장애·자원 과부하</text>
+  <text class="t-sub" x="450" y="104" text-anchor="middle">인프라 층 (5장 Chaos Mesh)</text>
+
+  <rect class="box" x="610" y="40" width="270" height="80" rx="4"/>
+  <text class="t-title" x="745" y="66" text-anchor="middle">③ 퍼즈 테스팅</text>
+  <text class="t-sub" x="745" y="88" text-anchor="middle">무작위 입력으로 보안·복원성</text>
+  <text class="t-sub" x="745" y="104" text-anchor="middle">장애가 아니라 취약점 발견</text>
+
+  <line x1="20" y1="146" x2="880" y2="146" stroke="#d8d8d8" stroke-dasharray="2 4"/>
+
+  <text class="t-h" x="20" y="174">① 통신 카오스를 주입하는 두 가지 방식</text>
+
+  <rect class="box" x="20" y="190" width="410" height="200" rx="6"/>
+  <text class="t-title" x="225" y="214" text-anchor="middle">수동 프록시 교체 (원서 방식 — Toxiproxy)</text>
+  <rect class="box" x="40" y="230" width="150" height="46" rx="4"/>
+  <text class="t-sub" x="115" y="252" text-anchor="middle">서비스명 변경</text>
+  <text class="t-sub" x="115" y="266" text-anchor="middle">backend→backend-real</text>
+  <line class="line" x1="190" y1="253" x2="216" y2="253" marker-end="url(#arrow201)"/>
+  <rect class="box" x="220" y="230" width="190" height="46" rx="4"/>
+  <text class="t-sub" x="315" y="252" text-anchor="middle">toxiproxy 파드를</text>
+  <text class="t-sub" x="315" y="266" text-anchor="middle">backend 이름으로 새로 배치</text>
+  <text class="t-sub" x="225" y="302" text-anchor="middle">서비스마다 이름 바꾸기 + 프록시 파드 배포</text>
+  <text class="t-sub" x="225" y="320" text-anchor="middle">반복 필요 — 세밀한 제어(정확히 2000ms</text>
+  <text class="t-sub" x="225" y="336" text-anchor="middle">지연 같은)엔 여전히 유용</text>
+  <text class="t-sub" x="225" y="358" text-anchor="middle">서비스 메시가 없는 환경에 적합</text>
+
+  <rect class="box-accent" x="460" y="190" width="420" height="200" rx="6"/>
+  <text class="t-title" x="670" y="214" text-anchor="middle">서비스 메시 네이티브 (2026 기준 우선 검토)</text>
+  <rect class="box" x="480" y="230" width="380" height="46" rx="4"/>
+  <text class="t-sub" x="670" y="252" text-anchor="middle">HTTPRoute / VirtualService에 fault 필드 선언</text>
+  <text class="t-sub" x="670" y="266" text-anchor="middle">서비스명 변경도, 별도 파드도 불필요</text>
+  <text class="t-sub" x="670" y="302" text-anchor="middle">9장의 앰비언트 메시가 이미 있다면</text>
+  <text class="t-sub" x="670" y="320" text-anchor="middle">선언 한 줄로 지연·중단을 주입</text>
+  <text class="t-sub" x="670" y="342" text-anchor="middle">서비스 늘어나도 관리 부담 그대로</text>
+  <text class="t-sub" x="670" y="364" text-anchor="middle">(수동 방식은 서비스 수만큼 반복)</text>
+
+  <text class="t-cap" x="450" y="410" text-anchor="middle">둘 다 "네트워크를 일부러 망가뜨린다"는 목적은 같다 — 이미 메시가 있다면 그 기능을 먼저 쓰는 게 합리적이다.</text>
+</svg>
+    <figcaption>그림 20-1. 카오스 테스팅 3계층(20.1.3~20.1.5)과, 통신 카오스를 주입하는 두 가지 방식.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    Toxiproxy 방식은 여전히 유효하고, 서비스 메시가 없는 환경이나 아주 정교한 제어(정확히 2000ms 지연 같은)가 필요할 때 유용하다. 다만 9장에서 다룬 <strong>서비스 메시가 이미 있다면</strong>, 서비스명을 바꾸고 프록시 파드를 따로 배포하는 수작업 없이 <strong>라우팅 규칙에 fault 필드를 선언하는 것만으로</strong> 같은 효과를 낼 수 있다. 서비스가 늘어날수록 이 차이가 커진다 — 수작업 방식은 서비스 수만큼 반복해야 하지만, 메시 방식은 선언 한 줄이 끝이다.
+    <span class="src">출처: 9장 갱신 주석(서비스 메시·앰비언트 모드) 참고</span>
+  </div>
+
+  <h3>20.1.4 애플리케이션 작동에 관한 카오스 테스팅</h3>
+  <p>통신이 아니라 <strong>인프라 자체</strong>가 불안하거나 과부하 걸린 상황을 시뮬레이션한다 — 노드를 강제로 죽이거나 CPU·메모리를 고갈시키는 식이다.</p>
+  <div class="link-back"><strong>5장 참고</strong> — 이 층위의 실험은 5.9.4절에서 이미 Chaos Toolkit으로 맛봤고, 현재 표준인 <strong>Chaos Mesh·LitmusChaos</strong>(둘 다 CNCF Incubating)를 다뤘다. 이 절의 "인프라를 불안하게 만든다"는 목표를 그 도구들이 CRD 선언으로 구현한다.</div>
+
+  <h3>20.1.5 애플리케이션의 보안 및 복원성에 관한 퍼즈 테스팅</h3>
+  <p><dfn class="term">퍼즈 테스팅 <span class="en">(Fuzz Testing)</span></dfn>도 무작위성을 일으킨다는 점에서 카오스 테스팅과 닮았지만, 목적이 다르다 — 장애를 일으키는 게 아니라 <strong>무작위·비정상 입력값</strong>을 계속 던져 보안 취약점이나 예상치 못한 크래시를 찾아낸다.</p>
+</section>
+
+<section id="s20-2">
+  <h2 class="sec"><span class="num">20.2</span>로드 테스팅</h2>
+
+  <h3>20.2.1 로드 테스팅의 목표</h3>
+  <p class="lead"><dfn class="term">로드 테스팅 <span class="en">(Load Testing)</span></dfn>은 애플리케이션이 부하를 받을 때 어떻게 동작하는지 확인하는 과정이다. 개발 중엔 소수 유저의 간헐적 트래픽만 보다가, 실제 프로덕션 수준 트래픽에서야 비로소 드러나는 문제가 있다.</p>
+
+  <h3>20.2.2 로드 테스팅의 전제 조건</h3>
+  <p>카오스 테스팅과 마찬가지로, 부하 자체가 새로운 장애를 일으킬 수 있다는 걸 인지해야 한다 — 테스트 자체가 사고를 내지 않도록 격리된 환경에서 진행한다.</p>
+
+  <h3>20.2.3 실제와 가까운 트래픽 생성</h3>
+  <p>진짜 같은 부하를 어떻게 만드는가는 애플리케이션마다 다르다. 뉴스 사이트처럼 읽기 전용이라면 확률 분포로 트래픽 패턴을 흉내 낼 수 있고, 실제 트래픽 로그를 재생하는 방법도 있다.</p>
+
+  <h3>20.2.4 애플리케이션 로드 테스팅</h3>
+  <p>부하를 걸 준비가 됐다고 끝이 아니다. 대부분의 애플리케이션은 DB 등 스토리지에 연결되어 있어, 부하가 만든 인위적 데이터가 <strong>프로덕션 데이터를 오염</strong>시키면 안 된다 — 그래서 전체 의존성을 갖춘 진짜 애플리케이션 사본을 따로 띄워야 한다. 대규모 분산 부하를 만들려면 파드도 여럿 필요하고, 이 부하 파드를 애플리케이션과 <strong>같은 클러스터에 둘지 분리할지</strong>도 결정해야 한다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow202" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-step { font-size: 11px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-step" x="115" y="30" text-anchor="middle">STEP 1</text>
+  <rect class="box" x="20" y="42" width="190" height="84" rx="4"/>
+  <text class="t-title" x="115" y="68" text-anchor="middle">실제와 가까운</text>
+  <text class="t-title" x="115" y="86" text-anchor="middle">트래픽 패턴 생성</text>
+  <text class="t-sub" x="115" y="106" text-anchor="middle">확률 분포 · 실기록 재생 (20.2.3)</text>
+
+  <line class="line" x1="210" y1="84" x2="246" y2="84" marker-end="url(#arrow202)"/>
+
+  <text class="t-step" x="345" y="30" text-anchor="middle">STEP 2</text>
+  <rect class="box" x="250" y="42" width="190" height="84" rx="4"/>
+  <text class="t-title" x="345" y="68" text-anchor="middle">격리된 애플리케이션</text>
+  <text class="t-title" x="345" y="86" text-anchor="middle">사본 준비</text>
+  <text class="t-sub" x="345" y="106" text-anchor="middle">프로덕션 DB 오염 방지</text>
+
+  <line class="line" x1="440" y1="84" x2="476" y2="84" marker-end="url(#arrow202)"/>
+
+  <text class="t-step" x="575" y="30" text-anchor="middle">STEP 3</text>
+  <rect class="box" x="480" y="42" width="190" height="84" rx="4"/>
+  <text class="t-title" x="575" y="68" text-anchor="middle">분산 부하 파드로</text>
+  <text class="t-title" x="575" y="86" text-anchor="middle">대량 요청 전송</text>
+  <text class="t-sub" x="575" y="106" text-anchor="middle">클러스터 내부·외부 선택 (20.2.4)</text>
+
+  <line class="line" x1="670" y1="84" x2="706" y2="84" marker-end="url(#arrow202)"/>
+
+  <text class="t-step" x="795" y="30" text-anchor="middle">STEP 4</text>
+  <rect class="box-accent" x="710" y="42" width="170" height="84" rx="4"/>
+  <text class="t-title" x="795" y="68" text-anchor="middle">병목 발견 +</text>
+  <text class="t-title" x="795" y="86" text-anchor="middle">리소스 튜닝</text>
+  <text class="t-sub" x="795" y="106" text-anchor="middle">8장 QoS·오토스케일링 연결</text>
+
+  <!-- 툴 3종 -->
+  <text class="t-h" x="20" y="166" font-size="13" font-weight="700" fill="#333">STEP 3에 쓰는 분산 로드 테스팅 툴</text>
+
+  <rect class="box" x="20" y="182" width="270" height="100" rx="4"/>
+  <text class="t-title" x="155" y="208" text-anchor="middle">JMeter</text>
+  <text class="t-sub" x="155" y="228" text-anchor="middle">GUI 기반, 프로토콜 폭 넓음</text>
+  <text class="t-sub" x="155" y="244" text-anchor="middle">(JDBC·JMS 등)</text>
+  <text class="t-sub" x="155" y="264" text-anchor="middle">엔터프라이즈·레거시 프로토콜에 강함</text>
+
+  <rect class="box" x="315" y="182" width="270" height="100" rx="4"/>
+  <text class="t-title" x="450" y="208" text-anchor="middle">Locust</text>
+  <text class="t-sub" x="450" y="228" text-anchor="middle">파이썬 코드로 시나리오 작성</text>
+  <text class="t-sub" x="450" y="244" text-anchor="middle">내장 분산 마스터/워커 모드</text>
+  <text class="t-sub" x="450" y="264" text-anchor="middle">파이썬 팀에 적합</text>
+
+  <rect class="box-accent" x="610" y="182" width="270" height="100" rx="4"/>
+  <text class="t-title" x="745" y="208" text-anchor="middle">k6 (2026 기준 추가)</text>
+  <text class="t-sub" x="745" y="228" text-anchor="middle">Grafana Labs · 코드형 테스트</text>
+  <text class="t-sub" x="745" y="244" text-anchor="middle">CI 네이티브, 3장 프로메테우스 연동</text>
+  <text class="t-sub" x="745" y="264" text-anchor="middle">단일 Go 바이너리 — 설치 간단</text>
+
+  <text class="t-cap" x="450" y="320" text-anchor="middle">셋 다 "부하를 코드로 기술한다"는 원칙은 같다 — 프로토콜 폭이 필요하면 JMeter,</text>
+  <text class="t-cap" x="450" y="342" text-anchor="middle">파이썬 생태계면 Locust, CI 통합과 개발자 경험을 우선하면 k6가 2026년 현재 첫 선택지로 꼽힌다.</text>
+</svg>
+    <figcaption>그림 20-2. 로드 테스팅 4단계와, 3단계에서 쓰는 분산 부하 툴 3종.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    원서는 JMeter와 Locust를 소개한다 — 둘 다 여전히 널리 쓰인다(JMeter는 JDBC 등 폭넓은 프로토콜의 엔터프라이즈 표준, Locust는 파이썬 팀의 선택지). 여기에 더해 2026년 현재는 <dfn class="term">k6</dfn>(Grafana Labs)가 CI 네이티브 개발자 경험을 앞세워 급부상했다 — 단일 Go 바이너리로 설치가 간단하고, 테스트 스크립트를 코드로 작성해 3장에서 다룬 프로메테우스·Grafana 스택과 자연스럽게 연동된다. 프로토콜 폭이 필요하면 JMeter, 파이썬 생태계면 Locust, CI 파이프라인에 부하 테스트를 코드로 통합하고 싶다면 k6가 현재 첫 선택지로 흔히 꼽힌다.
+    <span class="src">출처: 업계 도구 비교 자료 다수(2026) 교차 확인 — k6 v2.0(Grafana Labs) CI/관측 스택 통합 현황</span>
+  </div>
+
+  <h3>20.2.5 로드 테스팅을 이용한 애플리케이션 튜닝</h3>
+  <p>장애 예방을 넘어, 리소스 사용률 최적화에도 로드 테스팅이 쓰인다. 여기서 찾은 병목은 8장의 리소스 요청·제한, QoS, 오토스케일링 설정을 조정하는 실제 근거가 된다.</p>
+</section>
+
+<section id="s20-3">
+  <h2 class="sec"><span class="num">20.3</span>실험</h2>
+
+  <h3>20.3.1 실험의 목표</h3>
+  <p class="lead">카오스·로드 테스팅과 달리 <dfn class="term">실험 <span class="en">(Experiment)</span></dfn>은 아키텍처나 운영 문제를 찾는 게 아니다 — <strong>유저의 서비스 사용 경험을 개선</strong>할 방법을 찾는 것이다.</p>
+
+  <h3>20.3.2 실험의 전제 조건</h3>
+  <p>좋은 실험은 모두 좋은 <strong>가설</strong>에서 시작된다. "이렇게 바꾸면 이런 지표가 이렇게 변할 것이다"를 먼저 명확히 적어야, 결과가 나왔을 때 그게 실제로 의미 있는 신호인지 판단할 수 있다.</p>
+
+  <h3>20.3.3 실험 구축</h3>
+  <p>구축 방법은 크게 둘이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow203" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-app { fill: #ffffff; stroke: #3a8a5c; stroke-width: 1.2; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 방법 1 -->
+  <rect class="box" x="20" y="20" width="410" height="230" rx="6"/>
+  <text class="t-title" x="225" y="46" text-anchor="middle">방법 ① 한 바이너리에 두 경험</text>
+
+  <rect class="box-app" x="60" y="62" width="330" height="70" rx="4"/>
+  <text class="t-title" x="225" y="86" text-anchor="middle">단일 서비스</text>
+  <text class="t-sub" x="225" y="106" text-anchor="middle">기능 플래그로 요청마다 A/B 분기</text>
+  <text class="t-sub" x="225" y="122" text-anchor="middle">(HTTP 헤더·쿠키·쿼리 파라미터 기준)</text>
+
+  <text class="t-sub" x="40" y="156">✓ 롤아웃이 단순 — 배포는 하나</text>
+  <text class="t-sub" x="40" y="174">✗ 실험 코드 크래시가 프로덕션 전체에 영향</text>
+  <text class="t-sub" x="40" y="192">✗ 릴리스 전체와 묶여 실험 갱신이 느림</text>
+  <text class="t-sub" x="40" y="216">→ 기능 플래그 도구: Flagger 등 (5·7장 연결)</text>
+  <text class="t-sub" x="40" y="234">→ 빠르게 켜고 끌 수 있음</text>
+
+  <!-- 방법 2 -->
+  <rect class="box-accent" x="470" y="20" width="410" height="230" rx="6"/>
+  <text class="t-title" x="675" y="46" text-anchor="middle">방법 ② 서비스 메시로 트래픽 분할</text>
+
+  <rect class="box-app" x="490" y="62" width="150" height="70" rx="4"/>
+  <text class="t-title" x="565" y="86" text-anchor="middle">제어군</text>
+  <text class="t-sub" x="565" y="106" text-anchor="middle">대부분의 트래픽</text>
+
+  <rect class="box-app" x="660" y="62" width="150" height="70" rx="4"/>
+  <text class="t-title" x="735" y="86" text-anchor="middle">실험군</text>
+  <text class="t-sub" x="735" y="106" text-anchor="middle">소량 트래픽만</text>
+
+  <text class="t-sub" x="490" y="156">✓ 실험 크래시가 제어군에 영향 없음</text>
+  <text class="t-sub" x="490" y="174">✓ 언제든 새 실험 버전 배포 (릴리스 독립)</text>
+  <text class="t-sub" x="490" y="192">✗ 별도 서비스 배포 — 초기 구축 비용 큼</text>
+  <text class="t-sub" x="490" y="216">→ 9장의 서비스 메시가 트래픽 분할 담당</text>
+  <text class="t-sub" x="490" y="234">→ 요청 성공 여부도 메시가 직접 판단 가능</text>
+
+  <!-- 하단 -->
+  <rect class="box" x="20" y="270" width="860" height="70" rx="6"/>
+  <text class="t-sub" x="40" y="296">카오스·로드 테스팅은 "아키텍처와 운영이 견고한가"를 묻지만, 실험은 다른 질문이다 — "이 변경이</text>
+  <text class="t-sub" x="40" y="314">유저 경험을 실제로 개선하는가?" 좋은 가설(20.3.2)에서 시작해야 실험이 의미 있다.</text>
+
+  <text class="t-cap" x="450" y="366" text-anchor="middle">6장의 카나리 배포·7장의 리전 웨이브와 기술적으로 닮았다 — 다른 점은 목적이다. 저건 안전, 이건 학습이다.</text>
+</svg>
+    <figcaption>그림 20-3. 한 바이너리에 기능 플래그로 분기하는 방법과, 서비스 메시로 트래픽을 나누는 방법.</figcaption>
+  </figure>
+  <p><strong>방법 ①</strong>은 릴리스 바이너리 하나에 실험군·제어군 코드를 모두 넣고, HTTP 헤더·쿠키·쿼리 파라미터 같은 요청 속성으로 유저를 갈라 태운다. 롤아웃은 단순하지만, 실험 코드가 크래시 나면 프로덕션 전체가 흔들리고, 모든 변경이 서비스 전체 릴리스에 묶여 실험 갱신이 느리다. <dfn class="term">Flagger</dfn>(5장·7장에서 이미 다룬 프로그레시브 딜리버리 도구) 같은 오픈소스로 기능 플래그를 구현하면 문제 발생 시 빠르게 끄고 켤 수 있다.</p>
+  <p><strong>방법 ②</strong>는 서비스를 두 버전으로 나눠 배포하고, <span class="link-back" style="display:inline; border:none; background:none; padding:0;">9장</span>에서 다룬 서비스 메시로 트래픽의 일부만 실험군으로 흘린다. 구축 비용은 크지만 실험 코드가 죽어도 제어군엔 영향이 없고, 언제든 새 실험을 독립적으로 배포할 수 있다. 서비스 메시는 요청 성공 여부까지 직접 판단할 수 있어 실험 결과 측정도 더 정확해진다.</p>
+  <p>6장의 카나리 배포, 7장의 리전 웨이브 롤아웃과 기술적으로 매우 닮았다 — 다른 건 목적이다. 그것들은 <strong>안전</strong>하게 배포하려는 것이고, 이건 <strong>배우려는</strong> 것이다.</p>
+</section>
+
+<footer>
+  출처: 5장 갱신 주석(Chaos Mesh·LitmusChaos) · 9장 갱신 주석(서비스 메시) 참고 · 업계 도구 비교 자료(k6, 2026) — 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig20-1 ~ fig20-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

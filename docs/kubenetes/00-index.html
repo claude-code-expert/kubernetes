@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠버네티스 14일 — 전체 목차와 인덱스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR — 프로젝트의 용어 사전·명령어 레퍼런스와 동일 계열. 한글·숫자·코드가 한 줄에 섞이는 기술 교안에서 Mono와 짝이 맞는 유일한 한글 산세리프라 선택했다. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;            /* 유일한 액센트: 링크·현재 위치·강조 숫자 */
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c; /* 도판 의미 색 (프로젝트 규약) */
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.86rem;line-height:1.55;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:0}
+pre code{background:none;border:0;padding:0;font-size:1em}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* 상단 */
+header.top{border-bottom:1px solid var(--line);padding:40px 0 28px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 10px}
+h1{font-size:2rem;font-weight:700;line-height:1.25;margin:0 0 14px;letter-spacing:-.01em}
+.lede{font-size:1.05rem;color:var(--ink-2);max-width:760px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:22px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+
+/* 내비 */
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 22px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
+section{padding:44px 0 8px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.45rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 + p.sub{margin:0 0 22px;color:var(--ink-2)}
+h3{font-size:1.05rem;font-weight:600;margin:28px 0 10px}
+
+/* 표 */
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 20px}
+th,td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.phase td{background:var(--paper-2);font-weight:600;color:var(--ink-2);font-size:.82rem;letter-spacing:.02em}
+.old{color:var(--ink-3);text-decoration:line-through}
+
+/* 일차 카드 */
+.days{display:grid;grid-template-columns:1fr;gap:0}
+article.day{display:grid;grid-template-columns:120px 1fr;gap:0 28px;padding:24px 0;border-top:1px solid var(--line)}
+article.day:last-child{border-bottom:1px solid var(--line)}
+.day .no{font-family:var(--mono);font-size:.8rem;color:var(--ink-3);line-height:1.4}
+.day .no b{display:block;font-family:var(--sans);font-size:1.6rem;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.day .no .phase{display:block;color:var(--ink-2)}
+.day h3{margin:0 0 4px;font-size:1.12rem}
+.day .aim{margin:0 0 14px;color:var(--ink-2)}
+.day .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font-size:.9rem}
+.day .grid > div{padding-top:6px}
+.day .lab{border-left:2px solid var(--pod);padding-left:12px}
+.day .theory{border-left:2px solid var(--line);padding-left:12px}
+.day .grid h4{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-3);letter-spacing:.03em}
+.day ul{margin:0;padding-left:18px}
+.day li{margin:2px 0}
+.day .foot{grid-column:1 / -1;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2);font-size:.84rem;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px 24px}
+.day .foot span b{color:var(--ink);font-weight:600}
+.check{font-size:.86rem;background:var(--paper-2);border:1px solid var(--line-2);border-radius:4px;padding:8px 12px;margin-top:10px;grid-column:1 / -1}
+.check b{font-weight:600}
+
+/* 노트 */
+.note{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:16px 0;font-size:.92rem}
+.note.warn{border-color:var(--seq)}
+.note h4{margin:0 0 6px;font-size:.82rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p{margin:0}
+.note p + p{margin-top:8px}
+
+/* 파일 인덱스 */
+.files{font-family:var(--mono);font-size:.84rem}
+.files td{padding:6px 10px}
+
+figure{margin:20px 0 8px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+
+footer{padding:36px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px;margin:8px 0}
+@media (max-width:760px){
+  article.day{grid-template-columns:1fr}
+  .day .grid{grid-template-columns:1fr}
+  h1{font-size:1.6rem}
+}
+@media print{nav.toc{position:static}a{color:inherit}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">쿠버네티스 스터디 · 14일 이론/실습 교재 · 전체 목차와 인덱스</p>
+    <h1>Docker Desktop 하나로 시작해 모니터링까지 갖춘 클러스터를 만든다</h1>
+    <p class="lede">『쿠버네티스 창시자에게 배우는 모범 사례』(2판)의 순서를 그대로 따르지 않는다. 책은 "이미 클러스터를 운영하는 사람"이 독자다. 이 교재는 설치부터 시작해 하루에 한 계단씩 올라가며, 책의 21개 장 중 입문자에게 먼저 필요한 12개 장을 실습으로 풀어 쓰고 나머지는 14일차에 지도를 그려 준다.</p>
+    <div class="meta">
+      <span>기준일 <b>2026-08-30</b> · 14일 전체 완성</span>
+      <span>실습 환경 <b>Docker Desktop 4.88.1 · 내장 kind 프로비저너 · Kubernetes v1.36.x</b></span>
+      <span>대상 <b>컨테이너는 써 봤고 쿠버네티스는 처음인 개발자</b></span>
+      <span>분량 <b>하루 2시간 (이론 40분 · 실습 80분)</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#map">로드맵</a></li>
+  <li><a href="#rules">진행 방식</a></li>
+  <li><a href="#env">환경과 버전</a></li>
+  <li><a href="#days">일차별 목차</a></li>
+  <li><a href="#book">책 장 매핑</a></li>
+  <li><a href="#files">파일 인덱스</a></li>
+  <li><a href="#refs">출처</a></li>
+</ul></div></nav>
+
+<!-- ───────────────────────── 로드맵 ───────────────────────── -->
+<section id="map"><div class="wrap">
+  <h2>14일 로드맵</h2>
+  <p class="sub">4개 단계로 오른다. 각 단계 끝에는 "혼자 다시 할 수 있는가"를 확인하는 체크포인트가 있다.</p>
+
+  <figure>
+  <svg viewBox="0 0 1040 330" width="100%" role="img" aria-label="14일 로드맵: 4단계 계단 구조">
+    <!-- 단계 1: 기초 (D1~D3) -->
+    <rect x="20" y="220" width="220" height="86" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="34" y="244" font-size="13" font-weight="600" fill="#1d4ed8">1단계 · 기초</text>
+    <text x="34" y="264" font-size="12" fill="#4a4a4a">D1 도커 복습 · D2 클러스터 켜기</text>
+    <text x="34" y="282" font-size="12" fill="#4a4a4a">D3 파드·매니페스트·네임스페이스</text>
+    <text x="34" y="300" class="mono" font-size="11" fill="#767676">체크포인트 A: hello-world 파드</text>
+
+    <!-- 단계 2: 배포·네트워크·설정 (D4~D7) -->
+    <rect x="272" y="160" width="230" height="146" rx="4" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="286" y="184" font-size="13" font-weight="600" fill="#6d28d9">2단계 · 배포와 노출</text>
+    <text x="286" y="204" font-size="12" fill="#4a4a4a">D4 디플로이먼트·롤링 업데이트</text>
+    <text x="286" y="222" font-size="12" fill="#4a4a4a">D5 서비스·클러스터 네트워킹</text>
+    <text x="286" y="240" font-size="12" fill="#4a4a4a">D6 Gateway API (ingress-nginx 대체)</text>
+    <text x="286" y="258" font-size="12" fill="#4a4a4a">D7 컨피그맵·시크릿 + 1주 종합</text>
+    <text x="286" y="300" class="mono" font-size="11" fill="#767676">체크포인트 B: localhost/hello 응답</text>
+
+    <!-- 단계 3: 운영 (D8~D11) -->
+    <rect x="534" y="100" width="230" height="206" rx="4" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="548" y="124" font-size="13" font-weight="600" fill="#15803d">3단계 · 운영 품질</text>
+    <text x="548" y="144" font-size="12" fill="#4a4a4a">D8 프로브·리소스·스케줄링</text>
+    <text x="548" y="162" font-size="12" fill="#4a4a4a">D9 스토리지·스테이트풀셋·DB</text>
+    <text x="548" y="180" font-size="12" fill="#4a4a4a">D10 모니터링 ① 메트릭·대시보드·HPA</text>
+    <text x="548" y="198" font-size="12" fill="#4a4a4a">D11 모니터링 ② 앱 메트릭·알림·로그</text>
+    <text x="548" y="300" class="mono" font-size="11" fill="#767676">체크포인트 C: 그라파나에 내 앱 지표</text>
+
+    <!-- 단계 4: 보안·자동화·종합 (D12~D14) -->
+    <rect x="796" y="40" width="224" height="266" rx="4" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+    <text x="810" y="64" font-size="13" font-weight="600" fill="#c2410c">4단계 · 보안과 자동화</text>
+    <text x="810" y="84" font-size="12" fill="#4a4a4a">D12 RBAC·파드 시큐리티·정책</text>
+    <text x="810" y="102" font-size="12" fill="#4a4a4a">D13 Helm·Kustomize·GitOps</text>
+    <text x="810" y="120" font-size="12" fill="#4a4a4a">D14 종합 프로젝트·장애 주입</text>
+    <text x="810" y="300" class="mono" font-size="11" fill="#767676">체크포인트 D: 빈 클러스터에서 재구축</text>
+
+    <!-- 계단 연결선 -->
+    <line x1="240" y1="220" x2="272" y2="220" stroke="#767676" stroke-width="1.2"/>
+    <line x1="502" y1="160" x2="534" y2="160" stroke="#767676" stroke-width="1.2"/>
+    <line x1="764" y1="100" x2="796" y2="100" stroke="#767676" stroke-width="1.2"/>
+
+    <!-- 세로 축 설명 -->
+    <text x="20" y="22" font-size="12" fill="#767676">위로 갈수록 앞 단계의 산출물을 그대로 재사용한다. 13일차의 Helm 차트는 4일차 매니페스트를 감싸고, 14일차는 1~13일차 전체를 빈 클러스터에 다시 올린다.</text>
+    <!-- 앱 스택 표시 -->
+    <text x="20" y="62" font-size="11" fill="#767676">실습 앱 스택 (두 서비스, 14일 내내 재사용)</text>
+    <rect x="20" y="70" width="110" height="26" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="30" y="87" font-size="11" fill="#15803d">gateway (Spring)</text>
+    <rect x="140" y="70" width="100" height="26" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="150" y="87" font-size="11" fill="#15803d">order-api</text>
+    <text x="20" y="120" font-size="11" fill="#767676">D4 등장 → D6 게이트웨이 뒤로 → D9 DB 연결</text>
+    <text x="20" y="138" font-size="11" fill="#767676">→ D11 메트릭 노출 → D14 전체 재구축</text>
+  </svg>
+  <figcaption>도판 1. 4단계 계단 구조. 색은 프로젝트 규약(초록=파드/앱, 보라=네트워크, 파랑=노드·기반, 주황=순서·주의)을 따른다.</figcaption>
+  </figure>
+</div></section>
+
+<!-- ───────────────────────── 진행 방식 ───────────────────────── -->
+<section id="rules"><div class="wrap">
+  <h2>하루의 구조와 진행 규칙</h2>
+  <p class="sub">14개 문서는 같은 뼈대를 쓴다. 발표자가 바뀌어도 진행 리듬이 유지되도록 한다.</p>
+
+  <table>
+    <thead><tr><th style="width:110px">구간</th><th style="width:70px" class="num">시간</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>0. 전날 확인</td><td class="num">5분</td><td>전날 체크포인트 명령을 다시 실행해 클러스터 상태가 기대와 같은지 확인한다. 다르면 "정리 명령"으로 되돌리고 시작한다.</td></tr>
+      <tr><td>1. 문제 제시</td><td class="num">10분</td><td>오늘 기능이 없을 때 생기는 구체적 장애를 먼저 본다. 예: 4일차는 파드를 직접 지워 서비스가 죽는 것을 보고 나서 디플로이먼트를 배운다.</td></tr>
+      <tr><td>2. 이론</td><td class="num">30분</td><td>오브젝트 구조, 컨트롤 플레인이 하는 일, YAML의 어느 줄이 어느 동작을 만드는지. 도판은 전부 인라인 SVG.</td></tr>
+      <tr><td>3. 실습</td><td class="num">60분</td><td>단계별 명령과 기대 출력. 핵심 개념마다 "의도적 실패 → 수정" 1회 포함.</td></tr>
+      <tr><td>4. 체크포인트</td><td class="num">10분</td><td>문서를 덮고 혼자 재현하는 명령 3~5개. 통과 기준을 출력으로 명시한다.</td></tr>
+      <tr><td>5. 정리·다음 예고</td><td class="num">5분</td><td>오늘 만든 리소스 중 내일 재사용하는 것과 지우는 것을 구분해 <code>kubectl delete</code> 한다.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <h4>책을 다루는 방식</h4>
+    <p>책 본문은 장·절 번호로만 인용한다. 모든 명령·매니페스트·버전은 2026-08 기준 현재 환경에서 동작하는 것만 싣는다.</p>
+  </div>
+</div></section>
+
+<!-- ───────────────────────── 환경과 버전 ───────────────────────── -->
+<section id="env"><div class="wrap">
+  <h2>실습 환경과 고정 버전</h2>
+  <p class="sub">2026-08-30 공식 릴리스 페이지에서 확인한 값이다. 이 생태계는 분기 단위로 움직이므로 스터디 시작 시 한 번 더 대조한다.</p>
+
+  <table>
+    <thead><tr><th style="width:220px">구성 요소</th><th style="width:160px">고정 버전</th><th>선택 이유 · 주의</th></tr></thead>
+    <tbody>
+      <tr><td>Docker Desktop</td><td class="mono">4.88.1 (2026-08-25)</td><td>Settings → Kubernetes에서 <b>kind 프로비저너</b>를 고른다. 4.65부터 신규 클러스터의 기본값이다. 멀티 노드(D5·D8에서 2~3노드 사용)와 버전 선택이 가능하고, LoadBalancer 서비스가 <code>localhost</code>로 자동 노출된다(<code>desktop-cloud-provider-kind</code> + Envoy).</td></tr>
+      <tr><td>Kubernetes</td><td class="mono">v1.36.x</td><td>업스트림 최신은 v1.37.0(2026-08-26)이지만 Docker Desktop이 번들·검증한 버전은 v1.36.1(4.80 기준). kind 노드 이미지가 1.37로 제공되기 전까지는 1.36을 쓴다. 1.36에서 <code>gitRepo</code> 볼륨이 영구 비활성화됐고 containerd 1.x 지원이 끝났다.</td></tr>
+      <tr><td>kubectl</td><td class="mono">v1.36.x</td><td>Docker Desktop이 함께 설치한다(macOS <code>/usr/local/bin/kubectl</code>). Homebrew 버전과 충돌 시 한쪽을 제거. 서버와 마이너 버전 차이 ±1까지 허용.</td></tr>
+      <tr><td>Helm</td><td class="mono">v3.19+</td><td>D3(Headlamp)부터 사용. <code>brew install helm</code>.</td></tr>
+      <tr><td>Headlamp (웹 UI)</td><td class="mono">Helm 차트 최신</td><td>Kubernetes Dashboard는 2026-01 아카이브. SIG UI 공식 후속.</td></tr>
+      <tr><td>Envoy Gateway</td><td class="mono">v1.9.1 (2026-08-28)</td><td>Gateway API 구현체. Helm 차트가 Gateway API CRD를 함께 설치한다. 6개월 지원 주기.</td></tr>
+      <tr><td>Gateway API</td><td class="mono">v1 (gateway.networking.k8s.io/v1)</td><td>Gateway·HTTPRoute는 v1 GA. 트래픽 분할(<code>backendRefs.weight</code>)은 D13 카나리에서 사용.</td></tr>
+      <tr><td>kube-prometheus-stack</td><td class="mono">차트 88.3.0 (release kps)</td><td>Prometheus Operator + Grafana + Alertmanager + node-exporter + kube-state-metrics. CRD는 Helm 업그레이드로 갱신되지 않으므로 메이저 변경 시 수동 적용.</td></tr>
+      <tr><td>Loki · Grafana Alloy</td><td class="mono">loki 18.x (grafana-community) · alloy (grafana)</td><td>Loki는 모놀리식·파일시스템 저장, Alloy는 DaemonSet에서 <code>loki.source.kubernetes</code>로 수집(D11).</td></tr>
+      <tr><td>Argo CD</td><td class="mono">stable 매니페스트</td><td>D13 GitOps. Application(automated·prune·selfHeal)이 Git의 Helm 차트를 study에 동기화. D14 재구축의 마지막 단계.</td></tr>
+      <tr><td>metrics-server</td><td class="mono">Helm 최신</td><td><code>kubectl top</code>과 HPA에 필요. kind에서는 <code>--kubelet-insecure-tls</code> 인자 추가.</td></tr>
+      <tr><td>Spring Boot · Java</td><td class="mono">4.1.0 · Temurin 21 JRE · Spring Cloud 2025.1.2</td><td>Docker Hub <code>openjdk</code> 이미지는 deprecated. <code>eclipse-temurin:21-jre</code> 사용. 게이트웨이는 <code>spring-cloud-starter-gateway-server-webflux</code>(2025.1.x Oakwood).</td></tr>
+      <tr><td>이미지 전달</td><td class="mono">containerd 이미지 스토어</td><td>Docker Desktop kind는 <code>desktop-containerd-registry-mirror</code>로 호스트의 containerd 이미지 스토어를 노드에 내준다. push 없이 <code>docker build</code>한 이미지를 그대로 쓴다(D4). 실패 시 Docker Hub push 대안.</td></tr>
+      <tr><td>DB (D9)</td><td class="mono">postgres:18</td><td>StatefulSet + PVC 실습. Docker Desktop 기본 StorageClass <code>hostpath</code>(kind: <code>standard</code>) 사용.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note warn">
+    <h4>이 환경의 전제 (발표 시 명시)</h4>
+    <p>LoadBalancer가 <code>localhost</code>로 열리는 것과 Gateway에 주소가 자동으로 붙는 것은 Docker Desktop 내장 kind의 편의 기능이다. kind CLI 단독, OrbStack, 클라우드 클러스터에서는 cloud-provider-kind·MetalLB·클라우드 LB가 따로 필요해 D5·D6의 접속 경로가 달라진다. 기존 관측성 실습 시리즈(kind CLI 기준)와 병행하는 참가자는 이 차이를 먼저 확인한다.</p>
+    <p>NetworkPolicy(D12)는 kind 기본 CNI(kindnet)가 집행하지 않는다. 매니페스트 작성과 개념까지 다루고, 집행 확인은 Cilium 설치를 선택 실습으로 둔다.</p>
+  </div>
+</div></section>
+
+<!-- ───────────────────────── 일차별 목차 ───────────────────────── -->
+<section id="days"><div class="wrap">
+  <h2>일차별 목차</h2>
+  <p class="sub">이론은 회색 선, 실습은 초록 선. 각 일차 하단에 참조 장과 파일명을 적었다.</p>
+
+  <div class="days">
+
+  <!-- D1 -->
+  <article class="day" id="d01">
+    <div class="no"><b>D1</b><span class="phase">1단계 · 기초</span>day01</div>
+    <div>
+      <h3>컨테이너가 무엇인지 몸으로 확인하고 Docker Desktop을 설치한다</h3>
+      <p class="aim">쿠버네티스는 컨테이너를 "여러 대에서" 돌리는 도구다. 한 대에서 도커로 무엇이 되고 무엇이 안 되는지를 먼저 봐야 이틀 뒤 쿠버네티스가 왜 필요한지 설명이 된다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>namespace(격리)와 cgroup(제한): 컨테이너는 프로세스다</li>
+          <li>이미지 레이어와 캐시, 태그 고정(<code>latest</code>를 피하는 이유)</li>
+          <li>VM과의 차이, containerd·runc의 위치</li>
+          <li>Docker Desktop 구조: macOS 위의 Linux VM, VirtioFS</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>Docker Desktop 4.88 설치, 리소스(CPU 4·메모리 8GB 이상) 설정</li>
+          <li><code>docker run hello-world</code> → <code>nginx:1.29</code> 포트 공개 → 컨테이너 안에서 <code>ps</code>로 프로세스 확인</li>
+          <li>Dockerfile 3줄로 정적 페이지 이미지 빌드, <code>.dockerignore</code></li>
+          <li><b>의도적 실패</b>: 컨테이너를 지우고 데이터가 사라지는 것을 본 뒤 볼륨 붙이기</li>
+          <li>컨테이너 2개를 손으로 연결해 보고, "이걸 10대에서 하려면?"으로 마무리</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 직접 빌드한 이미지로 컨테이너를 띄우고 <code>curl localhost:8080</code>이 본인이 쓴 문구를 반환한다.</div>
+        <div class="foot"><span><b>책</b> 서문·1.1 (애플리케이션 개요)</span><span><b>참고</b> Docker 시작하기 2026 개정판 1~7장</span><span><b>파일</b> <code>day01-docker-and-containers.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D2 -->
+  <article class="day" id="d02">
+    <div class="no"><b>D2</b><span class="phase">1단계 · 기초</span>day02</div>
+    <div>
+      <h3>클러스터를 켜고, 안에 무엇이 돌고 있는지 이름을 붙인다</h3>
+      <p class="aim">체크박스 하나로 클러스터가 생긴다. 그 순간 컨테이너가 열몇 개 뜨는데, 그것들이 각각 무슨 일을 하는지 모르면 3일차부터 나오는 오류 메시지를 읽을 수 없다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>클러스터 = 컨트롤 플레인 + 워커 노드 (도판: 주요 구성 요소)</li>
+          <li>kube-apiserver·etcd·scheduler·controller-manager가 각각 하는 일</li>
+          <li>kubelet·kube-proxy·containerd: 노드 쪽 세 요소</li>
+          <li>선언형과 조정 루프: <code>kubectl apply</code> 이후 실제로 일어나는 일</li>
+          <li>kubectl은 어디에 있고 kubeconfig는 무엇을 담나</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>Settings → Kubernetes → kind 프로비저너 · v1.36 · 노드 1개로 시작</li>
+          <li><code>kubectl config get-contexts</code>, <code>use-context docker-desktop</code></li>
+          <li><code>kubectl get nodes</code> / <code>get pods -A</code>로 시스템 파드 이름 읽기</li>
+          <li><code>docker ps</code>로 kind 노드 컨테이너를 보고 "노드 = 컨테이너"임을 확인</li>
+          <li><code>kubectl run hello-world --image=hello-world --restart=Never</code> → 로그 → 삭제</li>
+          <li><b>의도적 실패</b>: 다른 컨텍스트로 바꿔 <code>Unable to connect</code>를 만든 뒤 복구</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — <code>kubectl get componentstatuses</code> 없이도 컨트롤 플레인 4개 요소의 파드를 <code>-n kube-system</code>에서 찾아 말할 수 있다.</div>
+        <div class="foot"><span><b>책</b> 2.2 (개발 클러스터 구축)</span><span><b>참고</b> Kubernetes 시작하기 2026 개정판 1~3장 · 도판 <code>주요구성요소.png</code> 재작성</span><span><b>파일</b> <code>day02-cluster-and-control-plane.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D3 -->
+  <article class="day" id="d03">
+    <div class="no"><b>D3</b><span class="phase">1단계 · 기초</span>day03</div>
+    <div>
+      <h3>파드를 YAML로 쓰고, 네임스페이스와 라벨로 정리한다</h3>
+      <p class="aim">YAML은 네 줄만 읽을 줄 알면 된다. apiVersion·kind·metadata·spec. 나머지 열흘의 모든 매니페스트가 이 네 줄의 변주다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>파드: 컨테이너를 담는 최소 단위, IP·포트 공간 공유, 일회용</li>
+          <li>생명주기 5단계(Pending→Running→Succeeded/Failed, Unknown)</li>
+          <li>네임스페이스: 논리적 칸막이, 이름 유일성 범위</li>
+          <li>라벨·셀렉터·어노테이션: 이후 모든 연결의 접착제</li>
+          <li><code>create</code> vs <code>apply</code>, <code>-o wide / yaml / jsonpath</code></li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>nginx 파드 매니페스트 작성 → apply → port-forward → 삭제</li>
+          <li>사이드카 2개 컨테이너 파드로 localhost 공유 확인</li>
+          <li><code>study</code> 네임스페이스 생성, 라벨 셀렉터로 조회·삭제</li>
+          <li>Headlamp를 Helm으로 설치, ServiceAccount 토큰(<code>kubectl create token</code>)으로 로그인</li>
+          <li><b>의도적 실패</b>: 존재하지 않는 이미지 태그로 <code>ImagePullBackOff</code> → <code>describe</code>로 원인 읽기</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 문서를 보지 않고 파드 매니페스트를 써서 apply하고, <code>describe</code>에서 Events 섹션을 읽어 무슨 일이 있었는지 설명한다.</div>
+        <div class="foot"><span><b>책</b> 1.2 (구성 파일 관리) · 2.3 (네임스페이스 부분)</span><span><b>참고</b> 개정판 4·6·7장 · 프로젝트 용어 사전</span><span><b>파일</b> <code>day03-pods-namespaces-labels.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D4 -->
+  <article class="day" id="d04">
+    <div class="no"><b>D4</b><span class="phase">2단계 · 배포와 노출</span>day04</div>
+    <div>
+      <h3>파드는 직접 만들지 않는다 — 디플로이먼트와 롤링 업데이트</h3>
+      <p class="aim">3일차 파드를 <code>kubectl delete</code> 하면 서비스가 끝난다. 원하는 개수를 선언하고 유지시키는 것이 디플로이먼트이고, 그 실체는 레플리카셋이다(도판: 2차원 배열로 보기).</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>Deployment → ReplicaSet → Pod 소유 관계와 <code>ownerReferences</code></li>
+          <li>조정 루프가 장애에 강한 이유</li>
+          <li>롤링 업데이트 파라미터(<code>maxSurge</code>·<code>maxUnavailable</code>), 리비전과 롤백</li>
+          <li>이미지 태그 전략: 시맨틱 버전·git SHA, <code>latest</code> 금지</li>
+          <li>kind 노드와 호스트 이미지의 관계 → containerd 이미지 스토어와 미러</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>Spring Boot 4.1 <code>order-api</code> v1(호스트명을 응답에 포함) 멀티 스테이지 빌드 → 노드가 호스트 이미지 스토어에서 직접 pull하는 것을 <code>crictl</code>로 확인</li>
+          <li>replicas 3 디플로이먼트 apply, 파드 하나 삭제 → 자동 복구 관찰</li>
+          <li>v2 이미지로 <code>set image</code> → <code>rollout status</code> → <code>rollout undo</code></li>
+          <li><code>scale --replicas=5</code>, 레플리카셋 두 개가 남는 이유 확인</li>
+          <li><b>의도적 실패</b>: 셀렉터와 템플릿 라벨을 다르게 써서 apply 거부 메시지 읽기</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 트래픽을 흘리는 터미널을 켠 채 v1→v2 롤링 업데이트를 수행하고 응답이 한 번도 실패하지 않는다(D8 readinessProbe 전까지는 실패가 섞일 수 있음을 기록해 둔다).</div>
+        <div class="foot"><span><b>책</b> 1.3 (디플로이먼트) · 5.5 (이미지 태깅) · 6장 (버저닝·릴리스·롤아웃)</span><span><b>참고</b> 개정판 8~10장 · 도판 <code>cluster.png</code> 재작성</span><span><b>파일</b> <code>day04-deployments-rollouts.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D5 -->
+  <article class="day" id="d05">
+    <div class="no"><b>D5</b><span class="phase">2단계 · 배포와 노출</span>day05</div>
+    <div>
+      <h3>파드 IP는 바뀐다 — 서비스와 클러스터 안 네트워크의 실제 경로</h3>
+      <p class="aim">서비스는 실체가 없는 가상 IP다. 프록시 서버가 있는 것이 아니라 커널의 주소 변환과 CNI 배달만 있다(도판: 서비스 간 호출 경로). 이걸 알아야 "왜 port-forward는 한 파드로만 가는가"에 답할 수 있다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>ClusterIP·NodePort·LoadBalancer·ExternalName, 헤드리스 서비스</li>
+          <li>CoreDNS 이름 규칙 <code>svc.ns.svc.cluster.local</code></li>
+          <li>kube-proxy(iptables/nftables)와 EndpointSlice</li>
+          <li>CNI가 하는 일: 노드 간 배달, 파드 CIDR (도판: 노드 간 통신 CNI)</li>
+          <li>Docker Desktop이 LoadBalancer를 localhost로 여는 방식</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>클러스터를 <b>노드 3개</b>로 재생성 (Settings에서 노드 수 변경)</li>
+          <li>order-api에 ClusterIP 서비스 → 임시 파드에서 <code>curl order-api.study</code></li>
+          <li>NodePort → LoadBalancer로 타입을 바꾸며 접속 경로 비교</li>
+          <li>반복 curl로 3개 파드에 분산되는 호스트명 확인, <code>-o wide</code>로 노드 배치 대조</li>
+          <li><code>gateway</code> 서비스(Spring Cloud Gateway) 추가 → order-api를 이름으로 호출</li>
+          <li><b>의도적 실패</b>: 서비스 셀렉터 오타로 Endpoints가 비는 상황 → <code>get endpointslices</code>로 진단</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — <code>gateway → order-api</code> 호출이 다른 노드의 파드까지 도달함을 파드 IP·노드 IP 출력으로 증명한다.</div>
+        <div class="foot"><span><b>책</b> 1.8 (TCP 로드 밸런서) · 9.1~9.3 (네트워킹 원리·플러그인·서비스)</span><span><b>참고</b> 도판 <code>서비스간호출경로.png</code> · <code>노드간통신CNI.png</code> 재작성</span><span><b>파일</b> <code>day05-services-networking.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D6 -->
+  <article class="day" id="d06">
+    <div class="no"><b>D6</b><span class="phase">2단계 · 배포와 노출</span>day06</div>
+    <div>
+      <h3>외부에서 들어오는 길 — 인그레스의 현재 위치와 Gateway API</h3>
+      <p class="aim">서비스는 L4다. 경로와 호스트로 나누는 L7 라우팅은 Gateway API가 맡는다. Ingress 리소스는 기능 동결 상태이므로 신규 구성은 Gateway·HTTPRoute로 만든다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>L4(서비스)와 L7(경로·호스트 라우팅)의 차이</li>
+          <li>Ingress 리소스 구조와 컨트롤러 의존성, 왜 동결됐나</li>
+          <li>Gateway API 역할 분리: GatewayClass(인프라) · Gateway(진입점) · HTTPRoute(앱)</li>
+          <li>Envoy Gateway 구조: 컨트롤 플레인 + 데이터 플레인 파드</li>
+          <li>TLS 종료, 헤더 조작, 리다이렉트 필터</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>Envoy Gateway v1.9.1 Helm 설치, <code>kubectl wait</code>로 준비 확인</li>
+          <li>GatewayClass·Gateway(80) 정의 → <code>get gateway</code>에서 ADDRESS가 localhost로 붙는지</li>
+          <li><code>/orders</code>→order-api, <code>/</code>→gateway 두 HTTPRoute, <code>curl localhost/orders</code></li>
+          <li>서비스를 ClusterIP로 되돌려 Gateway 경로로만 접근되는지 검증</li>
+          <li>같은 라우팅을 Ingress 리소스로도 적어 보고 <code>ingress2gateway</code>로 HTTPRoute를 생성해 비교</li>
+          <li>자체 서명 인증서로 443 리스너 추가 (선택)</li>
+        </ul></div>
+        <div class="check"><b>체크포인트 B</b> — 빈 클러스터에서 D4~D6 매니페스트만 apply해 <code>curl http://localhost/orders</code>가 응답한다.</div>
+        <div class="foot"><span><b>책</b> 1.4 · 1.9 · 9.3 후반</span><span><b>참고</b> 개정판 11장 · <code>01-쿠버네티스기초.html</code> "인그레스의 현재 위치" 절</span><span><b>파일</b> <code>day06-gateway-api.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D7 -->
+  <article class="day" id="d07">
+    <div class="no"><b>D7</b><span class="phase">2단계 · 배포와 노출</span>day07</div>
+    <div>
+      <h3>설정을 이미지 밖으로 — 컨피그맵·시크릿, 그리고 1주차 종합</h3>
+      <p class="aim">DB 주소 한 줄 때문에 이미지를 세 번 빌드하는 팀이 있다. 설정은 컨테이너 시작 시점에 주입한다. 다만 주입 방식에 따라 "고친 값이 앱에 도달하는 순간"이 세 갈래로 갈린다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>ConfigMap·Secret 구조, 환경 변수 vs 볼륨 마운트</li>
+          <li>base64는 암호화가 아니다: etcd 평문, RBAC이 진짜 보호막(D12 예고)</li>
+          <li>갱신 전파: 환경 변수는 재시작, 볼륨은 지연 반영, 서브패스는 미반영</li>
+          <li>설정 해시 어노테이션으로 변경 시에만 재배포</li>
+          <li>immutable ConfigMap, Secret 타입(Opaque·tls·dockerconfigjson)</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>order-api의 <code>application.yaml</code> 일부를 ConfigMap으로 분리, <code>envFrom</code>과 볼륨 두 방식으로 주입</li>
+          <li>값을 고친 뒤 각 방식에서 반영 시점 관찰(<code>exec</code>로 파일·env 확인)</li>
+          <li>Secret으로 API 키 주입, <code>get secret -o yaml</code>로 노출되는 것을 직접 본다</li>
+          <li><code>kubectl create secret docker-registry</code>로 사설 레지스트리 pull 시크릿</li>
+          <li><b>1주차 종합</b>: 네임스페이스부터 Gateway까지 매니페스트를 디렉터리 하나로 정리하고 <code>apply -f dir/</code></li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 컨피그맵 값을 바꾸고 재빌드 없이 앱 응답이 바뀐다. 어떤 주입 방식이었고 왜 그 시점에 바뀌었는지 설명한다.</div>
+        <div class="foot"><span><b>책</b> 1.5 · 1.6 (컨피그맵·시크릿) · 4.1~4.3</span><span><b>참고</b> <code>01-쿠버네티스_보안_발표.html</code> 컨피그맵·시크릿 절</span><span><b>파일</b> <code>day07-configmap-secret-week1-review.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D8 -->
+  <article class="day" id="d08">
+    <div class="no"><b>D8</b><span class="phase">3단계 · 운영 품질</span>day08</div>
+    <div>
+      <h3>죽었는지 준비됐는지 스스로 말하게 한다 — 프로브와 리소스</h3>
+      <p class="aim">4일차 롤링 업데이트에서 요청이 몇 개 실패했다. 새 파드가 "떴다"와 "받을 수 있다"는 다르기 때문이다. 오늘 readinessProbe를 넣으면 그 실패가 사라진다. 리소스 요청과 제한은 스케줄러가 파드를 어디에 놓을지 정하는 근거다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>startup·liveness·readiness 프로브의 역할 차이와 오용 사례</li>
+          <li>requests·limits, QoS 클래스(Guaranteed·Burstable·BestEffort), OOMKilled</li>
+          <li>CPU limit을 실습 앱에 넣지 않는 이유(스로틀링 지연 왜곡)</li>
+          <li>In-Place Pod Resize GA: 재시작 없이 리소스 변경</li>
+          <li>스케줄러 기초: nodeSelector·affinity·taint/toleration·topologySpread</li>
+          <li>PodDisruptionBudget과 graceful shutdown(<code>preStop</code>, <code>terminationGracePeriodSeconds</code>)</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>order-api에 Actuator health 기반 세 프로브 추가 → D4 롤링 업데이트 재실행, 실패 0 확인</li>
+          <li><b>의도적 실패</b>: liveness 주기를 너무 짧게 잡아 재시작 루프 → 원인 분석 후 조정</li>
+          <li>메모리 limit을 낮춰 OOMKilled 재현, <code>describe</code>의 Last State 읽기</li>
+          <li><code>kubectl patch --subresource resize</code>로 실행 중 파드 리소스 변경</li>
+          <li>노드 하나에 taint를 걸고 toleration 없는 파드가 Pending인 것을 <code>describe</code>로 확인</li>
+          <li>topologySpreadConstraints로 3노드에 고르게 분산</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 트래픽을 흘리며 롤링 업데이트를 수행할 때 5xx가 0건이고, 파드가 3노드에 1개씩 배치된다.</div>
+        <div class="foot"><span><b>책</b> 8장 (리소스 관리) · 5.7 (배포 전략 일부)</span><span><b>참고</b> 프로젝트 원칙 "CPU limit 미포함"</span><span><b>파일</b> <code>day08-probes-resources-scheduling.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D9 -->
+  <article class="day" id="d09">
+    <div class="no"><b>D9</b><span class="phase">3단계 · 운영 품질</span>day09</div>
+    <div>
+      <h3>상태를 가진 것은 다르게 다룬다 — 볼륨·PVC·StatefulSet·DB</h3>
+      <p class="aim">파드가 일회용이면 데이터는 어디에 있어야 하나. 책 1.7절은 MySQL 스테이트풀 배포를 다루는데, in-tree 볼륨 플러그인과 <code>Recycle</code> 정책은 이제 없다. CSI와 StorageClass 기준으로 다시 쓴다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>emptyDir·hostPath·PV·PVC·StorageClass, 동적 프로비저닝</li>
+          <li>접근 모드(RWO·RWX·ROX·RWOP), reclaim policy(<code>Recycle</code> deprecated)</li>
+          <li>in-tree 플러그인 → CSI 마이그레이션, VolumeAttributesClass GA(1.34)</li>
+          <li>StatefulSet: 고정 이름·순서·헤드리스 서비스·volumeClaimTemplates</li>
+          <li>DB를 쿠버네티스 안에 두는 판단 기준(오퍼레이터 vs 관리형 DB)</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>emptyDir로 사이드카 로그 공유, 파드 삭제 후 데이터 소실 확인</li>
+          <li>PVC 생성 → Docker Desktop 기본 StorageClass가 PV를 동적 생성하는 것을 <code>get pv</code>로 관찰</li>
+          <li>PostgreSQL 18 StatefulSet + 헤드리스 서비스 + PVC 템플릿</li>
+          <li>order-api를 DB에 연결(D7 Secret 재사용), 주문 생성 → 파드 삭제 → 데이터 유지 확인</li>
+          <li><b>의도적 실패</b>: PVC 삭제 순서를 틀려 <code>Terminating</code>에 걸리는 상황과 finalizer</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — DB 파드를 지운 뒤 재기동한 파드에서 이전 주문 데이터가 조회된다.</div>
+        <div class="foot"><span><b>책</b> 1.7 (스테이트풀 DB) · 16장 (상태와 스테이트풀 애플리케이션)</span><span><b>파일</b> <code>day09-storage-statefulset.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D10 -->
+  <article class="day" id="d10">
+    <div class="no"><b>D10</b><span class="phase">3단계 · 운영 품질</span>day10</div>
+    <div>
+      <h3>모니터링 ① — 클러스터가 지금 어떤 상태인지 숫자로 본다</h3>
+      <p class="aim">여기까지 오면 파드 열몇 개가 3노드에 흩어져 있다. <code>kubectl get</code>으로는 "지금"만 보인다. 시간축이 있는 메트릭이 있어야 "언제부터 나빠졌나"에 답한다. 책 3장의 기법(USE·RED·골든 시그널)을 그라파나 화면으로 확인한다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>메트릭 vs 로그 vs 트레이스, 블랙박스·화이트박스</li>
+          <li>USE(리소스)·RED(서비스)·골든 시그널 4개</li>
+          <li>쿠버네티스 메트릭 층: cAdvisor·kubelet·metrics-server·kube-state-metrics·node-exporter</li>
+          <li>Prometheus 모델: pull·시계열·라벨·PromQL 기초 5개 함수</li>
+          <li>Prometheus Operator와 ServiceMonitor CRD의 역할</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>metrics-server 설치(kind용 <code>--kubelet-insecure-tls</code>) → <code>kubectl top nodes/pods</code></li>
+          <li>kube-prometheus-stack 88.x 설치(<code>monitoring</code> 네임스페이스), Grafana port-forward 로그인</li>
+          <li>내장 대시보드로 노드 CPU·메모리, 네임스페이스별 파드 리소스 읽기</li>
+          <li>PromQL 5개 작성: 파드 재시작 수, 노드 메모리 여유, 컨테이너 CPU 사용률 등</li>
+          <li>HPA(CPU 50%) 설정 → 부하 생성기 파드로 스케일 아웃·인 관찰</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 부하를 걸었을 때 HPA가 replicas를 늘리는 과정이 그라파나 그래프와 <code>kubectl get hpa -w</code> 양쪽에서 일치한다.</div>
+        <div class="foot"><span><b>책</b> 3.1~3.7 (모니터링 기법·메트릭·프로메테우스)</span><span><b>참고</b> 프로젝트 관측성 실습 시리즈 트랙 A</span><span><b>파일</b> <code>day10-monitoring-1-metrics-hpa.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D11 -->
+  <article class="day" id="d11">
+    <div class="no"><b>D11</b><span class="phase">3단계 · 운영 품질</span>day11</div>
+    <div>
+      <h3>모니터링 ② — 내 앱의 지표를 수집하고, 알리고, 로그와 잇는다</h3>
+      <p class="aim">10일차 대시보드는 클러스터 얘기다. 정작 "주문 API의 p95 지연이 얼마인가"는 앱이 지표를 내놓아야 보인다. 수집이 안 되는 실패를 일부러 겪은 뒤 고친다. 로그는 Promtail이 아니라 Alloy로 모은다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>Micrometer → <code>/actuator/prometheus</code>: 카운터·게이지·히스토그램</li>
+          <li>ServiceMonitor 매칭 규칙과 Operator의 <code>release</code> 라벨 셀렉터</li>
+          <li>RED 대시보드 구성: 요청률·오류율·p95(histogram_quantile)</li>
+          <li>PrometheusRule·Alertmanager 라우팅, 알림 피로 줄이는 기준</li>
+          <li>로깅 구조: stdout → 노드 파일 → Alloy(DaemonSet) → Loki, Promtail EOL</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>order-api·gateway에 Actuator + Micrometer Prometheus 레지스트리 추가 → v3 이미지</li>
+          <li>ServiceMonitor 작성 — <b>의도적 실패</b>: <code>release</code> 라벨 누락으로 Targets에 안 뜸 → 라벨 추가로 해결</li>
+          <li>RED 대시보드 3패널 직접 작성, 부하 생성기로 p95 변화 확인</li>
+          <li>PrometheusRule: 오류율 5% 초과 알림 → Alertmanager UI에서 firing 확인</li>
+          <li>Loki + Alloy 설치(<code>grafana-community</code> 저장소), Grafana Explore에서 <code>{app="order-api"}</code> 로그와 메트릭을 같은 시간축으로 대조</li>
+        </ul></div>
+        <div class="check"><b>체크포인트 C</b> — 그라파나에서 order-api의 요청률·오류율·p95 패널이 살아 있고, 오류를 주입하면 알림이 firing 되며 같은 시각 로그를 Loki에서 찾는다.</div>
+        <div class="foot"><span><b>책</b> 3.7~3.9 (프로메테우스 심화·로깅)</span><span><b>참고</b> 관측성 실습 시리즈 트랙 B~D · 원칙 "ServiceMonitor release 라벨 실습"</span><span><b>파일</b> <code>day11-monitoring-2-app-metrics-alerts-logs.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D12 -->
+  <article class="day" id="d12">
+    <div class="no"><b>D12</b><span class="phase">4단계 · 보안과 자동화</span>day12</div>
+    <div>
+      <h3>누가 무엇을 할 수 있나 — RBAC·파드 시큐리티·네트워크 정책·어드미션</h3>
+      <p class="aim">7일차에 시크릿이 <code>get secret -o yaml</code> 한 줄로 열리는 것을 봤다. 진짜 보호막은 인코딩이 아니라 접근 권한이다. 요청은 인증·인가·어드미션 세 관문을 순서대로 지난다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>세 관문: 인증 → 인가(RBAC) → 어드미션(mutating·validating·<b>ValidatingAdmissionPolicy</b>)</li>
+          <li>Role/ClusterRole·Binding, ServiceAccount와 토큰(1.24+ 자동 생성 폐지)</li>
+          <li>Pod Security Admission 3단계(privileged·baseline·restricted)와 네임스페이스 라벨</li>
+          <li>NetworkPolicy 모델(기본 허용 → 정책이 있으면 거부), CNI 의존성</li>
+          <li>정책 엔진 지형: Kyverno(CNCF Graduated) vs Gatekeeper, 책 11장과의 차이</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>pod-viewer Role 생성 → 바인딩 전엔 권한이 없음을 <code>auth can-i</code>로 확인 → 바인딩</li>
+          <li>order-api 전용 ServiceAccount, <code>automountServiceAccountToken: false</code></li>
+          <li><b>의도적 실패</b>: <code>study</code> 네임스페이스에 <code>restricted</code> enforce → 기존 파드가 거부됨 → securityContext 수정</li>
+          <li>NetworkPolicy 작성(order-api는 gateway에서만 수신), kindnet에서 미집행 확인 → Cilium 설치 후 집행 (선택)</li>
+          <li>ValidatingAdmissionPolicy로 <code>latest</code> 태그 이미지 거부 (CEL 표현식)</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — 개발자 계정으로 파드는 조회되지만 시크릿은 Forbidden이고, restricted 네임스페이스에서 root 컨테이너가 거부된다.</div>
+        <div class="foot"><span><b>책</b> 4.4 (RBAC) · 9.4~9.5 (네트워크 정책) · 10장 (파드 보안) · 11장·17장 (정책·어드미션)</span><span><b>참고</b> <code>01-쿠버네티스_보안_발표.html</code> RBAC·파드 시큐리티 절</span><span><b>파일</b> <code>day12-rbac-pod-security-policy.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D13 -->
+  <article class="day" id="d13">
+    <div class="no"><b>D13</b><span class="phase">4단계 · 보안과 자동화</span>day13</div>
+    <div>
+      <h3>매니페스트 30개를 사람이 apply 하지 않는다 — Helm·Kustomize·GitOps</h3>
+      <p class="aim">7일차에 디렉터리 하나로 모은 매니페스트가 이제 30개를 넘는다. 환경별 차이(replicas·이미지 태그·호스트)를 복사본 없이 다루는 도구가 Helm과 Kustomize이고, "Git에 있는 것이 곧 클러스터 상태"로 만드는 것이 GitOps다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>Helm 차트 구조(Chart.yaml·values·templates), 릴리스와 리비전, CRD 한계</li>
+          <li>Kustomize: base·overlay·patch, Helm과의 선택 기준</li>
+          <li>배포 전략: 롤링·블루/그린·카나리 — HTTPRoute <code>weight</code>로 카나리</li>
+          <li>GitOps 원칙 4개, 풀 기반 동기화, 드리프트 감지</li>
+          <li>CI 파이프라인에서 이미지 태그 → 매니페스트 갱신 흐름, 시크릿을 Git에 두지 않는 법</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>order-api·gateway를 하나의 Helm 차트로 패키징, <code>values-dev.yaml</code>·<code>values-prod.yaml</code></li>
+          <li><code>helm template</code>·<code>--dry-run</code>으로 렌더링 검증, <code>helm upgrade --install</code> → <code>helm rollback</code></li>
+          <li>같은 앱을 Kustomize overlay로 재현해 두 도구 비교</li>
+          <li>HTTPRoute 가중치 90/10 카나리 → 11일차 대시보드로 v3·v4 오류율 비교 → 100/0</li>
+          <li>Argo CD 설치, 로컬 Git 저장소를 가리키는 Application 생성 → 수동 변경(드리프트)을 자동 되돌림 관찰</li>
+        </ul></div>
+        <div class="check"><b>체크포인트</b> — Git에 values 한 줄(replicas)을 바꿔 push하면 Argo CD가 동기화하고, 손으로 <code>scale</code>한 값이 되돌아간다.</div>
+        <div class="foot"><span><b>책</b> 5장 (CI·테스팅·배포) · 6.4 (종합 예제) · 18장 (깃옵스) · 7.2 (배포 파라미터화)</span><span><b>참고</b> 책 18.5의 Flux 설치는 Argo CD로 대체, Flux는 비교표로만</span><span><b>파일</b> <code>day13-helm-kustomize-gitops.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- D14 -->
+  <article class="day" id="d14">
+    <div class="no"><b>D14</b><span class="phase">4단계 · 보안과 자동화</span>day14</div>
+    <div>
+      <h3>종합 — 빈 클러스터에서 전체를 다시 세우고, 일부러 부수고, 고친다</h3>
+      <p class="aim">13일 동안 만든 것을 문서 없이 한 번에 올린다. 그다음 진행자가 장애를 넣는다. 원인을 찾는 순서가 몸에 배었는지가 이 교재의 최종 목표다. 마지막 30분은 책의 남은 장들이 어디에 이어지는지 지도를 그린다.</p>
+      <div class="grid">
+        <div class="theory"><h4>이론</h4><ul>
+          <li>트러블슈팅 순서: <code>get</code> → <code>describe</code> Events → <code>logs</code> → 메트릭 → 네트워크 → 권한</li>
+          <li>장애 유형별 첫 명령 표(Pending·CrashLoopBackOff·ImagePull·Endpoints 없음·403·OOM)</li>
+          <li>책의 남은 장 지도: 7장 글로벌 분산, 12장 멀티클러스터, 13장 외부 서비스, 14장 ML(DRA GA), 15장 확장(CRD·오퍼레이터), 9.6 서비스 메시(Ambient Mesh)</li>
+          <li>다음 학습 경로: CKAD/CKA 범위와의 대응, 클라우드 관리형 클러스터로 옮길 때 달라지는 것</li>
+        </ul></div>
+        <div class="lab"><h4>실습</h4><ul>
+          <li>클러스터 삭제 → 재생성(3노드) → Helm 차트·Argo CD로 전체 스택 재구축 (목표 30분)</li>
+          <li>장애 주입 5종: 잘못된 이미지 태그 / 셀렉터 오타 / DB 시크릿 변경 / 메모리 limit 축소 / RBAC 제거 — 각각 5분 안에 원인 특정</li>
+          <li>노드 하나 <code>drain</code> → 파드 재배치와 PDB 동작 관찰 → <code>uncordon</code></li>
+          <li>모니터링 화면에서 장애 시점을 역추적해 알림·로그·메트릭이 같은 이야기를 하는지 확인</li>
+          <li>회고: 14일 명령어 중 가장 자주 친 20개를 프로젝트 명령어 레퍼런스와 대조</li>
+        </ul></div>
+        <div class="check"><b>체크포인트 D</b> — 빈 클러스터에서 gateway·order-api·DB·Gateway API·모니터링 스택이 30분 안에 올라오고, 주입된 장애 5개 중 4개 이상의 원인을 각 5분 내에 말한다.</div>
+        <div class="foot"><span><b>책</b> 2.5 (개발 환경 모범 사례) · 7·12·13·14·15장 요약 · 9.6~9.7 (서비스 메시)</span><span><b>파일</b> <code>day14-capstone-troubleshooting.html</code></span></div>
+      </div>
+    </div>
+  </article>
+
+  </div>
+</div></section>
+
+<!-- ───────────────────────── 책 매핑 ───────────────────────── -->
+<section id="book"><div class="wrap">
+  <h2>책 장 ↔ 일차 매핑</h2>
+  <p class="sub">책 21개 장 중 12개 장을 실습으로 다루고, 6개 장은 14일차 지도에서 요약하며, 3개 장은 범위 밖으로 둔다.</p>
+  <table>
+    <thead><tr><th style="width:60px">장</th><th>제목</th><th style="width:130px">다루는 일차</th><th>처리</th></tr></thead>
+    <tbody>
+      <tr class="phase"><td colspan="4">실습으로 풀어 쓰는 장</td></tr>
+      <tr><td class="num">1</td><td>기본 서비스 설치</td><td>D1·D3·D4·D5·D6·D7·D9</td><td>인그레스 절은 Gateway API로 실습. DB는 CSI·StatefulSet 기준.</td></tr>
+      <tr><td class="num">2</td><td>개발자 워크플로</td><td>D2·D3·D14</td><td>2.2 개발 클러스터는 Docker Desktop kind로. 2.3 공용 클러스터는 네임스페이스·RBAC 부분만.</td></tr>
+      <tr><td class="num">3</td><td>모니터링과 로깅</td><td>D10·D11</td><td>로깅은 Grafana Alloy + Loki.</td></tr>
+      <tr><td class="num">4</td><td>구성, 시크릿, RBAC</td><td>D7·D12</td><td>ServiceAccount 토큰은 <code>kubectl create token</code>으로 발급.</td></tr>
+      <tr><td class="num">5</td><td>지속적 통합, 테스팅, 배포</td><td>D4·D13</td><td>5.7 배포 전략은 HTTPRoute 가중치 카나리로 실습. 5.9 카오스 실험은 D14 장애 주입으로 축소.</td></tr>
+      <tr><td class="num">6</td><td>버저닝, 릴리스, 롤아웃</td><td>D4·D13</td><td></td></tr>
+      <tr><td class="num">8</td><td>리소스 관리</td><td>D8·D10</td><td>In-Place Pod Resize GA 추가. HPA는 D10으로 이동.</td></tr>
+      <tr><td class="num">9</td><td>네트워킹, 네트워크 보안, 서비스 메시</td><td>D5·D6·D12·D14</td><td>9.6 서비스 메시는 Istio Ambient 기준 요약만.</td></tr>
+      <tr><td class="num">10</td><td>파드와 컨테이너 보안</td><td>D12</td><td>PSA 3단계 enforce 실습.</td></tr>
+      <tr><td class="num">11</td><td>클러스터 정책과 거버넌스</td><td>D12</td><td>실습은 ValidatingAdmissionPolicy. Kyverno·Gatekeeper는 비교표.</td></tr>
+      <tr><td class="num">16</td><td>상태와 스테이트풀 애플리케이션 관리</td><td>D9</td><td>CSI·StorageClass 기준.</td></tr>
+      <tr><td class="num">17</td><td>어드미션 컨트롤과 인가</td><td>D12</td><td>ValidatingAdmissionPolicy 포함 세 범주.</td></tr>
+      <tr><td class="num">18</td><td>깃옵스와 배포</td><td>D13</td><td>Argo CD 실습, Flux는 비교표.</td></tr>
+      <tr class="phase"><td colspan="4">14일차에서 지도로 요약하는 장</td></tr>
+      <tr><td class="num">7</td><td>글로벌 애플리케이션 분산과 스테이징</td><td>D14</td><td>7.2 파라미터화는 D13 values로 체험. 나머지 요약.</td></tr>
+      <tr><td class="num">12</td><td>멀티클러스터 관리</td><td>D14</td><td></td></tr>
+      <tr><td class="num">13</td><td>외부 서비스와 쿠버네티스 통합</td><td>D14</td><td>ExternalName·헤드리스 서비스는 D5에서 먼저 등장.</td></tr>
+      <tr><td class="num">14</td><td>쿠버네티스에서 머신러닝 실행하기</td><td>D14</td><td>GPU 할당은 DRA 기준.</td></tr>
+      <tr><td class="num">15</td><td>고수준 애플리케이션 패턴 구축</td><td>D14</td><td>CRD·오퍼레이터 개념은 D10(Prometheus Operator)·D9(DB 오퍼레이터 판단)에서 이미 접함.</td></tr>
+      <tr class="phase"><td colspan="4">범위 밖</td></tr>
+      <tr><td class="num">19~21</td><td>(3개 장)</td><td>—</td><td>입문 14일 범위와 거리가 멀어 제외. 제목과 한 줄 요약만 D14 지도에 표기.</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<!-- ───────────────────────── 파일 인덱스 ───────────────────────── -->
+<section id="files"><div class="wrap">
+  <h2>파일 인덱스</h2>
+  <p class="sub">모든 문서는 단일 HTML, 도판은 인라인 SVG, 외부 이미지 참조 없음. 코드는 html5lib·YAML·bash 문법 검증을 거친다.</p>
+  <table class="files">
+    <thead><tr><th style="width:400px">파일</th><th>내용</th><th style="width:90px">상태</th></tr></thead>
+    <tbody>
+      <tr><td>00-index.html</td><td>이 문서. 로드맵·환경·일차별 목차·책 매핑</td><td>완료</td></tr>
+      <tr><td>day01-docker-and-containers.html</td><td>컨테이너 원리, Docker Desktop 설치, 이미지 빌드, 볼륨·네트워크·Compose</td><td>완료</td></tr>
+      <tr><td>day02-cluster-and-control-plane.html</td><td>kind 클러스터 생성, 컨트롤 플레인·노드 요소, kubectl, 조정 루프 관찰</td><td>완료</td></tr>
+      <tr><td>day03-pods-namespaces-labels.html</td><td>파드 매니페스트·생명주기, ImagePull/CrashLoop 진단, 사이드카, 네임스페이스·라벨, Headlamp</td><td>완료</td></tr>
+      <tr><td>day04-deployments-rollouts.html</td><td>Spring Boot order-api v1 빌드, 로컬 이미지→kind 노드, Deployment→RS→Pod, 롤링 업데이트·롤백</td><td>완료</td></tr>
+      <tr><td>day05-services-networking.html</td><td>3노드 재생성, ClusterIP·DNS·EndpointSlice, kube-proxy DNAT·CNI 라우팅, LoadBalancer(localhost), gateway 앱</td><td>완료</td></tr>
+      <tr><td>day06-gateway-api.html</td><td>Envoy Gateway v1.9.1, Gateway·HTTPRoute, status 진단, URLRewrite·헤더·가중치, Ingress 비교·TLS(선택), 체크포인트 B</td><td>완료</td></tr>
+      <tr><td>day07-configmap-secret-week1-review.html</td><td>ConfigMap·Secret 주입과 반영 시점, 설정 해시 재배포, 시크릿 타입·immutable, week1/ 디렉터리 정리</td><td>완료</td></tr>
+      <tr><td>day08-probes-resources-scheduling.html</td><td>프로브 3종(Actuator), 무중단 롤링 검증, OOMKilled, In-Place Resize, 테인트·토폴로지 분산, PDB</td><td>완료</td></tr>
+      <tr><td>day09-storage-statefulset.html</td><td>emptyDir·PVC·StorageClass, PostgreSQL 18 StatefulSet, order-api v5(JDBC), PVC finalizer, 복제본≠레플리카</td><td>완료</td></tr>
+      <tr><td>day10-monitoring-1-metrics-hpa.html</td><td>metrics-server, kube-prometheus-stack 88.x, PromQL 5개, Grafana 내장 대시보드, HPA 확장·축소</td><td>완료</td></tr>
+      <tr><td>day11-monitoring-2-app-metrics-alerts-logs.html</td><td>Micrometer·ServiceMonitor(release 라벨 실패), RED 대시보드, PrometheusRule 알림, Loki+Alloy, 체크포인트 C</td><td>완료</td></tr>
+      <tr><td>day12-rbac-pod-security-policy.html</td><td>인증·인가·어드미션, RBAC·can-i, SA 토큰, PSA baseline/restricted, NetworkPolicy, ValidatingAdmissionPolicy</td><td>완료</td></tr>
+      <tr><td>day13-helm-kustomize-gitops.html</td><td>week1→Helm 차트(chartify), values-dev/prod, 롤백, 카나리 가중치 판정, Kustomize, Argo CD selfHeal</td><td>완료</td></tr>
+      <tr><td>day14-capstone-troubleshooting.html</td><td>rebuild.sh 30분 재구축, drain·PDB·로컬 PV, 장애 주입 5종, 진단 6층, 책 나머지 장 지도, 체크포인트 D</td><td>완료</td></tr>
+      <tr><td>~/k8s-study/ (참가자 로컬)</td><td>day01~day14 작업 디렉터리 · week1/ 기준 매니페스트 · gitops/ (차트·platform·rebuild.sh, Git 원본)</td><td>문서 안 코드로 생성</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.88rem;color:var(--ink-2)">기존 산출물과의 관계: <code>k8s-glossary.html</code>(용어 사전)과 <code>k8s-commands.html</code>(명령어 레퍼런스)은 매 일차 하단에서 링크로 참조한다. <code>01-쿠버네티스기초.html</code>·<code>01-쿠버네티스_보안_발표.html</code>의 도판과 설명은 D2·D5·D7·D12에서 재사용한다.</p>
+</div></section>
+
+<!-- ───────────────────────── 출처 ───────────────────────── -->
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.2rem">출처 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>Docker Desktop 릴리스 노트 — <a href="https://docs.docker.com/desktop/release-notes/">docs.docker.com/desktop/release-notes/</a> (4.88.1 · kind 기본화 4.65 · Kubernetes v1.36.1 번들 4.80)</li>
+    <li>Docker Desktop Kubernetes 설정(kind/kubeadm 프로비저너) — <a href="https://docs.docker.com/desktop/use-desktop/kubernetes/">docs.docker.com/desktop/use-desktop/kubernetes/</a></li>
+    <li>Kubernetes 릴리스 — <a href="https://kubernetes.io/releases/">kubernetes.io/releases/</a> · v1.37.0 릴리스 — <a href="https://github.com/kubernetes/kubernetes/releases">github.com/kubernetes/kubernetes/releases</a> · v1.36 발표 — <a href="https://kubernetes.io/blog/2026/04/22/kubernetes-v1-36-release/">kubernetes.io/blog/2026/04/22/kubernetes-v1-36-release/</a></li>
+    <li>ingress-nginx 은퇴 성명 — <a href="https://kubernetes.io/blog/2026/01/29/ingress-nginx-statement/">kubernetes.io/blog/2026/01/29/ingress-nginx-statement/</a> · ingress2gateway 1.0 — <a href="https://kubernetes.io/blog/2026/03/20/ingress2gateway-1-0-release">kubernetes.io/blog/2026/03/20/ingress2gateway-1-0-release</a> · 릴리스(v1.1.0) — <a href="https://github.com/kubernetes-sigs/ingress2gateway/releases">github.com/kubernetes-sigs/ingress2gateway/releases</a></li>
+    <li>Dashboard → Headlamp 전환 안내 — <a href="https://kubernetes.io/blog/2026/06/01/dashboard-to-headlamp/">kubernetes.io/blog/2026/06/01/dashboard-to-headlamp/</a> · 단계별 가이드 — <a href="https://kubernetes.io/blog/2026/07/13/kubernetes-dashboard-to-headlamp/">kubernetes.io/blog/2026/07/13/kubernetes-dashboard-to-headlamp/</a> · Headlamp 설치 — <a href="https://headlamp.dev/docs/latest/installation/in-cluster/">headlamp.dev/docs/latest/installation/in-cluster/</a></li>
+    <li>Gateway API — <a href="https://gateway-api.sigs.k8s.io/">gateway-api.sigs.k8s.io</a> · Envoy Gateway 릴리스(v1.9.1) — <a href="https://github.com/envoyproxy/gateway/releases">github.com/envoyproxy/gateway/releases</a> · v1.9.0 노트 — <a href="https://gateway.envoyproxy.io/news/releases/notes/v1.9.0/">gateway.envoyproxy.io/news/releases/notes/v1.9.0/</a></li>
+    <li>kube-prometheus-stack 차트 — <a href="https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack">github.com/prometheus-community/helm-charts</a></li>
+    <li>CNCF Distribution(registry:3) — <a href="https://distribution.github.io/distribution/">distribution.github.io/distribution/</a></li>
+    <li>kubectl 레퍼런스(한국어) — <a href="https://kubernetes.io/ko/docs/reference/kubectl/">kubernetes.io/ko/docs/reference/kubectl/</a></li>
+    <li>브렌던 번스 외, 『쿠버네티스 창시자에게 배우는 모범 사례』 2판 (한국어판, 2024) — 장·절 번호 인용</li>
+    <li>프로젝트 내부 자료: Kubernetes 시작하기 2026 개정판 · Docker 시작하기 2026 개정판 · 쿠버네티스 기초/보안 발표 HTML · 용어 사전 · 명령어 레퍼런스</li>
+  </ul>
+</div></footer>
+
+</body>
+</html>

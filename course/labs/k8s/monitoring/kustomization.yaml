@@ -1,0 +1,13 @@
+# M20~M21 의 관측 설정 일습. kubectl apply -k course/labs/k8s/monitoring 으로 배포한다.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 90-servicemonitors.yaml     # M20 — 무엇을 긁을까
+  - 91-prometheusrule.yaml      # M21 — 언제 사람을 부를까
+
+# 대시보드 ConfigMap 은 여기서 만들지 않는다.
+# kustomize 는 보안상 kustomization.yaml 이 있는 디렉터리 밖의 파일을 읽지 못한다:
+#   security; file '.../monitoring/dashboards/study-red.json' is not in or below '.../k8s/monitoring'
+# 대시보드 JSON 의 정본은 labs/monitoring/dashboards/ 이므로(CLAUDE.md 실습 파일 규약)
+# 복사본을 만들지 않고 scripts/apply-dashboards.sh 로 ConfigMap 을 만든다.

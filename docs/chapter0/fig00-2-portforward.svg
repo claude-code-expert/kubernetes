@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow02" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="80" width="160" height="72" rx="4"/>
+  <text class="t-title" x="100" y="110" text-anchor="middle">브라우저 / curl</text>
+  <text class="t-sub" x="100" y="130" text-anchor="middle">localhost:8080</text>
+
+  <line class="line" x1="180" y1="116" x2="246" y2="116" marker-end="url(#arrow02)"/>
+
+  <rect class="box-accent" x="250" y="80" width="210" height="72" rx="4"/>
+  <text class="t-title" x="355" y="110" text-anchor="middle">kubectl port-forward</text>
+  <text class="t-sub" x="355" y="130" text-anchor="middle">로컬 8080 → 클러스터 80 터널</text>
+
+  <line class="line" x1="460" y1="116" x2="526" y2="116" marker-end="url(#arrow02)"/>
+
+  <rect class="box" x="530" y="80" width="170" height="72" rx="4"/>
+  <text class="t-title" x="615" y="110" text-anchor="middle">Service: hello</text>
+  <text class="t-sub" x="615" y="130" text-anchor="middle">고정 이름 · 부하 분산</text>
+
+  <line class="line" x1="700" y1="116" x2="736" y2="116" marker-end="url(#arrow02)"/>
+
+  <rect class="box" x="740" y="80" width="140" height="72" rx="4"/>
+  <text class="t-title" x="810" y="110" text-anchor="middle">파드 hello-…</text>
+  <text class="t-sub" x="810" y="130" text-anchor="middle">nginx :80</text>
+
+  <text class="t-cap" x="450" y="205" text-anchor="middle">인그레스나 로드 밸런서 없이도, 개발 중 접속 확인은 이 터널 하나로 충분하다.</text>
+  <text class="t-cap" x="450" y="227" text-anchor="middle">터널은 명령을 실행한 터미널이 살아 있는 동안만 유지된다 (Ctrl+C로 종료).</text>
+</svg>

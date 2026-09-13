@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D13 · 매니페스트 21개를 사람이 apply 하지 않는다 — Helm·Kustomize·GitOps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D12와 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 4단계 보안과 자동화 · Day 13</p>
+  <h1>매니페스트 21개를 사람이 apply 하지 않는다 — Helm·Kustomize·GitOps</h1>
+  <p class="lede"><code>week1/</code>에 파일이 21개다. 네임스페이스가 섞여 있고, 시크릿이 평문이고, dev와 prod의 차이(레플리카·이미지 태그·호스트)를 표현할 수 없고, 파일을 지워도 클러스터의 리소스는 남는다. 오늘 그 디렉터리를 Helm 차트로 감싸 값 하나로 환경을 갈라 놓고, 같은 것을 Kustomize로 다시 만들어 두 도구를 비교하고, HTTPRoute 가중치를 값으로 옮기며 D11의 대시보드로 카나리를 판정하고, 마지막에 Argo CD로 "Git이 곧 클러스터"를 만든다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D12 완료 · week1/ 21개 파일 · GitHub 계정(빈 저장소 하나)</b></span>
+    <span>버전 <b>Helm 3.19+ · Kustomize (kubectl 내장) · Argo CD stable</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>기존 매니페스트 디렉터리를 Helm 차트로 바꾸고, <code>values-dev.yaml</code>과 <code>values-prod.yaml</code>로 같은 차트를 다르게 렌더링한다.</li>
+    <li><code>helm template</code>·<code>--dry-run</code>·<code>upgrade --install</code>·<code>rollback</code>의 차이를 말하고 릴리스 이력을 읽는다.</li>
+    <li>Kustomize base/overlay로 같은 환경 분기를 만들고 Helm과의 선택 기준을 말한다.</li>
+    <li>카나리 가중치를 값으로 바꾸며 D11 대시보드에서 두 버전의 오류율을 비교해 진행·중단을 결정한다.</li>
+    <li>Argo CD가 Git을 감시해 손으로 바꾼 것을 되돌리는 것을 본다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+
+  <h3>1.1 세 문제, 세 도구</h3>
+  <table>
+    <thead><tr><th style="width:230px">문제</th><th>도구</th><th>방식</th></tr></thead>
+    <tbody>
+      <tr><td>환경마다 값이 다르다. 같은 앱을 여러 곳에 배포한다</td><td><b>Helm</b></td><td>템플릿 + 값. 차트를 패키지로 설치·업그레이드·롤백. 릴리스 이력을 클러스터에 저장</td></tr>
+      <tr><td>남의 매니페스트(또는 내 것)를 고치지 않고 덧씌우고 싶다</td><td><b>Kustomize</b></td><td>base 위에 patch. 템플릿 없음. kubectl에 내장</td></tr>
+      <tr><td>누가 언제 무엇을 apply했는지 모르고, 파일과 클러스터가 어긋난다</td><td><b>GitOps</b> (Argo CD·Flux)</td><td>Git을 원본으로 컨트롤러가 클러스터를 계속 맞춘다. 사람은 커밋만 한다</td></tr>
+    </tbody>
+  </table>
+  <p>셋은 경쟁이 아니라 층이다. Helm이나 Kustomize가 "무엇을 만들지"를 정의하고, GitOps 컨트롤러가 그것을 "언제 누가" 적용할지를 맡는다. Argo CD는 Helm 차트도 Kustomize 디렉터리도 그대로 읽는다.</p>
+
+  <h3>1.2 Helm 차트의 뼈대</h3>
+  <table>
+    <thead><tr><th style="width:190px">파일</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><code>Chart.yaml</code></td><td>이름·차트 버전(<code>version</code>)·앱 버전(<code>appVersion</code>). 차트 버전은 차트 변경마다, 앱 버전은 이미지 태그를 따라 올린다</td></tr>
+      <tr><td><code>values.yaml</code></td><td>기본값. 환경별 파일(<code>values-dev.yaml</code>)이 이것을 덮어쓴다. <code>--set</code>이 그 위를 덮는다</td></tr>
+      <tr><td><code>templates/*.yaml</code></td><td>Go 템플릿. <code>{{ .Values.x }}</code>, <code>{{ .Release.Namespace }}</code>, <code>{{ include … | sha256sum }}</code></td></tr>
+      <tr><td><code>templates/NOTES.txt</code></td><td>설치 후 출력할 안내</td></tr>
+      <tr><td><code>crds/</code></td><td>CRD. Helm은 설치만 하고 업그레이드·삭제하지 않는다(D10에서 본 kps의 한계)</td></tr>
+    </tbody>
+  </table>
+  <p>Helm은 렌더링한 결과와 <b>릴리스</b>(설치 기록)를 네임스페이스의 시크릿(<code>sh.helm.release.v1.…</code>)에 저장한다. <code>helm history</code>가 그 시크릿을 읽고, <code>rollback</code>은 옛 렌더 결과를 다시 적용한다. D7의 설정 해시 스크립트는 템플릿 한 줄(<code>checksum/config</code> 어노테이션에 <code>sha256sum</code>)이 된다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 250" width="100%" role="img" aria-label="Helm 차트와 값이 환경별 매니페스트로 렌더링되는 흐름">
+    <rect x="20" y="40" width="220" height="150" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="62" font-size="12" font-weight="600" fill="#1d4ed8">차트 study-app</text>
+    <text x="32" y="84" class="mono" font-size="11" fill="#4a4a4a">Chart.yaml</text>
+    <text x="32" y="100" class="mono" font-size="11" fill="#4a4a4a">values.yaml (기본값)</text>
+    <text x="32" y="116" class="mono" font-size="11" fill="#4a4a4a">templates/</text>
+    <text x="44" y="132" class="mono" font-size="11" fill="#4a4a4a">order-api-deploy.yaml</text>
+    <text x="44" y="148" class="mono" font-size="11" fill="#4a4a4a">httproutes.yaml …</text>
+    <text x="32" y="176" font-size="11" fill="#767676">한 번 쓴다</text>
+    <rect x="300" y="40" width="160" height="60" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="312" y="62" font-size="12" font-weight="600" fill="#6d28d9">values-dev.yaml</text>
+    <text x="312" y="82" class="mono" font-size="11" fill="#4a4a4a">tag: v6 · hpa.max: 4</text>
+    <rect x="300" y="130" width="160" height="60" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="312" y="152" font-size="12" font-weight="600" fill="#6d28d9">values-prod.yaml</text>
+    <text x="312" y="172" class="mono" font-size="11" fill="#4a4a4a">tag: v6 · hpa.max: 12</text>
+    <line x1="240" y1="115" x2="300" y2="70" stroke="#767676" stroke-width="1.2"/>
+    <line x1="240" y1="115" x2="300" y2="160" stroke="#767676" stroke-width="1.2"/>
+    <text x="246" y="108" font-size="10" fill="#767676">+</text>
+    <line x1="460" y1="70" x2="530" y2="70" stroke="#767676" stroke-width="1.2"/><polygon points="524,66 532,70 524,74" fill="#767676"/>
+    <line x1="460" y1="160" x2="530" y2="160" stroke="#767676" stroke-width="1.2"/><polygon points="524,156 532,160 524,164" fill="#767676"/>
+    <text x="466" y="62" font-size="10" fill="#767676">helm template</text>
+    <text x="466" y="152" font-size="10" fill="#767676">helm template</text>
+    <rect x="536" y="40" width="160" height="60" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="548" y="62" font-size="12" font-weight="600" fill="#15803d">매니페스트 (dev)</text>
+    <text x="548" y="82" font-size="11" fill="#4a4a4a">study 네임스페이스로</text>
+    <rect x="536" y="130" width="160" height="60" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="548" y="152" font-size="12" font-weight="600" fill="#15803d">매니페스트 (prod)</text>
+    <text x="548" y="172" font-size="11" fill="#4a4a4a">다른 클러스터로</text>
+    <rect x="740" y="40" width="140" height="150" rx="3" fill="#f7f7f7" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="752" y="62" font-size="12" font-weight="600" fill="#4a4a4a">릴리스 이력</text>
+    <text x="752" y="84" class="mono" font-size="11" fill="#4a4a4a">rev 1  v5</text>
+    <text x="752" y="100" class="mono" font-size="11" fill="#4a4a4a">rev 2  v6</text>
+    <text x="752" y="116" class="mono" font-size="11" fill="#4a4a4a">rev 3  canary 10</text>
+    <text x="752" y="132" class="mono" font-size="11" fill="#4a4a4a">rev 4  canary 0</text>
+    <text x="752" y="160" font-size="11" fill="#767676">helm history</text>
+    <text x="752" y="176" font-size="11" fill="#767676">helm rollback 2</text>
+    <line x1="696" y1="70" x2="740" y2="100" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="20" y="226" font-size="11" fill="#767676">템플릿은 하나, 값 파일은 환경 수만큼. 렌더 결과와 값은 릴리스 시크릿에 남아 되돌릴 수 있다.</text>
+  </svg>
+  <figcaption>도판 1. 파랑=차트(불변), 보라=환경별 값, 초록=렌더 결과. 오른쪽 이력이 롤백의 재료다.</figcaption>
+  </figure>
+
+  <h3>1.3 Kustomize: 템플릿 없이 덧씌우기</h3>
+  <p><dfn title="Kustomize">Kustomize</dfn>는 완성된 YAML(base)을 그대로 두고 그 위에 patch를 얹는다. <code>kustomization.yaml</code>에 리소스 목록과 변환(이미지 태그 교체, 라벨 추가, 네임스페이스 지정, 패치)을 적고 <code>kubectl apply -k</code>로 적용한다. 템플릿 문법이 없어 base 자체가 유효한 YAML이라는 것이 장점이고, 조건문·반복문이 없어 "값 하나로 리소스 개수를 바꾸는" 일은 못 하는 것이 한계다. 선택 기준: 배포판을 남에게 나눠 주거나(패키지) 값이 수십 개면 Helm, 내 것 하나를 환경 셋으로 갈라 놓을 뿐이면 Kustomize. 둘을 겹쳐 쓰기도 한다(Helm 렌더 → Kustomize 패치).</p>
+
+  <h3>1.4 배포 전략과 카나리</h3>
+  <table>
+    <thead><tr><th style="width:130px">전략</th><th>방식</th><th>필요한 것</th></tr></thead>
+    <tbody>
+      <tr><td>롤링</td><td>새 파드를 하나씩 늘리고 옛 것을 줄인다(D4)</td><td>Deployment만</td></tr>
+      <tr><td>블루/그린</td><td>새 버전을 통째로 띄우고 트래픽을 한 번에 전환</td><td>디플로이먼트 2벌 + 라우트 전환</td></tr>
+      <tr><td>카나리</td><td>새 버전에 트래픽 일부만 보내며 지표를 보고 늘린다</td><td>디플로이먼트 2벌 + 가중치 라우팅(D6) + RED 지표(D11)</td></tr>
+    </tbody>
+  </table>
+  <p>카나리의 판정 기준은 사람이 정한다. "카나리의 오류율이 안정 버전의 2배를 넘거나 p95가 1.5배를 넘으면 중단". 오늘은 손으로 값을 올리고 대시보드를 보며 판정한다. 이것을 자동화한 것이 Argo Rollouts·Flagger 같은 프로그레시브 딜리버리 도구다.</p>
+
+  <h3>1.5 GitOps 네 원칙</h3>
+  <ol>
+    <li><b>선언적</b> — 원하는 상태 전체가 파일로 표현된다(D3부터 해 온 것).</li>
+    <li><b>버전 관리</b> — 그 파일이 Git에 있다. 변경 이력·리뷰·되돌리기가 Git의 것이다.</li>
+    <li><b>자동 반영</b> — 승인된 변경은 사람이 apply하지 않아도 클러스터에 간다.</li>
+    <li><b>지속적 조정</b> — 컨트롤러가 Git과 클러스터를 계속 비교해 어긋나면(드리프트) 되돌린다. D2의 조정 루프가 Git 층에 하나 더 생긴 것이다.</li>
+  </ol>
+  <p><dfn title="Argo CD">Argo CD</dfn>는 클러스터 안에서 돌며 Git 저장소를 주기적으로 읽어(pull) 렌더링하고 비교하고 적용한다. CI가 클러스터 자격 증명을 가질 필요가 없다. CI는 이미지를 빌드해 푸시하고 Git의 값 파일(태그 한 줄)을 갱신하는 것으로 끝난다. 시크릿은 Git에 평문으로 넣지 않는다. 암호화해 넣거나(SOPS), 외부 비밀 저장소에서 클러스터로 가져오는 컨트롤러(External Secrets Operator)를 쓴다. 오늘은 시크릿을 Git 밖에 두고 이름으로만 참조한다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · v7 이미지와 작업 디렉터리</h2>
+  <p class="sub">카나리에 쓸 v7은 v6과 코드가 같고 버전 표시만 다르다. 지표에서 두 버전을 구분하기 위한 것이다.</p>
+<pre><code><span class="p">$</span> docker build --build-arg APP_VERSION=v7 -t order-api:v7 ~/k8s-study/day04/order-api
+<span class="p">$</span> mkdir -p ~/k8s-study/gitops/charts/study-app/templates ~/k8s-study/gitops/kustomize ~/k8s-study/gitops/platform
+<span class="p">$</span> cd ~/k8s-study/gitops
+<span class="p">$</span> helm version --short &amp;&amp; kubectl kustomize --help | head -1
+<span class="c">v3.19.0+g…
+Build a set of KRM resources using a 'kustomization.yaml' file.</span></code></pre>
+  <p>오늘의 분류. <code>week1/</code> 21개를 셋으로 나눈다.</p>
+  <table>
+    <thead><tr><th style="width:190px">묶음</th><th>파일</th><th style="width:230px">이유</th></tr></thead>
+    <tbody>
+      <tr><td><code>charts/study-app</code> (앱 차트)</td><td>10 config · 13 SA · 14·15·16 RBAC · 20~24 order-api · 30 gateway · 41·42 routes · 50 SM · 52 rule · 60 netpol · 61 VAP</td><td>앱과 함께 움직이는 것</td></tr>
+      <tr><td><code>platform/</code> (그대로 apply)</td><td>00 namespace · 12 postgres · 40 gateway-api · 51 dashboard(monitoring)</td><td>수명이 앱과 다르거나 네임스페이스가 다름</td></tr>
+      <tr><td>Git 밖 (<code>.gitignore</code>)</td><td>11 order-api-secret · 12의 postgres-secret</td><td>평문 시크릿</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>차트화: 파일을 복사하고 다섯 군데를 치환한다</h3>
+    <p class="why">차트는 대개 기존 매니페스트를 옮겨 놓고 바뀌는 값만 <code>{{ }}</code>로 바꾸는 데서 시작한다. 손으로 다시 쓰지 않는다.</p>
+<pre><code><span class="p">$</span> cat &gt; charts/study-app/Chart.yaml &lt;&lt;'EOF'
+apiVersion: v2
+name: study-app
+description: order-api + gateway with routes, monitoring and policies
+type: application
+version: 0.1.0
+appVersion: "v6"
+EOF
+
+<span class="p">$</span> cat &gt; charts/study-app/values.yaml &lt;&lt;'EOF'
+orderApi:
+  image: order-api
+  tag: v6
+  resources:
+    requests: {cpu: 250m, memory: 256Mi}
+    limits: {memory: 512Mi}
+  hpa:
+    min: 2
+    max: 8
+    cpu: 50
+gateway:
+  image: gateway
+  tag: v2
+  replicas: 2
+canary:
+  enabled: true
+  tag: v7
+  weight: 0          # 0~100, 안정 버전은 100-weight
+config:
+  storeName: study-store-v2
+  region: incheon
+monitoring:
+  release: kps
+EOF
+
+<span class="c"># week1 파일을 templates/ 로 복사하며 치환 — 이 스크립트가 '차트화' 그 자체다</span>
+<span class="p">$</span> cat &gt; chartify.py &lt;&lt;'EOF'
+import re, pathlib, shutil
+src = pathlib.Path.home()/'k8s-study'/'week1'
+dst = pathlib.Path('charts/study-app/templates')
+keep = ['10-','13-','14-','15-','16-','20-','21-','22-','23-','24-','30-','41-','42-','50-','52-','60-','61-']
+for f in sorted(src.glob('*.yaml')):
+    if not any(f.name.startswith(k) for k in keep): continue
+    t = f.read_text()
+    if f.name.startswith('52-'):   # Prometheus 규칙의 {{ $value }} 는 Helm 템플릿과 충돌한다 → 이스케이프
+        t = t.replace('{{', '\x00').replace('}}', '\x01')
+        t = t.replace('\x00', '{{ "{{" }}').replace('\x01', '{{ "}}" }}')
+    t = t.replace('namespace: study', 'namespace: {{ .Release.Namespace }}')
+    t = t.replace('image: order-api:v6', 'image: {{ .Values.orderApi.image }}:{{ .Values.orderApi.tag }}')
+    t = t.replace('image: gateway:v2', 'image: {{ .Values.gateway.image }}:{{ .Values.gateway.tag }}')
+    t = t.replace('STORE_NAME: study-store-v2', 'STORE_NAME: {{ .Values.config.storeName | quote }}')
+    t = t.replace('region: incheon', 'region: {{ .Values.config.region | quote }}')
+    t = t.replace('release: kps', 'release: {{ .Values.monitoring.release }}')
+    t = re.sub(r'config-hash: ".*"', 'checksum/config: {{ include (print $.Template.BasePath "/10-order-api-config.yaml") . | sha256sum }}', t)
+    t = t.replace('minReplicas: 2', 'minReplicas: {{ .Values.orderApi.hpa.min }}')
+    t = t.replace('maxReplicas: 8', 'maxReplicas: {{ .Values.orderApi.hpa.max }}')
+    t = t.replace('averageUtilization: 50', 'averageUtilization: {{ .Values.orderApi.hpa.cpu }}')
+    t = t.replace('replicas: 2\n', 'replicas: {{ .Values.gateway.replicas }}\n') if f.name.startswith('30-') else t
+    t = t.replace('weight: 90', 'weight: {{ sub 100 .Values.canary.weight }}').replace('weight: 10', 'weight: {{ .Values.canary.weight }}')
+    (dst/f.name).write_text(t)
+    print('templated', f.name)
+EOF
+<span class="p">$</span> python3 chartify.py
+<span class="c">templated 10-order-api-config.yaml
+templated 13-serviceaccounts.yaml
+…
+templated 61-vap-image-tag.yaml</span>
+<span class="p">$</span> grep -c '{{' charts/study-app/templates/20-order-api-deploy.yaml charts/study-app/templates/41-order-api-route.yaml
+<span class="c">charts/study-app/templates/20-order-api-deploy.yaml:3
+charts/study-app/templates/41-order-api-route.yaml:3</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 열일곱 파일 중 실제로 치환된 곳은 십여 군데뿐이다. 나머지 줄은 그대로다. <code>checksum/config</code> 한 줄이 D7의 스크립트 전체를 대신한다. 52번 규칙 파일의 <code>{{ $value }}</code>는 Prometheus의 템플릿 문법이라 Helm이 자기 것으로 오해하고 실패한다. 그래서 그 파일만 <code>{{ "{{" }}</code>로 이스케이프했다. Helm 차트에 Prometheus 규칙이나 Grafana 대시보드를 넣을 때 늘 만나는 문제다. 컨피그맵 템플릿의 렌더 결과를 해시해 어노테이션에 넣으므로 값이 바뀌면 해시가 바뀌고 롤링이 일어난다. <code>{{ sub 100 .Values.canary.weight }}</code>처럼 템플릿에서 계산도 한다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>카나리 디플로이먼트를 템플릿으로 만든다</h3>
+    <p class="why">D6의 카나리(v1)는 프로브도 설정도 DB도 없다. 안정 버전과 같은 스펙에 이미지 태그만 다른 것이 진짜 카나리다. order-api 템플릿에서 파생시킨다.</p>
+<pre><code><span class="p">$</span> python3 - &lt;&lt;'EOF'
+import pathlib, re
+d = pathlib.Path('charts/study-app/templates')
+src = (d/'20-order-api-deploy.yaml').read_text()
+t = src.replace('name: order-api\n', 'name: order-api-canary\n', 1)
+t = t.replace('app: order-api\n', 'app: order-api-canary\n')          # labels, selector, template, topologySpread
+t = t.replace('{{ .Values.orderApi.tag }}', '{{ .Values.canary.tag }}')
+t = re.sub(r'(?m)^  replicas: \d+\n', '', t)
+t = t.replace('spec:\n  selector:', 'spec:\n  replicas: 1\n  selector:', 1)   # 카나리는 HPA 대상이 아니다
+t = '{{- if .Values.canary.enabled }}\n' + t.rstrip() + '\n{{- end }}\n'
+svc = '''{{- if .Values.canary.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api-canary
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: order-api-canary
+spec:
+  selector:
+    app: order-api-canary
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api-canary
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Values.monitoring.release }}
+spec:
+  selector:
+    matchLabels:
+      app: order-api-canary
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 15s
+{{- end }}
+'''
+(d/'22-order-api-canary.yaml').write_text(t + svc)
+print(open(d/'22-order-api-canary.yaml').read()[:300])
+EOF
+<span class="p">$</span> grep -n 'replicas\|order-api-canary' charts/study-app/templates/22-order-api-canary.yaml | head -8</code></pre>
+    <p class="expect"><b>읽을 것</b> — 카나리 디플로이먼트는 안정 버전과 동일한 프로브·리소스·securityContext·설정 주입을 갖고 이름·라벨·태그만 다르다. <code>{{- if .Values.canary.enabled }}</code>로 통째로 켜고 끈다. 카나리 서비스에 <code>app: order-api-canary</code> 라벨과 <code>http</code> 포트 이름을 넣고 ServiceMonitor를 붙였으니 D11 대시보드에 <code>job="order-api-canary"</code>가 따로 뜬다. HPA와 PDB는 안정 버전에만 있다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>lint · template · dry-run · install</h3>
+    <p class="why">네 단계로 검증 강도를 올린다. 기존 리소스는 Helm이 관리하지 않으므로 먼저 지우고 차트로 다시 올린다(수 초 중단).</p>
+<pre><code><span class="p">$</span> helm lint charts/study-app
+<span class="c">==&gt; Linting charts/study-app
+[INFO] Chart.yaml: icon is recommended
+1 chart(s) linted, 0 chart(s) failed</span>
+
+<span class="p">$</span> helm template study-app charts/study-app | grep -E '^kind:' | sort | uniq -c
+<span class="c">   2 ConfigMap
+   3 Deployment
+   1 HorizontalPodAutoscaler
+   2 HTTPRoute
+   1 NetworkPolicy
+   1 PodDisruptionBudget
+   1 PrometheusRule
+   1 Role
+   1 RoleBinding
+   3 Service
+   3 ServiceAccount
+   3 ServiceMonitor
+   1 ValidatingAdmissionPolicy
+   1 ValidatingAdmissionPolicyBinding</span>
+<span class="p">$</span> helm template study-app charts/study-app | grep -A1 'checksum/config'
+<span class="c">        checksum/config: 6b1e0f…(64자)
+      ...</span>
+<span class="p">$</span> helm template study-app charts/study-app --set canary.weight=20 | grep -B1 -A1 'weight:'
+<span class="c">      port: 8080
+      weight: 80
+    - name: order-api-canary
+      port: 8080
+      weight: 20</span>
+
+<span class="p">$</span> cat &gt; charts/study-app/values-dev.yaml &lt;&lt;'EOF'
+orderApi:
+  hpa:
+    max: 4
+config:
+  storeName: study-store-dev
+EOF
+<span class="p">$</span> cat &gt; charts/study-app/values-prod.yaml &lt;&lt;'EOF'
+orderApi:
+  hpa:
+    min: 3
+    max: 12
+gateway:
+  replicas: 3
+config:
+  storeName: study-store
+  region: seoul
+EOF
+<span class="p">$</span> diff &lt;(helm template study-app charts/study-app -f charts/study-app/values-dev.yaml) &lt;(helm template study-app charts/study-app -f charts/study-app/values-prod.yaml) | grep -E '^[&lt;&gt;]' | head
+<span class="c">&lt;   STORE_NAME: "study-store-dev"
+&gt;   STORE_NAME: "study-store"
+&lt;   region: "incheon"
+&gt;   region: "seoul"
+&lt;         checksum/config: 6b1e…
+&gt;         checksum/config: 9c4a…
+&lt;   replicas: 2
+&gt;   replicas: 3
+&lt;   minReplicas: 2
+&gt;   minReplicas: 3
+…</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>lint</code>는 문법, <code>template</code>은 렌더 결과(클러스터 없이), <code>--dry-run=server</code>는 API 서버 검증까지, <code>install</code>은 실제 적용. dev와 prod의 차이가 diff로 보인다. 값 파일이 다르면 checksum도 달라진다. 값이 곧 환경이다.</p>
+<pre><code><span class="c"># 기존 리소스를 지우고 차트로 대체 (postgres·시크릿·네임스페이스·Gateway는 그대로)</span>
+<span class="p">$</span> cd ~/k8s-study/week1 &amp;&amp; kubectl delete -f 10-order-api-config.yaml -f 13-serviceaccounts.yaml -f 14-rbac-pod-viewer.yaml -f 15-rbac-pod-viewer-binding.yaml -f 20-order-api-deploy.yaml -f 21-order-api-svc.yaml -f 22-order-api-canary.yaml -f 23-order-api-pdb.yaml -f 24-order-api-hpa.yaml -f 30-gateway.yaml -f 41-order-api-route.yaml -f 42-gateway-route.yaml -f 50-servicemonitors.yaml -f 52-prometheusrule.yaml -f 60-networkpolicy.yaml -f 61-vap-image-tag.yaml --wait=true
+<span class="p">$</span> cd ~/k8s-study/gitops
+<span class="p">$</span> helm upgrade --install study-app charts/study-app -n study -f charts/study-app/values-dev.yaml --dry-run=server &gt;/dev/null &amp;&amp; echo "server dry-run OK"
+<span class="p">$</span> helm upgrade --install study-app charts/study-app -n study -f charts/study-app/values-dev.yaml --wait --timeout 3m
+<span class="c">Release "study-app" does not exist. Installing it now.
+NAME: study-app
+NAMESPACE: study
+STATUS: deployed
+REVISION: 1</span>
+<span class="p">$</span> helm list -n study
+<span class="c">NAME        NAMESPACE   REVISION   STATUS     CHART             APP VERSION
+study-app   study       1          deployed   study-app-0.1.0   v6</span>
+<span class="p">$</span> curl -s localhost/config | grep -o '"store.name":"[^"]*"'
+<span class="c">"store.name":"study-store-dev"</span>
+<span class="p">$</span> kubectl get secret -n study -l owner=helm -o name
+<span class="c">secret/sh.helm.release.v1.study-app.v1</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 21개 파일이 <code>helm upgrade --install</code> 한 줄이 됐다. 릴리스 시크릿 하나에 렌더 결과와 값이 들어 있다. <code>--wait</code>는 파드가 Ready가 될 때까지 기다리고, 시간 안에 못 되면 실패로 기록한다. 이 시점부터 <code>week1/</code>의 앱 파일은 <b>원본이 아니다</b>. 차트가 원본이다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>업그레이드와 롤백: 이력이 남는다</h3>
+<pre><code><span class="p">$</span> helm upgrade study-app charts/study-app -n study -f charts/study-app/values-dev.yaml --set config.region=busan --wait
+<span class="p">$</span> curl -s localhost/config | grep -o '"store.region":"[^"]*"'
+<span class="c">"store.region":"busan"</span>
+<span class="p">$</span> helm history study-app -n study
+<span class="c">REVISION   UPDATED                    STATUS       CHART              APP VERSION   DESCRIPTION
+1          Sun Aug 30 05:10:12 2026   superseded   study-app-0.1.0    v6            Install complete
+2          Sun Aug 30 05:14:40 2026   deployed     study-app-0.1.0    v6            Upgrade complete</span>
+<span class="p">$</span> helm get values study-app -n study
+<span class="c">USER-SUPPLIED VALUES:
+config:
+  region: busan
+  storeName: study-store-dev
+orderApi:
+  hpa:
+    max: 4</span>
+<span class="p">$</span> helm rollback study-app 1 -n study --wait
+<span class="c">Rollback was a success! Happy Helming!</span>
+<span class="p">$</span> curl -s localhost/config | grep -o '"store.region":"[^"]*"'
+<span class="c">"store.region":"incheon"</span>
+<span class="p">$</span> helm history study-app -n study | tail -1
+<span class="c">3   …   deployed   study-app-0.1.0   v6   Rollback to 1</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 설정 한 줄 바꾸기가 업그레이드 한 번이고, 그 결과 컨피그맵과 checksum과 롤링이 함께 일어났다. 롤백은 리비전 1의 렌더 결과를 다시 적용해 새 리비전 3을 만든다. D4의 <code>rollout undo</code>가 디플로이먼트 하나였다면 이것은 앱 전체다. <code>--set</code>으로 넣은 값은 이력에만 남고 파일에는 없다. 그래서 다음 단계처럼 값은 파일로, 파일은 Git으로 간다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>카나리: 가중치를 올리며 대시보드로 판정한다</h3>
+    <p class="why">v7을 10% → 50%로 올린다. 중간에 카나리에만 오류를 넣어 "중단" 판정을 내려 본다. D11의 부하 파드와 RED 대시보드를 쓴다.</p>
+<pre><code><span class="p">$</span> kubectl apply -f ~/k8s-study/day10/load.yaml
+<span class="p">$</span> helm upgrade study-app charts/study-app -n study -f charts/study-app/values-dev.yaml --set canary.weight=10 --wait
+<span class="p">$</span> for i in $(seq 1 50); do curl -s localhost/orders | cut -d'"' -f4; done | sort | uniq -c
+<span class="c">  45 v6
+   5 v7</span></code></pre>
+    <p>Grafana(<code>kubectl -n monitoring port-forward svc/kps-grafana 3000:80</code>) → <b>Study / RED (provisioned)</b>. 범례에 <code>order-api</code>와 <code>order-api-canary</code> 두 줄이 있다. 요청률은 9:1, 오류율은 둘 다 0, p95는 비슷하다. 판정: <b>진행</b>.</p>
+<pre><code><span class="p">$</span> helm upgrade study-app charts/study-app -n study -f charts/study-app/values-dev.yaml --set canary.weight=50 --wait
+<span class="c"># 카나리에만 오류를 넣는다 (canary 서비스를 직접 두드린다)</span>
+<span class="p">$</span> kubectl run boom-canary --image=busybox:1.37 --restart=Never -- sh -c 'while true; do wget -qO- http://order-api-canary:8080/boom &gt;/dev/null 2&gt;&amp;1; sleep 0.05; done'
+<span class="p">$</span> sleep 90</code></pre>
+    <p>대시보드의 Error ratio 패널에서 <code>order-api-canary</code> 줄만 올라간다. <code>order-api</code>는 0이다. 판정: <b>중단</b>. D11의 알림 <code>OrderApiHighErrorRate</code>는 <code>job="order-api"</code>만 보므로 울리지 않는다. 카나리용 규칙을 따로 두거나 job을 정규식으로 넓히는 것이 과제다.</p>
+<pre><code><span class="p">$</span> helm upgrade study-app charts/study-app -n study -f charts/study-app/values-dev.yaml --set canary.weight=0 --wait
+<span class="p">$</span> kubectl delete pod boom-canary --wait=false
+<span class="p">$</span> for i in $(seq 1 20); do curl -s localhost/orders | cut -d'"' -f4; done | sort | uniq -c
+<span class="c">  20 v6</span>
+<span class="p">$</span> helm history study-app -n study | tail -3
+<span class="c">4   …   superseded   …   Upgrade complete   (weight 10)
+5   …   superseded   …   Upgrade complete   (weight 50)
+6   …   deployed     …   Upgrade complete   (weight 0)</span>
+<span class="p">$</span> kubectl delete -f ~/k8s-study/day10/load.yaml</code></pre>
+    <p class="expect"><b>읽을 것</b> — 카나리 중단은 값 하나를 0으로 되돌리는 것이다. 디플로이먼트는 그대로 있고 트래픽만 빠진다. 카나리가 건강했다면 <code>orderApi.tag: v7</code>로 안정 버전을 올리고 <code>canary.weight: 0</code>으로 두는 것이 승격이다. 가중치를 올리는 시점과 판정 기준을 사람이 아니라 지표로 자동화한 것이 Argo Rollouts다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>Kustomize로 같은 것을 만들어 본다</h3>
+    <p class="why">base는 <code>week1/</code> 그대로, overlay는 dev용 패치 두 개. 적용은 하지 않고 렌더만 비교한다.</p>
+<pre><code><span class="p">$</span> mkdir -p kustomize/base kustomize/overlays/dev
+<span class="p">$</span> cp ~/k8s-study/week1/{10,13,20,21,24,30,41,42}-*.yaml kustomize/base/
+<span class="p">$</span> cat &gt; kustomize/base/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- 10-order-api-config.yaml
+- 13-serviceaccounts.yaml
+- 20-order-api-deploy.yaml
+- 21-order-api-svc.yaml
+- 24-order-api-hpa.yaml
+- 30-gateway.yaml
+- 41-order-api-route.yaml
+- 42-gateway-route.yaml
+EOF
+<span class="p">$</span> cat &gt; kustomize/overlays/dev/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: study
+resources:
+- ../../base
+images:
+- name: order-api
+  newTag: v7
+labels:
+- pairs:
+    env: dev
+  includeSelectors: false
+patches:
+- target:
+    kind: HorizontalPodAutoscaler
+    name: order-api
+  patch: |
+    - op: replace
+      path: /spec/maxReplicas
+      value: 4
+- target:
+    kind: ConfigMap
+    name: order-api-config
+  patch: |
+    - op: replace
+      path: /data/STORE_NAME
+      value: study-store-dev
+EOF
+<span class="p">$</span> kubectl kustomize kustomize/overlays/dev | grep -E 'image: order-api|maxReplicas|STORE_NAME|env: dev' | sort | uniq -c
+<span class="c">   1 STORE_NAME: study-store-dev
+   8 env: dev
+   1 image: order-api:v7
+   1 maxReplicas: 4</span>
+<span class="p">$</span> kubectl kustomize kustomize/overlays/dev | kubectl apply --dry-run=server -f - | head -3
+<span class="c">configmap/order-api-config configured (server dry run)
+configmap/order-api-store unchanged (server dry run)
+serviceaccount/order-api unchanged (server dry run)</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — base는 D7~D12에서 쓰던 유효한 YAML 그대로이고, overlay가 태그·라벨·두 필드를 덧씌웠다. Helm의 <code>values-dev.yaml</code>과 같은 결과를 템플릿 없이 얻었다. 대신 "카나리를 켜고 끈다"처럼 리소스 존재 자체를 값으로 바꾸는 일은 Kustomize로는 base 두 벌이 필요하다. 이 실습에서는 Helm을 원본으로 유지하고 Kustomize 디렉터리는 비교용으로만 둔다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>Git에 올린다: 시크릿은 빼고</h3>
+<pre><code><span class="p">$</span> cd ~/k8s-study/gitops
+<span class="p">$</span> cp ~/k8s-study/week1/00-namespace.yaml ~/k8s-study/week1/40-gateway-api.yaml ~/k8s-study/week1/51-grafana-red-dashboard.yaml platform/
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+# 12-postgres.yaml 에서 Secret 문서만 떼어 Git 밖으로
+import pathlib, yaml
+src = pathlib.Path.home()/'k8s-study'/'week1'/'12-postgres.yaml'
+docs = list(yaml.safe_load_all(src.read_text()))
+pub = [d for d in docs if d['kind'] != 'Secret']
+sec = [d for d in docs if d['kind'] == 'Secret']
+pathlib.Path('platform/12-postgres.yaml').write_text(yaml.safe_dump_all(pub, sort_keys=False))
+pathlib.Path('secrets-local').mkdir(exist_ok=True)
+pathlib.Path('secrets-local/postgres-secret.yaml').write_text(yaml.safe_dump_all(sec, sort_keys=False))
+print('public docs:', [d['kind'] for d in pub], '| local:', [d['kind'] for d in sec])
+EOF
+<span class="p">$</span> cp ~/k8s-study/week1/11-order-api-secret.yaml secrets-local/
+<span class="p">$</span> printf 'secrets-local/\n*.bak\n' &gt; .gitignore
+<span class="p">$</span> cat &gt; README.md &lt;&lt;'EOF'
+# k8s-study gitops
+- platform/      네임스페이스 · postgres · Gateway API · 대시보드 (kubectl apply -f platform/)
+- charts/study-app  앱 차트 (Argo CD가 동기화)
+- kustomize/     비교용
+- secrets-local/ Git에 올리지 않음. 클러스터에 직접 apply.
+EOF
+<span class="p">$</span> git init -q &amp;&amp; git add -A &amp;&amp; git status --short | grep -c secrets-local ; echo "(0이어야 한다)"
+<span class="c">0
+(0이어야 한다)</span>
+<span class="p">$</span> git commit -q -m "study-app chart, platform manifests" &amp;&amp; git branch -M main
+<span class="c"># GitHub에서 빈 저장소 k8s-study-gitops 를 만든 뒤 (public 또는 private+토큰)</span>
+<span class="p">$</span> git remote add origin https://github.com/&lt;your-id&gt;/k8s-study-gitops.git
+<span class="p">$</span> git push -u origin main</code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>git status</code>에 <code>secrets-local/</code>이 없다. 시크릿은 클러스터에 이미 있고 차트는 이름으로만 참조한다. 새 클러스터에서는 <code>secrets-local/</code>을 손으로 먼저 apply한다. 그 "손으로"를 없애는 것이 SOPS(암호화해서 Git에)나 External Secrets Operator(외부 저장소에서 가져오기)이고, 이 교재 범위 밖이다.</p>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step" id="s8">
+    <h3><span class="sn">8</span>Argo CD: Git이 곧 클러스터</h3>
+    <p class="why">Argo CD를 설치하고 Git의 차트를 가리키는 Application을 만든다. Helm 릴리스는 지우고 Argo CD에게 넘긴다.</p>
+<pre><code><span class="p">$</span> kubectl create namespace argocd
+<span class="p">$</span> kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+<span class="p">$</span> kubectl -n argocd rollout status deployment/argocd-server --timeout=3m
+<span class="p">$</span> kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+<span class="c">(초기 admin 비밀번호)</span>
+<span class="c"># 터미널 A</span>
+<span class="p">$</span> kubectl -n argocd port-forward svc/argocd-server 8085:443</code></pre>
+    <p><code>https://localhost:8085</code>(자체 서명 경고는 통과) → <code>admin</code> / 위 비밀번호. private 저장소면 Settings → Repositories에서 HTTPS + 토큰으로 먼저 연결한다.</p>
+<pre><code><span class="c"># Helm 릴리스를 내린다 (리소스가 사라지고 잠시 뒤 Argo CD가 다시 만든다)</span>
+<span class="p">$</span> helm uninstall study-app -n study
+
+<span class="p">$</span> cat &gt; platform/argocd-app-study.yaml &lt;&lt;'EOF'
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: study-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/&lt;your-id&gt;/k8s-study-gitops.git
+    targetRevision: main
+    path: charts/study-app
+    helm:
+      valueFiles:
+      - values-dev.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: study
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=false
+EOF
+<span class="p">$</span> sed -i.bak "s|&lt;your-id&gt;|$(git remote get-url origin | sed -E 's#.*/([^/]+)/[^/]+$#\1#')|" platform/argocd-app-study.yaml &amp;&amp; rm platform/argocd-app-study.yaml.bak
+<span class="p">$</span> kubectl apply -f platform/argocd-app-study.yaml
+<span class="p">$</span> sleep 30 &amp;&amp; kubectl -n argocd get application study-app
+<span class="c">NAME        SYNC STATUS   HEALTH STATUS
+study-app   Synced        Healthy</span>
+<span class="p">$</span> kubectl get deploy -n study
+<span class="c">NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+gateway            2/2     2            2           40s
+order-api          2/2     2            2           40s
+order-api-canary   1/1     1            1           40s</span>
+<span class="p">$</span> curl -s localhost/config | grep -o '"store.name":"[^"]*"'
+<span class="c">"store.name":"study-store-dev"</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — Argo CD가 Git의 차트를 <code>values-dev.yaml</code>로 렌더링해 study에 적용했고 <code>Synced / Healthy</code>다. <code>helm list</code>에는 이제 아무것도 없다. Argo CD는 Helm을 렌더러로만 쓰고 릴리스 시크릿을 만들지 않는다. 이력은 Git 커밋이다. UI에서 study-app을 열면 D4의 소유 사슬(Deployment → RS → Pod)이 그래프로 보인다.</p>
+<pre><code><span class="c"># 드리프트 ①: 손으로 바꾼다 → 되돌아온다</span>
+<span class="p">$</span> kubectl scale deployment/gateway --replicas=5 -n study
+<span class="p">$</span> sleep 20 &amp;&amp; kubectl get deploy gateway -n study -o jsonpath='{.spec.replicas}{"\n"}'
+<span class="c">2</span>
+<span class="p">$</span> kubectl -n argocd get application study-app -o jsonpath='{.status.operationState.phase} {.status.sync.status}{"\n"}'
+<span class="c">Succeeded Synced</span>
+
+<span class="c"># 드리프트 ②: Git을 바꾼다 → 클러스터가 따라온다</span>
+<span class="p">$</span> sed -i.bak 's/storeName: study-store-dev/storeName: study-store-dev-2/' charts/study-app/values-dev.yaml &amp;&amp; rm charts/study-app/values-dev.yaml.bak
+<span class="p">$</span> git commit -qam "dev: store name" &amp;&amp; git push -q
+<span class="p">$</span> sleep 200 &amp;&amp; curl -s localhost/config | grep -o '"store.name":"[^"]*"'
+<span class="c">"store.name":"study-store-dev-2"</span>
+<span class="p">$</span> kubectl -n argocd get application study-app -o jsonpath='{.status.sync.revision}{"\n"}' | cut -c1-7
+<span class="c">(방금 커밋의 SHA)</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 손으로 5로 올린 것이 20초 안에 2로 돌아왔다(<code>selfHeal</code>). Git에 커밋하자 3분 안에(기본 폴링 주기) 클러스터가 바뀌었다. 기다리기 싫으면 UI의 Refresh/Sync나 <code>argocd app sync</code>. 이제 클러스터를 바꾸는 유일한 방법은 커밋이고, 누가 언제 무엇을 바꿨는지는 <code>git log</code>다. <code>prune: true</code>는 Git에서 지운 리소스를 클러스터에서도 지운다. D7에서 말한 <code>apply -f dir/</code>의 세 한계가 전부 해소됐다.</p>
+    <div class="note">
+      <h5>Flux와의 차이</h5>
+      <p>Flux는 같은 일을 UI 없이 CRD(GitRepository·Kustomization·HelmRelease)만으로 한다. Helm 차트를 실제 Helm 릴리스로 설치해 <code>helm list</code>에 보이는 것, 멀티테넌시 모델이 다르다. 팀에 UI가 필요하면 Argo CD, 전부 코드로 두고 싶으면 Flux. 원칙 네 가지는 같다.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <div class="check">
+    <ol>
+      <li><code>helm template</code>으로 dev와 prod의 렌더 결과 차이를 diff로 보이고, 왜 checksum이 다른지 말한다.</li>
+      <li>값 하나를 바꿔 업그레이드한 뒤 <code>helm rollback</code>으로 되돌리고 <code>history</code>에서 세 리비전을 읽는다.</li>
+      <li>카나리 가중치를 10 → 50으로 올리며 대시보드에서 두 job의 오류율을 비교해 진행/중단을 말하고, 0으로 되돌린다.</li>
+      <li>Kustomize overlay로 이미지 태그와 HPA 상한을 바꾼 렌더 결과를 보인다.</li>
+      <li>Git에 values 한 줄을 바꿔 push하면 Argo CD가 동기화하고, 손으로 <code>scale</code>한 값이 되돌아간다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D14로 간다. 5번이 막히면 Argo CD UI에서 Application의 Events와 저장소 연결 상태를 본다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">이제 원본은 <code>~/k8s-study/gitops</code>(Git)이다. <code>week1/</code>은 참고용으로만 남는다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/gitops &amp;&amp; git status --short | wc -l
+<span class="c">0</span>
+<span class="p">$</span> kubectl -n argocd get application
+<span class="c">NAME        SYNC STATUS   HEALTH STATUS
+study-app   Synced        Healthy</span>
+<span class="p">$</span> helm list -A | grep -c study-app
+<span class="c">0</span>
+<span class="p">$</span> ls platform secrets-local
+<span class="c">platform:
+00-namespace.yaml  12-postgres.yaml  40-gateway-api.yaml  51-grafana-red-dashboard.yaml  argocd-app-study.yaml
+
+secrets-local:
+11-order-api-secret.yaml  postgres-secret.yaml</span></code></pre>
+  <p>남은 과제 둘. postgres의 restricted 경고(<code>fsGroup: 999</code>·<code>runAsUser: 999</code>, D12)와 카나리용 알림 규칙(5단계). D14 재구축 전에 여유가 있으면 <code>platform/12-postgres.yaml</code>과 차트의 <code>52-prometheusrule.yaml</code>에 반영해 커밋한다.</p>
+
+  <div class="note">
+    <h5>D14 예고</h5>
+    <p>클러스터를 지우고 3노드로 다시 만든 뒤, Envoy Gateway·모니터링 스택·Argo CD를 올리고 <code>platform/</code>과 <code>secrets-local/</code>을 apply하면 나머지는 Argo CD가 Git에서 가져온다. 목표 30분. 그다음 진행자가 장애 다섯 개를 넣는다. 각각 5분 안에 원인을 찾는다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>Helm 차트 작성 가이드 — <a href="https://helm.sh/docs/chart_template_guide/">helm.sh/docs/chart_template_guide/</a> · 내장 함수(<code>sha256sum</code>, <code>sub</code>) — <a href="https://helm.sh/docs/chart_template_guide/function_list/">helm.sh/docs/chart_template_guide/function_list/</a> · 릴리스 저장 — <a href="https://helm.sh/docs/topics/advanced/#storage-backends">helm.sh/docs/topics/advanced/#storage-backends</a></li>
+    <li>Kustomize — <a href="https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/">kubectl.docs.kubernetes.io/references/kustomize/kustomization/</a> · 쿠버네티스 문서 — <a href="https://kubernetes.io/ko/docs/tasks/manage-kubernetes-objects/kustomization/">kubernetes.io/ko/docs/tasks/manage-kubernetes-objects/kustomization/</a></li>
+    <li>Gateway API 트래픽 분할 — <a href="https://gateway-api.sigs.k8s.io/guides/traffic-splitting/">gateway-api.sigs.k8s.io/guides/traffic-splitting/</a> · Argo Rollouts — <a href="https://argo-rollouts.readthedocs.io/">argo-rollouts.readthedocs.io</a></li>
+    <li>Argo CD 시작하기 — <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/">argo-cd.readthedocs.io/en/stable/getting_started/</a> · Application 스펙 — <a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/">argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/</a> · 자동 동기화 — <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/">argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/</a></li>
+    <li>OpenGitOps 원칙 — <a href="https://opengitops.dev/">opengitops.dev</a> · Flux — <a href="https://fluxcd.io/">fluxcd.io</a> · SOPS — <a href="https://github.com/getsops/sops">github.com/getsops/sops</a> · External Secrets Operator — <a href="https://external-secrets.io/">external-secrets.io</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day12-rbac-pod-security-policy.html">← D12 RBAC·파드 시큐리티·정책</a><a href="day14-capstone-troubleshooting.html">D14 종합·트러블슈팅 →</a></div>
+</div></footer>
+</body>
+</html>

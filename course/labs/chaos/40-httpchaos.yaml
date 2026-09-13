@@ -1,0 +1,24 @@
+# M36 실험 ④ — 애플리케이션 수준의 고장.
+#
+# 가설: /api/entries 가 절반쯤 500 을 내면
+#       M21 에서 만든 에러율 알림이 발화한다.
+#
+# HTTPChaos 는 파드의 네트워크 네임스페이스에서 HTTP 를 가로챈다.
+# 앱을 고치지 않고 응답을 바꿀 수 있다 — M30 에서 FAULT_RATE 를 코드에 넣은 것과
+# 같은 일을 **밖에서** 하는 것이고, 운영 코드에 손잡이를 남기지 않는다.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: api-500
+  namespace: journal
+spec:
+  mode: all
+  selector:
+    namespaces: [journal]
+    labelSelectors: {app: journal-api}
+  target: Request
+  port: 8080
+  path: "/api/entries"
+  method: "GET"
+  abort: true          # 연결을 끊는다
+  duration: "180s"

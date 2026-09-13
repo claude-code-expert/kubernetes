@@ -1,0 +1,142 @@
+# course/labs/monitoring/kps-values.yaml
+# kube-prometheus-stack 설치 값. M19 에서 만들고 M20~M22 가 이어서 쓴다.
+# 차트 89.2.2 / Prometheus operator v0.93.1 기준 (2026-09-05 확인 — 실습 당일 재확인하라).
+
+prometheus:
+  service:
+    # NodePort 를 쓰지 않는다. kind 설정(M01)이 호스트로 넘긴 포트는 18080/18443 뿐이고,
+    # 그 둘은 인그레스가 쓰고 있다. 프로메테우스 UI 는 port-forward 로 본다.
+    type: ClusterIP
+  prometheusSpec:
+    # 관측 스택을 한 노드에 모은다 (M16 nodeSelector).
+    # 흩어 놓으면 관측 대상이 앓을 때 관측 스택도 같이 앓는다.
+    nodeSelector:
+      workload: observability
+
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # 실습용. 노트북 디스크를 아끼려고 짧게 잡는다.
+    # 운영에서는 보존 기간이 곧 "얼마나 오래된 장애를 되짚을 수 있는가"다.
+    retention: 3d
+    retentionSize: 4GB
+
+    # storageSpec 을 생략하면 emptyDir 이 되어 파드가 재시작되면 지표가 전부 사라진다.
+    # kind 의 기본 스토리지클래스 standard 를 쓴다 (M18).
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 8Gi
+
+    resources:
+      requests: {cpu: 200m, memory: 900Mi}
+      limits: {memory: 1600Mi}
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      workload: observability
+    resources:
+      requests: {cpu: 20m, memory: 96Mi}
+      limits: {memory: 192Mi}
+  # 이 블록을 쓰면 차트 기본 설정을 통째로 대체한다.
+  # Watchdog 처리와 억제 규칙을 빠뜨리면 안 되는 이유다. 자세한 것은 M21.
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ["namespace", "alertname"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: study-default
+      routes:
+        # Watchdog 은 "모니터링이 살아있다"를 알리는 상시 알림이다. 버린다.
+        - receiver: "null"
+          matchers:
+            - alertname =~ "InfoInhibitor|Watchdog"
+        - receiver: study-critical
+          matchers:
+            - severity = "critical"
+    inhibit_rules:
+      # critical 이 울리는 동안 같은 대상의 warning/info 는 숨긴다
+      - source_matchers: [severity = "critical"]
+        target_matchers: [severity =~ "warning|info"]
+        equal: ["namespace", "alertname"]
+    receivers:
+      - name: "null"
+      - name: study-default
+      - name: study-critical
+
+grafana:
+  adminPassword: obs-study        # 실습용. 운영이라면 시크릿으로 (M13)
+  nodeSelector:
+    workload: observability
+  service:
+    type: ClusterIP
+  defaultDashboardsTimezone: Asia/Seoul
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard    # 이 라벨이 붙은 ConfigMap 을 대시보드로 인식한다 (M21)
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      searchNamespace: ALL
+  # M22 에서 추가. 데이터소스는 이름이 아니라 uid 로 참조한다 —
+  # 대시보드 JSON 이 uid 를 박아 두므로 이름을 바꿔도 패널이 깨지지 않는다.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      # 그라파나 파드에서 접근하는 주소다. 브라우저 주소가 아니다.
+      url: http://loki-gateway.logging.svc.cluster.local
+      jsonData:
+        maxLines: 1000
+  resources:
+    requests: {cpu: 50m, memory: 160Mi}
+    limits: {memory: 384Mi}
+
+prometheusOperator:
+  nodeSelector:
+    workload: observability
+
+kube-state-metrics:
+  nodeSelector:
+    workload: observability
+
+# ── 컨트롤 플레인 타깃 ────────────────────────────────────────────────
+# 아래 넷은 차트가 기본으로 켜 두지만, kind 의 기본 설정에서는 전부 DOWN 이 된다.
+# 왜 그런지와 어떻게 고치는지는 M19 의 "일부러 실패시키기"에서 다룬다.
+kubeControllerManager:
+  enabled: true
+  service: {port: 10257, targetPort: 10257}
+  serviceMonitor:
+    # HTTPS 를 끄지 않는다. kind 의 인증서는 노드 IP 를 SAN 에 갖고 있지 않으므로
+    # 검증만 건너뛴다.
+    https: true
+    insecureSkipVerify: true
+kubeScheduler:
+  enabled: true
+  service: {port: 10259, targetPort: 10259}
+  serviceMonitor:
+    https: true
+    insecureSkipVerify: true
+kubeEtcd:
+  enabled: true
+  # 2379 는 상호 TLS 가 필요한 클라이언트 포트다. 메트릭 전용 2381 을 쓴다.
+  service: {port: 2381, targetPort: 2381}
+  serviceMonitor:
+    scheme: http
+kubeProxy:
+  enabled: true
+  service: {port: 10249, targetPort: 10249}

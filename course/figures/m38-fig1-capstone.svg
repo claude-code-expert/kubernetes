@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="440" rx="6"/>
+  <text class="t-h" x="40" y="46">세 장애가 각각 다른 곳을 시험한다</text>
+
+  <rect class="soft" x="40" y="66" width="820" height="152" rx="4"/>
+  <rect class="warnbox" x="56" y="80" width="256" height="124" rx="3"/>
+  <text class="t-title" x="66" y="100">① 관측이 사라진다</text>
+  <text class="t-mono" x="66" y="120">ServiceMonitor 라벨 오타</text>
+  <text class="t-sub" x="66" y="140">타깃 수 0 · 앱은 200</text>
+  <text class="t-sub" x="66" y="158">알림도 울리지 않는다</text>
+  <text class="t-warn" x="66" y="180">down 과 없음은 다르다</text>
+  <text class="t-sub" x="66" y="196">시험하는 것: M20 라벨 사슬</text>
+
+  <rect class="warnbox" x="322" y="80" width="256" height="124" rx="3"/>
+  <text class="t-title" x="332" y="100">② 이름 해석이 죽는다</text>
+  <text class="t-mono" x="332" y="120">allow-dns 삭제</text>
+  <text class="t-sub" x="332" y="140">nslookup timed out</text>
+  <text class="t-sub" x="332" y="158">지금 요청은 200</text>
+  <text class="t-warn" x="332" y="180">재시작할 때 터진다</text>
+  <text class="t-sub" x="332" y="196">시험하는 것: M25 이그레스</text>
+
+  <rect class="warnbox" x="588" y="80" width="256" height="124" rx="3"/>
+  <text class="t-title" x="598" y="100">③ 한가한데 느리다</text>
+  <text class="t-mono" x="598" y="120">cpu limit 50m</text>
+  <text class="t-sub" x="598" y="140">p95 31s · 실패 80%</text>
+  <text class="t-sub" x="598" y="158">top 은 50m — 정상으로 보인다</text>
+  <text class="t-warn" x="598" y="180">스로틀링을 봐야 보인다</text>
+  <text class="t-sub" x="598" y="196">시험하는 것: M37 병목 진단</text>
+
+  <!-- A/B -->
+  <rect class="soft" x="40" y="234" width="400" height="128" rx="4"/>
+  <text class="t-h" x="56" y="258">A/B 실험 — 판정은 메트릭이 한다</text>
+  <rect class="accent" x="56" y="270" width="180" height="76" rx="3"/>
+  <text class="t-mono" x="66" y="290">변형 A (v1)</text>
+  <text class="t-acc" x="66" y="310">에러율 0.0 %</text>
+  <text class="t-sub" x="66" y="328">27 req/s · P95 0.49ms</text>
+  <rect class="warnbox" x="248" y="270" width="176" height="76" rx="3"/>
+  <text class="t-mono" x="258" y="290">변형 B (v3)</text>
+  <text class="t-warn" x="258" y="310">에러율 4.55 %</text>
+  <text class="t-sub" x="258" y="328">29 req/s · P95 0.48ms</text>
+
+  <!-- 통주 -->
+  <rect class="soft" x="456" y="234" width="384" height="128" rx="4"/>
+  <text class="t-h" x="472" y="258">통주 점검 — 49 항목</text>
+  <text class="t-mono" x="472" y="280">Part1 ✓6  Part2 ✓5  Part3 ✓7  Part4 ✓5</text>
+  <text class="t-mono" x="472" y="300">Part5 ✓7  Part6 ✓9  Part7 ✓5  Part8 ✓5</text>
+  <text class="t-acc" x="472" y="322">통과 49 · 실패 0</text>
+  <text class="t-sub" x="472" y="342">처음엔 1건 실패 — 점검 스크립트 자체의 버그였다</text>
+
+  <!-- 채점 -->
+  <rect class="soft" x="56" y="378" width="784" height="60" rx="4"/>
+  <text class="t-h" x="70" y="400">채점은 답이 아니라 경로를 본다</text>
+  <text class="t-sub" x="70" y="420">증상 기술 30 · 원인 지목 30 · <tspan font-weight="700">어떤 관찰로 좁혔는지 30</tspan> · 재발 방지 10</text>
+</svg>

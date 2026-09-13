@@ -1,0 +1,58 @@
+# M35 — DRA(동적 자원 할당). 1.37 에서 resource.k8s.io/v1 로 정식이 됐다.
+#
+# **이 파일은 적용해도 파드가 뜨지 않는다.** 드라이버가 없기 때문이다.
+# 그것을 확인하는 것이 이 파일의 목적이다 — 쿠버네티스는 API 만 제공하고,
+# 실제 장치를 광고하고 할당하는 것은 벤더의 드라이버다.
+#
+#   kubectl get resourceslices   -> No resources found   (광고된 장치가 없다)
+#   kubectl get deviceclasses    -> No resources found   (드라이버가 만드는 것이다)
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-claim
+  namespace: m35
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            # 이 클래스는 GPU 드라이버가 만든다. 없으면 파드가 Pending 에서 멈춘다.
+            deviceClassName: gpu.example.com
+            allocationMode: ExactCount
+            count: 1
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: train-gpu
+  namespace: m35
+spec:
+  completions: 1
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      # 파드가 요청하는 자원 청구. cpu/memory 와 달리 **이름 있는 장치**를 받는다.
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: gpu-claim
+      containers:
+        - name: trainer
+          image: alpine:3.22
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {memory: 64Mi}
+            # 컨테이너가 그 청구를 쓴다고 선언한다
+            claims:
+              - name: gpu
+          command: ["sh","-c","echo 'GPU 로 훈련'; sleep 5"]

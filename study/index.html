@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠버네티스 관측성 실습 — 11장</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+.why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="../course/index.html">← 도커 &amp; 쿠버네티스 38편 과정</a>
+  <span class="where">STUDY · 11 CHAPTERS</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>쿠버네티스 관측성 실습</h1>
+  <p class="lede">노트북 한 대에 kind 클러스터를 세우고 스프링 앱 두 개를 배포한 뒤, 프로메테우스·그라파나·로키로 관측하고 마지막에 <em>일부러 고장을 내서</em> 그 관측 체계를 판정한다.</p>
+</header>
+
+<h2><span class="n">01</span>무엇을 만드는가</h2>
+
+<p>메트릭이 “무언가 이상하다”를 알려주고, 로그가 “무슨 일이 있었나”를 알려주고, 알림이 사람을 부른다. 그 셋이 한 화면에 모인 상태를 <strong>노트북 한 대 안에서</strong> 만든다. 클라우드 계정도 별도 VM 도 필요 없다.</p>
+
+<p>그리고 마지막 장에서 <strong>일부러 고장을 낸다.</strong> 만들어 둔 알림이 실제로 우는지, 대시보드가 그것을 보여 주는지 판정하지 않으면 관측 체계가 동작한다고 말할 수 없기 때문이다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>이 과정이 다루는 것</th><th>다루지 않는 것</th></tr>
+  <tr><td>메트릭 수집과 PromQL, 대시보드, 알림, 로그 수집, 카오스 실험</td><td>분산 추적, 장기 저장, 멀티 클러스터 — 10장 부록 D 에 이어지는 주제로 적어 뒀다</td></tr>
+  <tr><td>쿠버네티스 위에서의 관측</td><td>쿠버네티스 자체의 입문 — 그쪽은 <a href="../course/index.html">38편 과정</a>이다</td></tr>
+</table>
+</div>
+
+
+<h2><span class="n">02</span>전체 로드맵</h2>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 190" role="img" aria-label="11개 장을 네 트랙으로 나눈 로드맵">
+  <rect width="1000" height="190" fill="#ffffff"/>
+
+  <text x="30" y="30" font-size="12.5" font-family="monospace" fill="#585f6b">트랙 A · 환경과 앱</text>
+  <line x1="30" y1="40" x2="336" y2="40" stroke="#d8dbe0" stroke-width="1.2"/>
+  <text x="356" y="30" font-size="12.5" font-family="monospace" fill="#585f6b">트랙 B · 설치</text>
+  <line x1="356" y1="40" x2="506" y2="40" stroke="#d8dbe0" stroke-width="1.2"/>
+  <text x="526" y="30" font-size="12.5" font-family="monospace" fill="#585f6b">트랙 C · 연동</text>
+  <line x1="526" y1="40" x2="754" y2="40" stroke="#d8dbe0" stroke-width="1.2"/>
+  <text x="774" y="30" font-size="12.5" font-family="monospace" fill="#585f6b">트랙 D · 운영과 검증</text>
+  <line x1="774" y1="40" x2="924" y2="40" stroke="#d8dbe0" stroke-width="1.2"/>
+
+  <a href="ch00-setup-versions.html"><rect x="30" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="66" y="86" font-size="16" font-family="monospace" fill="#15181d" text-anchor="middle">00</text><text x="66" y="110" font-size="11" fill="#15181d" text-anchor="middle">환경 준비</text></a>
+  <a href="ch01-kind-cluster.html"><rect x="108" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="144" y="86" font-size="16" font-family="monospace" fill="#15181d" text-anchor="middle">01</text><text x="144" y="110" font-size="11" fill="#15181d" text-anchor="middle">kind 구축</text></a>
+  <a href="ch02-instrumented-app.html"><rect x="186" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="222" y="86" font-size="16" font-family="monospace" fill="#15181d" text-anchor="middle">02</text><text x="222" y="110" font-size="11" fill="#15181d" text-anchor="middle">스프링 앱</text></a>
+  <a href="ch03-containerize-deploy.html"><rect x="264" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="300" y="86" font-size="16" font-family="monospace" fill="#15181d" text-anchor="middle">03</text><text x="300" y="110" font-size="11" fill="#15181d" text-anchor="middle">배포</text></a>
+
+  <a href="ch04-prometheus-stack.html"><rect x="356" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.6"/><text x="392" y="86" font-size="16" font-family="monospace" fill="#6a4a9c" text-anchor="middle">04</text><text x="392" y="110" font-size="11" fill="#15181d" text-anchor="middle">프로메테우스</text></a>
+  <a href="ch05-grafana-dashboards.html"><rect x="434" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.6"/><text x="470" y="86" font-size="16" font-family="monospace" fill="#6a4a9c" text-anchor="middle">05</text><text x="470" y="110" font-size="11" fill="#15181d" text-anchor="middle">그라파나</text></a>
+
+  <a href="ch06-app-metrics-promql.html"><rect x="526" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/><text x="562" y="86" font-size="16" font-family="monospace" fill="#1f4d8f" text-anchor="middle">06</text><text x="562" y="110" font-size="11" fill="#15181d" text-anchor="middle">PromQL</text></a>
+  <a href="ch07-alerting.html"><rect x="604" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/><text x="640" y="86" font-size="16" font-family="monospace" fill="#1f4d8f" text-anchor="middle">07</text><text x="640" y="110" font-size="11" fill="#15181d" text-anchor="middle">알림</text></a>
+  <a href="ch08-logging-loki-alloy.html"><rect x="682" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#b4621a" stroke-width="1.6"/><text x="718" y="86" font-size="16" font-family="monospace" fill="#b4621a" text-anchor="middle">08</text><text x="718" y="110" font-size="11" fill="#15181d" text-anchor="middle">로그</text></a>
+
+  <a href="ch09-operations.html"><rect x="774" y="56" width="72" height="72" rx="5" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/><text x="810" y="86" font-size="16" font-family="monospace" fill="#15181d" text-anchor="middle">09</text><text x="810" y="110" font-size="11" fill="#15181d" text-anchor="middle">운영</text></a>
+  <a href="ch10-chaos-testing.html"><rect x="852" y="56" width="72" height="72" rx="5" fill="#fdf8f4" stroke="#8f4408" stroke-width="1.8"/><text x="888" y="86" font-size="16" font-family="monospace" fill="#8f4408" text-anchor="middle">10</text><text x="888" y="110" font-size="11" fill="#8f4408" text-anchor="middle">카오스</text></a>
+
+  <text x="30" y="158" font-size="13" fill="#585f6b">앞에서 만든 것이 뒤의 입력이 된다 — 건너뛰면 뒤에서 판정할 기준이 없다</text>
+  <text x="30" y="180" font-size="12.5" fill="#8f4408">01장의 설정 스무 줄이 04장의 타깃 상태를 이미 정한다</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> 번호를 눌러 바로 갈 수 있다. 순서대로 진행하는 것을 전제로 쓰였지만,
+  이미 클러스터가 있다면 01장을 건너뛰어도 된다 — 다만 <strong>bind-address 패치</strong>가 들어 있는지는 확인해야 한다(04장에서 판가름 난다).
+</figcaption>
+</figure>
+
+
+<h2><span class="n">03</span>장 목록</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>장</th><th>제목과 내용</th><th>이 장이 남기는 것</th></tr>
+  <tr><td><a href="ch00-setup-versions.html">00</a></td><td><strong>실습 환경 준비와 버전 고정</strong><br>도구 설치·버전 고정·사전 점검. 코드는 한 줄도 쓰지 않는다</td><td>도구 5종 · 헬름 저장소</td></tr>
+  <tr><td><a href="ch01-kind-cluster.html">01</a></td><td><strong>kind 클러스터 구축</strong><br>설정 스무 줄이 04장의 타깃 상태를 미리 정한다</td><td><code>kind-cluster.yaml</code> · 노드 3개</td></tr>
+  <tr><td><a href="ch02-instrumented-app.html">02</a></td><td><strong>계측 가능한 애플리케이션</strong><br>USE·RED 를 고르고 도메인 지표 4종을 심는다</td><td>order-api · gateway 소스</td></tr>
+  <tr><td><a href="ch03-containerize-deploy.html">03</a></td><td><strong>컨테이너화와 배포</strong><br>이미지를 노드에 적재하고 프로브 3종을 건다</td><td>매니페스트 3종 · 파드 3개</td></tr>
+  <tr><td><a href="ch04-prometheus-stack.html">04</a></td><td><strong>프로메테우스 스택 설치</strong><br>메트릭 네 출처를 질의해서 구분한다</td><td><code>kps-values.yaml</code> · 타깃 전부 UP</td></tr>
+  <tr><td><a href="ch05-grafana-dashboards.html">05</a></td><td><strong>그라파나와 대시보드</strong><br>대시보드를 코드로 만든다. 라벨을 빼면 조용히 사라진다</td><td><code>obs-overview.json</code></td></tr>
+  <tr><td><a href="ch06-app-metrics-promql.html">06</a></td><td><strong>앱 메트릭과 PromQL</strong><br>라벨 세 겹을 먼저 끊어 보고 고친다</td><td>ServiceMonitor · RED 질의 6개</td></tr>
+  <tr><td><a href="ch07-alerting.html">07</a></td><td><strong>대시보드와 알림</strong><br>임계를 넘은 순간과 알림이 오는 순간 사이 네 구간</td><td><code>obs-red.json</code> · 알림 규칙 4개</td></tr>
+  <tr><td><a href="ch08-logging-loki-alloy.html">08</a></td><td><strong>로그 수집 — Loki + Alloy</strong><br>Promtail 이 아니다. 메트릭과 화살표가 반대다</td><td>로키 · Alloy · 로그 패널</td></tr>
+  <tr><td><a href="ch09-operations.html">09</a></td><td><strong>운영과 모범 사례</strong><br>카디널리티를 숫자로 보고 잘라낸다</td><td>실습 → 운영 대조표</td></tr>
+  <tr><td><a href="ch10-chaos-testing.html">10</a></td><td><strong>테스팅과 카오스 실험</strong><br>이상을 일부러 만들어 관측 체계를 판정한다</td><td>게임 데이 시트 4장</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">다른 운영체제를 쓴다면</span>
+  <p>본문의 설치와 실행 결과는 <strong>macOS 기준</strong>이다. 우분투와 WSL2 에서 도구를 갖추는 절차는 <a href="appendix-install.html">부록 · 우분투와 윈도우에서 도구 설치</a>에 따로 모았다. 설치가 끝나면 00장으로 돌아온다.</p>
+</blockquote>
+
+
+<h2><span class="n">04</span>각 장의 구성</h2>
+
+<p>열한 장이 같은 뼈대를 쓴다. 두 번째 회차부터는 필요한 블록만 골라 읽으면 된다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>블록</th><th>무엇이 들어 있나</th></tr>
+  <tr><td>왜 이 장이 필요한가</td><td>앞 장의 결과가 왜 부족한지에서 출발한다</td></tr>
+  <tr><td>알아야 할 개념</td><td>실습에서 마주칠 개념만. 끝에 <strong>용어표</strong> — 영문 풀네임과 역할을 함께 적는다</td></tr>
+  <tr><td>학습 목표</td><td>이 장을 마치면 무엇을 <em>할 수 있는지</em></td></tr>
+  <tr><td>최종적으로 만들 것</td><td>도판과 그 아래 <strong>확인 명령 + 기대값</strong>. 그리고 <span class="why">WHY</span> 블록이 그 그림을 만드는 설정 파일의 경로와 발췌를 보여 준다</td></tr>
+  <tr><td>따라하기</td><td>목적 → 명령 → 옵션 설명 → 실행 결과 → 판정</td></tr>
+  <tr><td>일부러 실패시키기</td><td>실제로 겪을 실수를 재현하고 에러 메시지를 읽은 뒤 고친다</td></tr>
+  <tr><td>자주 겪는 문제</td><td>증상과 첫 번째로 볼 곳</td></tr>
+  <tr><td>부록 A · B · C</td><td>완료 체크리스트(명령 + 기대값) · 명령어 레퍼런스 · 참고 출처</td></tr>
+</table>
+</div>
+
+<blockquote class="ok">
+  <span class="label">도판 뒤에는 항상 근거가 온다</span>
+  <p>그림을 보고 “그래서 저게 왜 저렇게 되는가”가 남지 않도록, 모든 도판 뒤에 <strong>그 그림을 만드는 설정 파일</strong>의 저장소 경로와 해당 부분 발췌, 그리고 <strong>설정 한 줄이 그림의 무엇이 되는지</strong>를 짝지은 표를 둔다. 문서만 보고 실습해도 이해가 끊기지 않게 하려는 구성이다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">실행 결과는 지어내지 않는다</span>
+  <p>문서에 실린 출력은 전부 <strong>실제로 실행해 얻은 것</strong>이다. 값이 환경마다 다른 부분(IP · 파드 접미사 · 타임스탬프)은 그대로 두고 각주를 달았다. 확인하지 못한 출력은 싣지 않고 “이런 형태의 출력이 나온다”고 서술했다.</p>
+</blockquote>
+
+
+<h2><span class="n">05</span>실습 코드</h2>
+
+<p>문서의 코드 블록이 정본이고 <code>labs/</code> 는 그 실행 가능한 형태다. 둘이 어긋나면 문서를 기준으로 맞춘다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/ — 역할별로 나눈다</span>
+<pre><code class="language-text">study/labs/
+├── infra/kind-cluster.yaml     01장
+├── apps/
+│   ├── order-api/              02·03장 — 커스텀 메트릭이 있는 앱
+│   ├── gateway/                02·03장 — 앞단
+│   ├── chaos/                  10장 — 실험 정의와 게임 데이 시트
+│   └── redeploy.sh             03장 — 태그를 올려 재배포
+├── k8s/                        03장 매니페스트 · 06·07장 연동 리소스
+├── monitoring/                 04·05·07·08장 values 와 대시보드 JSON
+├── preflight.sh                00장 사전 점검
+└── rebuild.sh                  09장 — 빈 클러스터에서 한 번에 복원</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>앱</th><th>역할</th><th>쓰는 장</th></tr>
+  <tr><td><code>order-api</code></td><td>커스텀 메트릭 <code>orders.created</code> · <code>rejected</code> · <code>processing</code> · <code>stored</code> 와 ChaosController. <strong>이름을 바꾸지 않는다</strong> — 06장 PromQL 과 07장 대시보드가 의존한다</td><td>02 – 10</td></tr>
+  <tr><td><code>gateway</code></td><td>앞단. 지연이 전파되는 모습을 여기서 본다</td><td>02 – 10</td></tr>
+  <tr><td><code>k8s-sample-boot</code><br>(외부)</td><td><code>/hello</code> 가 호스트명을 돌려준다. 어느 파드가 응답했는지 눈으로 판정하는 최소 예제</td><td>02 · 03</td></tr>
+  <tr><td><code>docker-sample</code><br>(외부)</td><td><code>Dockerfile</code> 4종으로 이미지 크기 감축을 재현</td><td>03</td></tr>
+</table>
+</div>
+
+<p>외부 앱 둘은 저장소에 복사해 두지 않는다. 커밋을 고정해 받아 온다.</p>
+
+<pre><code class="language-bash">bash study/scripts/fetch-samples.sh</code></pre>
+
+
+<h2><span class="n">06</span>버전</h2>
+
+<p>이 시리즈의 실행 결과는 아래 조합에서 <strong>실제로 실행해 얻은 것</strong>이다. 버전을 올리면 화면이 달라질 수 있으므로, 문서의 출력과 대조하려면 이 조합을 그대로 쓴다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>구성요소</th><th>버전</th><th>함정</th></tr>
+  <tr><td>Kubernetes / kind</td><td>1.36.x / v0.32.0</td><td>kubeadm 설정은 <code>v1beta4</code> — 맵이 아니라 목록이다</td></tr>
+  <tr><td>kube-prometheus-stack</td><td>차트 88.x</td><td>Operator v0.91 계열. <strong>CRD 는 helm upgrade 로 갱신되지 않는다</strong></td></tr>
+  <tr><td>Prometheus / Grafana</td><td>3.x / 13.x</td><td>데이터소스는 이름이 아니라 <code>uid</code> 로 참조</td></tr>
+  <tr><td>Loki</td><td>3.7.x</td><td>차트 저장소는 <code>grafana</code> 가 아니라 <strong><code>grafana-community</code></strong></td></tr>
+  <tr><td>로그 수집기</td><td>Grafana Alloy</td><td><strong>Promtail 은 2026-03-02 EOL.</strong> 검색 결과에 아직 나오지만 쓰지 않는다</td></tr>
+  <tr><td>Chaos Mesh</td><td>v2.8.2</td><td>kind 에서는 <code>chaosDaemon.runtime=containerd</code> 가 없으면 실험이 조용히 아무 일도 하지 않는다</td></tr>
+  <tr><td>Spring Boot / Cloud</td><td>4.1.0 / 2025.1.x</td><td>게이트웨이 프로퍼티는 <code>spring.cloud.gateway.server.webflux.*</code>. 릴리스 트레인이 어긋나도 <strong>빌드는 성공한다</strong></td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">38편 과정과 버전이 다르다</span>
+  <p>같은 저장소의 <a href="../course/index.html">도커 &amp; 쿠버네티스 38편 과정</a>은 2026-09-03 기준 <strong>1.37.0 · kind v0.33.0 · 차트 89.2.2</strong> 로 고정돼 있다. 이 시리즈를 1.37 라인으로 올리려면 11장의 명령과 출력을 다시 검증해야 하므로, <strong>검증된 조합을 그대로 유지</strong>하고 차이를 여기 적어 둔다. <strong>두 과정을 같은 클러스터에서 섞어 돌리지 않는다.</strong></p>
+</blockquote>
+
+<blockquote>
+  <span class="label">하드웨어</span>
+  <p>Docker Desktop 에 <strong>CPU 4코어 · 메모리 10 GiB 이상</strong>을 할당한다. 10 GiB 미만이면 04장 설치에서 반드시 막힌다. 메모리가 12 GiB 미만이면 01장에서 워커를 하나로 줄이는 선택지가 있다 — 그 경우 라벨 두 개를 같은 노드에 붙인다.</p>
+</blockquote>
+
+
+<div class="pager">
+  <span class="spacer"></span>
+  <a class="next" href="ch00-setup-versions.html">
+    <span class="dir">여기서 시작 →</span>
+    <span class="t">00 · 실습 환경 준비와 버전 고정</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow212" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="arrow212r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b23b3b"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-del { fill: #ffffff; stroke: #b8860b; stroke-width: 1.2; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-q { font-size: 11.5px; font-weight: 700; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-err { stroke: #b23b3b; stroke-width: 1.1; fill: none; stroke-dasharray: 3 3; }
+  </style>
+
+  <text class="t-q" x="20" y="26" fill="#333">Reconcile 메서드 — 이벤트가 발생할 때마다 처음부터 다시 실행 (레벨 기반 트리거링)</text>
+
+  <rect class="box-accent" x="20" y="46" width="180" height="70" rx="4"/>
+  <text class="t-title" x="110" y="74" text-anchor="middle">CR 인스턴스</text>
+  <text class="t-title" x="110" y="92" text-anchor="middle">존재하는가?</text>
+
+  <line class="line" x1="200" y1="81" x2="236" y2="81" marker-end="url(#arrow212)"/>
+  <text class="t-sub" x="218" y="70" text-anchor="middle">예</text>
+
+  <rect class="box" x="240" y="46" width="170" height="70" rx="4"/>
+  <text class="t-title" x="325" y="74" text-anchor="middle">CR 검사</text>
+  <text class="t-sub" x="325" y="94" text-anchor="middle">OpenAPI 스키마 (21.5)</text>
+
+  <line class="line" x1="410" y1="81" x2="446" y2="81" marker-end="url(#arrow212)"/>
+
+  <rect class="box" x="450" y="46" width="170" height="70" rx="4"/>
+  <text class="t-title" x="535" y="74" text-anchor="middle">CR 초기화</text>
+  <text class="t-sub" x="535" y="94" text-anchor="middle">최초 1회 필요한 준비 작업</text>
+
+  <line class="line" x1="620" y1="81" x2="656" y2="81" marker-end="url(#arrow212)"/>
+
+  <rect class="box-accent" x="660" y="46" width="200" height="70" rx="4"/>
+  <text class="t-title" x="760" y="74" text-anchor="middle">메인 오퍼레이터 로직</text>
+  <text class="t-sub" x="760" y="94" text-anchor="middle">상태 변경 필요 여부 확인·반영</text>
+
+  <!-- 재조정 루프 -->
+  <path class="line" d="M 760 116 C 760 160, 110 160, 110 122" marker-end="url(#arrow212)"/>
+  <text class="t-sub" x="435" y="150" text-anchor="middle">조정 리스케줄링 — 다음 이벤트 또는 주기마다 처음부터 반복</text>
+
+  <!-- 아니오 경로: CR 삭제 처리 -->
+  <line class="line" x1="110" y1="116" x2="110" y2="176" marker-end="url(#arrow212)"/>
+  <text class="t-sub" x="130" y="150" text-anchor="middle">아니오</text>
+
+  <rect class="box-del" x="20" y="180" width="180" height="70" rx="4"/>
+  <text class="t-title" x="110" y="208" text-anchor="middle">CR 삭제됨</text>
+  <text class="t-sub" x="110" y="228" text-anchor="middle">소유하지 않은 외부 리소스 존재?</text>
+
+  <line class="line" x1="200" y1="215" x2="236" y2="215" marker-end="url(#arrow212)"/>
+
+  <rect class="box-del" x="240" y="180" width="220" height="70" rx="4"/>
+  <text class="t-title" x="350" y="208" text-anchor="middle">정리 · Finalizer</text>
+  <text class="t-sub" x="350" y="228" text-anchor="middle">클라우드 리소스·PV 등을 먼저 정리</text>
+  <text class="t-sub" x="350" y="242" text-anchor="middle">끝나야 CR 삭제 허용</text>
+
+  <line class="line" x1="460" y1="215" x2="496" y2="215" marker-end="url(#arrow212)"/>
+
+  <rect class="box" x="500" y="180" width="160" height="70" rx="4"/>
+  <text class="t-title" x="580" y="222" text-anchor="middle">종료</text>
+
+  <!-- 에러 처리 배너 — row2 다음 여유 공간에 배치, 다른 요소와 겹치지 않음 -->
+  <rect class="box" x="20" y="280" width="860" height="40" rx="4" stroke="#b23b3b" stroke-dasharray="3 3"/>
+  <text class="t-sub" x="450" y="304" text-anchor="middle" fill="#b23b3b">에러 처리 — 검사·초기화·메인 로직·정리 중 어느 단계에서든 실패할 수 있다 → 기록 후 다음 조정 사이클에 재시도</text>
+
+  <text class="t-cap" x="450" y="446" text-anchor="middle">"무엇이 바뀌었는지"는 중요하지 않다 — 매번 전체를 다시 확인하는 이 단순함이 분산 시스템에서 오히려 안정적이다.</text>
+</svg>

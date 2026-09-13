@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>부록 · 우분투와 윈도우에서 도구 설치 — 쿠버네티스 관측성</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em}
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+.topbar{position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
+  gap:16px; padding:12px 0; margin-bottom:28px; background:rgba(255,255,255,.92);
+  backdrop-filter:saturate(180%) blur(8px); border-bottom:1px solid var(--line)}
+.topbar a{display:inline-flex; align-items:center; gap:8px; font-size:15.5px; color:var(--ac);
+  text-decoration:none; font-weight:600}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+p{margin:0 0 14px} ul,ol{margin:0 0 16px; padding-left:22px} li{margin:0 0 6px}
+a{color:var(--ac)} strong{font-weight:700}
+
+blockquote{margin:20px 0; padding:16px 20px; border-left:4px solid var(--ac);
+  background:var(--soft); border-radius:0 6px 6px 0}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em; color:var(--ac); margin-bottom:6px}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+
+pre{margin:14px 0; padding:16px 18px; overflow-x:auto; background:var(--soft);
+  border:1px solid var(--line); border-radius:6px}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft);
+  border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px;
+  padding-top:24px; border-top:1px solid var(--line)}
+.pager a{flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+
+@media (max-width:760px){
+  body{font-size:16.5px} h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%} .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="index.html">← 목차로</a>
+  <span class="where">APPENDIX · 설치</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>우분투와 윈도우에서 도구 설치</h1>
+  <p class="lede">본문의 실습과 실행 결과는 macOS 기준이다. 다른 운영체제에서 도구를 갖추는 절차만 여기에 모았다.</p>
+</header>
+
+<blockquote class="warn">
+  <span class="label">먼저 알아 둘 것</span>
+  <p>이 문서는 <strong>도구 설치까지만</strong> 다룬다. 설치가 끝나면 00장의 <a href="ch00-setup-versions.html">헬름 저장소 등록</a>부터 이어서 진행한다. 본문에 실린 실행 결과(버전 숫자, 경로)는 맥에서 얻은 것이므로 화면이 조금 다를 수 있다 — 판정 기준은 같다.</p>
+</blockquote>
+
+
+<h2><span class="n">01</span>무엇을 까는가</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>도구</th><th>영문 풀네임</th><th>무슨 일을 하나</th></tr>
+  <tr><td>Docker</td><td>Docker Engine</td><td>컨테이너 런타임. kind 노드 컨테이너가 여기서 돈다</td></tr>
+  <tr><td>kubectl</td><td>Kubernetes Control</td><td>쿠버네티스 API 서버에 명령을 보내는 클라이언트</td></tr>
+  <tr><td>kind</td><td>Kubernetes IN Docker</td><td>도커 컨테이너를 노드로 삼아 로컬 클러스터를 만든다</td></tr>
+  <tr><td>Helm</td><td>Helm</td><td>차트(매니페스트 묶음)를 설치하는 패키지 매니저</td></tr>
+  <tr><td>JDK 21</td><td>Java Development Kit</td><td>02장 스프링 앱 두 개를 빌드한다</td></tr>
+  <tr><td>jq</td><td>jq</td><td>JSON 응답에서 값만 뽑는 명령줄 도구</td></tr>
+</table>
+</div>
+
+
+<h2><span class="n">02</span>Ubuntu 22.04 / 24.04</h2>
+
+<h3>1. Docker Engine</h3>
+
+<pre><code class="language-bash">curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"   # 로그아웃 후 재로그인 필요</code></pre>
+
+<blockquote class="warn">
+  <span class="label">docker 그룹의 의미</span>
+  <p><code>docker</code> 그룹에 넣는 것은 사실상 root 권한을 주는 것이다. 도커 소켓에 접근할 수 있으면 호스트 파일 시스템을 통째로 마운트한 컨테이너를 띄울 수 있기 때문이다. 개인 실습 머신에서는 편의를 택해도 되지만, 공용 서버라면 rootless 모드를 검토한다.</p>
+</blockquote>
+
+<h3>2. kubectl</h3>
+
+<pre><code class="language-bash">KVER="$(curl -sL https://dl.k8s.io/release/stable.txt)"
+curl -LO "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+rm -f kubectl</code></pre>
+
+<h3>3. kind</h3>
+
+<pre><code class="language-bash"># arm64 머신이면 kind-linux-arm64 로 바꾼다
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.32.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind</code></pre>
+
+<h3>4. Helm</h3>
+
+<pre><code class="language-bash">curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+rm -f get_helm.sh</code></pre>
+
+<h3>5. JDK 21 과 jq</h3>
+
+<pre><code class="language-bash">sudo apt-get update
+sudo apt-get install -y openjdk-21-jdk jq</code></pre>
+
+
+<h2><span class="n">03</span>Windows — WSL2 위에서</h2>
+
+<blockquote class="warn">
+  <span class="label">파워셸에서 직접 하지 않는다</span>
+  <p>윈도우에서는 <strong>WSL2 안의 우분투</strong>를 실습 환경으로 쓴다. 파워셸에서 직접 진행하면 볼륨 마운트와 cgroup 문제로 시간을 버린다.</p>
+</blockquote>
+
+<pre><code class="language-powershell"># PowerShell (관리자 권한)
+wsl --install -d Ubuntu-24.04
+wsl --set-default-version 2</code></pre>
+
+<p>설치가 끝나면 Docker Desktop 의 <strong>Settings → Resources → WSL Integration</strong> 에서 해당 배포판을 켠다. 그다음 우분투 셸에 들어가 위 02절의 2~5번(kubectl · kind · Helm · JDK)을 그대로 실행한다. Docker Engine 은 Docker Desktop 이 제공하므로 우분투 안에서 따로 깔지 않는다.</p>
+
+
+<h2><span class="n">04</span>설치 확인</h2>
+
+<pre><code class="language-bash">docker version --format '{{.Server.Version}}'
+kubectl version --client -o yaml | grep gitVersion
+kind version
+helm version --short
+java -version
+jq --version</code></pre>
+
+<p>여섯 줄이 모두 값을 내면 준비가 끝난 것이다. 이어서 00장의 <a href="ch00-setup-versions.html">헬름 저장소 등록</a>과 <a href="ch00-setup-versions.html">사전 점검 스크립트</a>를 진행한다.</p>
+
+<blockquote>
+  <span class="label">cgroup v2 확인</span>
+  <p>Kubernetes 1.35부터 cgroup v1 지원이 제거됐다. 다음 명령이 <code>cgroup2fs</code> 를 내야 한다.</p>
+  <pre><code class="language-bash">stat -fc %T /sys/fs/cgroup</code></pre>
+</blockquote>
+
+
+<div class="pager">
+  <a href="index.html">
+    <span class="dir">← 목차</span>
+    <span class="t">장 목록으로</span>
+  </a>
+  <a class="next" href="ch00-setup-versions.html">
+    <span class="dir">이어서 →</span>
+    <span class="t">00 · 실습 환경 준비와 버전 고정</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

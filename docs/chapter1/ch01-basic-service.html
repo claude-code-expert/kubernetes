@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH01 기본 서비스 설치 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 외부 파일 참조가 아닌 인라인 SVG로 임베드 → 단일 파일로도 그림이 깨지지 않음.
+        수정할 때는 이 파일 안의 <svg> 블록에서 <text> 내용을 직접 고치면 된다. (동일 그림의 단독 .svg 파일도 별도 제공)
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4; /* 액센트 1색: 절 번호·용어·주석 라벨·링크에만 사용 */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  /* 최초 등장 용어: 한글 용어 + 영문 풀네임, 점선 밑줄. 정의는 문장으로 이어 쓴다. */
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+
+  .appendix-divider { margin: 64px 0 40px; padding-top: 40px; border-top: 2px solid var(--ink); }
+  .appendix-divider .tag { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .appendix-divider h2 { font-size: 26px; font-weight: 700; margin: 8px 0 10px; }
+  .appendix-divider p { color: var(--sub); font-size: 15px; margin-bottom: 0; }
+
+  nav.toc-appendix { margin-bottom: 48px; padding-top: 18px; border-top: 1px dashed var(--line); font-size: 14.5px; }
+  nav.toc-appendix .appendix-lead { display:block; font-weight:700; color:var(--accent); margin-bottom:10px; }
+  nav.toc-appendix a { color: var(--ink); text-decoration: none; display: inline-block; margin: 0 18px 6px 0; padding: 2px 0; border-bottom: 1px solid #efefef; }
+  nav.toc-appendix a:hover { color: var(--accent); }
+  nav.toc-appendix .num { color: var(--accent); font-weight: 600; margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 01</div>
+  <h1>기본 서비스 설치</h1>
+  <p class="ch-desc">저널(일기) 웹 애플리케이션 하나를 처음부터 끝까지 쿠버네티스에 올리며, 배포에 필요한 핵심 리소스를 한 바퀴 도는 장. Deployment · Service · Ingress · ConfigMap · Secret · StatefulSet · Helm이 실전 순서대로 등장한다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 모든 것을 YAML 선언으로 기술하고 Git에 두면, 배포·리뷰·롤백이 코드 워크플로와 같아진다.</p>
+  <p>2. 무상태(frontend)는 Deployment, 상태 보유(Redis)는 StatefulSet, 외부 노출은 Service + Ingress로 역할이 갈린다.</p>
+  <p>3. 환경별 차이는 이미지를 다시 빌드하는 게 아니라 ConfigMap·Secret·Helm values로 주입한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1-1"><span class="num">1.1</span>애플리케이션 개요</a>
+  <a href="#s1-2"><span class="num">1.2</span>구성 파일 관리</a>
+  <a href="#s1-3"><span class="num">1.3</span>디플로이먼트를 이용한 복제 서비스 생성</a>
+  <a href="#s1-4"><span class="num">1.4</span>HTTP 트래픽을 처리하는 외부 인그레스 설치</a>
+  <a href="#s1-5"><span class="num">1.5</span>컨피그맵으로 애플리케이션 구성</a>
+  <a href="#s1-6"><span class="num">1.6</span>시크릿 인증 관리</a>
+  <a href="#s1-7"><span class="num">1.7</span>간단한 스테이트풀 데이터베이스 배포</a>
+  <a href="#s1-8"><span class="num">1.8</span>서비스를 응용한 TCP 로드 밸런서 구축</a>
+  <a href="#s1-9"><span class="num">1.9</span>인그레스로 트래픽을 스태틱 파일 서버로 전달</a>
+  <a href="#s1-10"><span class="num">1.10</span>헬름을 이용한 애플리케이션 파라미터화</a>
+  <a href="#s1-11"><span class="num">1.11</span>서비스 배포 모범 사례</a>
+
+  <a href="#a1"><span class="num">A.1</span>전체 그림</a>
+  <a href="#a2"><span class="num">A.2</span>사전 구성</a>
+  <a href="#a3"><span class="num">A.3</span>호출 흐름 다섯 단계</a>
+  <a href="#a4"><span class="num">A.4</span>단계별 검증 명령</a>
+  <a href="#a5"><span class="num">A.5</span>실무 주의점</a>
+
+</nav>
+
+<nav class="toc-appendix">
+  <a href="#appendix-a" class="appendix-lead">부록 A · 서비스 간 호출 경로 — 이름에서 파드까지</a>
+  <a href="#a1"><span class="num">A.1</span>전체 그림</a>
+  <a href="#a2"><span class="num">A.2</span>사전 구성</a>
+  <a href="#a3"><span class="num">A.3</span>호출 흐름 다섯 단계</a>
+  <a href="#a4"><span class="num">A.4</span>단계별 검증 명령</a>
+  <a href="#a5"><span class="num">A.5</span>실무 주의점</a>
+</nav>
+
+<section id="s1-1">
+  <h2 class="sec"><span class="num">1.1</span>애플리케이션 개요</h2>
+  <p class="lead">예제는 온라인 저널(일기장)이다. 규모는 작지만 실제 서비스가 갖출 구성 요소를 전부 갖고 있다.</p>
+  <p>먼저 이 장 전체를 관통하는 두 단위부터. <dfn class="term">파드 <span class="en">(Pod)</span></dfn>는 하나 이상의 컨테이너를 묶어 배포·스케줄링하는 쿠버네티스의 최소 실행 단위이고, <dfn class="term">워크로드 <span class="en">(Workload)</span></dfn>는 그 파드들을 직접 만들지 않고 컨트롤러 리소스(Deployment, StatefulSet 등)에 맡겨 굴리는 애플리케이션 전체를 가리키는 상위 개념이다. 어떤 워크로드 리소스를 고르느냐가 이 장의 첫 번째 판단이다.</p>
+  <table>
+    <tr><th>컴포넌트</th><th>기술</th><th>쿠버네티스에서 맡는 리소스</th></tr>
+    <tr><td>API 프론트엔드</td><td>TypeScript로 작성한 Node.js 앱, 8080 포트의 <code>/api/*</code> 처리</td><td>Deployment + Service</td></tr>
+    <tr><td>데이터 저장소</td><td>Redis — 저널 엔트리 조회·추가·삭제</td><td>StatefulSet + Service 2개</td></tr>
+    <tr><td>정적 파일</td><td>HTML·CSS·JS를 NGINX가 서빙</td><td>Deployment + Service</td></tr>
+    <tr><td>외부 진입점</td><td>경로 기반 HTTP 라우팅</td><td>Ingress</td></tr>
+  </table>
+  <p>이 장의 진짜 주제는 저널 앱이 아니라, 위 네 줄을 채우는 데 필요한 <strong>판단 기준</strong>이다. 어떤 워크로드에 어떤 리소스를 쓰고, 구성은 어디에 두는가.</p>
+</section>
+
+<section id="s1-2">
+  <h2 class="sec"><span class="num">1.2</span>구성 파일 관리</h2>
+  <p>쿠버네티스는 <dfn class="term">선언형 <span class="en">(Declarative)</span></dfn> 시스템이다. "이 컨테이너를 실행해라"라고 절차를 명령하는 대신, 애플리케이션이 도달해야 할 <dfn class="term">원하는 상태 <span class="en">(Desired State)</span></dfn>를 기술해 제출하면 시스템이 그 상태를 스스로 유지한다. 이 선언을 담은 YAML/JSON 파일이 <dfn class="term">매니페스트 <span class="en">(Manifest)</span></dfn>다 — <code>apiVersion</code>, <code>kind</code>, <code>metadata</code>, <code>spec</code> 네 가지가 기본 골격이다. 매니페스트를 클러스터에 적용하는 CLI 도구가 <dfn class="term">kubectl <span class="en">(Kube Control)</span></dfn>이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  
+  .appendix-divider { margin: 64px 0 40px; padding-top: 40px; border-top: 2px solid var(--ink); }
+  .appendix-divider .tag { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .appendix-divider h2 { font-size: 26px; font-weight: 700; margin: 8px 0 10px; }
+  .appendix-divider p { color: var(--sub); font-size: 15px; margin-bottom: 0; }
+
+  nav.toc-appendix { margin-bottom: 48px; padding-top: 18px; border-top: 1px dashed var(--line); font-size: 14.5px; }
+  nav.toc-appendix .appendix-lead { display:block; font-weight:700; color:var(--accent); margin-bottom:10px; }
+  nav.toc-appendix a { color: var(--ink); text-decoration: none; display: inline-block; margin: 0 18px 6px 0; padding: 2px 0; border-bottom: 1px solid #efefef; }
+  nav.toc-appendix a:hover { color: var(--accent); }
+  nav.toc-appendix .num { color: var(--accent); font-weight: 600; margin-right: 6px; }
+</style>
+
+  <!-- 박스 5개: Git → kubectl → API 서버 → etcd → 컨트롤러 -->
+  <rect class="box" x="20" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="90" y="100" text-anchor="middle">Git 리포지터리</text>
+  <text class="t-sub" x="90" y="122" text-anchor="middle">journal.yaml</text>
+
+  <rect class="box" x="200" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="270" y="100" text-anchor="middle">kubectl apply</text>
+  <text class="t-sub" x="270" y="122" text-anchor="middle">-f journal.yaml</text>
+
+  <rect class="box" x="380" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="450" y="100" text-anchor="middle">API 서버</text>
+  <text class="t-sub" x="450" y="122" text-anchor="middle">검증 · 저장</text>
+
+  <rect class="box" x="560" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="630" y="100" text-anchor="middle">etcd</text>
+  <text class="t-sub" x="630" y="122" text-anchor="middle">원하는 상태 기록</text>
+
+  <rect class="box-accent" x="740" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="810" y="100" text-anchor="middle">컨트롤러</text>
+  <text class="t-sub" x="810" y="122" text-anchor="middle">조정 루프 반복</text>
+
+  <!-- 연결선 -->
+  <line class="line" x1="160" y1="106" x2="196" y2="106" marker-end="url(#arrow1)"/>
+  <line class="line" x1="340" y1="106" x2="376" y2="106" marker-end="url(#arrow1)"/>
+  <line class="line" x1="520" y1="106" x2="556" y2="106" marker-end="url(#arrow1)"/>
+  <line class="line" x1="700" y1="106" x2="736" y2="106" marker-end="url(#arrow1)"/>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="192" text-anchor="middle">YAML에 적은 것은 명령이 아니라 "원하는 상태"다.</text>
+  <text class="t-cap" x="450" y="214" text-anchor="middle">실제 상태가 어긋나면 컨트롤러가 원하는 상태로 되돌린다. 그래서 YAML은 Git으로 관리할 가치가 있다.</text>
+</svg>
+    <figcaption>그림 1-1. 선언형 구성 관리의 흐름. YAML은 명령이 아니라 상태 선언이다. <dfn class="term">API 서버 <span class="en">(kube-apiserver)</span></dfn>는 모든 요청이 거치는 컨트롤 플레인의 관문이고, <dfn class="term">etcd</dfn>는 클러스터의 원하는 상태 전체를 저장하는 분산 키-값 데이터베이스, <dfn class="term">컨트롤러 <span class="en">(Controller)</span></dfn>는 실제 상태와 원하는 상태의 차이를 감지해 끊임없이 메꾸는 조정 루프다.</figcaption>
+  </figure>
+  <p>선언이 파일이라는 사실이 곧 운영 방식을 결정한다. YAML을 Git에 두면:</p>
+  <ul class="tight">
+    <li><strong>리뷰</strong> — 인프라 변경이 코드 리뷰(PR)를 통과한다.</li>
+    <li><strong>이력과 롤백</strong> — 장애 시 "지난주의 그 상태"로 정확히 되돌릴 수 있다.</li>
+    <li><strong>단일 진실 공급원</strong> — 클러스터를 직접 만지는 대신 리포지터리를 고치고 적용한다. 클러스터에서 먼저 고쳤다면 반드시 리포지터리에 역반영해야 한다.</li>
+  </ul>
+  <p>애플리케이션마다 디렉터리 하나, 그 안에 리소스별 YAML과 README를 두는 단순한 구조로 시작하면 충분하다. 이 아이디어를 끝까지 밀어붙인 것이 18장의 깃옵스다.</p>
+</section>
+
+<section id="s1-3">
+  <h2 class="sec"><span class="num">1.3</span>디플로이먼트를 이용한 복제 서비스 생성</h2>
+  <p>프론트엔드는 상태가 없으므로(모든 상태는 Redis에) 동일한 복제본을 여러 개 띄우기만 하면 된다. 이 일을 하는 리소스가 <dfn class="term">디플로이먼트 <span class="en">(Deployment)</span></dfn> — 무상태 애플리케이션의 표준 배포 단위로, 이미지 교체 시 파드를 점진적으로 갈아 끼우고(롤링 업데이트) 롤백 이력을 관리한다. 실제 파드 개수 유지는 디플로이먼트가 내부적으로 만드는 <dfn class="term">레플리카셋 <span class="en">(ReplicaSet)</span></dfn>이 맡는다 — 지정한 개수의 동일 파드를 항상 유지하는 컨트롤러다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-side { font-size: 12px; fill: #555555; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  
+  .appendix-divider { margin: 64px 0 40px; padding-top: 40px; border-top: 2px solid var(--ink); }
+  .appendix-divider .tag { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .appendix-divider h2 { font-size: 26px; font-weight: 700; margin: 8px 0 10px; }
+  .appendix-divider p { color: var(--sub); font-size: 15px; margin-bottom: 0; }
+
+  nav.toc-appendix { margin-bottom: 48px; padding-top: 18px; border-top: 1px dashed var(--line); font-size: 14.5px; }
+  nav.toc-appendix .appendix-lead { display:block; font-weight:700; color:var(--accent); margin-bottom:10px; }
+  nav.toc-appendix a { color: var(--ink); text-decoration: none; display: inline-block; margin: 0 18px 6px 0; padding: 2px 0; border-bottom: 1px solid #efefef; }
+  nav.toc-appendix a:hover { color: var(--accent); }
+  nav.toc-appendix .num { color: var(--accent); font-weight: 600; margin-right: 6px; }
+</style>
+
+  <!-- Deployment -->
+  <rect class="box-accent" x="270" y="20" width="180" height="56" rx="4"/>
+  <text class="t-title" x="360" y="44" text-anchor="middle">Deployment</text>
+  <text class="t-sub" x="360" y="63" text-anchor="middle">frontend · replicas: 3</text>
+  <text class="t-side" x="470" y="50">이미지·버전 교체, 롤아웃 담당</text>
+
+  <!-- ReplicaSet -->
+  <rect class="box" x="270" y="118" width="180" height="56" rx="4"/>
+  <text class="t-title" x="360" y="142" text-anchor="middle">ReplicaSet</text>
+  <text class="t-sub" x="360" y="161" text-anchor="middle">파드 수 유지 담당</text>
+  <text class="t-side" x="470" y="148">파드가 죽으면 새로 채운다</text>
+
+  <!-- 연결: Deployment → ReplicaSet -->
+  <line class="line" x1="360" y1="76" x2="360" y2="114" marker-end="url(#arrow2)"/>
+
+  <!-- 버스 라인: ReplicaSet → Pods -->
+  <line class="line" x1="360" y1="174" x2="360" y2="200"/>
+  <line class="line" x1="130" y1="200" x2="590" y2="200"/>
+  <line class="line" x1="130" y1="200" x2="130" y2="226" marker-end="url(#arrow2)"/>
+  <line class="line" x1="360" y1="200" x2="360" y2="226" marker-end="url(#arrow2)"/>
+  <line class="line" x1="590" y1="200" x2="590" y2="226" marker-end="url(#arrow2)"/>
+
+  <!-- Pods -->
+  <rect class="box" x="60" y="230" width="140" height="52" rx="4"/>
+  <text class="t-title" x="130" y="252" text-anchor="middle">Pod</text>
+  <text class="t-sub" x="130" y="270" text-anchor="middle">frontend-abc12</text>
+
+  <rect class="box" x="290" y="230" width="140" height="52" rx="4"/>
+  <text class="t-title" x="360" y="252" text-anchor="middle">Pod</text>
+  <text class="t-sub" x="360" y="270" text-anchor="middle">frontend-def34</text>
+
+  <rect class="box" x="520" y="230" width="140" height="52" rx="4"/>
+  <text class="t-title" x="590" y="252" text-anchor="middle">Pod</text>
+  <text class="t-sub" x="590" y="270" text-anchor="middle">frontend-ghi56</text>
+
+  <text class="t-side" x="360" y="314" text-anchor="middle">사용자는 Deployment만 다루면 된다. ReplicaSet과 Pod는 Deployment가 만들어 관리한다.</text>
+</svg>
+    <figcaption>그림 1-2. Deployment → ReplicaSet → Pod 계층. 버전 교체는 Deployment가, 개수 유지는 ReplicaSet이 맡는다. 사용자는 Deployment만 다룬다.</figcaption>
+  </figure>
+
+  <h3>1.3.1 이미지 관리 모범 사례</h3>
+  <p>두 가지가 핵심이다. 첫째, <code>latest</code> 태그를 프로덕션에 쓰지 않는다. 어느 시점의 어떤 코드가 돌고 있는지 알 수 없게 되고, 노드마다 다른 버전이 캐시될 수 있다. <strong>시맨틱 버전 + 빌드 식별자(예: 커밋 해시)</strong> 조합으로 태그를 고정한다. 둘째, 한 번 푸시한 태그 위에 다른 이미지를 덮어쓰지 않는다(불변 태그).</p>
+
+  <h3>1.3.2 애플리케이션 레플리카 생성</h3>
+  <p>최소한의 프로덕션 요건을 담은 Deployment 예시다. 읽기 전에 용어 세 개만. <dfn class="term">레이블 <span class="en">(Label)</span></dfn>은 오브젝트에 붙이는 키-값 메타데이터, <dfn class="term">셀렉터 <span class="en">(Selector)</span></dfn>는 그 레이블 조건으로 대상을 골라내는 질의문이다 — 서비스가 파드를 찾고 디플로이먼트가 자기 파드를 인식하는 근거가 전부 이 둘이다. <dfn class="term">프로브 <span class="en">(Probe)</span></dfn>는 kubelet이 컨테이너 상태를 주기 점검하는 헬스체크로, liveness는 실패 시 컨테이너를 재시작하고 readiness는 실패 시 트래픽 대상에서 제외한다(재시작하지 않음).</p>
+<pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: my-repo/journal-frontend:v1.0.2-abc123
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080</code></pre>
+  <p><dfn class="term">리소스 요청과 제한 <span class="en">(Resource Requests / Limits)</span></dfn>은 컨테이너가 보장받을 자원(requests)과 넘을 수 없는 상한(limits)이다. 위처럼 둘을 같게 두면 <dfn class="term">QoS 클래스 <span class="en">(Quality of Service Class)</span></dfn> 중 축출 우선순위가 가장 낮은 Guaranteed 등급이 되어 예측 가능성이 최대가 된다(상세는 8장). 적용과 확인은 <code>kubectl apply -f frontend.yaml</code> 후 <code>kubectl get pods -l app=frontend</code>. 적용한 YAML은 잊지 말고 Git에 커밋한다.</p>
+</section>
+
+<section id="s1-4">
+  <h2 class="sec"><span class="num">1.4</span>HTTP 트래픽을 처리하는 외부 인그레스 설치</h2>
+  <p>파드는 기본적으로 클러스터 밖에서 접근할 수 없다. 외부 노출에는 리소스 두 개가 협력한다. <dfn class="term">서비스 <span class="en">(Service)</span></dfn>는 계속 생겼다 사라지는 파드 집합 앞에 고정된 이름과 가상 IP를 제공하는 추상화로, 기본 타입인 <dfn class="term">ClusterIP</dfn>는 클러스터 내부에서만 접근 가능한 가상 IP를 부여한다. 그 앞단의 <dfn class="term">인그레스 <span class="en">(Ingress)</span></dfn>는 호스트 이름과 URL 경로 기준으로 외부 HTTP/HTTPS 트래픽을 어느 서비스로 보낼지 정하는 라우팅 규칙이다. 단, 인그레스는 규칙 선언일 뿐이라 이를 읽어 실제 리버스 프록시로 반영하는 구현체인 <dfn class="term">인그레스 컨트롤러 <span class="en">(Ingress Controller)</span></dfn>가 클러스터에 없으면 아무 일도 일어나지 않는다.</p>
+<pre><code>apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: journal-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 8080</code></pre>
+
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    책 집필 시점과 달리 두 가지가 크게 바뀌었다.
+    ① <strong>Ingress API는 동결(frozen)</strong> 상태다. 안정(GA) API로 계속 쓸 수는 있지만 신규 기능 개발이 없으며, 쿠버네티스 프로젝트는 공식적으로 <dfn class="term">게이트웨이 API <span class="en">(Gateway API)</span></dfn> — Ingress의 한계를 보완하려고 GatewayClass(인프라 제공자) / Gateway(진입점) / HTTPRoute(라우팅 규칙)로 역할을 분리한 차세대 트래픽 라우팅 표준 — 사용을 권장한다.
+    ② 가장 널리 쓰이던 컨트롤러 <strong>ingress-nginx가 2026년 3월부로 은퇴(retired)</strong>했다. 이후 보안 패치가 전혀 없으므로 신규 학습·구축이라면 Gateway API 구현체(Envoy Gateway, Cilium, Traefik, kgateway 등)나 유지보수 중인 다른 컨트롤러를 선택해야 한다. 스터디에서 실습할 때 인그레스 개념은 그대로 배우되, 컨트롤러로 ingress-nginx를 새로 깔지 않는 것을 권장.
+    <span class="src">출처: kubernetes.io/docs/concepts/services-networking/ingress (Ingress 동결 및 Gateway API 권장) · kubernetes.io/blog/2026/01/29/ingress-nginx-statement (Steering Committee 공식 성명)</span>
+  </div>
+</section>
+
+<section id="s1-5">
+  <h2 class="sec"><span class="num">1.5</span>컨피그맵으로 애플리케이션 구성</h2>
+  <p>"페이지당 엔트리 10개" 같은 설정값을 이미지 안에 굽지 않는 이유는 하나다 — <strong>같은 바이너리를 환경마다 다르게 굴리기 위해서</strong>. 설정을 바꿀 때마다 이미지를 재빌드·재배포하는 것은 느리고, 코드 변경과 설정 변경의 이력이 섞여 원인 추적도 어려워진다. 이 비밀 아닌 설정 데이터를 키-값으로 담는 오브젝트가 <dfn class="term">컨피그맵 <span class="en">(ConfigMap)</span></dfn>이다. 환경 변수나 마운트된 파일로 파드에 주입하며, 전체 크기는 1MiB로 제한된다.</p>
+<pre><code>apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+data:
+  journalEntries: "10"</code></pre>
+  <p>파드에서는 환경 변수(<code>env.valueFrom.configMapKeyRef</code>)나 볼륨 마운트로 읽는다. 주의: 환경 변수로 주입한 값은 컨피그맵을 고쳐도 <strong>이미 뜬 파드에 반영되지 않는다</strong>. 반영하려면 롤아웃 재시작(<code>kubectl rollout restart deployment/frontend</code>)이 필요하다. 볼륨 마운트 방식은 갱신이 전파되지만 지연이 있다.</p>
+</section>
+
+<section id="s1-6">
+  <h2 class="sec"><span class="num">1.6</span>시크릿 인증 관리</h2>
+  <p>Redis 패스워드 같은 민감 정보는 소스 코드에도, 이미지에도 넣지 않는다. 이미지에 넣는 순간 레지스트리 접근 권한 = 패스워드 열람 권한이 되고, 환경별로 다른 패스워드도 쓸 수 없게 된다. 쿠버네티스의 답이 <dfn class="term">시크릿 <span class="en">(Secret)</span></dfn> — 비밀번호·토큰·인증서 등 민감 정보를 담는 오브젝트다. 사용법은 컨피그맵과 같지만 전용 타입(TLS, docker-registry 등)이 있고, RBAC으로 접근을 좁혀 쓰는 것이 전제다.</p>
+<pre><code># 생성
+kubectl create secret generic redis-passwd --from-literal=passwd=${RANDOM}
+
+# 파드에서 파일로 마운트 (컨테이너 spec 일부)
+volumeMounts:
+- name: passwd-volume
+  mountPath: /etc/redis-passwd
+  readOnly: true</code></pre>
+  <p>환경 변수보다 <strong>읽기 전용 볼륨 마운트</strong>가 낫다. 환경 변수는 프로세스 덤프나 자식 프로세스로 새기 쉽다.</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    Secret의 base64는 <strong>인코딩이지 암호화가 아니다</strong>. 기본 설정에서 etcd에 평문(base64)으로 저장되므로, 실무에서는 <code>EncryptionConfiguration</code>으로 저장 시 암호화(encryption at rest)를 켜거나 KMS 프로바이더를 연동하는 것이 표준이다. 이 내용은 4장·19장에서 다시 다룬다.
+    <span class="src">출처: kubernetes.io/docs/concepts/configuration/secret (기본 미암호화 명시) · kubernetes.io/docs/tasks/administer-cluster/encrypt-data</span>
+  </div>
+</section>
+
+<section id="s1-7">
+  <h2 class="sec"><span class="num">1.7</span>간단한 스테이트풀 데이터베이스 배포</h2>
+  <p>파드는 노드 장애·업그레이드·리밸런싱으로 언제든 다른 머신으로 옮겨질 수 있다. 무상태 앱은 상관없지만, 데이터를 든 앱이 옮겨지면 로컬 디스크의 데이터는 사라진다. 그래서 상태 보유 워크로드에는 두 가지 장치가 붙는다.</p>
+  <ul class="tight">
+    <li><dfn class="term">스테이트풀셋 <span class="en">(StatefulSet)</span></dfn> — 고유한 신원과 안정적 스토리지가 필요한 앱을 위한 컨트롤러. 파드 이름이 <code>redis-0</code>, <code>redis-1</code>처럼 고정되고 생성·삭제 순서가 보장되므로, "누가 마스터인가"를 이름으로 지목할 수 있게 된다.</li>
+    <li><dfn class="term">퍼시스턴트볼륨클레임 <span class="en">(PersistentVolumeClaim, PVC)</span></dfn> — 앱이 필요한 용량·접근 모드를 적어 스토리지를 요청하는 리소스. 실제 디스크 실체인 <dfn class="term">퍼시스턴트볼륨 <span class="en">(PersistentVolume, PV)</span></dfn>과 바인딩되어, 파드가 어느 노드로 가든 데이터가 따라붙는다. <code>volumeClaimTemplates</code>를 쓰면 레플리카마다 PVC가 자동으로 하나씩 만들어진다.</li>
+  </ul>
+<pre><code>apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  serviceName: redis
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7
+        ports:
+        - containerPort: 6379
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi</code></pre>
+  <p>redis-0을 마스터로, 나머지를 복제본으로 구성하는 초기화는 컨피그맵에 담은 설정/스크립트로 처리한다. 스테이트풀 워크로드의 심화(오퍼레이터 포함)는 16장의 주제다.</p>
+</section>
+
+<section id="s1-8">
+  <h2 class="sec"><span class="num">1.8</span>서비스를 응용한 TCP 로드 밸런서 구축</h2>
+  <p>Redis는 읽기와 쓰기의 갈 곳이 다르다. 읽기는 세 레플리카 어디로 가도 되지만, 쓰기는 마스터(redis-0)로만 가야 한다. 해법은 의외로 단순하다 — <strong>셀렉터가 다른 서비스를 두 개</strong> 만든다. 스테이트풀셋이 파드마다 자동으로 붙여주는 <code>statefulset.kubernetes.io/pod-name</code> 레이블 덕분에 특정 파드 하나만 셀렉트할 수 있다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .group { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-lbl { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-rep { stroke: #2456c4; stroke-width: 1.2; fill: none; }
+  
+  .appendix-divider { margin: 64px 0 40px; padding-top: 40px; border-top: 2px solid var(--ink); }
+  .appendix-divider .tag { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .appendix-divider h2 { font-size: 26px; font-weight: 700; margin: 8px 0 10px; }
+  .appendix-divider p { color: var(--sub); font-size: 15px; margin-bottom: 0; }
+
+  nav.toc-appendix { margin-bottom: 48px; padding-top: 18px; border-top: 1px dashed var(--line); font-size: 14.5px; }
+  nav.toc-appendix .appendix-lead { display:block; font-weight:700; color:var(--accent); margin-bottom:10px; }
+  nav.toc-appendix a { color: var(--ink); text-decoration: none; display: inline-block; margin: 0 18px 6px 0; padding: 2px 0; border-bottom: 1px solid #efefef; }
+  nav.toc-appendix a:hover { color: var(--accent); }
+  nav.toc-appendix .num { color: var(--accent); font-weight: 600; margin-right: 6px; }
+</style>
+
+  <!-- frontend 파드 -->
+  <rect class="box" x="20" y="170" width="150" height="70" rx="4"/>
+  <text class="t-title" x="95" y="199" text-anchor="middle">frontend 파드</text>
+  <text class="t-sub" x="95" y="219" text-anchor="middle">저널 API</text>
+
+  <!-- frontend → 쓰기 서비스 -->
+  <polyline class="line" points="170,190 225,190 225,90 276,90" marker-end="url(#arrow4)"/>
+  <text class="t-lbl" x="197" y="178" text-anchor="middle">쓰기</text>
+
+  <!-- frontend → 읽기 서비스 -->
+  <polyline class="line" points="170,220 225,220 225,320 276,320" marker-end="url(#arrow4)"/>
+  <text class="t-lbl" x="197" y="242" text-anchor="middle">읽기</text>
+
+  <!-- 쓰기 서비스 -->
+  <rect class="box-accent" x="280" y="60" width="190" height="60" rx="4"/>
+  <text class="t-title" x="375" y="85" text-anchor="middle">Service: redis</text>
+  <text class="t-sub" x="375" y="104" text-anchor="middle">redis-0 한 파드만 셀렉트</text>
+
+  <!-- 읽기 서비스 -->
+  <rect class="box-accent" x="280" y="290" width="190" height="60" rx="4"/>
+  <text class="t-title" x="375" y="315" text-anchor="middle">Service: redis-readonly</text>
+  <text class="t-sub" x="375" y="334" text-anchor="middle">레플리카 3개 전체 셀렉트</text>
+
+  <!-- StatefulSet 그룹 -->
+  <rect class="group" x="595" y="35" width="285" height="330" rx="4"/>
+  <text class="t-sub" x="610" y="58">StatefulSet: redis (replicas: 3)</text>
+
+  <!-- redis-0 -->
+  <rect class="box" x="630" y="75" width="215" height="50" rx="4"/>
+  <text class="t-title" x="737" y="96" text-anchor="middle">redis-0</text>
+  <text class="t-sub" x="737" y="114" text-anchor="middle">마스터 · 쓰기 수신</text>
+
+  <!-- redis-1 -->
+  <rect class="box" x="630" y="180" width="215" height="50" rx="4"/>
+  <text class="t-title" x="737" y="201" text-anchor="middle">redis-1</text>
+  <text class="t-sub" x="737" y="219" text-anchor="middle">복제본</text>
+
+  <!-- redis-2 -->
+  <rect class="box" x="630" y="285" width="215" height="50" rx="4"/>
+  <text class="t-title" x="737" y="306" text-anchor="middle">redis-2</text>
+  <text class="t-sub" x="737" y="324" text-anchor="middle">복제본</text>
+
+  <!-- 쓰기 서비스 → redis-0 -->
+  <line class="line" x1="470" y1="88" x2="626" y2="88" marker-end="url(#arrow4)"/>
+
+  <!-- 읽기 서비스 → 세 파드 (버스: x=560) -->
+  <polyline class="line" points="470,320 560,320"/>
+  <line class="line" x1="560" y1="112" x2="560" y2="320"/>
+  <line class="line" x1="560" y1="112" x2="626" y2="112" marker-end="url(#arrow4)"/>
+  <line class="line" x1="560" y1="205" x2="626" y2="205" marker-end="url(#arrow4)"/>
+  <line class="line" x1="560" y1="312" x2="626" y2="312" marker-end="url(#arrow4)"/>
+
+  <!-- 복제 흐름: redis-0 → redis-1 → redis-2 -->
+  <line class="line-rep" x1="737" y1="125" x2="737" y2="176" marker-end="url(#arrow4)"/>
+  <text class="t-lbl" x="750" y="155">복제</text>
+  <line class="line-rep" x1="737" y1="230" x2="737" y2="281" marker-end="url(#arrow4)"/>
+  <text class="t-lbl" x="750" y="260">복제</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="404" text-anchor="middle">셀렉터를 다르게 건 서비스 두 개로 쓰기(마스터 전용)와 읽기(전체 분산)를 분리한다 (1.8절).</text>
+</svg>
+    <figcaption>그림 1-3. 읽기/쓰기 서비스 분리. 쓰기 서비스는 redis-0 한 파드만, 읽기 서비스는 레플리카 전체를 셀렉트한다.</figcaption>
+  </figure>
+<pre><code># 읽기: 모든 레플리카로 분산
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-readonly
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: redis
+---
+# 쓰기: redis-0 한 파드만
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  ports:
+  - port: 6379
+  selector:
+    statefulset.kubernetes.io/pod-name: redis-0</code></pre>
+  <p>애플리케이션 입장에서는 클러스터 내부 DNS가 만들어 주는 이름 <code>redis</code>(쓰기)와 <code>redis-readonly</code>(읽기)만 알면 된다 — 이 이름 해석을 담당하는 클러스터 애드온이 <dfn class="term">코어DNS <span class="en">(CoreDNS)</span></dfn>다. HTTP가 아닌 순수 TCP도 서비스로 이렇게 로드 밸런싱된다.</p>
+</section>
+
+<section id="s1-9">
+  <h2 class="sec"><span class="num">1.9</span>인그레스를 이용해 트래픽을 스태틱 파일 서버로 전달</h2>
+  <p>정적 파일은 API 서버가 아니라 전용 NGINX 파드가 서빙하게 분리한다. 개발자는 API 코드에 집중하고, 파일 서빙은 그 일에 최적화된 서버에 맡기는 관심사 분리다. 진입점은 늘리지 않는다 — 기존 인그레스에 규칙을 추가해 <code>/api</code>는 frontend로, 나머지는 파일 서버로 보낸다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-path { font-size: 12.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  
+  .appendix-divider { margin: 64px 0 40px; padding-top: 40px; border-top: 2px solid var(--ink); }
+  .appendix-divider .tag { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+  .appendix-divider h2 { font-size: 26px; font-weight: 700; margin: 8px 0 10px; }
+  .appendix-divider p { color: var(--sub); font-size: 15px; margin-bottom: 0; }
+
+  nav.toc-appendix { margin-bottom: 48px; padding-top: 18px; border-top: 1px dashed var(--line); font-size: 14.5px; }
+  nav.toc-appendix .appendix-lead { display:block; font-weight:700; color:var(--accent); margin-bottom:10px; }
+  nav.toc-appendix a { color: var(--ink); text-decoration: none; display: inline-block; margin: 0 18px 6px 0; padding: 2px 0; border-bottom: 1px solid #efefef; }
+  nav.toc-appendix a:hover { color: var(--accent); }
+  nav.toc-appendix .num { color: var(--accent); font-weight: 600; margin-right: 6px; }
+</style>
+
+  <!-- 사용자 -->
+  <rect class="box" x="20" y="150" width="110" height="60" rx="4"/>
+  <text class="t-title" x="75" y="175" text-anchor="middle">사용자</text>
+  <text class="t-sub" x="75" y="194" text-anchor="middle">브라우저</text>
+
+  <!-- 사용자 → 인그레스 -->
+  <text class="t-sub" x="165" y="168" text-anchor="middle">HTTP</text>
+  <line class="line" x1="130" y1="180" x2="196" y2="180" marker-end="url(#arrow3)"/>
+
+  <!-- 인그레스 -->
+  <rect class="box-accent" x="200" y="150" width="170" height="60" rx="4"/>
+  <text class="t-title" x="285" y="175" text-anchor="middle">Ingress</text>
+  <text class="t-sub" x="285" y="194" text-anchor="middle">경로 기반 라우팅</text>
+
+  <!-- 상단 분기: /api/* → frontend 서비스 → frontend 파드 -->
+  <polyline class="line" points="370,168 420,168 420,84 466,84" marker-end="url(#arrow3)"/>
+  <text class="t-path" x="432" y="130">/api/*</text>
+
+  <rect class="box" x="470" y="54" width="170" height="60" rx="4"/>
+  <text class="t-title" x="555" y="79" text-anchor="middle">Service</text>
+  <text class="t-sub" x="555" y="98" text-anchor="middle">frontend (ClusterIP)</text>
+
+  <line class="line" x1="640" y1="84" x2="706" y2="84" marker-end="url(#arrow3)"/>
+
+  <rect class="box" x="710" y="54" width="170" height="60" rx="4"/>
+  <text class="t-title" x="795" y="79" text-anchor="middle">frontend 파드</text>
+  <text class="t-sub" x="795" y="98" text-anchor="middle">Node.js API (Deployment)</text>
+
+  <!-- 하단 분기: 그 외 경로 → fileserver 서비스 → NGINX 파드 -->
+  <polyline class="line" points="370,192 420,192 420,296 466,296" marker-end="url(#arrow3)"/>
+  <text class="t-path" x="432" y="250">/ (그 외)</text>
+
+  <rect class="box" x="470" y="266" width="170" height="60" rx="4"/>
+  <text class="t-title" x="555" y="291" text-anchor="middle">Service</text>
+  <text class="t-sub" x="555" y="310" text-anchor="middle">fileserver (ClusterIP)</text>
+
+  <line class="line" x1="640" y1="296" x2="706" y2="296" marker-end="url(#arrow3)"/>
+
+  <rect class="box" x="710" y="266" width="170" height="60" rx="4"/>
+  <text class="t-title" x="795" y="291" text-anchor="middle">NGINX 파드</text>
+  <text class="t-sub" x="795" y="310" text-anchor="middle">HTML · CSS · JS 정적 파일</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="362" text-anchor="middle">인그레스 하나로 API와 정적 파일 서버를 같은 도메인 아래 서로 다른 백엔드로 나눈다 (1.4절 · 1.9절).</text>
+</svg>
+    <figcaption>그림 1-4. 하나의 인그레스가 경로 기준으로 두 백엔드를 나눈다. 대규모라면 정적 파일은 CDN이 다음 단계다.</figcaption>
+  </figure>
+</section>
+
+<section id="s1-10">
+  <h2 class="sec"><span class="num">1.10</span>헬름을 이용한 애플리케이션 파라미터화</h2>
+  <p>개발·스테이징·프로덕션에 같은 앱을 배포하려면 환경마다 YAML 전체를 복사하게 되는데, 그러면 공통 변경이 세 벌의 수정이 된다. <dfn class="term">헬름 <span class="en">(Helm)</span></dfn>은 쿠버네티스의 패키지 매니저로, 매니페스트를 <strong>템플릿</strong>으로 만들고 환경별 차이만 <strong>values 파일</strong>로 분리한다. 템플릿과 기본값을 하나로 묶은 배포 패키지 단위가 <dfn class="term">차트 <span class="en">(Chart)</span></dfn>다.</p>
+<pre><code># values.yaml
+replicaCount: 2
+
+# templates/frontend.yaml (일부)
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+# 환경별 배포
+helm install journal-prod ./journal --values values-prod.yaml</code></pre>
+  <p>원칙: 환경 간에 <strong>정말 달라야 하는 값만</strong> 파라미터로 뽑는다. 파라미터가 늘수록 "환경들이 서로 얼마나 다른가"를 아무도 설명할 수 없게 된다.</p>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    책의 예제는 Helm 3 기준이다. <strong>Helm 4.0.0이 2025년 11월 12일 출시</strong>되었고(6년 만의 메이저), Helm 3는 2026-09-09 마지막 기능 릴리스 후 2027-02-10까지 보안 패치만 제공된다. 차트 문법은 대부분 호환되므로 학습 내용은 유효하지만, 신규 설치라면 Helm 4를 받고 Server-Side Apply 기반 배포·플러그인 체계 변경을 확인할 것.
+    <span class="src">출처: helm.sh/blog/helm-4-released · helm.sh/blog/helm-v3-end-of-life</span>
+  </div>
+</section>
+
+<section id="s1-11">
+  <h2 class="sec"><span class="num">1.11</span>서비스 배포 모범 사례</h2>
+  <p>이 장을 한 표로 접으면 다음과 같다. 오른쪽 열이 스터디에서 서로 물어볼 질문이다.</p>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>복제 서비스는 Deployment로, 노출은 Service로</td><td>파드를 직접 만들고 있지 않은가? 서비스 없이 파드 IP를 참조하는 곳은 없는가?</td></tr>
+    <tr><td>모든 YAML은 Git에, 클러스터 수정은 리포지터리 경유</td><td>지금 클러스터 상태를 리포지터리만 보고 재현할 수 있는가?</td></tr>
+    <tr><td>이미지 태그는 불변·버전 명시, latest 금지</td><td>장애 시각의 배포 이미지를 태그만으로 특정할 수 있는가?</td></tr>
+    <tr><td>설정은 ConfigMap, 비밀은 Secret — 이미지와 분리</td><td>이미지 재빌드 없이 설정만 바꿀 수 있는가? 패스워드가 코드에 없는가?</td></tr>
+    <tr><td>상태 보유 워크로드는 StatefulSet + PVC</td><td>파드가 다른 노드로 옮겨져도 데이터가 따라가는가?</td></tr>
+    <tr><td>HTTP 진입은 인그레스 계층 하나로 통합</td><td>2026 기준: 신규라면 Gateway API를 먼저 검토했는가?</td></tr>
+    <tr><td>다환경 배포는 헬름 등으로 파라미터화</td><td>환경 간 차이를 values 파일 diff 하나로 설명할 수 있는가?</td></tr>
+  </table>
+</section>
+
+<div class="appendix-divider" id="appendix-a">
+  <span class="tag">APPENDIX</span>
+  <h2>부록 A · 서비스 간 호출 경로 — 이름에서 파드까지</h2>
+  <p>1.4절·1.8절에서 다룬 Service를 "안정적인 이름과 IP"까지만 배웠다면, 여기서는 그 이름이 실제 패킷이 되어 다른 노드의 파드까지 도달하는 전체 경로를 한 걸음씩 뜯어본다. 이 내용은 9장(네트워킹) 9.1·9.3.1절에서 본편으로 다시 다룬다.</p>
+</div>
+
+<section id="a1">
+  <h2 class="sec"><span class="num">A.1</span>전체 그림</h2>
+  <p class="lead">시나리오는 하나다 — 워커 노드 1의 <code>order</code> 파드가 워커 노드 2의 <code>payment</code> 파드를 <code>payment-svc</code>라는 이름으로 부른다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrowA1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .cp { fill: #fafaf8; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .node { fill: #f0f4fb; stroke: #2456c4; stroke-width: 1.2; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-route { fill: #ffffff; stroke: #6a5acd; stroke-width: 1.2; }
+    .box-pod { fill: #ffffff; stroke: #3a8a5c; stroke-width: 1.2; }
+    .box-virtual { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .t-h { font-size: 15px; font-weight: 700; fill: #111111; }
+    .t-sub2 { font-size: 12px; fill: #555555; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-node-lbl { font-size: 13px; font-weight: 700; fill: #2456c4; }
+    .t-ip { font-size: 10.5px; fill: #777777; }
+    .t-order { font-size: 12px; font-weight: 700; fill: #ffffff; }
+    .order-badge { fill: #b23b3b; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-ctrl { stroke: #999999; stroke-width: 1; stroke-dasharray: 3 3; fill: none; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  
+  nav.toc-appendix { margin-bottom: 48px; padding-top: 18px; border-top: 1px dashed var(--line); font-size: 14.5px; }
+  nav.toc-appendix .appendix-lead { display:block; font-weight:700; color:var(--accent); margin-bottom:10px; }
+  nav.toc-appendix a { color: var(--ink); text-decoration: none; display: inline-block; margin: 0 18px 6px 0; padding: 2px 0; border-bottom: 1px solid #efefef; }
+  nav.toc-appendix a:hover { color: var(--accent); }
+  nav.toc-appendix .num { color: var(--accent); font-weight: 600; margin-right: 6px; }
+</style>
+
+  <text class="t-h" x="20" y="28">서비스 간 호출의 실제 경로 — 이름에서 파드까지</text>
+  <text class="t-sub2" x="20" y="48">order 파드가 payment-svc를 부른다. 프록시 서버는 없고, 커널의 주소 변환과 CNI의 배달만 있다. 컨트롤 플레인은 개입하지 않는다.</text>
+
+  <!-- 컨트롤 플레인 -->
+  <rect class="cp" x="20" y="64" width="960" height="96" rx="6"/>
+  <text class="t-sub2" x="36" y="86">컨트롤 플레인</text>
+  <rect class="box" x="36" y="96" width="210" height="52" rx="4"/>
+  <text class="t-title" x="141" y="118" text-anchor="middle">kube-apiserver</text>
+  <text class="t-sub" x="141" y="136" text-anchor="middle">유일한 창구</text>
+
+  <rect class="box" x="266" y="96" width="200" height="52" rx="4"/>
+  <text class="t-title" x="366" y="118" text-anchor="middle">etcd</text>
+  <text class="t-sub" x="366" y="136" text-anchor="middle">상태 저장소</text>
+
+  <rect class="box" x="486" y="96" width="220" height="52" rx="4"/>
+  <text class="t-title" x="596" y="118" text-anchor="middle">스케줄러</text>
+  <text class="t-sub" x="596" y="136" text-anchor="middle">배치 결정</text>
+
+  <rect class="box" x="726" y="96" width="234" height="52" rx="4"/>
+  <text class="t-title" x="843" y="118" text-anchor="middle">컨트롤러 매니저</text>
+  <text class="t-sub" x="843" y="136" text-anchor="middle">상태 수렴</text>
+
+  <!-- CoreDNS -->
+  <rect class="box-route" x="280" y="188" width="280" height="66" rx="4"/>
+  <text class="t-title" x="420" y="212" text-anchor="middle">CoreDNS</text>
+  <text class="t-sub" x="420" y="232" text-anchor="middle">payment-svc → 10.96.0.15</text>
+
+  <!-- Service (virtual) -->
+  <rect class="box-virtual" x="620" y="188" width="290" height="66" rx="4"/>
+  <text class="t-title" x="765" y="212" text-anchor="middle">Service payment-svc</text>
+  <text class="t-sub" x="765" y="232" text-anchor="middle">가상 IP 10.96.0.15 · 실체 없음</text>
+
+  <!-- 제어 통신 점선: apiserver → CoreDNS/Service -->
+  <path class="line-ctrl" d="M 141 148 C 141 172, 300 172, 300 184"/>
+  <path class="line-ctrl" d="M 700 184 C 700 168, 750 168, 750 184"/>
+
+  <!-- 노드 1 -->
+  <rect class="node" x="40" y="288" width="440" height="340" rx="6"/>
+  <text class="t-node-lbl" x="60" y="316">워커 노드 1</text>
+  <text class="t-ip" x="180" y="316">192.168.0.5</text>
+
+  <rect class="box-pod" x="60" y="330" width="400" height="58" rx="4"/>
+  <text class="t-title" x="260" y="354" text-anchor="middle">order 파드</text>
+  <text class="t-sub" x="260" y="374" text-anchor="middle">10.244.1.5</text>
+
+  <rect class="box-route" x="60" y="424" width="400" height="66" rx="4"/>
+  <text class="t-title" x="260" y="448" text-anchor="middle">kube-proxy iptables (DNAT)</text>
+  <text class="t-sub" x="260" y="468" text-anchor="middle">10.96.0.15 → 10.244.2.7</text>
+
+  <rect class="box-route" x="60" y="524" width="400" height="60" rx="4"/>
+  <text class="t-title" x="260" y="558" text-anchor="middle">CNI · 노드 간 배달</text>
+
+  <rect class="box" x="60" y="596" width="400" height="24" rx="4"/>
+  <text class="t-sub" x="260" y="612" text-anchor="middle">kubelet · containerd</text>
+
+  <!-- 노드 2 -->
+  <rect class="node" x="520" y="288" width="440" height="340" rx="6"/>
+  <text class="t-node-lbl" x="540" y="316">워커 노드 2</text>
+  <text class="t-ip" x="660" y="316">192.168.0.6</text>
+
+  <rect class="box-pod" x="540" y="330" width="190" height="58" rx="4"/>
+  <text class="t-title" x="635" y="354" text-anchor="middle">payment 파드</text>
+  <text class="t-sub" x="635" y="374" text-anchor="middle">10.244.2.7</text>
+
+  <rect class="box-pod" x="750" y="330" width="190" height="58" rx="4"/>
+  <text class="t-title" x="845" y="354" text-anchor="middle">payment 파드</text>
+  <text class="t-sub" x="845" y="374" text-anchor="middle">10.244.2.8</text>
+
+  <rect class="box-route" x="540" y="424" width="400" height="60" rx="4"/>
+  <text class="t-title" x="740" y="452" text-anchor="middle">CNI · 노드 간 배달</text>
+
+  <rect class="box-route" x="540" y="500" width="400" height="60" rx="4"/>
+  <text class="t-title" x="740" y="524" text-anchor="middle">kube-proxy iptables</text>
+  <text class="t-sub" x="740" y="544" text-anchor="middle">모든 노드가 동일 규칙 보유</text>
+
+  <rect class="box" x="540" y="596" width="400" height="24" rx="4"/>
+  <text class="t-sub" x="740" y="612" text-anchor="middle">kubelet · containerd</text>
+
+  <!-- Service → CoreDNS/노드 (제어/관계 점선) -->
+  <path class="line-ctrl" d="M 700 254 C 640 280, 460 280, 400 288"/>
+  <path class="line-ctrl" d="M 800 254 C 820 280, 780 280, 740 288"/>
+
+  <!-- 순번 원 + 화살표 -->
+  <circle class="order-badge" cx="200" cy="270" r="13"/>
+  <text class="t-order" x="200" y="275" text-anchor="middle">1</text>
+  <path class="line" d="M 260 330 L 330 254" marker-end="url(#arrowA1)"/>
+
+  <circle class="order-badge" cx="188" cy="404" r="13"/>
+  <text class="t-order" x="188" y="409" text-anchor="middle">2</text>
+  <path class="line" d="M 260 388 L 260 420" marker-end="url(#arrowA1)"/>
+
+  <circle class="order-badge" cx="188" cy="504" r="13"/>
+  <text class="t-order" x="188" y="509" text-anchor="middle">3</text>
+  <path class="line" d="M 260 490 L 260 520" marker-end="url(#arrowA1)"/>
+
+  <circle class="order-badge" cx="500" cy="554" r="13"/>
+  <text class="t-order" x="500" y="559" text-anchor="middle">4</text>
+  <path class="line" d="M 460 554 L 536 452" marker-end="url(#arrowA1)"/>
+
+  <circle class="order-badge" cx="740" cy="404" r="13"/>
+  <text class="t-order" x="740" y="409" text-anchor="middle">5</text>
+  <path class="line" d="M 740 420 L 740 392" marker-end="url(#arrowA1)"/>
+  <path class="line" d="M 635 420 L 635 392" marker-end="url(#arrowA1)"/>
+
+  <!-- 범례 -->
+  <rect class="box-pod" x="40" y="644" width="18" height="18" rx="2"/>
+  <text class="t-sub" x="64" y="658">파드</text>
+  <rect class="box-route" x="130" y="644" width="18" height="18" rx="2"/>
+  <text class="t-sub" x="154" y="658">네트워크 경로</text>
+  <circle class="order-badge" cx="270" cy="653" r="9"/>
+  <text class="t-sub" x="288" y="658">호출 순서</text>
+  <line class="line-ctrl" x1="360" y1="653" x2="400" y2="653"/>
+  <text class="t-sub" x="408" y="658">제어 통신 · 관계 표시</text>
+
+  <text class="t-cap" x="500" y="676" text-anchor="middle">① 이름 조회 ② 커널이 주소 변환 ③ CNI에 전달 ④ 노드 간 이동 ⑤ 파드 도착</text>
+</svg>
+    <figcaption>그림 A-1. 이름 조회부터 파드 도착까지 다섯 단계. 실선은 실제 트래픽 경로, 점선은 컨트롤 플레인의 제어 통신(데이터 경로가 아니다).</figcaption>
+  </figure>
+</section>
+
+<section id="a2">
+  <h2 class="sec"><span class="num">A.2</span>사전 구성</h2>
+  <p>이 경로가 성립하려면 먼저 Deployment와 Service가 있어야 한다. <code>selector</code>가 파드를 고르는 조건이고, <code>targetPort</code>가 실제 컨테이너 포트로 이어진다는 점은 1.4절에서 이미 다뤘다 — 여기서는 그 뒤에 무슨 일이 일어나는지가 주제다.</p>
+<pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+      - name: payment
+        image: myrepo/payment:1.0
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-svc
+spec:
+  selector:
+    app: payment          # 이 레이블을 가진 파드가 대상
+  ports:
+  - port: 80               # 서비스가 받는 포트
+    targetPort: 8080       # 파드 컨테이너 포트</code></pre>
+  <p>이 매니페스트가 적용되는 순간 세 가지가 만들어진다.</p>
+  <ul class="tight">
+    <li><strong>ClusterIP 할당</strong> — <code>10.96.0.15</code> 같은 값이 배정된다. 어느 장비의 네트워크 카드에도 없는 가상 주소다.</li>
+    <li><strong><dfn class="term">EndpointSlice <span class="en">(EndpointSlice)</span></dfn> 생성</strong> — 셀렉터에 맞고 <dfn class="term">Ready <span class="en">(Readiness)</span></dfn> 상태인 파드의 IP 목록(예: <code>[10.244.2.7, 10.244.2.8]</code>)을 담는다. 4장에서 배운 readiness 프로브가 여기서 다시 등장한다 — 프로브를 통과하지 못한 파드는 이 목록에서 빠진다.</li>
+    <li><strong>모든 노드의 iptables 갱신</strong> — <dfn class="term">kube-proxy</dfn>(노드마다 하나씩 상주하며 네트워크 규칙을 관리하는 컴포넌트)가 이 매핑을 각 노드 커널에 규칙으로 심는다. 그림에서 "모든 노드가 동일 규칙 보유"라고 적은 것이 이 뜻이다.</li>
+  </ul>
+</section>
+
+<section id="a3">
+  <h2 class="sec"><span class="num">A.3</span>호출 흐름 다섯 단계</h2>
+  <p><code>order</code> 파드(<code>10.244.1.5</code>)가 <code>http://payment-svc/pay</code>를 호출하는 순간을 그대로 따라간다.</p>
+  <ol class="steps">
+    <li>
+      <strong>① 이름 조회 — CoreDNS.</strong> order 파드의 <code>/etc/resolv.conf</code>는 이미 CoreDNS를 가리키도록 설정되어 있다. <code>payment-svc</code> 조회는 같은 네임스페이스이므로 <code>payment-svc.default.svc.cluster.local</code>로 확장되고, CoreDNS는 <code>10.96.0.15</code>를 응답한다. <strong>파드 IP가 아니라 서비스의 가상 IP를 받는다는 점이 핵심이다.</strong>
+    </li>
+    <li>
+      <strong>② 커널의 주소 변환 — kube-proxy iptables DNAT.</strong> order 파드가 <code>10.96.0.15:80</code>으로 패킷을 보낸다. 패킷이 노드 1의 커널을 지나는 순간, kube-proxy가 심어둔 iptables 규칙이 목적지를 실제 파드 중 하나로 바꾼다: <code>10.96.0.15:80 → 10.244.2.7:8080</code>. 파드가 2개이므로 확률적으로 분산된다. <strong>kube-proxy 프로세스가 트래픽을 중계하는 게 아니라, 규칙만 심어두고 변환은 커널이 한다.</strong>
+    </li>
+    <li>
+      <strong>③④ CNI · 노드 간 배달.</strong> 목적지가 <code>10.244.2.7</code>(노드 2의 파드 대역)이 됐으니, <dfn class="term">CNI <span class="en">(Container Network Interface)</span></dfn>가 구성해 둔 라우팅을 따라 노드 1(<code>192.168.0.5</code>) → 노드 2(<code>192.168.0.6</code>)로 패킷이 이동한다.
+    </li>
+    <li>
+      <strong>⑤ 파드 도착.</strong> 노드 2의 CNI가 패킷을 payment 파드(<code>10.244.2.7</code>)의 네트워크 인터페이스로 넣어준다. 응답은 역경로로 돌아가며, 커널의 <dfn class="term">conntrack <span class="en">(Connection Tracking)</span></dfn>(커널이 진행 중인 연결을 추적하는 기능)이 출발지 주소를 다시 <code>10.96.0.15</code>로 복원해 order 파드는 마치 서비스와 직접 대화한 것처럼 보게 된다.
+    </li>
+  </ol>
+</section>
+
+<section id="a4">
+  <h2 class="sec"><span class="num">A.4</span>단계별 검증 명령</h2>
+  <p>0장 kind 클러스터에서 위 시나리오와 같은 구조(디플로이먼트+서비스)를 하나 띄워 두고, 아래 명령으로 각 단계를 직접 확인한다.</p>
+<pre><code># ① DNS: 이름이 ClusterIP로 해석되는가
+kubectl run dns-test --image=busybox:1.36 -it --rm --restart=Never \
+  -- nslookup payment-svc.default.svc.cluster.local
+
+# ②의 전제: 서비스가 실제 파드 IP 목록을 갖고 있는가
+kubectl get endpointslices -l kubernetes.io/service-name=payment-svc
+
+# 전체 연결: 파드 안에서 실제 호출
+kubectl run curl-test --image=curlimages/curl:8.8.0 -it --rm --restart=Never \
+  -- curl -sS http://payment-svc:80/pay</code></pre>
+  <div class="check"><span class="lbl">체크포인트</span>첫 명령이 <code>10.96.x.x</code> 형태의 주소를 돌려주면 ①이 정상, 두 번째 명령의 <code>ENDPOINTS</code> 목록이 비어 있지 않으면 ②의 전제가 정상이다.</div>
+</section>
+
+<section id="a5">
+  <h2 class="sec"><span class="num">A.5</span>실무 주의점</h2>
+  <div class="pitfall">
+    <span class="lbl">함정 1 — ClusterIP에 ping은 안 된다</span>
+    가상 주소이므로 <dfn class="term">ICMP <span class="en">(Internet Control Message Protocol)</span></dfn>(ping이 쓰는 프로토콜) 요청에 응답할 실체가 없다. <strong>ping 실패는 장애가 아니다.</strong> "서비스 IP에 ping이 안 되는데 장애인가요?"는 매우 흔한 헛다리짚기이며, 커널이 그 주소로 가는 TCP/UDP 패킷만 낚아채 바꿔치기하기 때문에 실제 통신(curl 등)은 정상 동작한다.
+  </div>
+  <div class="pitfall">
+    <span class="lbl">함정 2 — 연결이 안 되면 EndpointSlice부터 본다</span>
+    목록이 비어 있다면 원인은 둘 중 하나다 — 셀렉터 레이블 불일치, 또는 readiness 프로브 실패. 이 둘이 <strong>서비스 장애의 최다 원인</strong>이다. Service 자체나 CNI를 의심하기 전에 <code>kubectl get endpointslices</code>부터 확인하는 습관을 들인다.
+  </div>
+  <div class="pitfall">
+    <span class="lbl">함정 3 — 컨트롤 플레인은 데이터 경로에 없다</span>
+    API 서버가 죽어도 이미 심어진 iptables 규칙으로 기존 통신은 계속 동작한다. 그림에서 컨트롤 플레인이 점선(제어 통신)으로만 연결된 이유다 — <strong>컨트롤 플레인 장애 ≠ 서비스 통신 장애.</strong> 다만 새 파드가 뜨거나 죽어 EndpointSlice가 갱신돼야 하는 상황이라면, 그 갱신 자체는 컨트롤 플레인을 거치므로 영향을 받는다.
+  </div>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 확인 사항</span>
+    이 부록은 가장 널리 쓰이는 <code>iptables</code> 모드를 기준으로 설명했다. kube-proxy는 리눅스에서 <code>iptables</code>·<code>ipvs</code>·<code>nftables</code> 세 모드를 지원하며, 쿠버네티스 공식 문서는 <strong>iptables와 IPVS 모드를 대체할 차세대 표준으로 nftables 모드를 권장</strong>하고 있다(규칙 수가 많을 때의 성능·정합성 문제 개선). 원리(DNAT로 가상 IP를 실제 파드 IP로 바꾼다는 것)는 세 모드 모두 동일하다. 한 가지 더 — Cilium 같은 eBPF 기반 CNI를 쓰면 kube-proxy 자체를 완전히 대체해 이 경로를 eBPF 프로그램이 대신 처리하기도 한다.
+    <span class="src">출처: kubernetes.io/docs/reference/networking/virtual-ips (프록시 모드 종류 및 nftables 권장 명시)</span>
+  </div>
+</section>
+
+<footer>
+  출처: kubernetes.io/docs (공식 문서) · kubernetes.io/blog/2026/01/29/ingress-nginx-statement · helm.sh/blog/helm-4-released · helm.sh/blog/helm-v3-end-of-life — 세부 출처는 각 절의 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 텍스트 수정은 &lt;svg&gt; 블록 안 &lt;text&gt;를 고치면 되고, 동일 그림의 단독 .svg 파일(fig01-1 ~ fig01-4)도 제공됩니다.<br>
+  kubernetes.io/docs/reference/networking/virtual-ips · kubernetes.io/docs/concepts/services-networking/service (부록 A 출처) · 검증일 2026-08-15<br>
+  원본 다이어그램(부록 A): 프로젝트 자산 서비스간호출경로.png의 구성을 이 노트 시리즈의 시각 언어로 다시 그렸습니다.
+</footer>
+
+</div>
+</body>
+</html>

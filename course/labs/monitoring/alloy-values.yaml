@@ -1,0 +1,79 @@
+# course/labs/monitoring/alloy-values.yaml
+# 로그 수집기. 차트 1.12.1 / Alloy v1.19.2 기준 (2026-09-05 확인).
+#
+# **Promtail 을 쓰지 않는다.** 2026-03-02 로 수명이 끝났고 차트에도
+# deprecated: true 가 박혀 있다. 그런데 helm search repo 에는 아무 표시 없이
+# 그대로 나오고, 검색 결과의 대부분이 아직 Promtail 을 쓴다 — 그것이 함정이다.
+#   확인: helm show chart grafana/promtail | grep deprecated
+alloy:
+  configMap:
+    content: |-
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      // 1) 클러스터의 파드를 발견한다
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // 2) 어떤 라벨을 붙일지 고른다. **여기서 고르지 않은 메타데이터는 버려진다.**
+      //    라벨 하나가 스트림 하나이므로, 값의 가짓수가 많은 것을 넣으면
+      //    카디널리티가 폭발한다 (M19 8절의 프로메테우스 라벨과 같은 문제다).
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        // 이 과정의 두 앱이 서로 다른 라벨 규칙을 쓴다.
+        // journal-api 는 app, order-api 는 app.kubernetes.io/name 이다.
+        // 둘 중 있는 쪽을 app 라벨로 모은다.
+        //
+        // source_labels 에 둘을 나열하고 separator 로 잇는 방식은 쓰지 않는다.
+        // 둘 다 있는 파드에서 값이 이어 붙어 버린다:
+        //   app="kube-prometheus-stack-prometheus-operatorkube-prometheus-stack-operator"
+        // regex = "(.+)" 를 붙이면 값이 있을 때만 규칙이 적용된다.
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          regex         = "(.+)"
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          regex         = "(.+)"
+          target_label  = "app"
+        }
+      }
+
+      // 3) 쿠버네티스 API 로 로그를 읽는다.
+      //    호스트의 /var/log 를 마운트하는 방식과 달리 특권 컨테이너가 필요 없다 (M24).
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // 4) 로키로 밀어 넣는다
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.logging.svc.cluster.local/loki/api/v1/push"
+        }
+      }
+
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 256Mi}
+
+# 노드마다 하나씩 뜨는 데몬셋이 기본값이다 (M09 의 워크로드 종류).
+controller:
+  type: daemonset

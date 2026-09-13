@@ -1,0 +1,16 @@
+# M13 실패 ① — 컨피그맵에 없는 키를 참조한다. CreateContainerConfigError 를 재현하기 위한 파드.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: missing-key
+spec:
+  containers:
+    - name: app
+      image: alpine:3.22
+      command: ["sh", "-c", "while true; do sleep 5; done"]
+      env:
+        - name: NOPE
+          valueFrom:
+            configMapKeyRef:
+              name: journal-config
+              key: NOT_THERE            # 이 키는 없다

@@ -1,0 +1,80 @@
+# M21 — 사람을 부르는 규칙. M20 에서 쓴 RED 질의에 임계값과 시간 조건을 붙인 것이다.
+#
+# ServiceMonitor 와 같은 이유로 release 라벨이 필요하다 (M20 ①번 고리).
+# 확인: kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.ruleSelector}'
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: study-app-rules
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: study-app
+      interval: 30s        # 이 그룹의 규칙을 얼마나 자주 평가할지
+      rules:
+        # ── ① 대상이 사라졌다 ────────────────────────────────────────────
+        # 증상이 아니라 관측 자체의 고장이다. 이것이 울리면 다른 알림을 믿을 수 없다.
+        - alert: AppTargetDown
+          expr: up{job=~"order-api|journal-api"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} 스크레이프 실패"
+            description: "{{ $labels.pod }} 를 1분 이상 긁지 못하고 있습니다."
+
+        # ── ② 에러율 ─────────────────────────────────────────────────────
+        # M20 8단계의 질의에 임계값 5% 와 지속 2분을 더했다.
+        # or 절이 없으면 5xx 가 하나도 없는 앱은 결과 자체가 없어 평가에서 빠진다.
+        - alert: AppHighErrorRate
+          expr: |
+            100 * (
+              sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api", status=~"5.."}[5m]))
+              /
+              sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api"}[5m]))
+            ) > 5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} 에러율 {{ $value | printf \"%.1f\" }}%"
+            description: "5xx 비율이 2분 이상 5% 를 넘고 있습니다."
+
+        # ── ③ 지연 ───────────────────────────────────────────────────────
+        # le 를 남겨야 histogram_quantile 이 동작한다 (M20 9단계).
+        - alert: AppHighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum by (job, le) (rate(http_server_requests_seconds_bucket{job=~"order-api|journal-api"}[5m]))
+            ) > 0.5
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} P95 {{ $value | printf \"%.2f\" }}초"
+            description: "P95 응답 시간이 3분 이상 500ms 를 넘고 있습니다."
+
+        # ── ④ SLO 소진 속도 ──────────────────────────────────────────────
+        # 책 3.11 이 말하는 SLO 기반 알림. "느리다"가 아니라
+        # "이 속도면 이번 달 예산을 다 쓴다"를 알린다.
+        #
+        # SLO: 요청의 99% 가 200ms 안에. 오차 예산은 1%.
+        # 5분 창에서 예산을 14.4배 속도로 태우면 30일 예산을 2일 만에 소진한다.
+        # 14.4 는 구글 SRE 워크북의 빠른 소진 계수다.
+        - alert: AppSLOFastBurn
+          expr: |
+            (
+              1 - (
+                sum by (job) (rate(http_server_requests_seconds_bucket{job=~"order-api|journal-api", le="0.2"}[5m]))
+                /
+                sum by (job) (rate(http_server_requests_seconds_count{job=~"order-api|journal-api"}[5m]))
+              )
+            ) > (14.4 * 0.01)
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} SLO 예산을 빠르게 소진 중"
+            description: "200ms 를 넘긴 요청 비율이 {{ $value | printf \"%.1%\" }} 입니다. 이 속도면 30일 예산이 2일 만에 사라집니다."

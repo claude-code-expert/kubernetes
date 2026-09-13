@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D4 · 파드는 직접 만들지 않는다 — 디플로이먼트와 롤링 업데이트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D3과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 2단계 배포와 노출 · Day 4</p>
+  <h1>파드는 직접 만들지 않는다 — 디플로이먼트와 롤링 업데이트</h1>
+  <p class="lede">어제 파드를 <code>delete</code>하면 그냥 사라졌다. 오늘은 "이 파드를 3개 유지하라"를 선언하고, 그 선언을 지키는 컨트롤러가 어떻게 파드를 되살리는지, 이미지를 v1에서 v2로 바꿀 때 어떻게 한 번에 끊기지 않게 교체하는지, 잘못됐을 때 어떻게 되돌리는지를 본다. 실습 앱은 Spring Boot로 만든 <code>order-api</code>이고, 이 앱을 D14까지 계속 키운다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분 (첫 이미지 빌드 약 3분 포함)</b></span>
+    <span>전제 <b>D3 완료 · 기본 네임스페이스 study · Docker Desktop containerd 이미지 스토어 사용</b></span>
+    <span>버전 <b>Spring Boot 4.1.0 · Temurin 21 · Kubernetes v1.36</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>Spring Boot 앱을 멀티 스테이지 Dockerfile로 이미지화하고, 그 이미지를 클러스터의 노드가 pull하는 것을 <code>crictl</code>로 확인한다.</li>
+    <li>Deployment → ReplicaSet → Pod 소유 관계를 <code>ownerReferences</code>로 추적하고, 파드·레플리카셋을 지워도 되살아나는 것을 본다.</li>
+    <li>이미지를 v2로 바꿔 롤링 업데이트를 수행하고, 레플리카셋 두 개가 교대하는 과정을 <code>-w</code>로 읽는다.</li>
+    <li>잘못된 이미지로 배포가 멈췄을 때 <code>rollout undo</code>로 직전 리비전에 돌아간다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+  <p class="sub">세 오브젝트의 관계, 셀렉터와 템플릿의 규칙, 롤링 업데이트가 실제로 하는 일, 이미지 태그와 pull 정책, 그리고 내 노트북의 이미지가 노드까지 가는 길.</p>
+
+  <h3>1.1 세 층의 소유 관계</h3>
+  <p><dfn title="Deployment">디플로이먼트(Deployment)</dfn>는 "이 파드 템플릿을 N개 유지하고, 템플릿이 바뀌면 점진적으로 교체하라"는 선언이다. 디플로이먼트는 파드를 직접 만들지 않는다. <dfn title="ReplicaSet">레플리카셋(ReplicaSet)</dfn>을 만들고, 레플리카셋이 파드 개수를 맞춘다. 템플릿이 바뀔 때마다 새 레플리카셋이 하나 더 생기고, 옛 것은 0개로 줄어든 채 이력으로 남는다. 그 이력이 롤백의 재료다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 330" width="100%" role="img" aria-label="Deployment, ReplicaSet, Pod의 소유 관계와 노드 배치">
+    <!-- top: logical layer -->
+    <rect x="20" y="16" width="860" height="96" rx="4" fill="#f7f7f7" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="34" y="38" font-size="11" fill="#767676">논리 계층 (API 서버 안의 오브젝트)</text>
+    <rect x="34" y="50" width="190" height="48" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="46" y="70" font-size="12" font-weight="600" fill="#6d28d9">Deployment order-api</text>
+    <text x="46" y="88" class="mono" font-size="11" fill="#4a4a4a">replicas: 3 · image: v1</text>
+    <line x1="224" y1="74" x2="270" y2="74" stroke="#6d28d9" stroke-width="1.2"/><polygon points="270,70 278,74 270,78" fill="#6d28d9"/>
+    <text x="230" y="66" font-size="10" fill="#6d28d9">소유</text>
+    <rect x="280" y="50" width="210" height="48" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="292" y="70" font-size="12" font-weight="600" fill="#1d4ed8">ReplicaSet order-api-7d9c4</text>
+    <text x="292" y="88" class="mono" font-size="11" fill="#4a4a4a">replicas: 3 · 템플릿 해시 7d9c4</text>
+    <line x1="490" y1="74" x2="536" y2="74" stroke="#1d4ed8" stroke-width="1.2"/><polygon points="536,70 544,74 536,78" fill="#1d4ed8"/>
+    <text x="496" y="66" font-size="10" fill="#1d4ed8">소유</text>
+    <rect x="546" y="50" width="320" height="48" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="558" y="70" font-size="12" font-weight="600" fill="#15803d">Pod × 3</text>
+    <text x="558" y="88" class="mono" font-size="11" fill="#4a4a4a">order-api-7d9c4-x2k9p · -m4q7z · -t8r2c</text>
+    <!-- down arrows -->
+    <line x1="600" y1="98" x2="120" y2="170" stroke="#15803d" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="660" y1="98" x2="420" y2="170" stroke="#15803d" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="720" y1="98" x2="720" y2="170" stroke="#15803d" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="34" y="150" font-size="11" fill="#767676">실행 계층 (노드에 배치)</text>
+    <!-- nodes -->
+    <rect x="20" y="172" width="270" height="140" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="34" y="194" font-size="12" font-weight="600" fill="#1d4ed8">노드 1</text>
+    <rect x="34" y="206" width="240" height="90" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="46" y="226" font-size="12" fill="#15803d">order-api-7d9c4-x2k9p</text>
+    <rect x="46" y="238" width="216" height="46" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/>
+    <text x="56" y="256" font-size="11" fill="#c2410c">container: app (order-api:v1)</text>
+    <text x="56" y="274" font-size="11" fill="#4a4a4a">:8080</text>
+    <rect x="315" y="172" width="270" height="140" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="329" y="194" font-size="12" font-weight="600" fill="#1d4ed8">노드 2</text>
+    <rect x="329" y="206" width="240" height="90" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="341" y="226" font-size="12" fill="#15803d">order-api-7d9c4-m4q7z</text>
+    <rect x="341" y="238" width="216" height="46" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/>
+    <text x="351" y="256" font-size="11" fill="#c2410c">container: app (order-api:v1)</text>
+    <text x="351" y="274" font-size="11" fill="#4a4a4a">:8080</text>
+    <rect x="610" y="172" width="270" height="140" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="624" y="194" font-size="12" font-weight="600" fill="#1d4ed8">노드 3</text>
+    <rect x="624" y="206" width="240" height="90" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="636" y="226" font-size="12" fill="#15803d">order-api-7d9c4-t8r2c</text>
+    <rect x="636" y="238" width="216" height="46" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.2"/>
+    <text x="646" y="256" font-size="11" fill="#c2410c">container: app (order-api:v1)</text>
+    <text x="646" y="274" font-size="11" fill="#4a4a4a">:8080</text>
+    <text x="20" y="328" font-size="11" fill="#767676">파드 이름 = 디플로이먼트명 - 템플릿 해시 - 랜덤. 해시가 같으면 같은 레플리카셋의 형제다. 오늘은 노드가 1개라 셋 다 한 노드에 놓인다.</text>
+  </svg>
+  <figcaption>도판 1. 보라=디플로이먼트, 파랑=레플리카셋·노드, 초록=파드, 주황=컨테이너. 점선은 스케줄러의 배치.</figcaption>
+  </figure>
+
+  <p>각 파드의 <code>metadata.ownerReferences</code>에 레플리카셋이, 레플리카셋의 <code>ownerReferences</code>에 디플로이먼트가 적혀 있다. 이 사슬 덕분에 디플로이먼트를 지우면 레플리카셋과 파드가 함께 정리되고(가비지 컬렉션), 반대로 파드를 지우면 레플리카셋이 "부족하다"를 감지해 채운다.</p>
+
+  <h3>1.2 셀렉터와 템플릿의 규칙</h3>
+  <p>디플로이먼트 매니페스트의 <code>spec</code>에는 세 부분이 있다.</p>
+  <table>
+    <thead><tr><th style="width:160px">필드</th><th>뜻</th><th style="width:240px">규칙</th></tr></thead>
+    <tbody>
+      <tr><td><code>replicas</code></td><td>유지할 파드 개수</td><td>생략하면 1</td></tr>
+      <tr><td><code>selector</code></td><td>"내 파드"를 고르는 라벨 조건 (D3의 셀렉터)</td><td>만든 뒤 바꿀 수 없다</td></tr>
+      <tr><td><code>template</code></td><td>파드 매니페스트의 <code>metadata</code>+<code>spec</code>. D3에서 쓴 것이 그대로 들어간다</td><td><code>template.metadata.labels</code>가 <code>selector</code>를 만족해야 한다. 아니면 API 서버가 거부</td></tr>
+    </tbody>
+  </table>
+  <p>셀렉터가 넓으면 남의 파드까지 "내 것"으로 세어 버린다. 그래서 디플로이먼트마다 고유한 라벨(<code>app: order-api</code>)을 쓰고, 셀렉터는 그 라벨 하나로 좁게 잡는다. 레플리카셋은 여기에 <code>pod-template-hash</code> 라벨을 자동으로 덧붙여 자기 세대의 파드만 고른다.</p>
+
+  <h3>1.3 롤링 업데이트가 실제로 하는 일</h3>
+  <p><code>template</code>이 바뀌면(대개 이미지 태그) 디플로이먼트는 새 해시의 레플리카셋을 만들고, 새 것을 하나 늘리고 옛 것을 하나 줄이는 일을 반복한다. 속도는 두 값이 정한다.</p>
+  <ul>
+    <li><code>maxSurge</code> — 원하는 개수보다 몇 개까지 <b>더</b> 띄울 수 있나. 기본 25%.</li>
+    <li><code>maxUnavailable</code> — 원하는 개수에서 몇 개까지 <b>모자라도</b> 되나. 기본 25%.</li>
+  </ul>
+  <p>replicas 3에 기본값이면 (반올림 규칙에 따라) 최대 4개, 최소 3개를 유지하며 교체한다. 옛 파드를 먼저 죽이지 않으므로 요청을 받을 파드가 항상 있다. 단, "새 파드가 준비됐다"를 판단하는 기준이 없으면 컨테이너가 뜨자마자 옛 파드를 줄이므로 앱이 아직 초기화 중일 때 요청이 실패할 수 있다. 그 기준(readinessProbe)은 D8에서 넣는다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 250" width="100%" role="img" aria-label="롤링 업데이트에서 레플리카셋 두 개의 개수 변화">
+    <text x="20" y="22" font-size="12" font-weight="600" fill="#1a1a1a">replicas 3 · maxSurge 1 · maxUnavailable 0 일 때</text>
+    <!-- columns t0..t4 -->
+    <g font-size="11" fill="#767676">
+      <text x="150" y="48">t0</text><text x="290" y="48">t1</text><text x="430" y="48">t2</text><text x="570" y="48">t3</text><text x="710" y="48">t4 (완료)</text>
+    </g>
+    <text x="20" y="90" font-size="12" fill="#1d4ed8">RS 옛 (v1)</text>
+    <text x="20" y="150" font-size="12" fill="#1d4ed8">RS 새 (v2)</text>
+    <text x="20" y="205" font-size="12" fill="#4a4a4a">합계</text>
+    <!-- t0 -->
+    <g>
+      <rect x="140" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/><rect x="160" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/><rect x="180" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="140" y="112" font-size="11" fill="#4a4a4a">3</text>
+      <text x="140" y="172" font-size="11" fill="#4a4a4a">0</text>
+      <text x="140" y="212" font-size="11" fill="#4a4a4a">3</text>
+    </g>
+    <!-- t1 -->
+    <g>
+      <rect x="280" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/><rect x="300" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/><rect x="320" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <rect x="280" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/>
+      <text x="280" y="112" font-size="11" fill="#4a4a4a">3</text>
+      <text x="280" y="172" font-size="11" fill="#4a4a4a">1 (surge)</text>
+      <text x="280" y="212" font-size="11" fill="#4a4a4a">4</text>
+    </g>
+    <!-- t2 -->
+    <g>
+      <rect x="420" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/><rect x="440" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <rect x="420" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/><rect x="440" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/>
+      <text x="420" y="112" font-size="11" fill="#4a4a4a">2</text>
+      <text x="420" y="172" font-size="11" fill="#4a4a4a">2</text>
+      <text x="420" y="212" font-size="11" fill="#4a4a4a">4</text>
+    </g>
+    <!-- t3 -->
+    <g>
+      <rect x="560" y="70" width="16" height="16" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <rect x="560" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/><rect x="580" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/><rect x="600" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/>
+      <text x="560" y="112" font-size="11" fill="#4a4a4a">1</text>
+      <text x="560" y="172" font-size="11" fill="#4a4a4a">3</text>
+      <text x="560" y="212" font-size="11" fill="#4a4a4a">4</text>
+    </g>
+    <!-- t4 -->
+    <g>
+      <rect x="700" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/><rect x="720" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/><rect x="740" y="130" width="16" height="16" fill="#15803d" stroke="#15803d" stroke-width="1.5"/>
+      <text x="700" y="112" font-size="11" fill="#4a4a4a">0 (이력으로 남음)</text>
+      <text x="700" y="172" font-size="11" fill="#4a4a4a">3</text>
+      <text x="700" y="212" font-size="11" fill="#4a4a4a">3</text>
+    </g>
+    <text x="20" y="242" font-size="11" fill="#767676">흰 사각형=v1 파드, 채운 사각형=v2 파드. 어느 순간에도 3개 이상이 있고 4개를 넘지 않는다. 새 파드가 Ready가 되어야 다음 단계로 간다.</text>
+  </svg>
+  <figcaption>도판 2. 새 레플리카셋을 1 늘리고 옛 것을 1 줄이는 단계가 반복된다. 옛 레플리카셋은 0개로 남아 롤백에 쓰인다.</figcaption>
+  </figure>
+
+  <p><code>kubectl rollout undo</code>는 옛 레플리카셋을 다시 3으로 올리고 새 것을 0으로 내리는 것, 즉 같은 롤링 업데이트를 반대 방향으로 하는 것이다. 이력은 <code>revisionHistoryLimit</code>(기본 10)개까지 남는다. 새 파드가 계속 뜨지 못하면(잘못된 이미지 등) 디플로이먼트는 옛 파드를 더 줄이지 않고 멈추며, <code>progressDeadlineSeconds</code>(기본 600초)가 지나면 <code>Progressing=False</code> 조건을 남긴다. 그때 되돌리는 것이 오늘 마지막 실습이다.</p>
+
+  <h3>1.4 이미지 태그와 pull 정책</h3>
+  <p>롤링 업데이트는 템플릿의 <b>변화</b>를 감지한다. <code>image: order-api:latest</code>를 새로 빌드해 같은 태그로 올리면 템플릿이 그대로이므로 아무 일도 일어나지 않는다. 그래서 태그는 빌드마다 달라야 한다. 오늘은 <code>v1</code>·<code>v2</code>처럼 손으로 붙이고, D13에서 git SHA를 쓴다.</p>
+  <p><code>imagePullPolicy</code>는 kubelet이 노드에 이미 있는 이미지를 쓸지 정한다. 태그가 <code>latest</code>이거나 생략이면 <code>Always</code>(매번 레지스트리 확인), 그 외 태그면 <code>IfNotPresent</code>(있으면 재사용)가 기본이다. 태그를 고정하면 이 정책도 자연히 안전한 쪽이 된다.</p>
+
+  <h3>1.5 내 노트북의 이미지가 노드까지 가는 길</h3>
+  <p>D2에서 봤듯 노드는 별도 컨테이너이고 자기 containerd를 가진다. <code>docker build</code>로 만든 이미지는 호스트 쪽 이미지 스토어에 있다. Docker Desktop의 kind 프로비저너는 이 둘을 <code>desktop-containerd-registry-mirror</code> 컨테이너로 잇는다. 노드의 containerd가 이미지를 pull하려 할 때 이 미러를 먼저 거치고, 미러는 호스트의 <b>containerd 이미지 스토어</b>에 있는 이미지를 그대로 내준다. 그래서 push 없이 <code>image: order-api:v1</code>만 적어도 노드가 이미지를 받는다.</p>
+  <p>조건이 하나 있다. Docker Desktop이 containerd 이미지 스토어를 쓰고 있어야 한다(Settings → General → <b>Use containerd for pulling and storing images</b>). 옛 Docker 이미지 스토어를 쓰는 설치에서는 kind 노드가 로컬 이미지를 보지 못한다. 2.1절에서 확인한다. 이 경로가 막히면 Docker Hub에 push하는 대안이 있고, 3단계 끝에 적어 두었다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비</h2>
+
+  <h3>2.1 containerd 이미지 스토어 확인</h3>
+<pre><code><span class="p">$</span> docker info --format '{{range .DriverStatus}}{{index . 0}}={{index . 1}} {{end}}{{"\n"}}'
+<span class="c">driver-type=io.containerd.snapshotter.v1 </span>
+
+<span class="p">$</span> kubectl config current-context && kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}{"\n"}'
+<span class="c">docker-desktop
+study</span>
+
+<span class="p">$</span> mkdir -p ~/k8s-study/day04/order-api && cd ~/k8s-study/day04</code></pre>
+  <p class="expect"><b>확인</b> — <code>driver-type=io.containerd.snapshotter.v1</code>이면 containerd 이미지 스토어다. 대신 <code>overlay2</code> 계열만 나오면 Settings → General에서 <b>Use containerd for pulling and storing images</b>를 켜고 <b>Apply &amp; restart</b>한다. 이 전환 뒤에는 기존 로컬 이미지가 보이지 않으므로 D1의 <code>day01-web:v1</code>은 필요할 때 다시 빌드한다. 기본 네임스페이스가 <code>study</code>가 아니면 D3 5단계를 다시 한다.</p>
+
+  <h3>2.2 JDK는 필요 없다</h3>
+  <p>빌드는 Dockerfile 안의 Maven 컨테이너가 한다. 노트북에 Java를 설치하지 않아도 된다. 첫 빌드는 의존성을 내려받느라 2~3분 걸리고, 두 번째부터는 레이어 캐시(D1 4단계) 덕에 수십 초다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+  <p class="sub">앱을 만들고 → 이미지를 노드로 보내고 → 디플로이먼트로 띄우고 → 부수고 → 늘리고 → v2로 바꾸고 → 되돌린다.</p>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>order-api v1: 소스와 이미지</h3>
+    <p class="why">응답에 버전과 파드 호스트명을 넣는다. 이 두 값이 D5의 로드밸런싱과 오늘의 롤링 업데이트를 눈으로 보게 해 준다.</p>
+<pre><code><span class="p">$</span> cd order-api
+<span class="p">$</span> mkdir -p src/main/java/study
+<span class="p">$</span> cat &gt; pom.xml &lt;&lt;'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+  &lt;parent&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+    &lt;version&gt;4.1.0&lt;/version&gt;
+    &lt;relativePath/&gt;
+  &lt;/parent&gt;
+  &lt;groupId&gt;study&lt;/groupId&gt;
+  &lt;artifactId&gt;order-api&lt;/artifactId&gt;
+  &lt;version&gt;0.0.1&lt;/version&gt;
+  &lt;properties&gt;
+    &lt;java.version&gt;21&lt;/java.version&gt;
+  &lt;/properties&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-boot-starter-webmvc&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+  &lt;build&gt;
+    &lt;plugins&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;
+      &lt;/plugin&gt;
+    &lt;/plugins&gt;
+  &lt;/build&gt;
+&lt;/project&gt;
+EOF
+
+<span class="p">$</span> cat &gt; src/main/java/study/OrderApiApplication.java &lt;&lt;'EOF'
+package study;
+
+import java.util.List;
+import java.util.Map;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+@RestController
+public class OrderApiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApiApplication.class, args);
+    }
+
+    @GetMapping("/")
+    public String root() {
+        return "order-api " + version() + " on " + host() + "\n";
+    }
+
+    @GetMapping("/orders")
+    public Map&lt;String, Object&gt; orders() {
+        return Map.of(
+            "version", version(),
+            "host", host(),
+            "orders", List.of(
+                Map.of("id", 1, "item", "keyboard"),
+                Map.of("id", 2, "item", "mouse")));
+    }
+
+    private static String version() {
+        String v = System.getenv("APP_VERSION");
+        return v == null ? "dev" : v;
+    }
+
+    private static String host() {
+        String h = System.getenv("HOSTNAME");
+        return h == null ? "unknown" : h;
+    }
+}
+EOF
+
+<span class="p">$</span> cat &gt; Dockerfile &lt;&lt;'EOF'
+# 1단계: 빌드 (JDK + Maven)
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY pom.xml .
+RUN mvn -q -B dependency:go-offline
+COPY src ./src
+RUN mvn -q -B package -DskipTests
+
+# 2단계: 실행 (JRE만)
+FROM eclipse-temurin:21-jre
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+WORKDIR /app
+COPY --from=build /src/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+EOF
+
+<span class="p">$</span> printf 'target/\n.git\n' &gt; .dockerignore
+<span class="p">$</span> docker build --build-arg APP_VERSION=v1 -t order-api:v1 .
+<span class="c">[+] Building 148.2s (15/15) FINISHED
+ ...
+ =&gt; naming to docker.io/library/order-api:v1</span>
+
+<span class="p">$</span> docker run -d --rm --name oa -p 8080:8080 order-api:v1
+<span class="p">$</span> sleep 4 &amp;&amp; curl -s localhost:8080/orders
+<span class="c">{"version":"v1","host":"f3a1c9d2e0b4","orders":[{"id":1,"item":"keyboard"},{"id":2,"item":"mouse"}]}</span>
+<span class="p">$</span> docker stop oa
+<span class="p">$</span> cd ..</code></pre>
+    <p class="expect"><b>읽을 것</b> — 이미지는 두 단계다. 빌드 단계의 JDK·Maven·소스는 최종 이미지에 남지 않고 JRE + jar만 남는다(<code>docker images order-api</code>로 크기 확인, 300MB 안팎). 버전은 소스가 아니라 빌드 인자로 넣었으므로 v2는 <code>--build-arg</code>만 바꿔 빌드한다. 컨테이너 안에서 <code>HOSTNAME</code>은 컨테이너 ID이고, 쿠버네티스에서는 파드 이름이 된다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>이미지가 노드에 도착하는지 확인</h3>
+    <p class="why">1.5절의 경로를 실제로 통과시켜 본다. 디플로이먼트 전에 파드 하나로 먼저 확인한다.</p>
+<pre><code><span class="p">$</span> kubectl run oa-test --image=order-api:v1 --restart=Never
+<span class="p">$</span> sleep 8 &amp;&amp; kubectl get pod oa-test
+<span class="c">NAME      READY   STATUS    RESTARTS   AGE
+oa-test   1/1     Running   0          8s</span>
+
+<span class="p">$</span> kubectl describe pod oa-test | grep -E 'Pulling|Pulled'
+<span class="c">  Normal  Pulling    12s   kubelet  Pulling image "order-api:v1"
+  Normal  Pulled     6s    kubelet  Successfully pulled image "order-api:v1" in 5.8s ...</span>
+
+<span class="p">$</span> docker exec desktop-control-plane crictl images | grep order-api
+<span class="c">docker.io/library/order-api    v1    3f0c8a9b1e2d    312MB</span>
+
+<span class="p">$</span> kubectl delete pod oa-test</code></pre>
+    <p class="expect"><b>읽을 것</b> — kubelet이 "Pulling"을 기록했고 노드의 containerd에 <code>docker.io/library/order-api:v1</code>이 생겼다. 태그 없는 이름은 <code>docker.io/library/</code>로 정규화된다. 어디에도 push하지 않았는데 노드가 받았다. 미러가 호스트 이미지 스토어를 내준 것이다.</p>
+    <div class="note warn">
+      <h5>ImagePullBackOff가 나면</h5>
+      <p>2.1절의 containerd 이미지 스토어 설정을 다시 확인한다. 그래도 안 되면 Docker Hub 경로를 쓴다. <code>docker login</code> 후 <code>docker tag order-api:v1 &lt;hub-id&gt;/order-api:v1 &amp;&amp; docker push &lt;hub-id&gt;/order-api:v1</code>, 그리고 이하 모든 매니페스트의 <code>image:</code>를 <code>&lt;hub-id&gt;/order-api:v1</code>로 바꾼다. 나머지 실습은 동일하다.</p>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>디플로이먼트: 3개를 선언하고 소유 사슬을 읽는다</h3>
+    <p class="why">D3의 파드 매니페스트가 <code>template</code> 자리에 그대로 들어간다는 것을 눈으로 확인한다.</p>
+<pre><code><span class="p">$</span> cat &gt; order-api-deploy.yaml &lt;&lt;'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  labels:
+    app: order-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-api
+  template:
+    metadata:
+      labels:
+        app: order-api
+    spec:
+      containers:
+      - name: app
+        image: order-api:v1
+        ports:
+        - containerPort: 8080
+EOF
+<span class="p">$</span> kubectl apply -f order-api-deploy.yaml
+<span class="c">deployment.apps/order-api created</span>
+
+<span class="p">$</span> kubectl get deploy,rs,pods -l app=order-api
+<span class="c">NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/order-api   3/3     3            3           15s
+
+NAME                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/order-api-7d9c4f6b8    3         3         3       15s
+
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/order-api-7d9c4f6b8-x2k9p   1/1     Running   0          15s
+pod/order-api-7d9c4f6b8-m4q7z   1/1     Running   0          15s
+pod/order-api-7d9c4f6b8-t8r2c   1/1     Running   0          15s</span>
+
+<span class="p">$</span> kubectl get rs -l app=order-api -o jsonpath='{.items[0].metadata.ownerReferences[0].kind}/{.items[0].metadata.ownerReferences[0].name}{"\n"}'
+<span class="c">Deployment/order-api</span>
+<span class="p">$</span> kubectl get pods -l app=order-api -o custom-columns='POD:.metadata.name,OWNER:.metadata.ownerReferences[0].name,HASH:.metadata.labels.pod-template-hash'
+<span class="c">POD                         OWNER                  HASH
+order-api-7d9c4f6b8-x2k9p   order-api-7d9c4f6b8    7d9c4f6b8
+order-api-7d9c4f6b8-m4q7z   order-api-7d9c4f6b8    7d9c4f6b8
+order-api-7d9c4f6b8-t8r2c   order-api-7d9c4f6b8    7d9c4f6b8</span>
+
+<span class="p">$</span> kubectl port-forward deployment/order-api 8080:8080 &amp;
+<span class="p">$</span> sleep 1 &amp;&amp; curl -s localhost:8080/
+<span class="c">order-api v1 on order-api-7d9c4f6b8-x2k9p</span>
+<span class="p">$</span> kill %1</code></pre>
+    <p class="expect"><b>읽을 것</b> — 디플로이먼트 → 레플리카셋 → 파드 세 층이 한 화면에 있다. 레플리카셋 이름의 <code>7d9c4f6b8</code>이 템플릿 해시이고, 파드에 <code>pod-template-hash</code> 라벨로 붙어 있다. 내가 쓴 라벨은 <code>app: order-api</code> 하나였는데 레플리카셋이 하나를 더 붙였다. 호스트명이 파드 이름이다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>부순다: 파드를 지우고, 레플리카셋을 지운다</h3>
+    <p class="why">조정 루프가 어느 층에서 일하는지 본다. 터미널 A에서 <code>kubectl get pods -l app=order-api -w</code>를 켜 둔다.</p>
+<pre><code><span class="p">$</span> kubectl delete pod -l app=order-api --wait=false
+<span class="c">pod "order-api-7d9c4f6b8-x2k9p" deleted
+pod "order-api-7d9c4f6b8-m4q7z" deleted
+pod "order-api-7d9c4f6b8-t8r2c" deleted</span>
+<span class="p">$</span> sleep 6 &amp;&amp; kubectl get pods -l app=order-api
+<span class="c">NAME                        READY   STATUS    RESTARTS   AGE
+order-api-7d9c4f6b8-b7n2k   1/1     Running   0          6s
+order-api-7d9c4f6b8-q9w4m   1/1     Running   0          6s
+order-api-7d9c4f6b8-z3c8v   1/1     Running   0          6s</span>
+
+<span class="p">$</span> kubectl delete rs -l app=order-api
+<span class="c">replicaset.apps "order-api-7d9c4f6b8" deleted</span>
+<span class="p">$</span> sleep 6 &amp;&amp; kubectl get rs,pods -l app=order-api
+<span class="c">NAME                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/order-api-7d9c4f6b8    3         3         3       6s
+
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/order-api-7d9c4f6b8-d5f1h   1/1     Running   0          6s
+...</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 파드 셋을 한꺼번에 지웠는데 6초 뒤 셋이 돌아왔다(레플리카셋의 일). 레플리카셋을 지우자 파드도 함께 사라졌다가(소유 사슬의 가비지 컬렉션) 디플로이먼트가 <b>같은 이름</b>의 레플리카셋을 다시 만들었다(디플로이먼트의 일). 이름이 같은 이유는 템플릿이 그대로라 해시가 같기 때문이다. 어느 층을 부숴도 위층이 복구한다. 디플로이먼트를 지우면 전부 사라진다. 그 위층은 없다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>셀렉터와 템플릿이 어긋나면</h3>
+    <p class="why">1.2절의 규칙. API 서버가 어떤 문장으로 거부하는지 읽어 둔다.</p>
+<pre><code><span class="p">$</span> sed 's/^      app: order-api$/      app: order-api-typo/' order-api-deploy.yaml &gt; bad-selector.yaml
+<span class="p">$</span> diff order-api-deploy.yaml bad-selector.yaml
+<span class="c">11c11
+&lt;       app: order-api
+---
+&gt;       app: order-api-typo</span>
+<span class="p">$</span> kubectl apply -f bad-selector.yaml
+<span class="c">The Deployment "order-api" is invalid:
+* spec.template.metadata.labels: Invalid value: map[string]string{"app":"order-api"}: `selector` does not match template `labels`
+* spec.selector: Invalid value: ...: field is immutable</span>
+<span class="p">$</span> rm bad-selector.yaml</code></pre>
+    <p class="expect"><b>읽을 것</b> — 두 가지가 한 번에 걸렸다. 셀렉터와 템플릿 라벨이 다르다는 것, 그리고 이미 있는 디플로이먼트의 셀렉터는 바꿀 수 없다는 것. 셀렉터를 바꿔야 한다면 디플로이먼트를 새로 만든다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>개수 조절: 명령으로, 그리고 파일로</h3>
+    <p class="why"><code>scale</code>은 빠르지만 파일과 어긋난다. 어긋난 상태에서 <code>apply</code>하면 무슨 일이 생기는지 본다.</p>
+<pre><code><span class="p">$</span> kubectl scale deployment/order-api --replicas=5
+<span class="p">$</span> kubectl get deploy order-api
+<span class="c">NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+order-api   5/5     5            5           4m</span>
+
+<span class="p">$</span> kubectl apply -f order-api-deploy.yaml
+<span class="c">deployment.apps/order-api configured</span>
+<span class="p">$</span> kubectl get deploy order-api
+<span class="c">NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+order-api   3/3     3            3           4m</span>
+
+<span class="p">$</span> sed -i.bak 's/replicas: 3/replicas: 4/' order-api-deploy.yaml &amp;&amp; rm order-api-deploy.yaml.bak
+<span class="p">$</span> kubectl apply -f order-api-deploy.yaml
+<span class="p">$</span> kubectl get deploy order-api -o jsonpath='{.spec.replicas}{"\n"}'
+<span class="c">4</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>scale</code>로 5를 만들었지만 파일에는 3이 적혀 있었고, apply가 파일을 이겨 3으로 돌아갔다. 파일이 원본이다. 개수를 바꾸려면 파일을 고치고 apply한다. 앞으로 <code>scale</code>은 D10의 HPA처럼 자동화가 대신 하도록 두고, 사람은 파일을 고친다. (<code>sed -i.bak</code>는 macOS·Linux 어느 쪽에서도 동작하는 형식이다.)</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>롤링 업데이트: v2로</h3>
+    <p class="why">템플릿의 이미지 한 줄을 바꾸고, 레플리카셋 두 개가 교대하는 것을 지켜본다.</p>
+<pre><code><span class="p">$</span> docker build --build-arg APP_VERSION=v2 -t order-api:v2 order-api/
+<span class="c">[+] Building 6.4s (15/15) FINISHED     ← 캐시 덕에 빠르다</span>
+
+<span class="p">$</span> sed -i.bak 's/image: order-api:v1/image: order-api:v2/' order-api-deploy.yaml &amp;&amp; rm order-api-deploy.yaml.bak
+<span class="p">$</span> kubectl apply -f order-api-deploy.yaml &amp;&amp; kubectl annotate deployment/order-api kubernetes.io/change-cause="image v2" --overwrite
+<span class="p">$</span> kubectl rollout status deployment/order-api
+<span class="c">Waiting for deployment "order-api" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "order-api" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "order-api" rollout to finish: 1 old replicas are pending termination...
+deployment "order-api" successfully rolled out</span>
+
+<span class="p">$</span> kubectl get rs -l app=order-api
+<span class="c">NAME                    DESIRED   CURRENT   READY   AGE
+order-api-5b8d7c9f2     4         4         4       40s
+order-api-7d9c4f6b8     0         0         0       9m</span>
+
+<span class="p">$</span> kubectl port-forward deployment/order-api 8080:8080 &amp;
+<span class="p">$</span> sleep 1 &amp;&amp; curl -s localhost:8080/
+<span class="c">order-api v2 on order-api-5b8d7c9f2-k2p8n</span>
+<span class="p">$</span> kill %1
+
+<span class="p">$</span> kubectl rollout history deployment/order-api
+<span class="c">REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+2         image v2</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 터미널 A(<code>-w</code>)에서는 새 해시(<code>5b8d7c9f2</code>)의 파드가 하나 <code>Running</code>이 될 때마다 옛 해시의 파드 하나가 <code>Terminating</code>으로 바뀐다. 끝나면 옛 레플리카셋은 0개로 남아 있다. 지워지지 않았다. 리비전 2가 현재이고 리비전 1이 그 레플리카셋이다.</p>
+    <div class="note">
+      <h5>지금은 확인하지 않는 것</h5>
+      <p>교체 중 요청이 실패했는지는 오늘 볼 수 없다. port-forward는 파드 하나에만 붙기 때문이다. 여러 파드에 트래픽을 흘리며 관찰하는 것은 D5에서 서비스를 만든 뒤, 실패를 0으로 만드는 것은 D8에서 readinessProbe를 넣은 뒤에 한다.</p>
+    </div>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step" id="s8">
+    <h3><span class="sn">8</span>고장 난 배포와 롤백</h3>
+    <p class="why">존재하지 않는 이미지로 v3를 배포한다. 디플로이먼트가 서비스를 죽이지 않고 멈추는 것, 그리고 되돌리는 법.</p>
+<pre><code><span class="p">$</span> sed -i.bak 's/image: order-api:v2/image: order-api:v3/' order-api-deploy.yaml &amp;&amp; rm order-api-deploy.yaml.bak
+<span class="p">$</span> kubectl apply -f order-api-deploy.yaml &amp;&amp; kubectl annotate deployment/order-api kubernetes.io/change-cause="image v3 (없는 태그)" --overwrite
+<span class="p">$</span> kubectl rollout status deployment/order-api --timeout=30s
+<span class="c">Waiting for deployment "order-api" rollout to finish: 1 out of 4 new replicas have been updated...
+error: timed out waiting for the condition</span>
+
+<span class="p">$</span> kubectl get rs,pods -l app=order-api
+<span class="c">NAME                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/order-api-9f3e1a7c4   1         1         0       40s
+replicaset.apps/order-api-5b8d7c9f2   4         4         4       5m
+replicaset.apps/order-api-7d9c4f6b8   0         0         0       14m
+
+NAME                            READY   STATUS             RESTARTS   AGE
+pod/order-api-9f3e1a7c4-h6j2w   0/1     ImagePullBackOff   0          40s
+pod/order-api-5b8d7c9f2-k2p8n   1/1     Running            0          5m
+pod/order-api-5b8d7c9f2-...     1/1     Running            0          5m
+(v2 파드 4개 그대로)</span>
+
+<span class="p">$</span> kubectl get deploy order-api
+<span class="c">NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+order-api   4/4     1            4           14m</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 새 레플리카셋은 1개를 띄우려다 <code>ImagePullBackOff</code>에 걸렸고, 그 파드가 Ready가 되지 않으니 디플로이먼트는 옛 파드를 하나도 줄이지 않았다. READY 4/4, AVAILABLE 4. 서비스는 v2로 멀쩡히 돌고 있다. UP-TO-DATE 1이 "새 템플릿의 파드는 1개뿐"이라는 뜻이다. 10분(<code>progressDeadlineSeconds</code>)이 지나면 <code>Progressing=False</code>가 되지만 그때도 옛 파드는 유지된다.</p>
+<pre><code><span class="p">$</span> kubectl rollout undo deployment/order-api
+<span class="c">deployment.apps/order-api rolled back</span>
+<span class="p">$</span> kubectl rollout status deployment/order-api
+<span class="c">deployment "order-api" successfully rolled out</span>
+<span class="p">$</span> kubectl rollout history deployment/order-api
+<span class="c">REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+3         image v3 (없는 태그)
+4         image v2</span>
+<span class="p">$</span> kubectl get deploy order-api -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+<span class="c">order-api:v2</span>
+
+<span class="c"># 파일도 되돌려 클러스터와 맞춘다</span>
+<span class="p">$</span> sed -i.bak 's/image: order-api:v3/image: order-api:v2/' order-api-deploy.yaml &amp;&amp; rm order-api-deploy.yaml.bak
+<span class="p">$</span> kubectl diff -f order-api-deploy.yaml ; echo "exit=$?"
+<span class="c">exit=0</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>undo</code>는 직전 리비전(v2)의 레플리카셋을 다시 올렸다. 이력에서 리비전 2가 사라지고 4가 된 것은 같은 템플릿이 "새 리비전으로 재사용"됐기 때문이다. 리비전 1(v1)로 가려면 <code>--to-revision=1</code>. 마지막으로 파일을 클러스터 상태와 맞췄다. <code>kubectl diff</code>가 아무것도 출력하지 않고 exit 0이면 파일과 클러스터가 같다. 롤백 뒤 이 한 줄을 습관으로 둔다. 그러지 않으면 다음 apply가 v3를 다시 밀어 넣는다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <p class="sub">문서를 덮고 진행한다.</p>
+  <div class="check">
+    <ol>
+      <li><code>day01-web:v1</code>(D1) 또는 <code>nginx:1.30</code>으로 replicas 2짜리 디플로이먼트 <code>cp-web</code>을 파일로 써서 apply하고, 파드의 <code>pod-template-hash</code>를 읽는다.</li>
+      <li>그 파드 둘을 지우고 다시 2개가 되는 것을 <code>-w</code>로 보인다.</li>
+      <li>이미지를 다른 태그로 바꿔 apply하고 <code>rollout status</code>·<code>get rs</code>로 레플리카셋 두 개를 보인다.</li>
+      <li>존재하지 않는 태그로 apply한 뒤 READY 수가 줄지 않았음을 보이고 <code>rollout undo</code>로 복구한다.</li>
+      <li>롤백 뒤 <code>kubectl diff</code>가 비어 있게 파일을 맞춘다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D5로 간다. 4번이 막히면 8단계의 <code>get deploy</code> 출력에서 READY·UP-TO-DATE·AVAILABLE 세 열의 뜻을 다시 읽는다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub"><code>order-api</code> 디플로이먼트는 v2·4개인 채로 남긴다. 내일 서비스를 붙인다. 체크포인트에서 만든 것만 지운다.</p>
+<pre><code><span class="p">$</span> kubectl delete deployment cp-web --ignore-not-found
+<span class="p">$</span> kubectl get deploy,rs,pods -l app=order-api
+<span class="c">deployment.apps/order-api   4/4   ...
+replicaset.apps/order-api-5b8d7c9f2   4   4   4
+replicaset.apps/order-api-7d9c4f6b8   0   0   0
+replicaset.apps/order-api-9f3e1a7c4   0   0   0
+pod/... × 4  Running</span>
+<span class="p">$</span> docker images order-api --format '{{.Repository}}:{{.Tag}}'
+<span class="c">order-api:v2
+order-api:v1</span></code></pre>
+  <p>0개짜리 레플리카셋 두 개는 이력이다. 지우지 않는다(<code>revisionHistoryLimit</code>이 관리한다). <code>order-api-deploy.yaml</code>은 D5부터 계속 고쳐 쓰므로 <code>~/k8s-study/day04/</code>에 그대로 둔다.</p>
+
+  <div class="note">
+    <h5>D5 예고</h5>
+    <p>4개 파드에 IP가 4개 있고 매번 바뀐다. 내일은 그 앞에 고정된 이름과 IP 하나를 세우는 서비스를 만들고, 그 IP가 실체 없는 가상 주소라는 것과 요청이 어느 파드로 어떻게 배달되는지를 노드 3개로 늘려 확인한다. 오늘 본 롤링 업데이트를 트래픽을 흘리면서 다시 한다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>디플로이먼트 — <a href="https://kubernetes.io/ko/docs/concepts/workloads/controllers/deployment/">kubernetes.io/ko/docs/concepts/workloads/controllers/deployment/</a> · 레플리카셋 — <a href="https://kubernetes.io/ko/docs/concepts/workloads/controllers/replicaset/">kubernetes.io/ko/docs/concepts/workloads/controllers/replicaset/</a></li>
+    <li>이미지와 pull 정책 — <a href="https://kubernetes.io/ko/docs/concepts/containers/images/">kubernetes.io/ko/docs/concepts/containers/images/</a> · 소유자와 종속 — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/owners-dependents/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/owners-dependents/</a></li>
+    <li>Docker Desktop Kubernetes(kind 프로비저너와 containerd 이미지 스토어) — <a href="https://docs.docker.com/desktop/use-desktop/kubernetes/">docs.docker.com/desktop/use-desktop/kubernetes/</a> · containerd 이미지 스토어 — <a href="https://docs.docker.com/desktop/features/containerd/">docs.docker.com/desktop/features/containerd/</a></li>
+    <li>Spring Boot 4.1.0 릴리스 — <a href="https://spring.io/blog/2026/06/10/spring-boot-4/">spring.io/blog/2026/06/10/spring-boot-4/</a> · 4.0 마이그레이션 가이드(스타터 이름) — <a href="https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide">github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide</a></li>
+    <li>멀티 스테이지 빌드 — <a href="https://docs.docker.com/build/building/multi-stage/">docs.docker.com/build/building/multi-stage/</a></li>
+    <li>이미지 태그 — maven <a href="https://hub.docker.com/_/maven">3.9-eclipse-temurin-21</a> · eclipse-temurin <a href="https://hub.docker.com/_/eclipse-temurin">21-jre</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day03-pods-namespaces-labels.html">← D3 파드·네임스페이스·라벨</a><a href="day05-services-networking.html">D5 서비스와 네트워킹 →</a></div>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 박스 5개: Git → kubectl → API 서버 → etcd → 컨트롤러 -->
+  <rect class="box" x="20" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="90" y="100" text-anchor="middle">Git 리포지터리</text>
+  <text class="t-sub" x="90" y="122" text-anchor="middle">journal.yaml</text>
+
+  <rect class="box" x="200" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="270" y="100" text-anchor="middle">kubectl apply</text>
+  <text class="t-sub" x="270" y="122" text-anchor="middle">-f journal.yaml</text>
+
+  <rect class="box" x="380" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="450" y="100" text-anchor="middle">API 서버</text>
+  <text class="t-sub" x="450" y="122" text-anchor="middle">검증 · 저장</text>
+
+  <rect class="box" x="560" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="630" y="100" text-anchor="middle">etcd</text>
+  <text class="t-sub" x="630" y="122" text-anchor="middle">원하는 상태 기록</text>
+
+  <rect class="box-accent" x="740" y="70" width="140" height="72" rx="4"/>
+  <text class="t-title" x="810" y="100" text-anchor="middle">컨트롤러</text>
+  <text class="t-sub" x="810" y="122" text-anchor="middle">조정 루프 반복</text>
+
+  <!-- 연결선 -->
+  <line class="line" x1="160" y1="106" x2="196" y2="106" marker-end="url(#arrow)"/>
+  <line class="line" x1="340" y1="106" x2="376" y2="106" marker-end="url(#arrow)"/>
+  <line class="line" x1="520" y1="106" x2="556" y2="106" marker-end="url(#arrow)"/>
+  <line class="line" x1="700" y1="106" x2="736" y2="106" marker-end="url(#arrow)"/>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="192" text-anchor="middle">YAML에 적은 것은 명령이 아니라 "원하는 상태"다.</text>
+  <text class="t-cap" x="450" y="214" text-anchor="middle">실제 상태가 어긋나면 컨트롤러가 원하는 상태로 되돌린다. 그래서 YAML은 Git으로 관리할 가치가 있다.</text>
+</svg>

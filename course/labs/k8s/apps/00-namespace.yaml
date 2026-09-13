@@ -1,0 +1,10 @@
+# M19 — 두 번째 실습 앱이 사는 네임스페이스.
+# journal(Node) 과 apps(JVM) 를 나눠 두는 이유: 실제 클러스터에는 언어도 팀도 다른 앱이
+# 섞여 있고, 스크레이프 대상을 네임스페이스 단위로 고르는 일이 그래서 생긴다.
+# M20 의 ServiceMonitor namespaceSelector 가 이 구분을 쓴다.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    app.kubernetes.io/part-of: obs-study

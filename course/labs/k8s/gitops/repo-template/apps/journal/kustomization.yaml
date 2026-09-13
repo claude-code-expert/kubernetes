@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gitops-journal
+resources:
+  - 10-config.yaml
+  - 20-redis.yaml
+  - 30-journal-api.yaml
+  - 40-web-static.yaml
+  - 70-hpa.yaml
+configMapGenerator:
+  - name: web-content
+    files:
+      - index.html
+images:
+  - name: journal-api
+    newTag: v2

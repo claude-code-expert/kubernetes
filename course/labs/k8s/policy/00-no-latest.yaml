@@ -1,0 +1,36 @@
+# M26 — :latest 금지. CEL 한 줄이 조직 규약이 된다.
+#
+# 정책(무엇을 검사하는가)과 바인딩(어디에 적용하는가)이 분리돼 있다.
+# 정책만 만들면 아무것도 검사하지 않는다 — M23 의 Role/RoleBinding 과 같은 구조다.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: no-latest-tag
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["deployments", "statefulsets", "daemonsets"]
+  validations:
+    - expression: >-
+        object.spec.template.spec.containers.all(c,
+          !c.image.endsWith(":latest") && c.image.contains(":"))
+      message: "이미지에 :latest 를 쓰거나 태그를 생략할 수 없다. 고정 태그나 다이제스트를 쓴다."
+      reason: Invalid
+---
+# 승격 순서: validationActions 를 [Warn] 로 먼저 배포하고,
+# 감사에서 위반이 0 이 된 뒤 [Deny] 로 바꾼다.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: no-latest-tag-binding
+spec:
+  policyName: no-latest-tag
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        policy: enforced

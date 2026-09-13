@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+  <text class="t-h" x="40" y="46">파드 하나가 뚫렸을 때 어디까지 가는가</text>
+
+  <!-- 경로 -->
+  <rect class="warnbox" x="40" y="70" width="132" height="52" rx="4"/>
+  <text class="t-title" x="106" y="92" text-anchor="middle">뚫린 파드</text>
+  <text class="t-mono" x="106" y="110" text-anchor="middle">앱 취약점</text>
+
+  <path class="wline" d="M 172 84 L 228 84" marker-end="url(#ar2)"/>
+  <rect class="box" x="230" y="60" width="180" height="46" rx="4"/>
+  <text class="t-mono" x="240" y="80">노드 kubelet :10250</text>
+  <text class="t-warn" x="240" y="97">401 — 닿기는 한다</text>
+
+  <path class="wline" d="M 172 108 L 228 130" marker-end="url(#ar2)"/>
+  <rect class="box" x="230" y="112" width="180" height="46" rx="4"/>
+  <text class="t-mono" x="240" y="132">169.254.169.254</text>
+  <text class="t-warn" x="240" y="149">클라우드 자격 증명</text>
+
+  <path class="wline" d="M 410 83 L 456 83" marker-end="url(#ar2)"/>
+  <rect class="warnbox" x="458" y="60" width="150" height="46" rx="4"/>
+  <text class="t-title" x="533" y="88" text-anchor="middle">노드의 모든 파드</text>
+  <path class="wline" d="M 410 135 L 456 135" marker-end="url(#ar2)"/>
+  <rect class="warnbox" x="458" y="112" width="150" height="46" rx="4"/>
+  <text class="t-title" x="533" y="140" text-anchor="middle">클라우드 계정</text>
+
+  <rect class="accent" x="640" y="60" width="200" height="98" rx="4"/>
+  <text class="t-title" x="740" y="84" text-anchor="middle">막는 자리</text>
+  <text class="t-mono" x="652" y="104">이그레스 ipBlock + except</text>
+  <text class="t-mono" x="652" y="122">노드 대역 · 링크로컬</text>
+  <text class="t-acc" x="652" y="142">M25 의 정책에 한 줄 더</text>
+
+  <!-- 감사 -->
+  <rect class="soft" x="40" y="180" width="400" height="152" rx="4"/>
+  <text class="t-h" x="56" y="204">감사 로그 — 무엇을 버리느냐가 정책이다</text>
+  <rect class="box" x="56" y="216" width="368" height="46" rx="3"/>
+  <text class="t-mono" x="66" y="236">읽기를 전부 버림 — 128줄/분 (약 380MB/일)</text>
+  <text class="t-warn" x="66" y="253">인가 거부(403)도 함께 사라진다</text>
+  <rect class="accent" x="56" y="270" width="368" height="46" rx="3"/>
+  <text class="t-mono" x="66" y="290">시스템 읽기만 버림 — 644줄/분 (약 1.4GB/일)</text>
+  <text class="t-acc" x="66" y="307">403 이 남는다. 유휴 클러스터 기준 숫자다</text>
+
+  <!-- 진단 -->
+  <rect class="soft" x="456" y="180" width="384" height="152" rx="4"/>
+  <text class="t-h" x="472" y="204">CIS 진단 — 다 고치는 게 목표가 아니다</text>
+  <rect class="box" x="472" y="216" width="352" height="40" rx="3"/>
+  <text class="t-mono" x="482" y="241">10 fail  →  4 fail  (pass 37 → 43)</text>
+  <rect class="warnbox" x="472" y="264" width="352" height="52" rx="3"/>
+  <text class="t-mono" x="482" y="284">남은 4개는 근거를 적고 넘어간다</text>
+  <text class="t-sub" x="482" y="303">bind-address 는 M19 의 스크레이프 때문에 0.0.0.0 이다</text>
+
+  <!-- 이미지 -->
+  <text class="t-h" x="56" y="360">이미지 스캔 — 대부분 우리 코드가 아니다</text>
+  <rect class="box" x="56" y="372" width="252" height="56" rx="3"/>
+  <text class="t-mono" x="66" y="392">node:22-alpine</text>
+  <text class="t-warn" x="66" y="412">HIGH 12 · CRITICAL 1</text>
+  <rect class="accent" x="322" y="372" width="252" height="56" rx="3"/>
+  <text class="t-mono" x="332" y="392">node:24-alpine</text>
+  <text class="t-acc" x="332" y="412">HIGH 6</text>
+  <rect class="box" x="588" y="372" width="252" height="56" rx="3"/>
+  <text class="t-mono" x="598" y="392">distroless nodejs22</text>
+  <text class="t-sub" x="598" y="412">HIGH 5 · CRITICAL 1</text>
+</svg>

@@ -1,0 +1,32 @@
+# M36 실험 ② — 통신 카오스 (책 20.1.3).
+#
+# 가설: journal-api 와 redis 사이에 200ms 지연이 생기면
+#       응답 시간이 그만큼 늘지만 **실패는 나지 않는다**.
+#       (커넥션이 끊기는 것이 아니라 느려지는 것이다)
+#
+# 이 실험이 노리는 것은 "느림"과 "죽음"을 구분하는 능력이다.
+# 타임아웃이 없는 클라이언트에서는 느림이 곧 죽음이 된다.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: redis-delay
+  namespace: journal
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [journal]
+    labelSelectors:
+      app: journal-api
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces: [journal]
+      labelSelectors:
+        app: redis
+  delay:
+    latency: "200ms"
+    correlation: "0"
+    jitter: "0ms"
+  duration: "60s"

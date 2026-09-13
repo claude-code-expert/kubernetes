@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 2 · 쿠버네티스 코어] M14 종합 — 저널 애플리케이션과 Helm — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 14 / 38 · PART 2 쿠버네티스 코어</div>
+  <h1>종합 — 저널 애플리케이션과 Helm 파라미터화</h1>
+  <p class="ch-desc">M08부터 만든 조각들이 <code>default</code> 네임스페이스에 흩어져 있다. 이것을 한 디렉터리의 매니페스트 일습으로 다시 쓰고, <code>kubectl apply -k</code> 한 줄로 배포한 뒤, 같은 것을 Helm 차트로 묶어 <strong>dev와 prod를 값 파일만 바꿔</strong> 배포한다.</p>
+  <div class="meta">
+    <span class="tag">초반→중반</span><span class="tag">135분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Helm 4.2.4</span>
+    <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전은 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m13-k8s-configmap-secret.html">M13</a> 완료 — 컨피그맵과 시크릿 주입을 직접 해 봤고, M13이 만든 것은 정리했다. <code>default</code>에는 M12가 남긴 <code>journal-api</code> · <code>web-static</code> · 인그레스 <code>journal</code> · Gateway <code>journal-gateway</code>가 있다</li>
+    <li>이미지 <code>journal-api:v1</code>과 <code>journal-api:v2</code>가 kind 노드에 적재돼 있다 (<a href="m07-docker-registry-supplychain.html">M07</a>·<a href="m10-k8s-deployment-rollout.html">M10</a>). 확인: <code>docker exec study-control-plane crictl images | grep journal</code>에 두 태그가 다 보인다. v2는 M15 프로브 실습이 롤링 업데이트 대상으로 쓴다</li>
+    <li>ingress-nginx가 설치돼 있다 (<a href="m12-k8s-ingress-gateway.html">M12</a>). 확인: <code>kubectl get pods -n ingress-nginx</code></li>
+    <li>브라우저로 열어 보려면 <code>/etc/hosts</code>에 <code>127.0.0.1 journal.local dev.journal.local</code>. 이 문서의 명령은 전부 <code>-H "Host: ..."</code>로 진행하므로 없어도 된다</li>
+    <li>새로 만들 파일: <code>course/labs/k8s/journal/</code>, <code>course/labs/charts/journal/</code>, <code>course/labs/scripts/rebuild.sh</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 흩어진 <code>kubectl create</code>의 결과를 <strong>한 디렉터리의 매니페스트</strong>로 다시 쓰면, 지우고 다시 만드는 일이 명령 한 줄이 된다.</p>
+  <p>2. 상태가 있는 워크로드는 디플로이먼트가 아니라 <strong>스테이트풀셋</strong>이다. 고정 이름 · 파드별 PVC · 순서 있는 생성이 세 가지 차이다.</p>
+  <p>3. Helm은 같은 매니페스트를 <strong>값으로 파라미터화</strong>한다. 환경이 늘어날 때 복사본이 아니라 값 파일이 늘어나야 한다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">14.1</span>흩어진 것을 한 덩어리로</a>
+  <a href="#s2"><span class="num">14.2</span>무엇이 무엇에 의존하는가</a>
+  <a href="#s3"><span class="num">14.3</span>따라하기 ① 일습으로 배포</a>
+  <a href="#s4"><span class="num">14.4</span>따라하기 ② 상태는 어디에 남는가</a>
+  <a href="#s5"><span class="num">14.5</span>따라하기 ③ 같은 것을 Helm 차트로</a>
+  <a href="#s6"><span class="num">14.6</span>따라하기 ④ 값으로 환경을 가른다</a>
+  <a href="#s7"><span class="num">14.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">14.8</span>운영 관점</a>
+  <a href="#s9"><span class="num">14.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">14.1</span>흩어진 것을 한 덩어리로</h2>
+  <p class="lead">지금 <code>default</code> 네임스페이스를 열어 보면 M10의 디플로이먼트, M11의 서비스 셋, M12의 명령 한 줄로 만든 정적 서버와 인그레스와 Gateway가 순서 없이 쌓여 있다. M13은 자기가 만든 것을 지웠지만, 지웠다는 사실도 남아 있지 않다. 어느 것이 어느 모듈에서 왔는지 클러스터는 기억하지 않는다.</p>
+  <p>문제는 재현이다. 지금 이 클러스터를 지우면 같은 상태를 다시 만들 방법이 없다. 명령을 어떤 순서로 쳤는지가 어디에도 남아 있지 않기 때문이다. 책 1.2가 "선언형이 진실 공급원"이라고 말하는 이유가 여기서 실감난다 — 명령형은 <strong>일을 시키고 결과를 남기지 않고</strong>, 선언형은 <strong>원하는 상태를 파일로 남긴다</strong>.</p>
+  <p>그래서 이 모듈은 새 기능을 거의 배우지 않는다. M08~M13에서 만든 것을 파일로 다시 쓰고, 그 파일들이 서로 어떻게 맞물리는지 확인한다. 새로 나오는 것은 저장소를 위한 스테이트풀셋 하나다. 여기서 확정하는 매니페스트와 차트를 <strong>Part 3부터 Part 8까지 전부 실습 대상으로 재사용</strong>한다. 프로브(M15)도, HPA(M17)도, PromQL 쿼리(M20)도, 카오스 실험(M36)도 이 앱을 건드린다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">14.2</span>무엇이 무엇에 의존하는가</h2>
+  <p>책 1.7~1.11이 배포하는 저널 애플리케이션은 세 덩어리다. 진입점(인그레스), 무상태 워크로드 둘(정적 파일 서버·API), 상태를 가진 저장소 하나(레디스). 이 모듈에서 만들 것도 같은 모양이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="m14ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .cluster { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .ns { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .store { fill:#f7f7f5; stroke:#999999; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
+
+      <rect class="accent" x="20" y="180" width="150" height="66" rx="4"/>
+      <text class="t-title" x="95" y="206" text-anchor="middle">curl · 브라우저</text>
+      <text class="t-mono" x="95" y="226" text-anchor="middle">localhost:18080</text>
+
+      <rect class="cluster" x="196" y="26" width="684" height="374" rx="6"/>
+      <text class="t-h" x="212" y="50">kind 클러스터 study — 노드 3개</text>
+
+      <rect class="ns" x="214" y="64" width="152" height="316" rx="4"/>
+      <text class="t-sub" x="226" y="84">ns: ingress-nginx</text>
+      <rect class="accent" x="228" y="180" width="124" height="66" rx="3"/>
+      <text class="t-title" x="290" y="204" text-anchor="middle">컨트롤러</text>
+      <text class="t-mono" x="290" y="224" text-anchor="middle">Ingress journal</text>
+      <text class="t-sub" x="290" y="360" text-anchor="middle">노드 :80</text>
+
+      <rect class="ns" x="384" y="64" width="478" height="316" rx="4"/>
+      <text class="t-sub" x="396" y="84">ns: journal — kubectl apply -k 로 한 번에</text>
+
+      <rect class="box" x="404" y="96" width="192" height="62" rx="3"/>
+      <text class="t-title" x="500" y="120" text-anchor="middle">web-static ×2</text>
+      <text class="t-mono" x="500" y="140" text-anchor="middle">nginx:1.29-alpine</text>
+
+      <rect class="box" x="404" y="186" width="192" height="62" rx="3"/>
+      <text class="t-title" x="500" y="210" text-anchor="middle">journal-api ×3</text>
+      <text class="t-mono" x="500" y="230" text-anchor="middle">journal-api:v1</text>
+
+      <rect class="box" x="646" y="186" width="192" height="62" rx="3"/>
+      <text class="t-title" x="742" y="210" text-anchor="middle">redis-0 · StatefulSet</text>
+      <text class="t-mono" x="742" y="230" text-anchor="middle">redis:8.2-alpine</text>
+
+      <rect class="store" x="646" y="292" width="192" height="60" rx="3"/>
+      <text class="t-title" x="742" y="316" text-anchor="middle">PVC data-redis-0</text>
+      <text class="t-mono" x="742" y="336" text-anchor="middle">1Gi · standard</text>
+
+      <rect class="store" x="404" y="292" width="192" height="60" rx="3"/>
+      <text class="t-title" x="500" y="316" text-anchor="middle">ConfigMap · Secret</text>
+      <text class="t-mono" x="500" y="336" text-anchor="middle">journal-config / -secret</text>
+
+      <path class="line" d="M 170 213 L 222 213" marker-end="url(#m14ar)"/>
+      <path class="line" d="M 352 200 L 378 200 L 378 127 L 398 127" marker-end="url(#m14ar)"/>
+      <text class="t-mono" x="386" y="112">/</text>
+      <path class="line" d="M 352 226 L 378 226 L 378 217 L 398 217" marker-end="url(#m14ar)"/>
+      <text class="t-mono" x="376" y="250">/api</text>
+      <path class="line" d="M 596 217 L 640 217" marker-end="url(#m14ar)"/>
+      <text class="t-mono" x="618" y="208" text-anchor="middle">:6379</text>
+      <path class="line" d="M 742 248 L 742 286" marker-end="url(#m14ar)"/>
+      <text class="t-mono" x="752" y="272">/data</text>
+      <path class="line" d="M 500 248 L 500 286" marker-end="url(#m14ar)"/>
+      <text class="t-mono" x="510" y="272">env</text>
+    </svg>
+    <figcaption>그림 14.1 — 요청 하나가 지나가는 길. 맥의 18080은 kind 설정(M01)이 컨트롤 플레인 노드의 80으로 넘긴 것이고, 거기서 ingress-nginx가 경로를 보고 두 서비스로 나눈다. 레디스만 PVC를 갖는다.</figcaption>
+  </figure>
+  <p>의존 방향이 한쪽이라는 점이 중요하다. API는 레디스를 알아야 하지만 레디스는 API를 모른다. 정적 파일 서버는 아무것도 모른다. 그래서 배포 순서를 강제할 필요가 없다 — API가 레디스보다 먼저 떠도 <code>/readyz</code>가 503을 돌려주며 기다리고(M04에서 본 <code>server.ts</code>의 설계 — <code>REDIS_URL</code>이 있는데 연결이 안 열려 있으면 503), 레디스가 준비되면 저절로 트래픽을 받는다.</p>
+
+  <h3>파일을 어떻게 나누는가</h3>
+  <p>책 1.11은 "서비스마다 디렉터리를 나누라"고 말한다. 서비스가 열 개를 넘어가면 맞는 조언이지만, 세 개짜리 앱에서 디렉터리를 셋으로 나누면 파일을 여닫는 품이 더 든다. 이 과정은 <strong>한 디렉터리 · 번호 접두사</strong>로 간다.</p>
+<pre><code>course/labs/k8s/journal/
+  00-namespace.yaml     네임스페이스
+  10-config.yaml        ConfigMap · Secret
+  20-redis.yaml         헤드리스 Service · 읽기용 Service · StatefulSet
+  30-journal-api.yaml   Deployment · Service
+  40-web-static.yaml    Deployment · Service
+  50-ingress.yaml       Ingress
+  index.html            정적 페이지 (컨피그맵으로 주입된다)
+  kustomization.yaml    위 전부를 묶는 파일</code></pre>
+  <p>번호는 적용 순서를 강제하기 위한 것이 아니다(<code>apply</code>는 순서를 보장하지 않는다). 사람이 파일 목록을 봤을 때 <strong>바깥에서 안쪽으로 읽히도록</strong> 하기 위한 것이다.</p>
+
+  <h3>왜 <code>default</code>가 아니라 새 네임스페이스인가</h3>
+  <p>네임스페이스 하나가 곧 삭제 단위다. <code>kubectl delete ns journal</code> 한 줄이면 이 앱이 만든 모든 것이 사라진다. <code>default</code>에 쌓아 두면 무엇을 지워야 할지 매번 목록을 만들어야 한다. 책 2.3.2가 개발자마다 네임스페이스를 주라고 말하는 것도 같은 이유다 — 격리보다 <strong>정리가 쉬워지는 것</strong>이 실무에서 더 자주 도움이 된다.</p>
+  <p>대신 대가가 있다. M13에서 <code>default</code>에 만들었던 <code>journal-config</code>와 <code>journal-secret</code>은 — 지우지 않고 남겨 두었더라도 — 여기서 쓸 수 없다. <strong>컨피그맵과 시크릿은 네임스페이스를 넘지 못한다</strong>. 그래서 <code>10-config.yaml</code>에 같은 것을 다시 정의한다. M13 실패 ①에서 봤던 세 가지 원인 중 세 번째가 바로 이것이었다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">14.3</span>따라하기 ① 일습으로 배포</h2>
+
+  <div class="step">
+    <h4>1단계. 네임스페이스와 설정을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>앱이 들어갈 자리와 앱이 읽을 값을 먼저 만든다.</p>
+<pre><code># course/labs/k8s/journal/00-namespace.yaml
+# M14 — 저널 애플리케이션 일습은 전용 네임스페이스에 배포한다.
+# M08~M13 실습은 default 에 흩어져 있었다. 여기서부터는 한 덩어리로 지우고 다시 만들 수 있어야 한다.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: journal</code></pre>
+<pre><code># course/labs/k8s/journal/10-config.yaml
+# M13 에서 만든 것과 같은 컨피그맵·시크릿. 네임스페이스가 다르므로 다시 만든다.
+# 컨피그맵과 시크릿은 네임스페이스를 넘지 못한다 (M13 실패 ①의 세 번째 원인).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: journal-config
+data:
+  APP_GREETING: "hello from configmap v1"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: journal-secret
+type: Opaque
+stringData:
+  # 실습용 값이다. 실제 비밀번호를 이 파일에 적고 깃에 커밋하지 않는다 (M31 SOPS·External Secrets).
+  REDIS_PASSWORD: "s3cr3t-pass"</code></pre>
+    <p>네임스페이스를 파일 안에 적지 않았다. 각 파일의 <code>metadata.namespace</code>는 비워 두고 <code>kustomization.yaml</code>이 한 번에 채운다. 같은 파일을 다른 네임스페이스에 복제하기 쉬워진다. 비밀번호에 <code>@</code> · <code>:</code> · <code>/</code>가 없는 것은 3단계에서 이 값이 URL 안에 들어가기 때문이다 — URL 구분 문자가 섞이면 클라이언트마다 다르게 파싱한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 레디스를 스테이트풀셋으로 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>저장소는 디플로이먼트로 배포하면 안 되는 이유를 파일 형태로 확인한다.</p>
+    <p><dfn class="term">스테이트풀셋 <span class="en">(StatefulSet)</span></dfn>은 디플로이먼트와 같이 파드 집합을 관리하지만, 파드마다 고정된 이름(서수)과 전용 <dfn class="term">PVC <span class="en">(PersistentVolumeClaim)</span></dfn> — "이만한 저장 공간을 달라"는 요청 오브젝트 — 를 붙여 주고, 생성·삭제를 순서대로 한다. 레디스처럼 재시작 뒤에도 같은 데이터를 물고 와야 하는 워크로드를 위한 컨트롤러다.</p>
+<pre><code># course/labs/k8s/journal/20-redis.yaml
+# 레디스 — 상태를 가진 워크로드. 디플로이먼트가 아니라 스테이트풀셋을 쓴다.
+# 차이 세 가지: 파드 이름이 고정(redis-0), 파드마다 자기 PVC, 순서대로 생성·삭제.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis                      # 스테이트풀셋의 serviceName 과 같아야 한다
+  labels:
+    app: redis
+spec:
+  clusterIP: None                  # 헤드리스 — redis-0.redis 라는 고정 DNS 이름을 만든다
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-read                 # 책 1장의 읽기 전용 서비스 자리
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis                     # 복제본이 1개인 지금은 redis 와 같은 파드를 가리킨다
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  serviceName: redis               # 헤드리스 서비스 이름. 파드 DNS 는 &lt;파드&gt;.&lt;이 이름&gt; 이 된다
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:8.2-alpine
+          imagePullPolicy: IfNotPresent
+          # $(VAR) 는 쿠버네티스가 같은 컨테이너의 env 에서 치환한다. 셸이 하는 일이 아니다.
+          args: ["--requirepass", "$(REDIS_PASSWORD)", "--appendonly", "yes"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: journal-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data     # appendonly 파일이 여기 쌓인다
+  # 디플로이먼트에는 없는 필드. 파드마다 PVC 를 하나씩 만들어 붙인다.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # storageClassName 을 생략하면 클러스터의 기본 스토리지클래스를 쓴다.
+        # kind 는 local-path-provisioner 의 standard 가 기본이다: kubectl get sc
+        resources:
+          requests:
+            storage: 1Gi</code></pre>
+    <table>
+      <tr><th>필드</th><th>디플로이먼트에는</th><th>왜 스테이트풀셋에 필요한가</th></tr>
+      <tr><td><code>serviceName</code></td><td>없다</td><td>파드마다 <code>redis-0.redis</code> 같은 고정 DNS 이름을 만든다. IP가 바뀌어도 이름은 그대로다</td></tr>
+      <tr><td><code>volumeClaimTemplates</code></td><td>없다</td><td>파드가 만들어질 때 <strong>그 파드 전용 PVC</strong>를 만든다. 파드를 지워도 PVC는 남고, 다시 만들어진 파드가 같은 PVC를 물고 온다</td></tr>
+      <tr><td>파드 이름</td><td>임의 접미사 (<code>-cbdf4d977-cp2xz</code>)</td><td>서수 (<code>redis-0</code>, <code>redis-1</code>). 생성은 0→1→2, 삭제는 그 반대 순서</td></tr>
+    </table>
+    <div class="note-2026">
+      <span class="lbl">레디스 이미지 태그와 라이선스</span>
+      <code>redis:8.2-alpine</code>으로 고정한다(2026-09-05 확인). Redis는 8.0부터 AGPLv3를 선택지로 되돌렸지만 여전히 BSD가 아니다. 이 이유로 리눅스 재단이 포크한 <strong>Valkey</strong>를 쓰는 조직이 늘고 있고, 프로토콜과 명령이 호환되므로 이 실습의 이미지 이름만 바꿔도 그대로 돌아간다. 책은 Redis를 쓰므로 이 과정도 Redis로 간다. 실습 당일 태그가 살아 있는지 확인하라.
+      <span class="src">https://hub.docker.com/_/redis · https://valkey.io/</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. API와 정적 서버, 진입점을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M10의 디플로이먼트에 레디스 연결과 설정 주입을 더하고, M12의 정적 서버와 인그레스를 파일로 옮긴다.</p>
+<pre><code># course/labs/k8s/journal/30-journal-api.yaml
+# 저널 API — M10 의 디플로이먼트에 레디스 연결과 설정 주입을 더했다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-api
+  labels:
+    app: journal-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: journal-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: journal-api
+    spec:
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent      # kind load 로 넣은 로컬 이미지라 당겨오지 않는다
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "v1"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: journal-config
+                  key: LOG_LEVEL
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: journal-secret
+                  key: REDIS_PASSWORD
+            # redis-0.redis 는 스테이트풀셋이 보장하는 고정 이름이다.
+            # 파드가 다시 만들어져 IP 가 바뀌어도 이 이름은 그대로다.
+            - name: REDIS_URL
+              value: "redis://default:$(REDIS_PASSWORD)@redis-0.redis:6379"
+          readinessProbe:
+            httpGet:
+              path: /readyz                  # 레디스에 못 붙으면 503 을 돌려준다
+              port: http
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api
+spec:
+  type: ClusterIP
+  selector:
+    app: journal-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http</code></pre>
+    <p>M10 파일과 달라진 곳은 셋이다. 복제본이 4에서 3으로(노트북 자원), 포트에 <code>http</code>라는 <strong>이름</strong>이 붙어 서비스와 프로브가 번호 대신 이름으로 가리키고, <code>env</code>에 컨피그맵·시크릿 주입과 <code>REDIS_URL</code>이 들어왔다. <code>livenessProbe</code>도 새로 붙었다 — 값이 왜 그 숫자인지는 M15가 다룬다.</p>
+    <p><code>REDIS_URL</code> 안의 <code>$(REDIS_PASSWORD)</code>가 핵심이다. 시크릿 값을 URL 문자열 안에 조립해야 하는데, 시크릿을 매니페스트에 평문으로 적을 수는 없다. 쿠버네티스는 <strong>같은 컨테이너의 다른 <code>env</code> 항목</strong>을 <code>$(이름)</code> 문법으로 치환해 준다. 셸이 하는 일이 아니므로 <code>sh -c</code>로 감쌀 필요가 없다. 단, 치환되는 항목이 <strong>먼저</strong> 정의돼 있어야 한다 — 그래서 <code>REDIS_PASSWORD</code>가 <code>REDIS_URL</code> 위에 있다.</p>
+<pre><code># course/labs/k8s/journal/40-web-static.yaml
+# 정적 파일 서버. 페이지 자체는 컨피그맵으로 주입한다 (kustomization 의 configMapGenerator).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-static
+  labels:
+    app: web-static
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-static
+  template:
+    metadata:
+      labels:
+        app: web-static
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.29-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+      volumes:
+        - name: content
+          configMap:
+            name: web-content      # kustomize 가 이름 뒤에 해시를 붙인다
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-static
+spec:
+  type: ClusterIP
+  selector:
+    app: web-static
+  ports:
+    - name: http
+      port: 80
+      targetPort: http</code></pre>
+    <p>정적 서버는 페이지 자체를 컨피그맵으로 주입한다. 이미지를 다시 빌드하지 않고 페이지를 바꾸기 위해서다. M12에서 <code>kubectl create deploy web-static</code>으로 만들었던 것이 파일 두 장(디플로이먼트·서비스)이 됐고, nginx 기본 페이지 대신 우리 페이지를 낸다. 그 페이지가 아래 <code>index.html</code>이다 — M06의 <code>static-site/index.html</code>과는 <strong>다르다</strong>. 폼과 <code>fetch</code>가 붙어 <code>/api/entries</code>를 실제로 호출한다.</p>
+<pre><code>&lt;!-- course/labs/k8s/journal/index.html --&gt;
+&lt;!doctype html&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;title&gt;Journal&lt;/title&gt;
+&lt;style&gt;
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; line-height: 1.7; }
+  input { width: 70%; padding: 6px 8px; }
+  button { padding: 6px 14px; }
+  li { font-family: ui-monospace, monospace; font-size: 13px; }
+  #where { color: #666; font-size: 13px; }
+&lt;/style&gt;
+&lt;h1&gt;Journal&lt;/h1&gt;
+&lt;p id="where"&gt;이 페이지는 web-static 이, &lt;code&gt;/api&lt;/code&gt; 는 journal-api 가 처리한다.&lt;/p&gt;
+&lt;form id="f"&gt;
+  &lt;input id="t" placeholder="한 줄 적기" autocomplete="off"&gt;
+  &lt;button type="submit"&gt;저장&lt;/button&gt;
+&lt;/form&gt;
+&lt;ul id="list"&gt;&lt;/ul&gt;
+&lt;script&gt;
+  const list = document.getElementById('list');
+  async function load() {
+    const r = await fetch('/api/entries');
+    const d = await r.json();
+    list.innerHTML = d.entries.map(e =&gt; '&lt;li&gt;' + e + '&lt;/li&gt;').join('');
+  }
+  document.getElementById('f').onsubmit = async (ev) =&gt; {
+    ev.preventDefault();
+    const t = document.getElementById('t');
+    await fetch('/api/entries', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: t.value }),
+    });
+    t.value = '';
+    load();
+  };
+  load();
+&lt;/script&gt;</code></pre>
+    <p>진입점은 M12의 <code>m12-ingress.yaml</code>과 같은 규칙이다. 다른 곳은 하나 — 포트를 번호(<code>number: 8080</code>) 대신 <strong>이름</strong>(<code>name: http</code>)으로 가리킨다. 서비스 포트에 이름을 붙였으니 번호가 바뀌어도 인그레스는 고칠 필요가 없다.</p>
+<pre><code># course/labs/k8s/journal/50-ingress.yaml
+# 진입점. M12 에서 default 에 만든 것과 같은 규칙을 journal 네임스페이스로 옮겼다.
+# 인그레스는 자기 네임스페이스의 서비스만 백엔드로 지정할 수 있다.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: journal
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: journal.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: journal-api
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-static
+                port:
+                  name: http</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>4단계. kustomization.yaml로 묶는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>여섯 파일을 한 단위로 만들고, 반복되는 값(네임스페이스·레이블·이미지 태그)을 한곳에 모은다.</p>
+    <p><dfn class="term">kustomize</dfn>는 kubectl에 내장된 매니페스트 합성 도구다. 템플릿 문법 없이, 유효한 YAML 파일들을 읽어 네임스페이스·레이블·이미지 태그를 덧씌우고 컨피그맵을 생성해 하나의 스트림으로 내보낸다.</p>
+<pre><code># course/labs/k8s/journal/kustomization.yaml
+# kubectl apply -k . 로 이 디렉터리 전체를 한 번에 배포한다.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 아래 모든 리소스의 metadata.namespace 를 journal 로 맞춘다.
+# 매니페스트 파일마다 namespace 를 적지 않아도 되고, 다른 네임스페이스로 복제하기도 쉽다.
+namespace: journal
+
+resources:
+  - 00-namespace.yaml
+  - 10-config.yaml
+  - 20-redis.yaml
+  - 30-journal-api.yaml
+  - 40-web-static.yaml
+  - 50-ingress.yaml
+
+# 공통 레이블. includeSelectors: false 가 중요하다 —
+# true 면 셀렉터에도 레이블이 추가되는데, 셀렉터는 만든 뒤 바꿀 수 없어 다음 apply 가 거부된다.
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: journal
+      app.kubernetes.io/managed-by: kustomize
+
+# 파일 내용으로 컨피그맵을 만든다. 이름 뒤에 내용 해시가 붙는다: web-content-9g4h2f6d5k
+# 파일이 바뀌면 이름이 바뀌고, 이름이 바뀌면 파드 템플릿이 바뀌어 롤아웃이 일어난다.
+# M13 에서 말한 "컨피그맵이 바뀌어도 자동 롤아웃은 없다" 문제의 해법 중 하나다.
+configMapGenerator:
+  - name: web-content
+    files:
+      - index.html
+
+# 이미지 태그를 한곳에서 바꾼다.
+images:
+  - name: journal-api
+    newTag: v1</code></pre>
+    <div class="note-2026">
+      <span class="lbl">검색하면 나오는 <code>commonLabels</code>는 쓰지 않는다</span>
+      kustomize v5부터 <code>commonLabels</code>는 <code>labels</code>로 대체됐다. 옛 필드는 레이블을 <strong>셀렉터에도</strong> 무조건 추가하는데, 디플로이먼트와 서비스의 셀렉터는 만든 뒤 바꿀 수 없다. 그래서 나중에 레이블을 하나 추가하는 순간 <code>field is immutable</code>로 모든 apply가 막힌다. <code>labels: [{includeSelectors: false, pairs: {...}}]</code>가 지금의 정답이다. kubectl 1.37에 내장된 kustomize 버전은 <code>kubectl version</code>의 <code>Kustomize Version: v5.8.1</code> 행에서 읽는다(M01에서 이미 봤다).
+      <span class="src">https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/</span>
+    </div>
+<pre><code>kubectl kustomize course/labs/k8s/journal | head -40</code></pre>
+    <p><code>apply</code> 전에 렌더 결과를 눈으로 본다. <code>kustomize</code> 하위 명령은 클러스터에 붙지 않고 파일만 합성한다.</p>
+    <span class="out-lbl">실행 결과 — head -40 으로 잘랐다. index.html 컨피그맵 중간에서 끊긴다</span>
+    <div class="out"><code>apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: journal
+  name: journal
+---
+apiVersion: v1
+data:
+  APP_GREETING: hello from configmap v1
+  LOG_LEVEL: info
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: journal
+  name: journal-config
+  namespace: journal
+---
+apiVersion: v1
+data:
+  index.html: |
+    &lt;!doctype html&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;title&gt;Journal&lt;/title&gt;
+    &lt;style&gt;
+      body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; line-height: 1.7; }
+      input { width: 70%; padding: 6px 8px; }
+      button { padding: 6px 14px; }
+      li { font-family: ui-monospace, monospace; font-size: 13px; }
+      #where { color: #666; font-size: 13px; }
+    &lt;/style&gt;
+    &lt;h1&gt;Journal&lt;/h1&gt;
+    &lt;p id="where"&gt;이 페이지는 web-static 이, &lt;code&gt;/api&lt;/code&gt; 는 journal-api 가 처리한다.&lt;/p&gt;
+    &lt;form id="f"&gt;
+      &lt;input id="t" placeholder="한 줄 적기" autocomplete="off"&gt;
+      &lt;button type="submit"&gt;저장&lt;/button&gt;
+    &lt;/form&gt;
+    &lt;ul id="list"&gt;&lt;/ul&gt;</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파일에 없던 것 세 가지가 보인다. 모든 리소스에 <code>labels</code> 두 개가 붙었고, 네임스페이스 리소스를 뺀 나머지에 <code>namespace: journal</code>이 채워졌으며, <code>index.html</code> 파일이 <code>ConfigMap</code>의 <code>data</code>로 들어갔다. 이 40줄 안에는 아직 안 보이지만 그 컨피그맵의 이름에는 해시 접미사가 붙는다 — 5단계 출력에서 확인한다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계. 적용한다 — 첫 시도는 막힌다</h4>
+    <p class="purpose"><span class="lbl">목적</span>앞 모듈이 남긴 리소스와 충돌하는 지점을 직접 확인한다.</p>
+<pre><code>kubectl apply -k course/labs/k8s/journal</code></pre>
+    <span class="out-lbl">실행 결과 — 마지막 에러 원문은 한 줄이다. 읽기 쉽게 줄을 나눴다</span>
+    <div class="out"><code>namespace/journal created
+configmap/journal-config created
+configmap/web-content-8t5kt7g5fc created
+secret/journal-secret created
+service/journal-api created
+service/redis created
+service/redis-read created
+service/web-static created
+deployment.apps/journal-api created
+deployment.apps/web-static created
+statefulset.apps/redis created
+Error from server (BadRequest): error when creating "course/labs/k8s/journal":
+admission webhook "validate.nginx.ingress.kubernetes.io" denied the request:
+host "journal.local" and path "/api" is already defined in ingress default/journal</code></div>
+    <div class="verdict"><span class="lbl">판정</span>열한 개는 만들어졌고 <strong>인그레스만 거부됐다</strong>. M12에서 <code>default</code>에 만든 인그레스가 같은 호스트와 경로를 이미 쓰고 있다. M12 실패 ②에서 만난 ingress-nginx의 검증 웹훅이 중복을 막은 것이다. <code>web-content-8t5kt7g5fc</code> — 4단계에서 예고한 해시 접미사가 여기 있다.</div>
+    <p>여기서 두 가지를 읽어야 한다. 첫째, <code>apply</code>는 <strong>부분 성공</strong>한다 — 하나가 실패해도 나머지는 이미 만들어져 있다. 트랜잭션이 아니다. 둘째, 같은 호스트·경로를 두 인그레스가 주장하면 어느 쪽이 이기는지 정의되지 않으므로 컨트롤러가 아예 거부한다. 웹훅이 없었다면 조용히 둘 중 하나가 무시됐을 것이고, 그편이 훨씬 찾기 어렵다.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계. default를 비우고 다시 적용한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>명령형으로 만든 앞 모듈의 잔재를 정리한다. 이후로는 <code>default</code>에 아무것도 만들지 않는다.</p>
+<pre><code>kubectl delete ingress journal -n default
+kubectl delete deploy journal-api web-static -n default
+kubectl delete svc journal-api journal-api-headless journal-api-nodeport web-static -n default
+kubectl delete pod config-demo curlbox -n default --ignore-not-found
+
+# M12에서 Gateway API 절을 따라 했다면 함께 지운다. 구현체(nginx-gateway 네임스페이스)는 남긴다
+kubectl delete httproute journal-route -n default --ignore-not-found
+kubectl delete gateway journal-gateway -n default --ignore-not-found
+
+kubectl apply -k course/labs/k8s/journal</code></pre>
+    <ul class="tight">
+      <li><code>--ignore-not-found</code> — 없어도 에러를 내지 않는다. M13 정리를 이미 했으면 <code>config-demo</code>는 없고, <code>curlbox</code>는 M10에서 <code>sleep 3600</code>으로 만든 것이라 이미 종료됐을 수 있다. 어느 쪽이든 이 줄은 통과한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>ingress.networking.k8s.io "journal" deleted from default namespace
+deployment.apps "journal-api" deleted from default namespace
+deployment.apps "web-static" deleted from default namespace
+service "journal-api" deleted from default namespace
+service "journal-api-headless" deleted from default namespace
+service "journal-api-nodeport" deleted from default namespace
+service "web-static" deleted from default namespace
+pod "curlbox" deleted from default namespace
+httproute.gateway.networking.k8s.io "journal-route" deleted from default namespace
+gateway.gateway.networking.k8s.io "journal-gateway" deleted from default namespace
+namespace/journal unchanged
+configmap/journal-config unchanged
+configmap/web-content-8t5kt7g5fc unchanged
+secret/journal-secret configured
+service/journal-api unchanged
+service/redis unchanged
+service/redis-read unchanged
+service/web-static unchanged
+deployment.apps/journal-api unchanged
+deployment.apps/web-static unchanged
+statefulset.apps/redis configured
+ingress.networking.k8s.io/journal created</code></div>
+    <div class="verdict"><span class="lbl">판정</span>두 번째 <code>apply</code>에서 <code>created</code>는 <strong>인그레스 한 줄</strong>뿐이다. 5단계에서 이미 만들어진 것은 <code>unchanged</code>로 지나간다 — 선언형의 핵심인 멱등성이다. 같은 파일을 몇 번 적용해도 결과가 같다.</div>
+    <p>두 줄이 <code>configured</code>인 것은 파일이 바뀌어서가 아니다. 시크릿은 우리가 <code>stringData</code>로 적었지만 서버는 <code>data</code>로 저장하므로 <code>apply</code>가 매번 차이를 본다. 스테이트풀셋은 <code>volumeClaimTemplates</code>에 서버가 기본값과 <code>status</code>를 채워 넣어 역시 매번 차이로 잡힌다. 둘 다 실제 변경은 없고, 이 두 종류는 <code>apply</code>할 때마다 <code>configured</code>가 나온다고 알고 있으면 된다.</p>
+    <p><code>web-content-8t5kt7g5fc</code>의 접미사는 <code>index.html</code> 내용의 해시다. 파일을 한 글자만 고쳐도 이름이 바뀌고, 이름이 바뀌면 파드 템플릿의 <code>configMap.name</code>이 바뀌어 <strong>롤아웃이 일어난다</strong>. M13에서 "컨피그맵을 바꿔도 자동 롤아웃은 없다"고 했던 문제의 해법 하나가 이것이다. 해시는 내용으로 결정되므로 파일이 같으면 어느 환경에서든 같은 접미사가 나온다.</p>
+  </div>
+
+  <div class="step">
+    <h4>7단계. 떴는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>네임스페이스 하나에 들어간 전부를 한 화면으로 확인한다.</p>
+<pre><code>kubectl get all -n journal</code></pre>
+    <span class="out-lbl">실행 결과 — 파드 접미사와 IP는 환경마다 다르다. 파드가 Running 이 되기까지 30초쯤 걸린다</span>
+    <div class="out"><code>NAME                              READY   STATUS    RESTARTS   AGE
+pod/journal-api-cbdf4d977-cp2xz   1/1     Running   0          32s
+pod/journal-api-cbdf4d977-j54ns   1/1     Running   0          32s
+pod/journal-api-cbdf4d977-rt5j7   1/1     Running   0          32s
+pod/redis-0                       1/1     Running   0          32s
+pod/web-static-74cfbb9764-krnjh   1/1     Running   0          32s
+pod/web-static-74cfbb9764-pcnsf   1/1     Running   0          32s
+
+NAME                  TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/journal-api   ClusterIP   10.96.78.88    &lt;none&gt;        8080/TCP   32s
+service/redis         ClusterIP   None           &lt;none&gt;        6379/TCP   32s
+service/redis-read    ClusterIP   10.96.121.31   &lt;none&gt;        6379/TCP   32s
+service/web-static    ClusterIP   10.96.218.36   &lt;none&gt;        80/TCP     32s
+
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/journal-api   3/3     3            3           32s
+deployment.apps/web-static    2/2     2            2           32s
+
+NAME                                    DESIRED   CURRENT   READY   AGE
+replicaset.apps/journal-api-cbdf4d977   3         3         3       32s
+replicaset.apps/web-static-74cfbb9764   2         2         2       32s
+
+NAME                     READY   AGE
+statefulset.apps/redis   1/1     32s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드 이름 여섯 개 중 <strong><code>redis-0</code>만 접미사가 없다</strong>. 스테이트풀셋이 붙인 서수다. 레플리카셋 블록에 <code>redis</code>가 없는 것도 같은 이유 — 스테이트풀셋은 레플리카셋을 거치지 않고 파드를 직접 만든다. <code>redis</code> 서비스의 CLUSTER-IP가 <code>None</code>인 것도 확인한다 — 헤드리스라 가상 IP가 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>8단계. 밖에서 두드린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>인그레스 → 서비스 → API → 레디스 경로가 끝까지 이어졌는지 쓰고 읽어서 확인한다.</p>
+<pre><code>curl -s -H "Host: journal.local" -X POST http://localhost:18080/api/entries \
+  -H 'content-type: application/json' -d '{"text":"첫 엔트리"}'
+
+curl -s -H "Host: journal.local" http://localhost:18080/api/entries</code></pre>
+    <span class="out-lbl">실행 결과 — id는 밀리초 타임스탬프라 매번 다르다</span>
+    <div class="out"><code>{"id":"1788597007329"}
+{"entries":["{\"text\":\"첫 엔트리\"}"]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>POST가 <code>id</code>를 돌려주고, GET이 그 엔트리를 되돌려주면 경로가 전부 이어진 것이다. <code>/etc/hosts</code>에 항목을 넣었다면 브라우저로 <code>http://journal.local:18080</code>을 열어 폼으로 써 봐도 된다 — 3단계의 <code>index.html</code>이 그 폼이다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">14.4</span>따라하기 ② 상태는 어디에 남는가</h2>
+  <p>디플로이먼트의 파드는 지워도 아쉽지 않다. 똑같은 것이 다시 뜬다. 레디스는 다르다 — 지운 파드가 갖고 있던 데이터가 사라지면 앱이 깨진다. 스테이트풀셋이 그 차이를 어떻게 메우는지 직접 확인한다.</p>
+
+  <div class="step">
+    <h4>9단계. PVC와 스토리지클래스를 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>volumeClaimTemplates</code>가 실제로 무엇을 만들었는지 확인한다.</p>
+<pre><code>kubectl get pvc -n journal
+kubectl get sc</code></pre>
+    <span class="out-lbl">실행 결과 — VOLUME 의 UUID는 환경마다 다르다</span>
+    <div class="out"><code>NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-redis-0   Bound    pvc-0fddef41-d1ca-48c4-ae6c-d836e6f6895e   1Gi        RWO            standard       &lt;unset&gt;                 37s
+
+NAME                 PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+standard (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  43h</code></div>
+    <div class="verdict"><span class="lbl">판정</span>PVC <code>data-redis-0</code>이 <code>Bound</code>, 뒤에 붙은 <code>VOLUME</code>이 실제 PV다. <code>VOLUMEATTRIBUTESCLASS &lt;unset&gt;</code>은 1.37에서 새로 보이는 열로, 지금은 신경 쓰지 않는다.</div>
+    <p>PVC 이름 <code>data-redis-0</code>은 <code>&lt;volumeClaimTemplates의 이름&gt;-&lt;파드 이름&gt;</code> 규칙으로 만들어진다. 규칙이기 때문에 파드가 다시 만들어져도 같은 PVC를 찾아낸다. 스토리지클래스는 "PVC가 오면 어떤 방식으로 PV를 만들어 줄지"를 정한 오브젝트이고, kind에는 <code>standard</code> 하나가 기본으로 있다.</p>
+    <table>
+      <tr><th>스토리지클래스 항목</th><th>이 값의 뜻</th><th>실습 규모와 운영 규모</th></tr>
+      <tr><td><code>rancher.io/local-path</code></td><td>PV를 <strong>노드의 로컬 디렉터리</strong>로 만든다</td><td>운영에서는 EBS·PD 같은 네트워크 볼륨. 로컬 경로는 그 노드가 죽으면 데이터도 같이 죽는다</td></tr>
+      <tr><td><code>WaitForFirstConsumer</code></td><td>파드가 <strong>스케줄된 뒤에</strong> 볼륨을 만든다</td><td>먼저 만들면 볼륨이 A 노드에, 파드가 B 노드에 갈 수 있다. 로컬·존 제약이 있는 스토리지에서 필수</td></tr>
+      <tr><td><code>Delete</code></td><td>PVC를 지우면 PV와 데이터도 지운다</td><td>운영 데이터에는 <code>Retain</code>. 실수로 지운 PVC가 데이터까지 가져가는 사고가 실제로 난다</td></tr>
+      <tr><td><code>ALLOWVOLUMEEXPANSION false</code></td><td>PVC 크기를 나중에 못 늘린다</td><td>클라우드 스토리지클래스는 대개 <code>true</code>. 이 실습에서 1Gi를 2Gi로 못 바꾸는 이유이기도 하다(14.7 실패 ③)</td></tr>
+    </table>
+    <p>PV가 노드의 어디에 있는지도 볼 수 있다.</p>
+<pre><code>kubectl get pv -o custom-columns=NAME:.metadata.name,CLAIM:.spec.claimRef.name,PATH:.spec.hostPath.path</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>NAME                                       CLAIM          PATH
+pvc-0fddef41-d1ca-48c4-ae6c-d836e6f6895e   data-redis-0   /var/local-path-provisioner/pvc-0fddef41-d1ca-48c4-ae6c-d836e6f6895e_journal_data-redis-0</code></div>
+    <p>그 경로는 파드가 스케줄된 워커 노드 컨테이너 안의 디렉터리다. 다시 말해 <strong>도커 컨테이너 하나가 죽으면 이 데이터는 사라진다</strong>. kind 클러스터를 지우면 당연히 함께 사라진다. 실습 환경의 한계를 정확히 알고 쓰는 것이 중요하다.</p>
+  </div>
+
+  <div class="step">
+    <h4>10단계. 파드를 죽여도 데이터가 남는지 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>스테이트풀셋이 주는 것이 이름뿐인지, 데이터까지인지 판정한다.</p>
+<pre><code>kubectl exec -n journal redis-0 -- sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning dbsize'
+
+kubectl delete pod redis-0 -n journal
+kubectl wait --for=condition=Ready pod/redis-0 -n journal --timeout=120s
+
+kubectl get pod redis-0 -n journal -o wide
+kubectl exec -n journal redis-0 -- sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning dbsize'
+curl -s -H "Host: journal.local" http://localhost:18080/api/entries</code></pre>
+    <ul class="tight">
+      <li><code>--no-auth-warning</code> — <code>-a</code>로 비밀번호를 주면 redis-cli가 표준 오류로 경고를 뱉는다. 판정에 방해되므로 끈다</li>
+      <li><code>kubectl wait</code> — 준비될 때까지 블로킹한다. <code>sleep</code>으로 어림잡는 것보다 정확하고 스크립트에 쓰기 좋다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 — 삭제 전 1, 삭제 후에도 1. IP 와 노드는 환경마다 다르다</span>
+    <div class="out"><code>1
+pod "redis-0" deleted from journal namespace
+pod/redis-0 condition met
+NAME      READY   STATUS    RESTARTS   AGE   IP            NODE            NOMINATED NODE   READINESS GATES
+redis-0   1/1     Running   0          5s    10.244.2.62   study-worker2   &lt;none&gt;           &lt;none&gt;
+1
+{"entries":["{\"text\":\"첫 엔트리\"}"]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드 <strong>이름은 그대로 <code>redis-0</code></strong>, <code>AGE 5s</code>로 새 파드인데, <code>dbsize</code>는 그대로 1이고 8단계에서 쓴 엔트리가 그대로 읽힌다. PVC <code>data-redis-0</code>이 새 파드에 다시 붙었기 때문이다. API가 <code>redis-0.redis</code>라는 이름으로 접속하므로 IP가 바뀐 것도 문제가 되지 않는다.</div>
+    <p>디플로이먼트로 같은 것을 했다면 파드 이름이 바뀌고, 볼륨이 없으니 데이터도 사라진다. 이 차이 하나가 "저장소는 스테이트풀셋"이라는 규칙의 전부다.</p>
+    <div class="note-2026">
+      <span class="lbl">스테이트풀셋을 지우면 PVC는 어떻게 되나</span>
+      기본값은 <strong>남긴다</strong>. <code>kubectl delete statefulset redis</code>를 해도 <code>data-redis-0</code>은 그대로 있고, 같은 이름의 스테이트풀셋을 다시 만들면 데이터를 물고 돌아온다. 실수로 지웠을 때의 안전장치지만, 정리했다고 생각한 볼륨이 요금을 계속 먹는 원인이기도 하다. 동작을 바꾸려면 <code>spec.persistentVolumeClaimRetentionPolicy</code>를 쓴다. 네임스페이스째 지우면(<code>kubectl delete ns journal</code>) PVC도 함께 사라진다.
+      <span class="src">https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention</span>
+    </div>
+    <p>여기서는 스테이트풀셋을 <strong>저널 앱의 부품으로</strong> 썼다. 볼륨 확장, 스냅샷, 파드별 볼륨을 가진 다중 복제본, 순서 있는 업데이트는 M18에서 따로 파고든다.</p>
+  </div>
+
+  <div class="note-2026">
+    <span class="lbl">여기서 한 번 끊는다</span>
+    <p>이 모듈은 이 과정에서 <strong>가장 분량이 많다</strong>(다른 모듈의 두 배). 14.1~14.4가 "매니페스트로 앱 한 벌을 세운다"이고, 14.5부터가 "같은 것을 차트로 다시 쓴다"이다. <strong>두 덩어리는 목적이 다르므로 한자리에서 이어 하지 않아도 된다.</strong></p>
+    <p>강의로 진행한다면 <strong>M14를 단독 회차로</strong> 잡는다(다른 모듈과 묶지 않는다). 자습이라면 14.4까지 하고 체크포인트의 앞 절반을 확인한 뒤 쉬었다가 14.5로 온다 — <strong>지금 상태(<code>kubectl apply -k</code>로 배포된 저널 앱)는 그대로 두고 이어서 시작하면 된다.</strong></p>
+    <p>다음 모듈(M15)의 실습 대상은 <strong>14.4까지의 결과물</strong>이다. 차트를 만들지 않아도 M15~M27은 진행된다 — 차트는 M28에서 다시 정면으로 다룬다.</p>
+  </div>
+</section>
+<section id="s5">
+  <h2 class="sec"><span class="num">14.5</span>따라하기 ③ 같은 것을 Helm 차트로</h2>
+  <p class="lead">지금 만든 매니페스트는 <code>journal</code> 네임스페이스 하나에만 맞다. 개발용을 하나 더 띄우려면 파일을 통째로 복사해 이름과 호스트와 복제본 수를 고쳐야 한다. 복사본이 둘이 되는 순간 한쪽만 고치는 사고가 시작된다.</p>
+  <p>Helm은 매니페스트를 <strong>템플릿과 값</strong>으로 나눈다. 템플릿과 기본값을 묶은 디렉터리가 <dfn class="term">차트 <span class="en">(Chart)</span></dfn>, 차트를 값과 함께 클러스터에 설치한 결과 하나가 <dfn class="term">릴리스 <span class="en">(Release)</span></dfn>다. 같은 차트로 릴리스를 여럿 만들 수 있고, 릴리스의 변경 이력은 <dfn class="term">리비전 <span class="en">(Revision)</span></dfn>으로 쌓인다. 구조는 한 벌만 두고, 환경마다 다른 것은 값 파일에만 적는다. 값이 늘어나는 것은 괜찮지만 구조가 복제되는 것은 위험하다 — 이 구분이 Helm을 쓰는 이유의 전부다.</p>
+
+  <div class="step">
+    <h4>11단계. 뼈대를 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Helm이 기대하는 디렉터리 구조를 손으로 만들기 전에 표준형을 확인한다.</p>
+<pre><code>helm version
+helm create /tmp/scaffold
+find /tmp/scaffold -type f | sort</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>version.BuildInfo{Version:"v4.2.4", GitCommit:"3900f434fd3ef2b84065dc04508df48f288dba00", GitTreeState:"clean", GoVersion:"go1.26.5", KubeClientVersion:"v1.36"}
+Creating /tmp/scaffold
+/tmp/scaffold/.helmignore
+/tmp/scaffold/Chart.yaml
+/tmp/scaffold/templates/NOTES.txt
+/tmp/scaffold/templates/_helpers.tpl
+/tmp/scaffold/templates/deployment.yaml
+/tmp/scaffold/templates/hpa.yaml
+/tmp/scaffold/templates/httproute.yaml
+/tmp/scaffold/templates/ingress.yaml
+/tmp/scaffold/templates/service.yaml
+/tmp/scaffold/templates/serviceaccount.yaml
+/tmp/scaffold/templates/tests/test-connection.yaml
+/tmp/scaffold/values.yaml</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>Version:"v4.2.4"</code>. 그리고 <code>httproute.yaml</code>이 뼈대에 들어 있다. Helm 4의 <code>helm create</code>는 Ingress와 Gateway API HTTPRoute를 둘 다 만들어 준다 — M12에서 본 전환이 도구의 기본값에까지 반영된 것이다. <code>KubeClientVersion:"v1.36"</code>은 Helm이 내장한 클라이언트 라이브러리 버전이라 클러스터 1.37과 하나 차이나도 문제없다.</div>
+    <p>이 뼈대를 그대로 쓰지는 않는다. 뼈대는 <strong>서비스 하나짜리</strong> 차트를 가정하는데 우리 앱은 셋이다. 아래 구조로 직접 쓴다.</p>
+<pre><code>course/labs/charts/journal/
+  Chart.yaml            차트 이름 · 버전 · appVersion
+  .helmignore           패키징에서 뺄 파일 (.DS_Store, *.tgz)
+  values.yaml           기본값
+  values-dev.yaml       개발 환경에서 덮어쓸 값만
+  values-prod.yaml      운영 환경에서 덮어쓸 값만
+  values.schema.json    값의 형식 검증 (14.7 실패 ②에서 추가한다)
+  files/index.html      정적 페이지 — k8s/journal/index.html 과 같은 파일
+  templates/
+    _helpers.tpl        이름·레이블 규칙
+    config.yaml         ConfigMap · Secret
+    redis.yaml          Service ×2 · StatefulSet
+    api.yaml            Deployment · Service
+    web.yaml            ConfigMap · Deployment · Service
+    ingress.yaml        Ingress
+    NOTES.txt           설치 후 안내문</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>12단계. Chart.yaml과 기본값을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>차트의 신원(이름·버전)과, 템플릿이 읽을 값의 기본형을 정한다.</p>
+<pre><code># course/labs/charts/journal/Chart.yaml
+apiVersion: v2                 # Helm 3 부터의 차트 형식. Helm 4 도 이 형식을 읽는다
+name: journal
+description: 저널 애플리케이션 — API · 정적 파일 서버 · 레디스
+type: application
+
+# 차트 자체의 버전. 템플릿이나 기본값을 고치면 올린다.
+version: 0.1.0
+
+# 이 차트가 기본으로 배포하는 애플리케이션의 버전. 둘은 서로 다른 축이다.
+# 값만 바꿔 배포할 때는 version 만 오르고 appVersion 은 그대로인 경우가 많다.
+appVersion: "v1"</code></pre>
+    <p><code>version</code>과 <code>appVersion</code>을 헷갈리면 나중에 롤백할 때 무엇으로 되돌리는지 알 수 없게 된다. 템플릿을 고치면 <code>version</code>이 오르고, 애플리케이션 이미지를 새로 빌드하면 <code>appVersion</code>이 오른다. 둘은 독립적으로 움직인다.</p>
+<pre><code># course/labs/charts/journal/values.yaml
+# 기본값 — 이 파일만으로도 설치가 된다. 환경별 파일은 여기서 달라지는 것만 덮어쓴다.
+
+api:
+  replicas: 3
+  image:
+    repository: journal-api
+    tag: ""                    # 비우면 Chart.yaml 의 appVersion 을 쓴다
+    pullPolicy: IfNotPresent
+  logLevel: info
+  resources: {}                # M16 에서 채운다
+
+web:
+  replicas: 2
+  image:
+    repository: nginx
+    tag: "1.29-alpine"
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "8.2-alpine"
+  storage: 1Gi
+  password: "s3cr3t-pass"      # 실습용. 운영에서는 --set 이나 외부 시크릿 (M31)
+
+ingress:
+  enabled: true
+  className: nginx
+  host: journal.local</code></pre>
+    <p><code>tag: ""</code>가 기본값인 것에 이유가 있다. 비어 있으면 <code>appVersion</code>을 쓰도록 템플릿을 짜 두면, 이미지 태그를 한곳(<code>Chart.yaml</code>)에서만 관리하면서도 필요할 때 값으로 덮어쓸 수 있다.</p>
+<pre><code># course/labs/charts/journal/.helmignore
+.DS_Store
+*.tgz</code></pre>
+  </div>
+
+  <div class="step">
+    <h4>13단계. 이름 규칙을 함수로 뺀다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 차트를 한 클러스터에 여러 번 설치할 수 있게 만든다.</p>
+<pre><code># course/labs/charts/journal/templates/_helpers.tpl
+{{/*
+  이름 규칙을 한곳에 모은다. 릴리스 이름이 journal 이면 journal-api,
+  prod 면 prod-api 가 되도록 모든 리소스가 이 함수를 통해 이름을 만든다.
+  같은 클러스터에 같은 차트를 두 번 설치할 수 있는 이유다.
+*/}}
+{{- define "journal.fullname" -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/* 모든 리소스에 붙이는 공통 레이블. app.kubernetes.io/* 는 쿠버네티스 권장 레이블이다. */}}
+{{- define "journal.labels" -}}
+app.kubernetes.io/name: journal
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
+{{- end -}}
+
+{{/* 셀렉터는 만든 뒤 바꿀 수 없다. 버전처럼 변하는 값을 여기에 넣으면 다음 upgrade 가 거부된다. */}}
+{{- define "journal.selectorLabels" -}}
+app.kubernetes.io/name: journal
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{- define "journal.apiImage" -}}
+{{- $tag := .Values.api.image.tag | default .Chart.AppVersion -}}
+{{- printf "%s:%s" .Values.api.image.repository $tag -}}
+{{- end -}}</code></pre>
+    <p>모든 리소스 이름이 <code>{{ include "journal.fullname" . }}-api</code> 꼴이 된다. 릴리스 이름이 <code>dev</code>면 <code>dev-api</code>, <code>prod</code>면 <code>prod-api</code>다. <strong>이름 충돌이 구조적으로 불가능해지는 것</strong>이 kustomize 복사본과의 가장 큰 차이다.</p>
+    <p>레이블을 둘로 나눈 것에도 이유가 있다. <code>journal.labels</code>에는 <code>app.kubernetes.io/version</code>처럼 릴리스마다 바뀌는 값이 들어 있다. 이것을 셀렉터에 넣으면 다음 <code>helm upgrade</code>가 <code>field is immutable</code>로 거부된다. 그래서 셀렉터에는 <strong>절대 바뀌지 않는 두 개</strong>만 쓴다.</p>
+  </div>
+
+  <div class="step">
+    <h4>14단계. 매니페스트를 템플릿으로 옮긴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>14.3의 매니페스트 여섯 장을 템플릿 다섯 장으로 옮긴다. 값이 들어갈 자리만 <code>{{ }}</code>로 바꾸고 나머지는 그대로다.</p>
+    <p>설정부터. kustomize 판과 달리 시크릿 값이 <code>required</code>로 감싸여 있다 — 값이 비면 렌더링 자체가 실패한다.</p>
+<pre><code># course/labs/charts/journal/templates/config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "journal.fullname" . }}-config
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.api.logLevel | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "journal.fullname" . }}-secret
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  # required 는 값이 비면 렌더링을 실패시킨다. 오타가 조용히 빈 값이 되는 것을 막는다.
+  REDIS_PASSWORD: {{ required "redis.password 를 반드시 지정해야 한다" .Values.redis.password | quote }}</code></pre>
+    <p>레디스. <code>{{- if .Values.redis.enabled }}</code>로 파일 전체를 감싸 값 하나로 켜고 끌 수 있게 했다. 나머지는 <code>20-redis.yaml</code>과 같고, 이름과 레이블만 함수를 거친다.</p>
+<pre><code># course/labs/charts/journal/templates/redis.yaml
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "journal.fullname" . }}-redis
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "journal.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "journal.fullname" . }}-redis-read
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "journal.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "journal.fullname" . }}-redis
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "journal.fullname" . }}-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "journal.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        {{- include "journal.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          args: ["--requirepass", "$(REDIS_PASSWORD)", "--appendonly", "yes"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "journal.fullname" . }}-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.redis.storage }}
+{{- end }}</code></pre>
+    <p>API. 세 곳이 kustomize 판과 다르다. <code>checksum/config</code> 어노테이션, 레디스 관련 <code>env</code>를 <code>if</code>로 감싼 것, 그리고 <code>resources</code>를 값에서 통째로 받는 것.</p>
+<pre><code># course/labs/charts/journal/templates/api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "journal.fullname" . }}-api
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      {{- include "journal.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "journal.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+      annotations:
+        # 설정 내용의 해시. 컨피그맵이 바뀌면 이 값이 바뀌고, 파드 템플릿이 바뀌어 롤아웃이 일어난다.
+        # M13 에서 "컨피그맵을 바꿔도 환경 변수는 그대로"였던 문제를 차트가 해결하는 방식이다.
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+    spec:
+      containers:
+        - name: api
+          image: {{ include "journal.apiImage" . | quote }}
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: {{ .Chart.AppVersion | quote }}
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "journal.fullname" . }}-config
+                  key: LOG_LEVEL
+{{- if .Values.redis.enabled }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "journal.fullname" . }}-secret
+                  key: REDIS_PASSWORD
+            - name: REDIS_URL
+              value: "redis://default:$(REDIS_PASSWORD)@{{ include "journal.fullname" . }}-redis-0.{{ include "journal.fullname" . }}-redis:6379"
+{{- end }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "journal.fullname" . }}-api
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "journal.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http</code></pre>
+    <table>
+      <tr><th>문법</th><th>하는 일</th></tr>
+      <tr><td><code>{{- </code> · <code> -}}</code></td><td>앞뒤 공백과 줄바꿈을 지운다. YAML은 들여쓰기가 문법이라 이것을 빼면 렌더 결과가 깨진다</td></tr>
+      <tr><td><code>nindent 6</code></td><td>줄바꿈을 하나 넣고 6칸 들여쓴다. <code>indent</code>는 줄바꿈 없이 들여쓰기만 한다</td></tr>
+      <tr><td><code>include</code></td><td>정의한 템플릿을 불러온다. <code>template</code>과 달리 결과를 문자열로 돌려줘 <code>| nindent</code> 같은 파이프에 넣을 수 있다</td></tr>
+      <tr><td><code>toYaml</code></td><td>값 트리를 YAML로 직렬화한다. <code>resources: {}</code>처럼 구조를 통째로 받을 때 쓴다</td></tr>
+      <tr><td><code>$.Template.BasePath</code></td><td>차트의 <code>templates</code> 경로. <code>$</code>는 최상위 컨텍스트로, <code>if</code> 블록 안에서도 <code>.</code>이 아닌 원본을 가리킨다</td></tr>
+      <tr><td><code>.Files.Get</code></td><td>차트 디렉터리의 파일을 문자열로 읽는다. kustomize의 <code>configMapGenerator</code>에 대응한다 (아래 <code>web.yaml</code>)</td></tr>
+    </table>
+    <p>정적 서버. 컨피그맵과 디플로이먼트가 한 파일에 있고, 페이지 파일은 <code>.Files.Get</code>으로 읽는다.</p>
+<pre><code># course/labs/charts/journal/templates/web.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "journal.fullname" . }}-web
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+data:
+  # .Files.Get 은 차트 디렉터리의 파일을 그대로 읽는다.
+  # kustomize 의 configMapGenerator 에 대응하는 기능이다.
+  index.html: |
+{{ .Files.Get "files/index.html" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "journal.fullname" . }}-web
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      {{- include "journal.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "journal.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+      annotations:
+        # 자기 자신을 include 하면 무한 재귀가 된다. 파일 내용에서 직접 해시를 만든다.
+        checksum/web: {{ .Files.Get "files/index.html" | sha256sum }}
+    spec:
+      containers:
+        - name: nginx
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+      volumes:
+        - name: content
+          configMap:
+            name: {{ include "journal.fullname" . }}-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "journal.fullname" . }}-web
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "journal.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http</code></pre>
+    <div class="note-2026">
+      <span class="lbl">자기 자신을 include 하면 무한 재귀다</span>
+      정적 페이지 컨피그맵에도 API와 같은 <code>checksum</code> 패턴을 쓰고 싶어 <code>web.yaml</code> 안에서 <code>include (print $.Template.BasePath "/web.yaml")</code>을 적으면 <code>helm lint</code>가 같은 줄을 수백 번 반복한 에러를 뱉는다. 컨피그맵과 디플로이먼트가 같은 파일에 있기 때문이다. 위 템플릿처럼 파일 내용에서 직접 해시를 만들면 된다: <code>checksum/web: {{ .Files.Get "files/index.html" | sha256sum }}</code>
+    </div>
+    <p><code>files/index.html</code>은 <code>course/labs/k8s/journal/index.html</code>과 <strong>같은 파일</strong>이다(3단계 전문 참조). 복사해 넣는다. 인그레스와 설치 후 안내문으로 템플릿이 끝난다.</p>
+<pre><code># course/labs/charts/journal/templates/ingress.yaml
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "journal.fullname" . }}
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "journal.fullname" . }}-api
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "journal.fullname" . }}-web
+                port:
+                  name: http
+{{- end }}</code></pre>
+<pre><code># course/labs/charts/journal/templates/NOTES.txt
+릴리스 {{ .Release.Name }} 를 네임스페이스 {{ .Release.Namespace }} 에 설치했다.
+
+확인:
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+{{- if .Values.ingress.enabled }}
+  curl -H "Host: {{ .Values.ingress.host }}" http://localhost:18080/api/entries
+{{- end }}
+
+이 릴리스의 값:
+  helm get values {{ .Release.Name }} -n {{ .Release.Namespace }}</code></pre>
+    <p><code>NOTES.txt</code>는 매니페스트가 아니다. 렌더돼서 <code>helm install</code>의 마지막에 출력되는 안내문이고, 18단계에서 그 화면을 본다.</p>
+  </div>
+
+  <div class="step">
+    <h4>15단계. 클러스터에 붙이기 전에 검사한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>문법 오류와 렌더 결과를 클러스터를 건드리지 않고 확인하고, 마지막으로 서버 검증까지 통과시켜 본다.</p>
+<pre><code>helm lint course/labs/charts/journal
+helm template journal course/labs/charts/journal | head -40</code></pre>
+    <span class="out-lbl">실행 결과 — template 은 head -40 으로 잘랐다</span>
+    <div class="out"><code>==&gt; Linting course/labs/charts/journal
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+---
+# Source: journal/templates/config.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: journal-secret
+  labels:
+    app.kubernetes.io/name: journal
+    app.kubernetes.io/instance: journal
+    app.kubernetes.io/version: "v1"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: journal-0.1.0
+type: Opaque
+stringData:
+  # required 는 값이 비면 렌더링을 실패시킨다. 오타가 조용히 빈 값이 되는 것을 막는다.
+  REDIS_PASSWORD: "s3cr3t-pass"
+
+---
+# Source: journal/templates/config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: journal-config
+  labels:
+    app.kubernetes.io/name: journal
+    app.kubernetes.io/instance: journal
+    app.kubernetes.io/version: "v1"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: journal-0.1.0
+data:
+  LOG_LEVEL: "info"
+
+---
+# Source: journal/templates/web.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: journal-web
+  labels:
+    app.kubernetes.io/name: journal</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>0 chart(s) failed</code>. 렌더 결과의 첫 리소스가 <strong>Secret</strong>이다 — Helm은 파일 순서가 아니라 리소스 종류별 정렬 순서(Namespace → ... → Secret → ConfigMap → ...)로 설치한다. 14.7 실패 ①에서 이 순서가 에러 메시지에 그대로 드러난다. <code># Source:</code> 주석으로 각 리소스가 어느 템플릿에서 왔는지 추적할 수 있다.</div>
+    <p><code>helm lint</code>는 차트의 구조와 템플릿 문법을 본다. <code>helm template</code>은 실제로 렌더해 매니페스트를 표준 출력으로 뱉는다. 둘 다 클러스터에 접속하지 않으므로 CI에서 돌리기 좋다. 렌더 결과를 서버 검증까지 통과시키려면 한 단계 더 간다.</p>
+<pre><code>helm template journal course/labs/charts/journal | kubectl apply --dry-run=server -f -</code></pre>
+    <span class="out-lbl">실행 결과 — 마지막 에러 원문은 한 줄이다. 읽기 쉽게 줄을 나눴다</span>
+    <div class="out"><code>secret/journal-secret created (server dry run)
+configmap/journal-config created (server dry run)
+configmap/journal-web created (server dry run)
+service/journal-api created (server dry run)
+service/journal-redis created (server dry run)
+service/journal-redis-read created (server dry run)
+service/journal-web created (server dry run)
+deployment.apps/journal-api created (server dry run)
+deployment.apps/journal-web created (server dry run)
+statefulset.apps/journal-redis created (server dry run)
+Error from server (BadRequest): error when creating "STDIN":
+admission webhook "validate.nginx.ingress.kubernetes.io" denied the request:
+host "journal.local" and path "/api" is already defined in ingress journal/journal</code></div>
+    <div class="verdict"><span class="lbl">판정</span>열 개는 <code>created (server dry run)</code> — 스키마 검증을 통과했고 <strong>실제로는 만들어지지 않았다</strong>. 그리고 인그레스가 웹훅에 거부됐다. 5단계와 같은 메시지인데 이번에는 이미 있는 쪽이 <code>journal/journal</code>, 즉 우리가 14.3에서 만든 인그레스다. 렌더 결과에 네임스페이스가 없어 <code>default</code>에 적용하려 했고, 호스트 <code>journal.local</code>이 겹쳤다.</div>
+    <p><code>--dry-run=server</code>는 apiserver까지 보내 어드미션 웹훅과 스키마 검증을 받되 저장하지 않는다. 14.3의 5단계에서 만난 인그레스 웹훅 거부를 <strong>배포 전에</strong> 잡아낼 수 있는 방법이고, 이 화면이 그 증명이다. 이 차트를 실제로 설치할 때는 다른 네임스페이스와 다른 호스트(값 파일)를 쓸 것이므로 여기서 고칠 것은 없다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">14.6</span>따라하기 ④ 값으로 환경을 가른다</h2>
+  <p>이제 진짜 목적이다. 같은 차트를 개발용 값으로 설치해 <code>journal</code>과 나란히 돌린다. 매니페스트를 한 줄도 복사하지 않는다.</p>
+
+  <div class="step">
+    <h4>16단계. 환경별 값 파일을 쓴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>환경 사이에서 <strong>달라지는 것만</strong> 파일로 뽑아낸다.</p>
+<pre><code># course/labs/charts/journal/values-dev.yaml
+# 개발 — 노트북 한 대. 복제본을 줄여 자원을 아낀다.
+api:
+  replicas: 1
+  logLevel: debug
+web:
+  replicas: 1
+redis:
+  storage: 1Gi
+ingress:
+  host: dev.journal.local</code></pre>
+<pre><code># course/labs/charts/journal/values-prod.yaml
+# 운영 — 복제본을 늘리고 로그를 줄이고 비밀번호는 파일에 두지 않는다.
+# helm upgrade ... -f values-prod.yaml --set redis.password="$REDIS_PASSWORD"
+api:
+  replicas: 6
+  logLevel: warn
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+web:
+  replicas: 3
+redis:
+  storage: 10Gi
+ingress:
+  host: journal.example.com</code></pre>
+    <p>값 파일에 <strong>달라지는 것만</strong> 적었다. 이미지 이름, 포트, 프로브 설정처럼 환경이 바뀌어도 같은 것은 <code>values.yaml</code>에 한 번만 있다. 값 파일이 커지고 있다면 그것은 템플릿이 충분히 추상화되지 않았다는 신호다.</p>
+    <p>운영 비밀번호는 파일에 적지 않는다. 설치할 때 주입한다. 아래 명령은 <strong>읽기만 하고 실행하지 않는다</strong> — 노트북에 API 파드 6개와 10Gi PVC가 생기고, 이 모듈의 정리 절은 <code>journal-prod</code>를 지우지 않는다.</p>
+<pre><code># 읽기만 한다. 실행하지 않는다.
+helm upgrade --install prod course/labs/charts/journal \
+  -n journal-prod --create-namespace \
+  -f course/labs/charts/journal/values-prod.yaml \
+  --set redis.password="$REDIS_PASSWORD"</code></pre>
+    <p>이것도 완전한 해법은 아니다 — 셸 히스토리와 CI 로그에 남는다. 제대로 된 답은 External Secrets나 SOPS이고 M31에서 다룬다. 이 모듈에서는 "값 파일에 평문을 적지 않는다"까지만 지킨다.</p>
+  </div>
+
+  <div class="step">
+    <h4>17단계. 배포하기 전에 두 환경의 차이를 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>값 파일이 실제로 무엇을 바꾸는지 렌더 결과로 확인한다.</p>
+<pre><code>for f in values-dev values-prod; do
+  echo "--- $f ---"
+  helm template journal course/labs/charts/journal \
+    -f course/labs/charts/journal/$f.yaml \
+    | grep -E "^  replicas:|LOG_LEVEL:|storage:"
+done</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>--- values-dev ---
+  LOG_LEVEL: "debug"
+  replicas: 1
+  replicas: 1
+  replicas: 1
+            storage: 1Gi
+--- values-prod ---
+  LOG_LEVEL: "warn"
+  replicas: 6
+  replicas: 3
+  replicas: 1
+            storage: 10Gi</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>replicas</code> 세 줄은 순서대로 api · web · redis다. dev는 1/1/1, prod는 6/3/1. 레디스만 양쪽 다 1인 것은 값 파일이 그 항목을 건드리지 않기 때문이다 — 복제 레디스는 이 차트의 범위 밖이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>18단계. 개발 환경을 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 차트의 두 번째 릴리스를 다른 네임스페이스에 세우고, 원본과 공존하는지 본다.</p>
+<pre><code>helm install dev course/labs/charts/journal \
+  -n journal-dev --create-namespace \
+  -f course/labs/charts/journal/values-dev.yaml</code></pre>
+    <ul class="tight">
+      <li><code>dev</code> — 릴리스 이름. 모든 리소스 이름의 접두사가 된다</li>
+      <li><code>--create-namespace</code> — 네임스페이스가 없으면 만든다. 없으면 설치가 실패한다</li>
+      <li><code>-f</code> — 값 파일. 여러 번 쓸 수 있고 <strong>뒤에 오는 것이 이긴다</strong>. <code>--set</code>은 <code>-f</code>보다 우선한다</li>
+    </ul>
+    <span class="out-lbl">실행 결과 — 시각은 환경마다 다르다</span>
+    <div class="out"><code>NAME: dev
+LAST DEPLOYED: Sat Sep  5 17:30:45 2026
+NAMESPACE: journal-dev
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+릴리스 dev 를 네임스페이스 journal-dev 에 설치했다.
+
+확인:
+  kubectl get pods -n journal-dev -l app.kubernetes.io/instance=dev
+  curl -H "Host: dev.journal.local" http://localhost:18080/api/entries
+
+이 릴리스의 값:
+  helm get values dev -n journal-dev</code></div>
+    <p><code>NOTES</code>는 14단계의 <code>templates/NOTES.txt</code>를 렌더한 것이다. 설치한 사람이 바로 다음에 칠 명령을 여기에 적어 두면, 차트를 처음 쓰는 사람이 문서를 뒤지지 않아도 된다.</p>
+<pre><code>kubectl get pods,svc,ingress -n journal-dev</code></pre>
+    <span class="out-lbl">실행 결과 — 파드 접미사와 IP 는 환경마다 다르다</span>
+    <div class="out"><code>NAME                           READY   STATUS    RESTARTS   AGE
+pod/dev-api-56dc7b6c97-s66lj   1/1     Running   0          14s
+pod/dev-redis-0                1/1     Running   0          14s
+pod/dev-web-68f5776b6c-zthjs   1/1     Running   0          14s
+
+NAME                     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/dev-api          ClusterIP   10.96.175.227   &lt;none&gt;        8080/TCP   14s
+service/dev-redis        ClusterIP   None            &lt;none&gt;        6379/TCP   14s
+service/dev-redis-read   ClusterIP   10.96.59.13     &lt;none&gt;        6379/TCP   14s
+service/dev-web          ClusterIP   10.96.235.86    &lt;none&gt;        80/TCP     14s
+
+NAME                            CLASS   HOSTS               ADDRESS   PORTS   AGE
+ingress.networking.k8s.io/dev   nginx   dev.journal.local             80      14s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>모든 이름이 <code>dev-</code>로 시작한다. <code>journal</code> 네임스페이스의 원본과 같은 클러스터에 공존하면서 이름도 호스트도 겹치지 않는다. 인그레스 웹훅도 통과했다 — 호스트가 다르기 때문이다.</div>
+<pre><code>curl -s -H "Host: dev.journal.local" -X POST http://localhost:18080/api/entries \
+  -H 'content-type: application/json' -d '{"text":"dev entry"}'
+curl -s -H "Host: dev.journal.local" http://localhost:18080/api/entries
+curl -s -H "Host: journal.local"     http://localhost:18080/api/entries</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>{"id":"1788597065053"}
+{"entries":["{\"text\":\"dev entry\"}"]}
+{"entries":["{\"text\":\"첫 엔트리\"}"]}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>두 환경의 데이터가 <strong>섞이지 않는다</strong>. 각자의 레디스와 각자의 PVC를 갖기 때문이다. 호스트 헤더 하나로 두 환경을 오간다.</div>
+  </div>
+
+  <div class="step">
+    <h4>19단계. 값을 바꾸고, 이력을 보고, 되돌린다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Helm이 릴리스를 리비전으로 관리한다는 것을 확인한다.</p>
+<pre><code>helm upgrade dev course/labs/charts/journal -n journal-dev \
+  -f course/labs/charts/journal/values-dev.yaml --set api.replicas=3
+
+helm history dev -n journal-dev
+helm get values dev -n journal-dev</code></pre>
+    <span class="out-lbl">실행 결과 — upgrade 의 출력은 NAME 줄부터 NOTES 까지 18단계와 같아 뺐다. 시각은 환경마다 다르다</span>
+    <div class="out"><code>Release "dev" has been upgraded. Happy Helming!
+...
+
+REVISION	UPDATED                 	STATUS    	CHART        	APP VERSION	DESCRIPTION
+1       	Sat Sep  5 17:30:45 2026	superseded	journal-0.1.0	v1         	Install complete
+2       	Sat Sep  5 17:31:25 2026	deployed  	journal-0.1.0	v1         	Upgrade complete
+
+USER-SUPPLIED VALUES:
+api:
+  logLevel: debug
+  replicas: 3
+ingress:
+  host: dev.journal.local
+redis:
+  storage: 1Gi
+web:
+  replicas: 1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>리비전 2가 <code>deployed</code>, 1은 <code>superseded</code>. 18단계 이후 40초쯤 지나 있다 — 사이에 curl 세 번을 쳤다. <code>helm get values</code>가 돌려주는 것은 <strong>사용자가 준 값만</strong>이다. <code>-f</code>의 값 파일과 <code>--set</code>이 합쳐져 <code>replicas: 3</code>이 됐다.</div>
+    <p>기본값까지 보려면 <code>--all</code>을 붙인다. 지금 클러스터에 무엇이 배포돼 있는지 확인할 때 가장 먼저 치는 명령이고, "누가 <code>--set</code>으로 뭘 덮어썼는지"를 찾는 유일한 방법이기도 하다.</p>
+<pre><code>helm rollback dev 1 -n journal-dev
+helm history dev -n journal-dev</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Rollback was a success! Happy Helming!
+REVISION	UPDATED                 	STATUS    	CHART        	APP VERSION	DESCRIPTION
+1       	Sat Sep  5 17:30:45 2026	superseded	journal-0.1.0	v1         	Install complete
+2       	Sat Sep  5 17:31:25 2026	superseded	journal-0.1.0	v1         	Upgrade complete
+3       	Sat Sep  5 17:31:40 2026	deployed  	journal-0.1.0	v1         	Rollback to 1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>롤백이 <strong>리비전 3을 새로 만든다</strong>. 되돌리는 것도 앞으로 가는 것으로 기록된다 — <code>kubectl rollout undo</code>(M10)와 같은 사고방식이다. 이력이 지워지지 않으므로 "어제 상태로 돌렸다가 다시 오늘 상태로" 가는 것이 가능하다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">14.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — kubectl로 만든 것 위에 helm install</span>
+    <p>같은 이름으로 Helm 릴리스를 <code>journal</code> 네임스페이스에 설치해 본다. 매니페스트와 차트가 같은 앱을 만드니 될 것 같지만 그렇지 않다.</p>
+<pre><code>helm install journal course/labs/charts/journal -n journal
+helm list -n journal</code></pre>
+    <span class="out-lbl">실행 결과 — 에러 원문은 한 줄이다. 읽기 쉽게 세미콜론 뒤에서 줄을 나눴다</span>
+    <div class="out"><code>Error: INSTALLATION FAILED: unable to continue with install: Secret "journal-secret" in namespace "journal" exists and cannot be imported into the current release: invalid ownership metadata;
+label validation error: key "app.kubernetes.io/managed-by" must equal "Helm": current value is "kustomize";
+annotation validation error: missing key "meta.helm.sh/release-name": must be set to "journal";
+annotation validation error: missing key "meta.helm.sh/release-namespace": must be set to "journal"
+NAME	NAMESPACE	REVISION	UPDATED	STATUS	CHART	APP VERSION</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>INSTALLATION FAILED</code>, 그리고 <code>helm list</code>는 헤더만 돌려준다 — 릴리스가 기록조차 되지 않았다. 첫 충돌이 <strong>Secret</strong>인 것은 15단계에서 본 Helm의 설치 순서(Secret이 ConfigMap보다 먼저) 때문이다.</div>
+    <p>Helm은 자기가 만든 리소스에 <strong>소유권 표시</strong>를 남긴다. 레이블 <code>app.kubernetes.io/managed-by: Helm</code>과 어노테이션 <code>meta.helm.sh/release-name</code>·<code>-namespace</code> 세 가지다. 이 표시가 없거나 다른 값이면 "내 것이 아닌데 덮어쓸 수 없다"며 멈춘다.</p>
+    <p>여기서 <code>current value is "kustomize"</code>가 보이는 것은 우리가 <code>kustomization.yaml</code>에 그 레이블을 직접 적었기 때문이다. 표시가 정직하게 동작한 셈이다. 레이블을 안 붙였더라면 같은 자리가 <code>missing key "app.kubernetes.io/managed-by"</code>로 바뀐다.</p>
+    <p>이 안전장치가 없다면 어떻게 되는지가 중요하다. Helm이 남의 리소스를 릴리스에 편입시켰다가 <code>helm uninstall</code> 때 <strong>같이 지워 버린다</strong>. 실무에서 "헬름으로 하나 지웠더니 관계없는 것까지 사라졌다"는 사고의 원형이 이것이다.</p>
+    <p>고치는 방법은 셋이고, 상황에 따라 다르다.</p>
+    <ul class="tight">
+      <li>다른 네임스페이스에 설치한다 — 지금 실습에서 택한 길(<code>journal-dev</code>)</li>
+      <li>기존 것을 지우고 Helm으로 다시 만든다: <code>kubectl delete -k ...</code> 후 <code>helm install</code>. 데이터가 있으면 PVC는 남기고 옮길 수 있다</li>
+      <li>기존 리소스에 소유권 레이블·어노테이션을 손으로 붙여 <strong>입양</strong>시킨다. 세 개를 정확히 맞춰야 하고 실수하면 위 사고가 난다. 리소스가 적을 때만 쓴다</li>
+    </ul>
+    <p>더 나은 규칙은 애초에 <strong>한 리소스를 한 도구만 관리하게 하는 것</strong>이다. kustomize와 Helm을 섞어 쓰는 것 자체는 문제가 아니지만, 같은 오브젝트를 둘이 주장하면 반드시 사고가 난다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 값 이름을 틀리게 적는다 (그리고 아무 일도 일어나지 않는다)</span>
+    <p>이 실패를 보려면 차트에 <code>values.schema.json</code>이 <strong>아직 없어야</strong> 한다. 11단계의 디렉터리 구조에 예고만 해 두고 여기서 추가하는 이유다. <code>replicas</code>를 <code>replica</code>로 잘못 적어 본다.</p>
+<pre><code>helm upgrade dev course/labs/charts/journal -n journal-dev \
+  -f course/labs/charts/journal/values-dev.yaml --set api.replica=9
+
+kubectl get deploy dev-api -n journal-dev</code></pre>
+    <span class="out-lbl">실행 결과 — upgrade 출력은 첫 줄과 REVISION 만 남겼다</span>
+    <div class="out"><code>Release "dev" has been upgraded. Happy Helming!
+NAME: dev
+...
+REVISION: 4
+...
+
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+dev-api   1/1     1            1           59s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>Helm은 <strong>성공했다고 말하고</strong> 리비전 4를 만들었는데, 파드는 1개 그대로다(<code>READY 1/1</code>). 값 트리에 <code>api.replica</code>라는 항목이 새로 생겼을 뿐, 어느 템플릿도 그것을 읽지 않는다.</div>
+    <p>이 종류의 실수가 위험한 이유는 조용하기 때문이다. <code>--set api.resources.limits.memory=2Gi</code>를 <code>--set api.resource.limits.memory=2Gi</code>로 치면 메모리 제한이 걸린 줄 알고 넘어간다. 문제는 몇 주 뒤 OOM으로 드러난다.</p>
+    <p>막는 방법은 <strong>값에 스키마를 붙이는 것</strong>이다. 차트 루트에 <code>values.schema.json</code>을 두면 Helm이 값을 JSON Schema로 검증한다. 전문을 그대로 쓴다 — 루트에 <code>additionalProperties: false</code>를 두는 순간 <code>values.yaml</code>에 있는 <strong>모든 키</strong>가 스키마에 있어야 하므로, 일부만 적으면 기본값부터 거부된다.</p>
+<pre><code>// course/labs/charts/journal/values.schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "journal chart values",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["api", "web", "redis", "ingress"],
+  "properties": {
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": { "type": "integer", "minimum": 1 },
+        "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+          }
+        },
+        "resources": { "type": "object" }
+      }
+    },
+    "web": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": { "type": "integer", "minimum": 1 },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" }
+          }
+        }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" }
+          }
+        },
+        "storage": { "type": "string" },
+        "password": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "host": { "type": "string" }
+      }
+    }
+  }
+}</code></pre>
+    <p><code>additionalProperties: false</code>가 핵심이다. 정의하지 않은 키를 거부한다. 이것 없이 타입만 적으면 오타는 여전히 통과한다. 파일을 넣은 뒤 같은 명령을 다시 친다.</p>
+<pre><code>helm upgrade dev course/labs/charts/journal -n journal-dev \
+  -f course/labs/charts/journal/values-dev.yaml --set api.replica=9
+
+helm template journal course/labs/charts/journal --set api.logLevel=verbose
+helm template journal course/labs/charts/journal --set redis.password=""</code></pre>
+    <span class="out-lbl">실행 결과 — 같은 오타가 이제 막힌다</span>
+    <div class="out"><code>Error: UPGRADE FAILED: values don't meet the specifications of the schema(s) in the following chart(s):
+journal:
+- at '/api': additional properties 'replica' not allowed
+
+Error: values don't meet the specifications of the schema(s) in the following chart(s):
+journal:
+- at '/api/logLevel': value must be one of 'debug', 'info', 'warn', 'error'
+
+Error: values don't meet the specifications of the schema(s) in the following chart(s):
+journal:
+- at '/redis/password': minLength: got 0, want 1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 가지가 모두 <strong>클러스터에 닿기 전에</strong> 막혔다. 오타, 허용되지 않는 값, 빈 비밀번호. 차트를 남에게 주려면 스키마는 선택이 아니다.</div>
+    <p>스키마로 못 잡는 것도 있다. "값이 있어야 한다"는 규칙은 템플릿 쪽에서 <code>required</code>로도 건다. 이 차트의 <code>config.yaml</code>이 그렇게 돼 있다.</p>
+<pre><code>  REDIS_PASSWORD: {{ required "redis.password 를 반드시 지정해야 한다" .Values.redis.password | quote }}</code></pre>
+    <p>둘의 차이는 메시지다. 스키마는 기계적인 문장을, <code>required</code>는 차트 작성자가 쓴 문장을 보여 준다. 값이 왜 필요한지 설명이 필요한 항목에는 <code>required</code>를 함께 건다.</p>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ③ — 스테이트풀셋의 볼륨 크기를 늘린다</span>
+    <p>레디스 데이터가 커질 것 같아 <code>20-redis.yaml</code>의 <code>storage: 1Gi</code>를 <code>2Gi</code>로 고치고 적용한다.</p>
+<pre><code>kubectl apply -k course/labs/k8s/journal</code></pre>
+    <span class="out-lbl">실행 결과 — 마지막 에러 원문은 한 줄이다. 서버가 채운 필드는 ... 로 줄이고 읽기 쉽게 줄을 나눴다</span>
+    <div class="out"><code>namespace/journal unchanged
+configmap/journal-config unchanged
+...
+ingress.networking.k8s.io/journal unchanged
+The StatefulSet "redis" is invalid: spec.volumeClaimTemplates: Invalid value:
+[{"name":"data","Spec":{"AccessModes":["ReadWriteOnce"], ...
+ "Resources":{"Limits":null,"Requests":{"storage":"2Gi"}}, ... }}]:
+field is immutable</code></div>
+    <div class="verdict"><span class="lbl">판정</span>나머지 열한 개는 지나가고 스테이트풀셋만 <code>field is immutable</code>로 거부된다. 다른 리소스 뒤에 나오는 것은 <code>apply -k</code>가 리소스를 차례로 보내기 때문이다.</div>
+    <p>스테이트풀셋에서 나중에 바꿀 수 있는 필드는 정해져 있다 — <code>replicas</code>, <code>ordinals</code>, <code>template</code>, <code>updateStrategy</code>, <code>persistentVolumeClaimRetentionPolicy</code>, <code>minReadySeconds</code>. <code>volumeClaimTemplates</code>는 그 목록에 없다. 이미 만들어진 PVC들과 템플릿이 어긋나는 상태를 컨트롤러가 표현할 수 없기 때문이다.</p>
+    <p>실무에서 볼륨을 늘리는 순서는 이렇다.</p>
+    <ol class="tight">
+      <li>스토리지클래스가 <code>allowVolumeExpansion: true</code>인지 확인한다. kind의 <code>standard</code>는 <strong>false</strong>라 여기서 끝난다</li>
+      <li>true라면 <strong>PVC를 직접 수정</strong>한다: <code>kubectl patch pvc data-redis-0 -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'</code></li>
+      <li>스테이트풀셋은 <code>--cascade=orphan</code>으로 지웠다가 새 템플릿으로 다시 만든다. 파드는 살아 있고 PVC도 그대로다</li>
+    </ol>
+    <p>즉 <strong>기존 볼륨은 PVC로, 앞으로 만들 볼륨은 템플릿으로</strong> 각각 바꿔야 한다. 순서를 반대로 하면 이미 있는 PVC는 그대로인 채 새 파드만 큰 볼륨을 받는 어긋난 상태가 된다.</p>
+    <p>실습을 계속하려면 <code>2Gi</code>를 <code>1Gi</code>로 되돌린다. 되돌리지 않으면 <code>rebuild.sh</code>의 <code>apply -k</code>가 같은 자리에서 멈춘다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">14.8</span>운영 관점</h2>
+
+  <h3>Helm은 릴리스 상태를 어디에 두는가</h3>
+  <p>Tiller라는 서버 컴포넌트가 있던 시절(Helm 2)의 이야기는 잊어도 된다. Helm 3부터 릴리스 정보는 <strong>그 네임스페이스의 시크릿</strong>에 저장된다.</p>
+<pre><code>kubectl get secret -n journal-dev -l owner=helm</code></pre>
+  <span class="out-lbl">실행 결과 — 리비전마다 하나씩 쌓인다. AGE 는 환경마다 다르다</span>
+  <div class="out"><code>NAME                        TYPE                 DATA   AGE
+sh.helm.release.v1.dev.v1   helm.sh/release.v1   1      59s
+sh.helm.release.v1.dev.v2   helm.sh/release.v1   1      19s
+sh.helm.release.v1.dev.v3   helm.sh/release.v1   1      4s
+sh.helm.release.v1.dev.v4   helm.sh/release.v1   1      3s</code></div>
+  <p>넷이다 — 설치(v1), 업그레이드(v2), 롤백(v3), 그리고 실패 ②에서 스키마 없이 통과한 <code>api.replica=9</code>(v4). 실패 ②의 두 번째 시도는 스키마에 막혀 리비전을 만들지 않았다. 여기서 두 가지가 따라 나온다. 첫째, <strong>시크릿을 읽을 권한이 곧 릴리스 이력에 대한 권한</strong>이다(M23 RBAC). 둘째, 리비전이 쌓이면 시크릿도 쌓인다 — 기본 보관 개수는 10이고 <code>--history-max</code>로 조절한다. 배포가 잦은 파이프라인에서 etcd를 갉아먹는 흔한 원인이다.</p>
+  <p>클러스터가 진실 공급원이라는 뜻이기도 하다. 로컬에 차트가 없어도 <code>helm get manifest dev -n journal-dev</code>로 <strong>실제로 배포된 매니페스트</strong>를 되돌려 받을 수 있다. 인수인계받은 클러스터를 파악할 때 가장 먼저 쓰는 명령이다.</p>
+
+  <h3>kustomize와 Helm 중 무엇을 언제 쓰나</h3>
+  <p>둘을 비교하는 표는 인터넷에 많고 대부분 도움이 안 된다. 선택은 <strong>이 매니페스트를 누가 쓰는가</strong>로 갈린다.</p>
+  <table>
+    <tr><th>상황</th><th>선택</th><th>이유</th></tr>
+    <tr><td>우리 팀이 우리 앱을 우리 클러스터 몇 곳에 배포한다</td><td>kustomize</td><td>템플릿 문법이 없다. 렌더 전 파일이 그대로 유효한 YAML이라 편집기 검증과 diff가 통한다</td></tr>
+    <tr><td>차트를 남에게 준다 (사내 플랫폼 팀, 오픈소스)</td><td>Helm</td><td>값·스키마·NOTES·버전·롤백이 한 묶음으로 온다. 쓰는 쪽이 템플릿을 안 읽어도 된다</td></tr>
+    <tr><td>남의 차트를 쓰는데 한두 군데를 고쳐야 한다</td><td>둘 다</td><td><code>helm template</code>으로 렌더한 뒤 kustomize 패치를 얹는다. Argo CD가 기본으로 지원하는 조합이다 (M32)</td></tr>
+  </table>
+  <p>이 과정은 앞으로 둘 다 쓴다. 우리가 만든 앱은 <code>k8s/journal/</code>의 kustomize 정의를 M15~M27이 고쳐 나가고, 차트는 M28에서 그 변경을 한 번에 따라잡으며 값 분기를 더 파고든다. 남이 만든 것(ingress-nginx · kube-prometheus-stack · Chaos Mesh)은 그쪽이 제공하는 차트로 설치한다.</p>
+
+  <h3>실습 규모와 운영 규모가 갈리는 지점</h3>
+  <p>레디스가 복제본 1개다. 이 파드가 죽으면 다시 뜰 때까지 앱 전체가 <code>/readyz</code> 503이 된다 — 10단계에서 <code>kubectl wait</code>가 끝나기까지의 몇 초가 그 시간이다. 운영에서는 Sentinel이나 매니지드 서비스를 쓴다. 이 과정은 "저장소를 클러스터 안에 두는 것의 대가"를 보여 주는 데까지만 간다.</p>
+  <p>PV가 노드의 로컬 경로다. 9단계에서 본 대로 워커 노드 컨테이너 안의 디렉터리이므로 노드가 죽으면 데이터도 죽는다. 운영에서는 네트워크 볼륨과 <code>Retain</code> 정책, 그리고 볼륨과 별도인 백업이 셋 다 있어야 한다.</p>
+  <p>비밀번호가 값 파일에 있다. M31까지의 임시 상태이고, 지금 단계에서도 <code>values-prod.yaml</code>에는 적지 않는 습관을 들인다. 16단계의 <code>--set</code>이 그 습관의 첫 단계다.</p>
+  <p>이미지 태그가 <code>v1</code>이다. 태그는 옮겨 붙을 수 있으므로(M07) 운영에서는 다이제스트(<code>@sha256:...</code>)까지 고정한다. 이 과정에서는 kind에 직접 적재한 이미지라 태그로 충분하다.</p>
+
+  <div class="note-2026">
+    <span class="lbl">Helm 3 · Helm 4</span>
+    이 모듈은 Helm <strong>4.2.4</strong>로 검증했다(2026-09-05). 여기서 쓴 명령(<code>lint</code> · <code>template</code> · <code>install</code> · <code>upgrade</code> · <code>history</code> · <code>rollback</code> · <code>get values</code>)과 <code>apiVersion: v2</code> 차트 형식은 Helm 3에서도 같다. 두 버전의 차이는 M28에서 따로 다룬다. Helm 3의 보안 지원은 <strong>2027-02-10</strong>에 끝나므로 새로 만드는 파이프라인은 4로 간다. 실습 당일 <code>helm version</code>으로 자기 버전을 확인하고, 검색 결과에 <code>helm init</code>이나 <code>tiller</code>가 나오면 그것은 Helm 2 시절 문서다 — 지금 따라 하면 안 된다.
+    <span class="src">https://helm.sh/docs/ · https://helm.sh/blog/</span>
+  </div>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">14.9</span>체크포인트와 정리</h2>
+
+  <h3>탈출구를 만들어 둔다</h3>
+  <p>Part 3부터는 이 앱을 일부러 망가뜨리는 실습이 이어진다. 프로브를 잘못 걸어 재시작 루프를 만들고(M15), 리소스를 과하게 요청해 Pending을 만들고(M16), 나중에는 파드를 무작위로 죽인다(M36). 그때마다 클러스터를 처음부터 다시 만들 수 있어야 한다.</p>
+<pre><code>bash course/labs/scripts/rebuild.sh          # 기존 클러스터에 다시 적용
+RECREATE=1 bash course/labs/scripts/rebuild.sh   # 클러스터부터 새로 만든다</code></pre>
+  <p>이 스크립트가 하는 일은 일곱 단계다. 클러스터 확인·생성 → <code>journal-api</code> v1·v2 빌드와 <code>kind load</code> → metrics-server 설치(M16·M17의 전제) → ingress-nginx 설치 → <code>default</code>의 옛 인그레스 제거 후 <code>kubectl apply -k</code> → 롤아웃 대기 → <code>curl</code> 스모크 테스트. 마지막 단계가 200을 못 받으면 <strong>0이 아닌 코드로 끝난다</strong>. 조용히 실패하는 복구 스크립트는 없느니만 못하다. 스모크 테스트는 <code>rebuild smoke test</code>라는 엔트리를 하나 써 넣으므로, 돌린 뒤에는 엔트리가 하나 늘어 있다.</p>
+  <span class="out-lbl">실행 결과 — 마지막 세 줄</span>
+  <div class="out"><code>  200 OK — {"entries":["{\"text\":\"첫 엔트리\"}","{\"text\":\"rebuild smoke test\"}"]}
+
+복구 완료. http://journal.local:18080 (/etc/hosts 에 항목이 있어야 브라우저로 열린다)</code></div>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get all -n journal</code> → 파드 6개가 <code>Running</code>이고 <code>redis-0</code>만 서수 이름이다</li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}\n' -H "Host: journal.local" http://localhost:18080/api/entries</code> → <code>200</code></li>
+      <li><code>kubectl delete pod redis-0 -n journal &amp;&amp; kubectl wait --for=condition=Ready pod/redis-0 -n journal --timeout=120s &amp;&amp; kubectl exec -n journal redis-0 -- sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning dbsize'</code> → 지우기 전과 같은 숫자</li>
+      <li><code>helm list -n journal-dev</code> → 릴리스 <code>dev</code>가 <code>deployed</code> (정리 전에 확인한다)</li>
+      <li><code>curl -s -H "Host: dev.journal.local" http://localhost:18080/api/entries</code>와 <code>-H "Host: journal.local"</code> → 서로 다른 엔트리 목록</li>
+      <li><code>helm install journal course/labs/charts/journal -n journal 2&gt;&amp;1 | grep -o 'invalid ownership metadata'</code> → <code>invalid ownership metadata</code></li>
+      <li><code>helm template journal course/labs/charts/journal --set api.replica=9 2&gt;&amp;1 | grep -o "'replica' not allowed"</code> → <code>'replica' not allowed</code></li>
+      <li><code>bash course/labs/scripts/rebuild.sh; echo "exit=$?"</code> → 마지막 줄 <code>exit=0</code></li>
+      <li>(이해 확인) Helm이 남의 리소스를 거부할 때 보는 소유권 표시 세 가지 — 레이블 하나, 어노테이션 둘 — 를 이름으로 말한다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/journal/</code> — 매니페스트 6개 + <code>index.html</code> + <code>kustomization.yaml</code>. <strong>M15~M27의 정본</strong>이다. 이후 모듈이 프로브·리소스·PDB 등을 고칠 때 이 디렉터리의 파일을 고치고, 각 모듈의 "남기는 파일"에 무엇을 고쳤는지 적는다</li>
+      <li><code>course/labs/charts/journal/</code> — 차트 한 벌. M15~M27 동안은 <code>k8s/journal/</code>과 <strong>의도적으로 갈라진 채</strong> 두고, M28이 "왜 갈라졌는가"를 소재로 한 번에 따라잡는다. 그 사이에 차트를 고치지 않는다</li>
+      <li><code>course/labs/scripts/rebuild.sh</code> — 빈 클러스터에서 여기까지 복구하는 스크립트</li>
+      <li>클러스터에 남는 것: 네임스페이스 <code>journal</code>(계속 쓴다), <code>journal-dev</code>(아래에서 지운다). kind 노드의 <code>journal-api:v1</code>·<code>v2</code> 이미지 — v2는 M15 프로브 실습이 롤링 업데이트 대상으로 쓴다</li>
+      <li><code>default</code>에는 아무것도 남지 않는다. <code>curlbox</code>도 6단계에서 지웠다 — M15 1단계에서 부하 루프용으로 다시 만든다(<code>sleep infinity</code>로)</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+  <p><code>journal</code> 네임스페이스는 <strong>지우지 않는다</strong>. M15부터 계속 쓴다. Helm 실습용으로 만든 개발 환경만 정리한다.</p>
+<pre><code>helm uninstall dev -n journal-dev
+kubectl delete ns journal-dev
+kubectl get pv | grep journal-dev</code></pre>
+  <span class="out-lbl">실행 결과</span>
+  <div class="out"><code>release "dev" uninstalled
+namespace "journal-dev" deleted</code></div>
+  <p><code>helm uninstall</code>은 릴리스가 만든 리소스를 지우지만 <strong>PVC는 남긴다</strong>. 네임스페이스를 통째로 지워야 <code>data-dev-redis-0</code>까지 사라진다. 마지막 <code>grep</code>이 아무것도 안 내면 됐다. 이 모듈에서는 부하 생성 루프를 띄우지 않았으므로 따로 죽일 프로세스는 없다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m13-k8s-configmap-secret.html">← M13 컨피그맵과 시크릿</a>
+  <a href="m15-k8s-probes-lifecycle.html">M15 프로브와 파드 라이프사이클 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금 배포한 <code>journal-api</code>에는 <code>readinessProbe</code>와 <code>livenessProbe</code>가 이미 붙어 있지만, 값이 왜 그 숫자인지는 설명하지 않았다. M15는 프로브를 <strong>떼어 낸 상태로 롤링 업데이트를 돌려 5xx를 눈으로 보는 것</strong>부터 시작한다. 그 다음 readiness를 붙여 실패를 0으로 만들고, liveness 임계값을 일부러 낮춰 재시작 루프를 재현한다. 실습 대상은 이 모듈이 남긴 <code>course/labs/k8s/journal/30-journal-api.yaml</code>이고, 롤링 업데이트에는 노드에 적재된 <code>journal-api:v2</code>를 쓴다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>StatefulSet: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/</li>
+    <li>StatefulSet 기본 사용법 튜토리얼: https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/</li>
+    <li>퍼시스턴트 볼륨: https://kubernetes.io/docs/concepts/storage/persistent-volumes/</li>
+    <li>스토리지클래스: https://kubernetes.io/docs/concepts/storage/storage-classes/</li>
+    <li>컨테이너 환경 변수의 $(VAR) 치환: https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/</li>
+    <li>Kustomization 필드 레퍼런스: https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/</li>
+    <li>Helm 차트 템플릿 가이드: https://helm.sh/docs/chart_template_guide/</li>
+    <li>Helm values.schema.json: https://helm.sh/docs/topics/charts/#schema-files</li>
+    <li>Helm 릴리스 저장소(시크릿): https://helm.sh/docs/topics/advanced/#storage-backends</li>
+    <li>kind 로컬 레지스트리·이미지 적재: https://kind.sigs.k8s.io/docs/user/quick-start/#loading-an-image-into-your-cluster</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.7~1.11(저널 애플리케이션 배포), 1.11 서비스 배포 모범 사례, 2.3.2 네임스페이스</li>
+  </ul>
+  <p>이 문서의 명령과 출력은 macOS(Apple Silicon) · Docker Engine 29.2.1 · kind v0.33.0 · Kubernetes 1.37.0 · Helm 4.2.4 환경에서 2026-09-05에 실행해 얻은 것이다. 버전은 실습 당일 다시 확인하라.</p>
+</footer>
+
+</div>
+</body>
+</html>

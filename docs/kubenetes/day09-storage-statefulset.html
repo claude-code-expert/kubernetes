@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D9 · 상태를 가진 것은 다르게 다룬다 — 볼륨·PVC·StatefulSet·DB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D8과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 3단계 운영 품질 · Day 9</p>
+  <h1>상태를 가진 것은 다르게 다룬다 — 볼륨·PVC·StatefulSet·DB</h1>
+  <p class="lede">파드가 일회용이면 데이터는 어디에 있어야 하나. D1에서 볼륨 없이 띄운 PostgreSQL이 컨테이너와 함께 사라졌다. 오늘은 같은 실험을 클러스터 규모로 반복한다. 파드가 죽어도, 다른 노드로 옮겨도 남는 저장소를 요청하는 법(PVC), 그 요청을 실제 디스크로 바꿔 주는 것(StorageClass·CSI), 그리고 이름과 디스크가 파드마다 고정되는 워크로드(StatefulSet)로 PostgreSQL을 올린 뒤 order-api가 진짜 DB에서 주문을 읽고 쓰게 한다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D8 완료 · week1/ 기준 배치 · 3노드</b></span>
+    <span>버전 <b>Kubernetes v1.36 · PostgreSQL 18 · Spring Boot 4.1.0 (order-api v5, JDBC)</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>emptyDir·PVC·StatefulSet 볼륨의 수명이 각각 무엇에 묶여 있는지 말한다.</li>
+    <li>PVC를 만들면 StorageClass가 PV를 동적으로 만드는 과정을 <code>get pv,pvc</code>와 노드 디스크에서 확인한다.</li>
+    <li>StatefulSet으로 PostgreSQL을 올리고, 파드를 지워도 같은 이름·같은 PVC로 돌아와 데이터가 남는 것을 보인다.</li>
+    <li>order-api가 서비스 이름으로 DB에 연결해 주문을 읽고 쓰게 하고, DB 파드 재시작 뒤에도 데이터가 그대로임을 API로 확인한다.</li>
+    <li>사용 중인 PVC 삭제가 <code>Terminating</code>에 멈추는 이유를 finalizer로 설명한다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+
+  <h3>1.1 볼륨의 수명은 무엇에 묶이나</h3>
+  <table>
+    <thead><tr><th style="width:170px">볼륨</th><th>수명</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td><code>emptyDir</code></td><td>파드. 파드가 사라지면 함께 사라진다. 노드 재시작에도 사라진다.</td><td>같은 파드 안 컨테이너끼리 파일 공유, 임시 캐시</td></tr>
+      <tr><td><code>configMap</code> / <code>secret</code></td><td>오브젝트. D7에서 씀.</td><td>설정 파일 주입</td></tr>
+      <tr><td><code>hostPath</code></td><td>노드. 그 노드의 디렉터리를 직접 마운트.</td><td>노드 에이전트(로그 수집기, D11의 Alloy). 앱 데이터에는 쓰지 않는다. 파드가 다른 노드로 가면 데이터가 없다.</td></tr>
+      <tr><td><code>persistentVolumeClaim</code></td><td>PVC 오브젝트. 파드와 무관. 지우기 전까지 남는다.</td><td>DB, 업로드 파일, 큐. 오늘의 주제.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.2 PVC · PV · StorageClass</h3>
+  <p>앱 개발자는 "10Gi, 읽기쓰기 가능, 빠른 디스크"라고 <dfn title="PersistentVolumeClaim">요청(PVC)</dfn>만 쓴다. 어느 스토리지 시스템에서 어떻게 만들지는 모른다. <dfn title="PersistentVolume">PV(PersistentVolume)</dfn>는 실제 저장소 하나를 나타내는 클러스터 범위 오브젝트다. <dfn title="StorageClass">스토리지클래스(StorageClass)</dfn>는 "이런 요청이 오면 이 프로비저너로 이렇게 만들어라"는 정책이고, 그 프로비저너가 <dfn title="Container Storage Interface">CSI(Container Storage Interface)</dfn> 드라이버다. 클라우드면 디스크 API를 부르고, 이 환경에서는 노드 디렉터리를 하나 만든다. 앱 매니페스트는 클라우드든 노트북이든 같다. 스토리지클래스만 다르다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 300" width="100%" role="img" aria-label="PVC 요청이 StorageClass와 CSI를 거쳐 PV로 만들어지는 흐름">
+    <rect x="20" y="40" width="200" height="90" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="32" y="62" font-size="12" font-weight="600" fill="#15803d">Pod postgres-0</text>
+    <text x="32" y="82" class="mono" font-size="11" fill="#4a4a4a">volumes:</text>
+    <text x="32" y="98" class="mono" font-size="11" fill="#4a4a4a">- persistentVolumeClaim:</text>
+    <text x="32" y="114" class="mono" font-size="11" fill="#4a4a4a">    claimName: data-postgres-0</text>
+    <line x1="220" y1="85" x2="278" y2="85" stroke="#767676" stroke-width="1.2"/><polygon points="272,81 280,85 272,89" fill="#767676"/>
+    <rect x="282" y="40" width="200" height="90" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="294" y="62" font-size="12" font-weight="600" fill="#6d28d9">PVC data-postgres-0</text>
+    <text x="294" y="82" class="mono" font-size="11" fill="#4a4a4a">storage: 1Gi</text>
+    <text x="294" y="98" class="mono" font-size="11" fill="#4a4a4a">accessModes: [RWO]</text>
+    <text x="294" y="114" class="mono" font-size="11" fill="#4a4a4a">storageClassName: standard</text>
+    <text x="282" y="150" font-size="11" fill="#767676">네임스페이스 범위 · 개발자가 쓴다</text>
+    <line x1="382" y1="130" x2="382" y2="184" stroke="#767676" stroke-width="1.2" stroke-dasharray="3 3"/><polygon points="378,178 382,186 386,178" fill="#767676"/>
+    <rect x="282" y="190" width="240" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="294" y="212" font-size="12" font-weight="600" fill="#1d4ed8">StorageClass standard</text>
+    <text x="294" y="232" class="mono" font-size="11" fill="#4a4a4a">provisioner: rancher.io/local-path</text>
+    <text x="294" y="248" class="mono" font-size="11" fill="#4a4a4a">reclaimPolicy: Delete</text>
+    <line x1="522" y1="225" x2="552" y2="225" stroke="#767676" stroke-width="1.2"/><polygon points="546,221 554,225 546,229" fill="#767676"/>
+    <rect x="556" y="190" width="160" height="70" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="568" y="212" font-size="12" font-weight="600" fill="#1d4ed8">프로비저너 (CSI)</text>
+    <text x="568" y="232" font-size="11" fill="#4a4a4a">노드에 디렉터리 생성</text>
+    <text x="568" y="248" font-size="11" fill="#4a4a4a">→ PV 오브젝트 생성</text>
+    <line x1="636" y1="190" x2="636" y2="136" stroke="#767676" stroke-width="1.2"/><polygon points="632,142 636,134 640,142" fill="#767676"/>
+    <rect x="544" y="40" width="336" height="90" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="556" y="62" font-size="12" font-weight="600" fill="#6d28d9">PV pvc-3f9a… (클러스터 범위)</text>
+    <text x="556" y="82" class="mono" font-size="11" fill="#4a4a4a">1Gi · RWO · claimRef: study/data-postgres-0</text>
+    <text x="556" y="98" class="mono" font-size="11" fill="#4a4a4a">local: /var/local-path-provisioner/pvc-3f9a…</text>
+    <text x="556" y="114" class="mono" font-size="11" fill="#4a4a4a">nodeAffinity: desktop-worker</text>
+    <line x1="482" y1="85" x2="544" y2="85" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="490" y="78" font-size="10" fill="#6d28d9">Bound</text>
+    <text x="20" y="290" font-size="11" fill="#767676">① 파드가 PVC를 참조 ② PVC가 클래스를 지목 ③ 프로비저너가 디스크와 PV를 만든다 ④ PVC ↔ PV가 Bound. 파드를 지워도 ②~④는 남는다.</text>
+  </svg>
+  <figcaption>도판 1. 초록=파드, 보라=요청과 실제 볼륨(둘이 Bound로 묶임), 파랑=정책과 프로비저너. 개발자는 왼쪽 두 상자만 쓴다.</figcaption>
+  </figure>
+
+  <h3>1.3 세 가지 속성</h3>
+  <table>
+    <thead><tr><th style="width:200px">속성</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>접근 모드 <code>accessModes</code></td><td><code>ReadWriteOnce</code>(한 노드에서 읽기쓰기, 대부분의 블록 디스크) · <code>ReadWriteMany</code>(여러 노드, NFS 류) · <code>ReadOnlyMany</code> · <code>ReadWriteOncePod</code>(한 파드만). DB는 RWO 또는 RWOP.</td></tr>
+      <tr><td>회수 정책 <code>reclaimPolicy</code></td><td>PVC를 지웠을 때 PV를 <code>Delete</code>(디스크까지 삭제)할지 <code>Retain</code>(PV와 디스크를 남기고 수동 정리)할지. 동적 프로비저닝의 기본은 Delete. 운영 DB는 Retain을 고려한다.</td></tr>
+      <tr><td>바인딩 시점 <code>volumeBindingMode</code></td><td><code>Immediate</code>(PVC 생성 즉시) 또는 <code>WaitForFirstConsumer</code>(파드가 스케줄될 때). 후자는 파드가 갈 노드를 보고 그 노드의 디스크를 만든다. 로컬 디스크 계열은 반드시 후자.</td></tr>
+    </tbody>
+  </table>
+  <p>이 환경의 <code>standard</code> 클래스는 노드의 로컬 디렉터리를 쓰는 <code>local-path</code> 프로비저너다. 그래서 PV에 <code>nodeAffinity</code>가 붙고, 그 PVC를 쓰는 파드는 그 노드에만 갈 수 있다. 노드가 사라지면 데이터도 사라진다. 클라우드의 네트워크 디스크는 노드를 옮겨 다닌다. 개념은 같고 내구성이 다르다.</p>
+
+  <h3>1.4 StatefulSet: 이름과 디스크가 고정되는 파드</h3>
+  <p>디플로이먼트의 파드는 이름이 랜덤이고 서로 바꿔 쓸 수 있다. DB는 다르다. "1번 인스턴스"가 죽으면 "1번의 디스크"를 가진 "1번"이 돌아와야 한다. <dfn title="StatefulSet">스테이트풀셋(StatefulSet)</dfn>은 그것을 보장한다.</p>
+  <ul>
+    <li><b>고정 이름</b> — <code>postgres-0</code>, <code>postgres-1</code>. 재생성돼도 같은 이름.</li>
+    <li><b>파드별 PVC</b> — <code>volumeClaimTemplates</code>로 파드마다 PVC를 하나씩 만들고(<code>data-postgres-0</code>), 파드가 재생성되면 같은 PVC를 다시 붙인다. 스테이트풀셋을 지워도 PVC는 남는다(<code>persistentVolumeClaimRetentionPolicy</code>로 조정).</li>
+    <li><b>순서</b> — 0번이 Ready가 된 뒤 1번을 만든다. 줄일 때는 역순.</li>
+    <li><b>고정 DNS</b> — <dfn title="headless service">헤드리스 서비스(D5)</dfn>와 짝을 이뤄 <code>postgres-0.postgres.study.svc.cluster.local</code>처럼 파드 하나를 이름으로 지목할 수 있다.</li>
+  </ul>
+
+  <figure>
+  <svg viewBox="0 0 900 250" width="100%" role="img" aria-label="Deployment와 StatefulSet의 파드·볼륨 관계 비교">
+    <text x="20" y="24" font-size="12" font-weight="600" fill="#1a1a1a">Deployment order-api</text>
+    <rect x="20" y="40" width="130" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/><text x="30" y="60" font-size="11" fill="#15803d">order-api-…-k2p8n</text><text x="30" y="78" font-size="10" fill="#767676">이름 랜덤</text>
+    <rect x="160" y="40" width="130" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/><text x="170" y="60" font-size="11" fill="#15803d">order-api-…-q7w3m</text><text x="170" y="78" font-size="10" fill="#767676">서로 교체 가능</text>
+    <rect x="300" y="40" width="130" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/><text x="310" y="60" font-size="11" fill="#15803d">order-api-…-z9c4v</text><text x="310" y="78" font-size="10" fill="#767676">디스크 없음</text>
+    <text x="20" y="120" font-size="11" fill="#767676">서비스 order-api → 아무 파드나</text>
+    <line x1="20" y1="135" x2="880" y2="135" stroke="#ececec" stroke-width="1"/>
+    <text x="20" y="160" font-size="12" font-weight="600" fill="#1a1a1a">StatefulSet postgres</text>
+    <rect x="20" y="176" width="130" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/><text x="30" y="196" font-size="11" fill="#15803d">postgres-0</text><text x="30" y="214" font-size="10" fill="#767676">항상 이 이름</text>
+    <rect x="160" y="176" width="130" height="50" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5" stroke-dasharray="4 3"/><text x="170" y="196" font-size="11" fill="#15803d">postgres-1</text><text x="170" y="214" font-size="10" fill="#767676">0번 Ready 뒤 생성</text>
+    <rect x="470" y="176" width="150" height="50" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/><text x="480" y="196" font-size="11" fill="#6d28d9">PVC data-postgres-0</text><text x="480" y="214" font-size="10" fill="#767676">0번 전용 · 파드보다 오래 산다</text>
+    <rect x="630" y="176" width="150" height="50" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="4 3"/><text x="640" y="196" font-size="11" fill="#6d28d9">PVC data-postgres-1</text><text x="640" y="214" font-size="10" fill="#767676">1번 전용</text>
+    <line x1="150" y1="201" x2="470" y2="201" stroke="#6d28d9" stroke-width="1.2"/>
+    <line x1="290" y1="201" x2="630" y2="201" stroke="#6d28d9" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <text x="20" y="246" font-size="11" fill="#767676">헤드리스 서비스 postgres → postgres-0.postgres 로 0번만 지목 가능. 복제본이 서로 다른 데이터를 가지므로 "아무 파드나"가 안 된다.</text>
+  </svg>
+  <figcaption>도판 2. 위는 교체 가능한 파드, 아래는 이름·디스크가 1:1로 묶인 파드. 보라 선이 파드-PVC 고정 연결이다.</figcaption>
+  </figure>
+
+  <h3>1.5 DB를 클러스터 안에 둘 것인가</h3>
+  <p>스테이트풀셋 하나로 올린 PostgreSQL은 <b>단일 인스턴스</b>다. 복제본을 2로 늘려도 두 번째 파드는 독립된 빈 DB일 뿐 레플리카가 아니다. 복제·장애 조치·백업·업그레이드는 DB의 규칙을 아는 <dfn title="Operator">오퍼레이터(Operator)</dfn>(CloudNativePG, Crunchy 등)가 CRD로 관리하거나, 관리형 DB(RDS 등)를 클러스터 밖에 두고 D5의 <code>ExternalName</code>으로 연결한다. 오늘의 단일 인스턴스는 개발·실습·소규모 내부 도구 수준이며, 그 한계를 7단계에서 직접 본다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · 스토리지클래스 확인, order-api v5</h2>
+<pre><code><span class="p">$</span> kubectl get storageclass
+<span class="c">NAME                 PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+standard (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  4d</span>
+<span class="p">$</span> kubectl get pods -n local-path-storage
+<span class="c">NAME                                      READY   STATUS    RESTARTS   AGE
+local-path-provisioner-…                  1/1     Running   0          4d</span></code></pre>
+  <p class="expect"><b>확인</b> — 기본 클래스(<code>(default)</code>) 하나가 있고 바인딩 모드가 <code>WaitForFirstConsumer</code>다. PVC에 클래스를 안 적으면 이것이 쓰인다. 이름이 <code>hostpath</code>로 보이면 그 이름으로 읽으면 된다. 이후 매니페스트는 클래스명을 생략해 기본 클래스를 따르게 한다.</p>
+
+  <h3>order-api v5: JDBC로 주문을 읽고 쓴다</h3>
+<pre><code><span class="p">$</span> cd ~/k8s-study/day04/order-api
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='pom.xml'; t=open(p).read()
+dep=('    &lt;dependency&gt;\n'
+     '      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;\n'
+     '      &lt;artifactId&gt;spring-boot-starter-jdbc&lt;/artifactId&gt;\n'
+     '    &lt;/dependency&gt;\n'
+     '    &lt;dependency&gt;\n'
+     '      &lt;groupId&gt;org.postgresql&lt;/groupId&gt;\n'
+     '      &lt;artifactId&gt;postgresql&lt;/artifactId&gt;\n'
+     '      &lt;scope&gt;runtime&lt;/scope&gt;\n'
+     '    &lt;/dependency&gt;\n')
+if 'starter-jdbc' not in t:
+    t=t.replace('  &lt;dependencies&gt;\n','  &lt;dependencies&gt;\n'+dep,1)
+open(p,'w').write(t)
+EOF
+
+<span class="p">$</span> cat &gt; src/main/java/study/OrderApiApplication.java &lt;&lt;'EOF'
+package study;
+
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+@RestController
+public class OrderApiApplication {
+
+    private final JdbcClient jdbc;
+
+    @Value("${store.name:unset}")
+    private String storeName;
+
+    @Value("${store.region:unset}")
+    private String storeRegion;
+
+    @Value("${api.key:unset}")
+    private String apiKey;
+
+    public OrderApiApplication(JdbcClient jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApiApplication.class, args);
+    }
+
+    @GetMapping("/")
+    public String root() {
+        return "order-api " + version() + " on " + host() + "\n";
+    }
+
+    @GetMapping("/orders")
+    public Map&lt;String, Object&gt; orders() {
+        List&lt;Map&lt;String, Object&gt;&gt; rows = jdbc
+            .sql("SELECT id, item FROM orders ORDER BY id")
+            .query().listOfRows();
+        return Map.of("version", version(), "host", host(), "orders", rows);
+    }
+
+    @PostMapping("/orders")
+    public Map&lt;String, Object&gt; create(@RequestBody Map&lt;String, String&gt; body) {
+        int n = jdbc.sql("INSERT INTO orders(item) VALUES (:item)")
+            .param("item", body.getOrDefault("item", "unknown"))
+            .update();
+        return Map.of("inserted", n, "host", host());
+    }
+
+    @GetMapping("/config")
+    public Map&lt;String, Object&gt; config() {
+        return Map.of(
+            "version", version(),
+            "host", host(),
+            "store.name", storeName,
+            "store.region", storeRegion,
+            "api.key", mask(apiKey));
+    }
+
+    private static String mask(String s) {
+        if (s == null || s.length() &lt; 4) return "****";
+        return s.substring(0, 2) + "****" + s.substring(s.length() - 2);
+    }
+
+    private static String version() {
+        String v = System.getenv("APP_VERSION");
+        return v == null ? "dev" : v;
+    }
+
+    private static String host() {
+        String h = System.getenv("HOSTNAME");
+        return h == null ? "unknown" : h;
+    }
+}
+EOF
+
+<span class="p">$</span> cat &gt; src/main/resources/schema.sql &lt;&lt;'EOF'
+CREATE TABLE IF NOT EXISTS orders (
+  id         SERIAL PRIMARY KEY,
+  item       TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+EOF
+
+<span class="p">$</span> cat &gt; src/main/resources/application.properties &lt;&lt;'EOF'
+spring.config.import=optional:configtree:/config/
+management.endpoints.web.exposure.include=health
+management.endpoint.health.probes.enabled=true
+server.shutdown=graceful
+spring.lifecycle.timeout-per-shutdown-phase=20s
+spring.sql.init.mode=always
+EOF
+
+<span class="p">$</span> docker build --build-arg APP_VERSION=v5 -t order-api:v5 .
+<span class="p">$</span> mkdir -p ~/k8s-study/day09 &amp;&amp; cd ~/k8s-study/day09</code></pre>
+  <p class="expect"><b>확인</b> — DB 주소·계정은 코드에 없다. Spring Boot는 <code>SPRING_DATASOURCE_URL</code>·<code>_USERNAME</code>·<code>_PASSWORD</code> 환경 변수를 <code>spring.datasource.*</code>로 읽는다(D7의 완화된 바인딩). <code>schema.sql</code>은 시작 시 실행돼 테이블을 만든다. DB에 연결이 안 되면 앱은 시작에 실패하고 D8의 startupProbe가 30회(60초)까지 기다려 준다. 로컬 <code>docker run</code> 확인은 DB가 없어 생략하고 클러스터에서 확인한다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>emptyDir: 파드와 함께 사라진다</h3>
+    <p class="why">D3의 사이드카 파드에 공유 볼륨을 붙인다. 한 컨테이너가 쓰고 다른 컨테이너가 읽는다.</p>
+<pre><code><span class="p">$</span> cat &gt; emptydir-demo.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emptydir-demo
+spec:
+  containers:
+  - name: writer
+    image: busybox:1.37
+    command: ["sh", "-c", "i=0; while true; do i=$((i+1)); echo \"$(date +%T) line $i\" &gt;&gt; /shared/log.txt; sleep 2; done"]
+    volumeMounts:
+    - name: shared
+      mountPath: /shared
+  - name: reader
+    image: busybox:1.37
+    command: ["sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: shared
+      mountPath: /data
+      readOnly: true
+  volumes:
+  - name: shared
+    emptyDir:
+      sizeLimit: 10Mi
+EOF
+<span class="p">$</span> kubectl apply -f emptydir-demo.yaml &amp;&amp; kubectl wait --for=condition=Ready pod/emptydir-demo
+<span class="p">$</span> sleep 6 &amp;&amp; kubectl exec emptydir-demo -c reader -- tail -2 /data/log.txt
+<span class="c">03:41:12 line 2
+03:41:14 line 3</span>
+<span class="p">$</span> kubectl exec emptydir-demo -c reader -- sh -c 'echo x &gt;&gt; /data/log.txt' ; echo "exit=$?"
+<span class="c">sh: can't create /data/log.txt: Read-only file system
+exit=1</span>
+<span class="p">$</span> kubectl delete pod emptydir-demo --wait=true &amp;&amp; kubectl apply -f emptydir-demo.yaml &amp;&amp; kubectl wait --for=condition=Ready pod/emptydir-demo
+<span class="p">$</span> sleep 3 &amp;&amp; kubectl exec emptydir-demo -c reader -- head -1 /data/log.txt
+<span class="c">03:42:05 line 1</span>
+<span class="p">$</span> kubectl delete pod emptydir-demo --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — writer가 <code>/shared</code>에 쓴 것을 reader가 <code>/data</code>에서 읽는다(마운트 경로는 컨테이너마다 달라도 된다). 파드를 다시 만들자 <code>line 1</code>부터다. 이전 파일은 사라졌다. <code>sizeLimit</code>을 넘기면 파드가 축출된다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>PVC: 파드보다 오래 사는 디스크</h3>
+    <p class="why">PVC를 만들고 파드에 붙였다 떼며 PV·데이터·노드 디렉터리가 어느 시점에 생기고 남는지 본다.</p>
+<pre><code><span class="p">$</span> cat &gt; pvc-demo.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: demo-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-demo
+spec:
+  containers:
+  - name: app
+    image: busybox:1.37
+    command: ["sh", "-c", "echo \"written by $HOSTNAME at $(date +%T)\" &gt;&gt; /data/history.txt; sleep 3600"]
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: demo-data
+EOF
+<span class="p">$</span> kubectl apply -f pvc-demo.yaml
+<span class="p">$</span> kubectl get pvc demo-data
+<span class="c">NAME        STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+demo-data   Pending                                      standard       3s</span>
+<span class="p">$</span> kubectl wait --for=condition=Ready pod/pvc-demo &amp;&amp; kubectl get pvc,pv
+<span class="c">NAME                              STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/demo-data   Bound    pvc-3f9a1c2e-…                             100Mi      RWO            standard       12s
+
+NAME                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM             STORAGECLASS
+persistentvolume/pvc-3f9a1c2e-…             100Mi      RWO            Delete           Bound    study/demo-data   standard</span>
+
+<span class="p">$</span> kubectl get pv -o jsonpath='{range .items[*]}{.spec.local.path}  node={.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}{"\n"}{end}'
+<span class="c">/var/local-path-provisioner/pvc-3f9a1c2e-…_study_demo-data  node=desktop-worker</span>
+<span class="p">$</span> docker exec desktop-worker sh -c 'cat /var/local-path-provisioner/*demo-data*/history.txt'
+<span class="c">written by pvc-demo at 03:45:10</span>
+
+<span class="p">$</span> kubectl delete pod pvc-demo --wait=true
+<span class="p">$</span> kubectl get pvc demo-data -o jsonpath='{.status.phase}{"\n"}'
+<span class="c">Bound</span>
+<span class="p">$</span> kubectl apply -f pvc-demo.yaml &amp;&amp; kubectl wait --for=condition=Ready pod/pvc-demo
+<span class="p">$</span> kubectl exec pvc-demo -- cat /data/history.txt
+<span class="c">written by pvc-demo at 03:45:10
+written by pvc-demo at 03:46:31</span>
+<span class="p">$</span> kubectl get pod pvc-demo -o jsonpath='{.spec.nodeName}{"\n"}'
+<span class="c">desktop-worker</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — PVC는 처음에 <code>Pending</code>이었다. <code>WaitForFirstConsumer</code>라서 파드가 스케줄될 때 그 노드에 디렉터리를 만들고 PV를 생성해 Bound가 됐다. 노드 컨테이너 안에 실제 파일이 있다. 파드를 지워도 PVC는 <code>Bound</code> 그대로이고, 다시 만든 파드에는 두 줄이 있다. 두 번째 파드도 <code>desktop-worker</code>에 갔다. PV의 nodeAffinity 때문이며, 로컬 디스크 스토리지의 제약이다.</p>
+<pre><code><span class="p">$</span> kubectl delete pod pvc-demo --wait=true &amp;&amp; kubectl delete pvc demo-data
+<span class="p">$</span> sleep 3 &amp;&amp; kubectl get pv
+<span class="c">No resources found</span>
+<span class="p">$</span> docker exec desktop-worker sh -c 'ls /var/local-path-provisioner/ | grep -c demo-data || true'
+<span class="c">0</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — PVC를 지우자 <code>reclaimPolicy: Delete</code>대로 PV와 노드 디렉터리까지 사라졌다. 운영 DB라면 PVC 삭제 한 번이 데이터 삭제다. Retain 정책이거나 백업이 있어야 한다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>PostgreSQL 스테이트풀셋 + 헤드리스 서비스</h3>
+    <p class="why">비밀번호는 시크릿, 데이터는 <code>volumeClaimTemplates</code>. D8에서 예고한 대로 requests = limits로 Guaranteed.</p>
+<pre><code><span class="p">$</span> cat &gt; ~/k8s-study/week1/12-postgres.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: study
+type: Opaque
+stringData:
+  POSTGRES_USER: orders
+  POSTGRES_PASSWORD: orders-pw-2026
+  POSTGRES_DB: orders
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: study
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: study
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: postgres
+        image: postgres:18
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - secretRef:
+            name: postgres-secret
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "orders", "-d", "orders"]
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "orders", "-d", "orders"]
+          periodSeconds: 15
+          failureThreshold: 3
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources:
+        requests:
+          storage: 1Gi
+EOF
+<span class="p">$</span> kubectl apply -f ~/k8s-study/week1/12-postgres.yaml
+<span class="p">$</span> kubectl rollout status statefulset/postgres
+<span class="c">partitioned roll out complete: 1 new pods have been updated...</span>
+<span class="p">$</span> kubectl get sts,pod,pvc,svc -l app=postgres
+<span class="c">NAME                        READY   AGE
+statefulset.apps/postgres   1/1     40s
+
+NAME             READY   STATUS    RESTARTS   AGE
+pod/postgres-0   1/1     Running   0          40s
+
+NAME                                    STATUS   VOLUME           CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/data-postgres-0   Bound    pvc-8b2d…        1Gi        RWO            standard       40s
+
+NAME               TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+service/postgres   ClusterIP   None         &lt;none&gt;        5432/TCP   40s</span>
+
+<span class="p">$</span> kubectl get pod postgres-0 -o jsonpath='{.status.qosClass}{"\n"}'
+<span class="c">Guaranteed</span>
+<span class="p">$</span> kubectl run dns-check --rm -it --restart=Never --image=busybox:1.37 -- nslookup postgres-0.postgres 2&gt;/dev/null | tail -2
+<span class="c">Name:      postgres-0.postgres
+Address 1: 10.244.2.21 postgres-0.postgres.study.svc.cluster.local</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 파드 이름이 <code>postgres-0</code>, PVC 이름이 <code>data-postgres-0</code>(템플릿명-스테이트풀셋명-순번). 서비스의 CLUSTER-IP가 <code>None</code>인 헤드리스라 <code>postgres-0.postgres</code>가 파드 IP로 직접 풀린다. <code>postgres</code>만 치면 파드들의 IP 목록이 돌아온다(지금은 하나). QoS가 Guaranteed다. requests와 limits를 같게 준 유일한 워크로드다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>D1의 실험을 클러스터에서: 파드를 지워도 데이터는 남는다</h3>
+<pre><code><span class="p">$</span> kubectl exec postgres-0 -- psql -U orders -d orders -c "CREATE TABLE t(v text); INSERT INTO t VALUES ('before delete');"
+<span class="c">INSERT 0 1</span>
+<span class="p">$</span> kubectl delete pod postgres-0 --wait=true
+<span class="c">pod "postgres-0" deleted</span>
+<span class="p">$</span> kubectl rollout status statefulset/postgres
+<span class="p">$</span> kubectl get pod postgres-0 -o jsonpath='{.metadata.name} age={.metadata.creationTimestamp} pvc={.spec.volumes[0].persistentVolumeClaim.claimName}{"\n"}'
+<span class="c">postgres-0 age=2026-08-30T03:52:40Z pvc=data-postgres-0</span>
+<span class="p">$</span> kubectl exec postgres-0 -- psql -U orders -d orders -tAc "SELECT v FROM t;"
+<span class="c">before delete</span>
+<span class="p">$</span> kubectl exec postgres-0 -- psql -U orders -d orders -c "DROP TABLE t;"</code></pre>
+    <p class="expect"><b>읽을 것</b> — 새로 만들어진 파드인데(creationTimestamp가 방금) 이름도 <code>postgres-0</code>, PVC도 <code>data-postgres-0</code>이고 행이 남아 있다. 디플로이먼트였다면 이름이 바뀌고 PVC를 다시 붙여야 했다. 이것이 스테이트풀셋이 보장하는 "1번은 1번의 디스크로 돌아온다"이다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>order-api v5: 서비스 이름으로 DB에 붙는다</h3>
+    <p class="why">환경 변수 세 개를 추가하고 이미지를 v5로. D8 파일을 갱신한다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/week1
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+p='20-order-api-deploy.yaml'; t=open(p).read()
+t=t.replace('image: order-api:v4','image: order-api:v5')
+t=t.replace('''        - name: JAVA_TOOL_OPTIONS
+''','''        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://postgres:5432/orders
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: JAVA_TOOL_OPTIONS
+''')
+open(p,'w').write(t)
+EOF
+<span class="p">$</span> grep -c 'SPRING_DATASOURCE' 20-order-api-deploy.yaml
+<span class="c">3</span>
+<span class="p">$</span> kubectl apply -f 20-order-api-deploy.yaml &amp;&amp; kubectl rollout status deployment/order-api
+<span class="c">deployment "order-api" successfully rolled out</span>
+
+<span class="p">$</span> curl -s localhost/orders; echo
+<span class="c">{"version":"v5","host":"order-api-…","orders":[]}</span>
+<span class="p">$</span> curl -s -X POST -H 'Content-Type: application/json' -d '{"item":"keyboard"}' localhost/orders; echo
+<span class="c">{"inserted":1,"host":"order-api-…-a1b2c"}</span>
+<span class="p">$</span> curl -s -X POST -H 'Content-Type: application/json' -d '{"item":"mouse"}' localhost/orders; echo
+<span class="p">$</span> for i in 1 2 3; do curl -s localhost/orders | cut -c1-110; echo; done
+<span class="c">{"version":"v5","host":"order-api-…-a1b2c","orders":[{"id":1,"item":"keyboard"},{"id":2,"item":"mouse"}]}
+{"version":"v5","host":"order-api-…-d3e4f","orders":[{"id":1,"item":"keyboard"},{"id":2,"item":"mouse"}]}
+{"version":"v5","host":"order-api-…-g5h6i","orders":[{"id":1,"item":"keyboard"},{"id":2,"item":"mouse"}]}</span>
+
+<span class="p">$</span> kubectl exec postgres-0 -- psql -U orders -d orders -tAc "SELECT count(*) FROM orders;"
+<span class="c">2</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 주문 목록이 코드가 아니라 DB에서 온다. 파드 4개가 서로 다른 호스트명으로 같은 두 행을 돌려준다. 상태는 DB 한 곳에 있고 앱 파드는 상태가 없다. 그래서 앱은 디플로이먼트로 마음껏 늘리고 지우고, DB만 스테이트풀셋으로 아낀다. 이 분리가 쿠버네티스에서 앱을 설계하는 기본 형태다.</p>
+<pre><code><span class="c"># DB 파드를 지워도 API는 회복된다</span>
+<span class="p">$</span> kubectl delete pod postgres-0 --wait=false
+<span class="p">$</span> for i in $(seq 1 12); do curl -s -m 2 -o /dev/null -w '%{http_code} ' localhost/orders; sleep 2; done; echo
+<span class="c">500 500 500 500 200 200 200 200 200 200 200 200</span>
+<span class="p">$</span> curl -s localhost/orders | grep -o '"orders":\[.*\]'
+<span class="c">"orders":[{"id":1,"item":"keyboard"},{"id":2,"item":"mouse"}]</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — DB가 내려간 8초 동안 500이 났고 올라오자 200으로 돌아왔다. 주문 두 건은 그대로다. 앱 파드는 재시작되지 않았다. D8에서 readiness에 DB 검사를 넣지 않은 이유가 여기서 드러난다. 넣었다면 앱 파드 4개가 전부 트래픽에서 빠져 500 대신 Gateway의 503이 났을 것이고, 그 편이 나은지는 서비스마다 다르다. 단일 DB 파드의 8초 공백은 1.5절의 한계다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>고장: 쓰는 중인 PVC를 지우면</h3>
+    <p class="why">삭제가 <code>Terminating</code>에서 멈춘다. 이유는 finalizer다.</p>
+<pre><code><span class="p">$</span> kubectl delete pvc data-postgres-0 --wait=false
+<span class="c">persistentvolumeclaim "data-postgres-0" deleted</span>
+<span class="p">$</span> kubectl get pvc data-postgres-0
+<span class="c">NAME              STATUS        VOLUME       CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+data-postgres-0   Terminating   pvc-8b2d…    1Gi        RWO            standard       15m</span>
+<span class="p">$</span> kubectl get pvc data-postgres-0 -o jsonpath='{.metadata.finalizers}{"\n"}'
+<span class="c">["kubernetes.io/pvc-protection"]</span>
+<span class="p">$</span> kubectl exec postgres-0 -- psql -U orders -d orders -tAc "SELECT count(*) FROM orders;"
+<span class="c">2</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — "deleted"라고 찍혔지만 PVC는 <code>Terminating</code>으로 살아 있고 DB도 정상이다. <code>pvc-protection</code> finalizer가 "이 PVC를 쓰는 파드가 있는 한 실제 삭제를 보류"한다. 파드가 사라지는 순간 삭제가 진행되고 데이터가 없어진다. 즉 지금 이 PVC는 <b>시한폭탄</b>이다. 되돌릴 방법은 없다(삭제 표시는 취소되지 않는다). 새 PVC로 데이터를 옮기거나, 실습이므로 스테이트풀셋과 함께 지우고 다시 만든다.</p>
+<pre><code><span class="p">$</span> kubectl delete statefulset postgres --wait=true
+<span class="p">$</span> sleep 5 &amp;&amp; kubectl get pvc data-postgres-0 2&gt;&amp;1 | tail -1
+<span class="c">Error from server (NotFound): persistentvolumeclaims "data-postgres-0" not found</span>
+<span class="p">$</span> kubectl apply -f 12-postgres.yaml &amp;&amp; kubectl rollout status statefulset/postgres
+<span class="p">$</span> kubectl rollout restart deployment/order-api &amp;&amp; kubectl rollout status deployment/order-api
+<span class="p">$</span> curl -s localhost/orders | grep -o '"orders":\[.*\]'
+<span class="c">"orders":[]</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 파드가 사라지자 보류됐던 삭제가 실행됐고, 새 스테이트풀셋은 새 PVC를 만들어 빈 DB로 시작했다. 주문 두 건이 없어졌다. order-api를 재시작한 이유는 <code>schema.sql</code>이 시작 시에만 돌기 때문이다. finalizer는 PVC뿐 아니라 네임스페이스·CRD 등 여러 오브젝트에 있으며, <code>Terminating</code>에서 멈춘 오브젝트를 만나면 <code>.metadata.finalizers</code>를 먼저 본다.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>복제본 2는 레플리카가 아니다</h3>
+    <p class="why">스테이트풀셋을 2로 늘려 순서·PVC·데이터 독립성을 본 뒤 되돌린다.</p>
+<pre><code><span class="p">$</span> curl -s -X POST -H 'Content-Type: application/json' -d '{"item":"monitor"}' localhost/orders &gt;/dev/null
+<span class="p">$</span> kubectl scale statefulset/postgres --replicas=2
+<span class="p">$</span> kubectl get pods -l app=postgres -w
+<span class="c">NAME         READY   STATUS              RESTARTS   AGE
+postgres-0   1/1     Running             0          3m
+postgres-1   0/1     Pending             0          0s
+postgres-1   0/1     ContainerCreating   0          1s
+postgres-1   1/1     Running             0          8s
+^C</span>
+<span class="p">$</span> kubectl get pvc -l app=postgres
+<span class="c">NAME              STATUS   VOLUME      CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+data-postgres-0   Bound    pvc-c1d2…   1Gi        RWO            standard       4m
+data-postgres-1   Bound    pvc-e3f4…   1Gi        RWO            standard       20s</span>
+<span class="p">$</span> kubectl exec postgres-0 -- psql -U orders -d orders -tAc "SELECT count(*) FROM orders;"
+<span class="c">1</span>
+<span class="p">$</span> kubectl exec postgres-1 -- psql -U orders -d orders -tAc "SELECT count(*) FROM orders;"
+<span class="c">ERROR:  relation "orders" does not exist</span>
+
+<span class="p">$</span> kubectl scale statefulset/postgres --replicas=1
+<span class="p">$</span> sleep 15 &amp;&amp; kubectl get pods,pvc -l app=postgres
+<span class="c">NAME             READY   STATUS    RESTARTS   AGE
+pod/postgres-0   1/1     Running   0          5m
+
+NAME                                    STATUS   VOLUME      CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/data-postgres-0   Bound    pvc-c1d2…   1Gi        RWO            standard       5m
+persistentvolumeclaim/data-postgres-1   Bound    pvc-e3f4…   1Gi        RWO            standard       1m</span>
+<span class="p">$</span> kubectl delete pvc data-postgres-1</code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>postgres-1</code>은 0번 뒤에 순서대로 생겼고 자기 PVC를 따로 받았다. 그리고 <b>빈 DB</b>다. 테이블조차 없다. 스테이트풀셋은 "이름과 디스크를 고정한 파드 N개"를 줄 뿐 데이터 복제는 모른다. 복제는 PostgreSQL의 스트리밍 복제 설정이 필요하고, 그것을 자동화하는 것이 오퍼레이터다. 1로 줄이자 파드는 사라졌지만 PVC <code>data-postgres-1</code>은 남았다. 다시 2로 늘리면 그 디스크가 돌아온다. 오늘은 손으로 지운다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <div class="check">
+    <ol>
+      <li>PVC를 만들고 파드에 붙여 파일을 쓴 뒤, 파드를 지우고 새 파드에서 그 파일을 읽는다. PV가 어느 노드의 어느 경로인지 말한다.</li>
+      <li>DB 파드를 지운 뒤 재기동한 파드에서 이전 주문 데이터가 <code>curl localhost/orders</code>로 조회된다.</li>
+      <li><code>postgres-0.postgres</code>가 풀리는 이유(헤드리스)와 <code>order-api</code>가 풀리는 방식(ClusterIP)의 차이를 말한다.</li>
+      <li>PVC 삭제가 <code>Terminating</code>에 멈추는 원인 필드를 가리키고, 그 상태가 왜 위험한지 말한다.</li>
+      <li>스테이트풀셋 복제본 2의 두 번째 파드가 왜 빈 DB인지 설명한다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D10으로 간다. 2번이 안 되면 4단계의 PVC 이름을 다시 확인한다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">postgres 스테이트풀셋·PVC·시크릿은 남긴다. <code>week1/</code>에 <code>12-postgres.yaml</code>이 추가됐고 <code>20-order-api-deploy.yaml</code>이 v5로 바뀌었다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/week1 &amp;&amp; kubectl diff -f . ; echo "exit=$?"
+<span class="c">exit=0</span>
+<span class="p">$</span> kubectl get pvc
+<span class="c">NAME              STATUS   VOLUME      CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+data-postgres-0   Bound    pvc-c1d2…   1Gi        RWO            standard       12m</span>
+<span class="p">$</span> curl -s -X POST -H 'Content-Type: application/json' -d '{"item":"keyboard"}' localhost/orders &gt;/dev/null
+<span class="p">$</span> curl -s -X POST -H 'Content-Type: application/json' -d '{"item":"mouse"}' localhost/orders &gt;/dev/null
+<span class="p">$</span> curl -s localhost/orders | grep -o '"orders":\[.*\]'
+<span class="c">"orders":[{"id":1,"item":"monitor"},{"id":2,"item":"keyboard"},{"id":3,"item":"mouse"}]</span></code></pre>
+  <p>주문 세 건을 넣어 두었다. D10·D11에서 부하를 걸 때 이 데이터를 읽는다. <code>week1/12-postgres.yaml</code>의 비밀번호는 평문이다. D13에서 Git에 올리기 전에 처리한다.</p>
+
+  <div class="note">
+    <h5>D10 예고</h5>
+    <p>파드가 열몇 개, 노드 셋, DB 하나. <code>kubectl get</code>은 "지금"만 보여 준다. 내일은 metrics-server와 kube-prometheus-stack을 올려 시간축이 있는 지표를 보고, CPU 사용률로 order-api를 자동으로 늘리는 HPA를 건다. 기본 네임스페이스가 study라서 <code>-n monitoring</code>을 빠뜨리기 쉽다. 내일 첫 줄에서 다시 짚는다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>볼륨 — <a href="https://kubernetes.io/ko/docs/concepts/storage/volumes/">kubernetes.io/ko/docs/concepts/storage/volumes/</a> · 퍼시스턴트 볼륨 — <a href="https://kubernetes.io/ko/docs/concepts/storage/persistent-volumes/">kubernetes.io/ko/docs/concepts/storage/persistent-volumes/</a> · 스토리지클래스 — <a href="https://kubernetes.io/ko/docs/concepts/storage/storage-classes/">kubernetes.io/ko/docs/concepts/storage/storage-classes/</a></li>
+    <li>스테이트풀셋 — <a href="https://kubernetes.io/ko/docs/concepts/workloads/controllers/statefulset/">kubernetes.io/ko/docs/concepts/workloads/controllers/statefulset/</a> · finalizer — <a href="https://kubernetes.io/ko/docs/concepts/overview/working-with-objects/finalizers/">kubernetes.io/ko/docs/concepts/overview/working-with-objects/finalizers/</a></li>
+    <li>local-path-provisioner — <a href="https://github.com/rancher/local-path-provisioner">github.com/rancher/local-path-provisioner</a> · CSI 드라이버 목록 — <a href="https://kubernetes-csi.github.io/docs/drivers.html">kubernetes-csi.github.io/docs/drivers.html</a></li>
+    <li>PostgreSQL 공식 이미지(18, 데이터 경로) — <a href="https://hub.docker.com/_/postgres">hub.docker.com/_/postgres</a> · CloudNativePG 오퍼레이터 — <a href="https://cloudnative-pg.io/">cloudnative-pg.io</a></li>
+    <li>Spring Boot SQL 데이터베이스(JdbcClient, 스키마 초기화) — <a href="https://docs.spring.io/spring-boot/reference/data/sql.html">docs.spring.io/spring-boot/reference/data/sql.html</a></li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day08-probes-resources-scheduling.html">← D8 프로브·리소스·스케줄링</a><a href="day10-monitoring-1-metrics-hpa.html">D10 모니터링 ① →</a></div>
+</div></footer>
+</body>
+</html>

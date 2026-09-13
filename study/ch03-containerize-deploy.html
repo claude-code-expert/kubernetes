@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 · 컨테이너화와 배포 — 쿠버네티스 관측성</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+.why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="index.html">← 목차로</a>
+  <span class="where">CHAPTER 03 / 11</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>컨테이너화와 배포</h1>
+  <p class="lede">02장에서 만든 두 앱을 이미지로 굽고 kind 클러스터에 올린다. 레지스트리는 쓰지 않는다. 여기서 정하는 라벨과 포트 이름이 06장 스크레이프의 조건이 된다.</p>
+</header>
+
+<h2><span class="n">01</span>왜 이 장이 필요한가</h2>
+
+<p>02장의 앱은 맥에서 돌았다. 클러스터에는 아직 아무것도 없다. 그리고 로컬에서 도는 것과 클러스터에서 도는 것 사이에는 <strong>세 가지 새로운 문제</strong>가 있다.</p>
+
+<p>첫째, <strong>이미지가 노드에 없다.</strong> 쿠버네티스는 이미지를 레지스트리에서 받아 온다고 가정하는데, 방금 빌드한 이미지는 어느 레지스트리에도 없다. 둘째, <strong>언제 트래픽을 보내도 되는지</strong>를 쿠버네티스가 알아야 한다. JVM 앱은 기동이 느려서 이것을 잘못 설정하면 파드가 재시작을 반복한다. 셋째, <strong>어느 노드에 둘 것인가</strong>를 정해야 한다. 01장에서 라벨을 붙여 둔 이유가 여기서 나온다.</p>
+
+<p>그리고 하나 더 — 여기서 정하는 <strong>서비스의 라벨과 포트 이름</strong>이 06장 <code>ServiceMonitor</code> 의 선택 조건이 된다. 매니페스트를 그냥 복사하지 말고 라벨이 어디에 걸리는지만큼은 눈으로 따라간다.</p>
+
+
+<h2><span class="n">02</span>알아야 할 개념</h2>
+
+<h3>이미지 저장소가 두 곳이다</h3>
+
+<p>맥의 도커 데몬이 가진 이미지 목록과, kind 노드 컨테이너 <em>안쪽</em> 런타임이 가진 목록은 <strong>서로 다른 공간</strong>이다. <code>docker images</code> 에 보인다고 파드가 뜨지 않는다.</p>
+
+<p><code>kind load docker-image</code> 가 그 간극을 메운다. 이미지를 노드 컨테이너 안으로 밀어 넣어 런타임이 볼 수 있게 한다. 적재됐는지는 노드 안에서 <code>crictl images</code> 로 확인해야 하고, <code>docker images</code> 로는 알 수 없다.</p>
+
+<blockquote class="warn">
+  <span class="label">latest 를 쓰면 여기서 조용히 깨진다</span>
+  <p>태그가 <code>latest</code> 면 <code>imagePullPolicy</code> 기본값이 <code>Always</code> 가 되어, 이미 적재해 둔 이미지를 무시하고 레지스트리를 찾아가 <code>ErrImagePull</code> 로 떨어진다. 이 실습은 모든 이미지에 <strong>버전 태그를 박는다</strong>. 10절에서 실제로 그 에러를 만들어 본다.</p>
+</blockquote>
+
+<h3>프로브 세 개가 각각 답하는 질문</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>프로브</th><th>답하는 질문</th><th>실패하면</th></tr>
+  <tr><td><code>startupProbe</code></td><td>아직 시작 중인가</td><td>다른 두 프로브를 <strong>미룬다</strong>. 느린 JVM 기동을 감싸는 용도</td></tr>
+  <tr><td><code>readinessProbe</code></td><td>지금 트래픽을 받아도 되나</td><td>서비스 엔드포인트에서 <strong>빠진다</strong>. 파드는 살아 있다</td></tr>
+  <tr><td><code>livenessProbe</code></td><td>살아 있나</td><td>컨테이너를 <strong>죽이고 다시 만든다</strong></td></tr>
+</table>
+</div>
+
+<p>셋을 헷갈리면 사고가 난다. 기동이 느린 앱에 liveness 만 걸면 준비되기도 전에 죽이고 다시 만들기를 반복한다 — <code>CrashLoopBackOff</code> 의 흔한 원인이다. <strong>liveness 에는 외부 의존성 검사를 넣지 않는 것</strong>이 원칙이다. DB 가 잠깐 끊겼다고 앱을 재시작하면 상황이 더 나빠진다.</p>
+
+<h3>같은 라벨이 네 자리에 쓰인다</h3>
+
+<p><code>app.kubernetes.io/name</code> 은 ① Deployment 셀렉터, ② 파드 라벨, ③ Service 셀렉터, ④ <strong>Service 자신의 라벨</strong>에 각각 쓰인다. 앞의 셋은 파드를 묶기 위한 것이고, ④번만 역할이 다르다 — 06장 <code>ServiceMonitor</code> 가 <em>서비스를</em> 찾기 위한 것이다. 값이 같더라도 네 곳에 각각 써야 한다.</p>
+
+<h3>자원 요청과 제한</h3>
+
+<p><dfn class="term">requests</dfn> 는 스케줄러가 “이 파드를 놓을 자리가 있는가”를 계산할 때 쓰는 값이고, <dfn class="term">limits</dfn> 는 실제 사용 상한이다. 이 실습은 <strong>메모리만 제한하고 CPU 는 제한하지 않는다</strong>. 이유는 08절 매니페스트에서 설명한다.</p>
+
+<h3>용어 정리</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
+  <tr><td>containerd</td><td>container daemon</td><td>노드 안에서 컨테이너를 실제로 돌리는 런타임. kind 노드는 이것을 쓴다</td></tr>
+  <tr><td>crictl</td><td>CRI Control</td><td>컨테이너 런타임을 직접 조회하는 도구. 노드 안의 이미지 목록을 본다</td></tr>
+  <tr><td>빌드팩</td><td>Cloud Native Buildpacks</td><td>Dockerfile 없이 소스에서 OCI 이미지를 만드는 표준 도구</td></tr>
+  <tr><td>OCI 이미지</td><td>Open Container Initiative Image</td><td>컨테이너 이미지의 표준 형식. 도커 이미지도 이 형식이다</td></tr>
+  <tr><td>다이제스트</td><td>Digest (SHA-256)</td><td>이미지 내용의 해시. 태그와 달리 옮겨 달 수 없다</td></tr>
+  <tr><td>imagePullPolicy</td><td>Image Pull Policy</td><td>이미지를 언제 받아올지. <code>IfNotPresent</code> 는 노드에 있으면 그대로 쓴다</td></tr>
+  <tr><td>디플로이먼트</td><td>Deployment</td><td>파드를 몇 개 유지할지와 교체 방식을 정의하는 리소스</td></tr>
+  <tr><td>서비스</td><td>Service</td><td>파드 묶음에 고정된 이름과 IP 를 주는 리소스. 클러스터 안 DNS 이름이 된다</td></tr>
+  <tr><td>노드셀렉터</td><td>nodeSelector</td><td>파드를 특정 라벨을 가진 노드에만 배치하는 조건</td></tr>
+  <tr><td>테인트</td><td>Taint</td><td>노드가 “아무나 오지 마라”고 거는 표식. 컨트롤 플레인에 기본으로 걸려 있다</td></tr>
+  <tr><td>엔드포인트슬라이스</td><td>EndpointSlice</td><td>서비스가 실제로 어느 파드 IP 로 보내는지의 목록. 비어 있으면 502 다</td></tr>
+  <tr><td>롤링 업데이트</td><td>Rolling Update</td><td>파드를 한 번에 다 바꾸지 않고 순차 교체하는 방식</td></tr>
+  <tr><td>OOMKilled</td><td>Out Of Memory Killed</td><td>메모리 제한을 넘겨 커널이 프로세스를 죽인 상태. 종료 코드 137</td></tr>
+  <tr><td>계층형 jar</td><td>Layered Jar</td><td>의존성과 애플리케이션 코드를 분리해 담은 jar. 도커 캐시가 살아남게 한다</td></tr>
+</table>
+</div>
+
+<div class="goals">
+  <h3>이 장을 마치면 할 수 있는 것</h3>
+  <ol>
+    <li>레지스트리 없이 이미지를 노드에 적재하고, 적재됐는지 <code>crictl images</code> 로 판정할 수 있다.</li>
+    <li>프로브 세 개를 시간 구간으로 나눠 걸고, <code>CrashLoopBackOff</code> 가 프로브 때문인지 구분할 수 있다.</li>
+    <li>노드셀렉터로 파드를 의도한 노드에 모으고, <code>Pending</code> 의 이유를 이벤트에서 읽을 수 있다.</li>
+    <li>서비스의 라벨과 포트 이름을 06장이 쓸 형태로 맞출 수 있다.</li>
+    <li>코드를 고쳤을 때 태그를 올려 재배포하는 루틴을 한 번에 실행할 수 있다.</li>
+  </ol>
+</div>
+
+
+<h2><span class="n">03</span>최종적으로 만들 것</h2>
+
+<p>이 장이 끝나면 파드 3개(order-api 2개 · gateway 1개)가 <code>obs-worker</code> 에서 돌고, 맥의 <code>localhost:30080</code> 으로 주문이 생성된다. 그리고 <code>/actuator/prometheus</code> 가 <strong>클러스터 안에서</strong> 열려 있다 — 04장 프로메테우스가 긁어 갈 대상이 준비된 상태다.</p>
+
+<h3>이미지가 파드가 되기까지</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 470" role="img" aria-label="빌드한 이미지를 kind 노드에 적재하고 매니페스트를 적용해 파드가 뜨기까지의 경로">
+  <rect width="1000" height="470" fill="#ffffff"/>
+
+  <defs>
+    <marker id="f1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="40" width="290" height="92" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="70" font-size="14" font-weight="700" fill="#15181d">1. 이미지 빌드</text>
+  <text x="42" y="96" font-size="11.5" font-family="monospace" fill="#585f6b">./gradlew bootBuildImage</text>
+  <text x="42" y="118" font-size="12" fill="#585f6b">맥의 도커 이미지 목록에 생긴다</text>
+
+  <line x1="316" y1="86" x2="351" y2="86" stroke="#585f6b" stroke-width="2" marker-end="url(#f1)"/>
+
+  <rect x="355" y="40" width="290" height="92" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="373" y="70" font-size="14" font-weight="700" fill="#15181d">2. 노드에 적재</text>
+  <text x="373" y="96" font-size="11.5" font-family="monospace" fill="#585f6b">kind load docker-image</text>
+  <text x="373" y="118" font-size="12" fill="#585f6b">각 노드의 containerd 로 복사</text>
+
+  <line x1="647" y1="86" x2="682" y2="86" stroke="#585f6b" stroke-width="2" marker-end="url(#f1)"/>
+
+  <rect x="686" y="40" width="290" height="92" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="704" y="70" font-size="14" font-weight="700" fill="#15181d">3. 매니페스트 적용</text>
+  <text x="704" y="96" font-size="11.5" font-family="monospace" fill="#585f6b">kubectl apply -f k8s/</text>
+  <text x="704" y="118" font-size="12" fill="#585f6b">Deployment 가 파드를 만든다</text>
+
+  <path d="M500 132 L500 168" fill="none" stroke="#585f6b" stroke-width="1.5"/>
+  <line x1="174" y1="168" x2="826" y2="168" stroke="#585f6b" stroke-width="1.5"/>
+  <path d="M174 168 L174 214" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#f1)"/>
+  <path d="M500 168 L500 214" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#f1)"/>
+  <path d="M826 168 L826 214" fill="none" stroke="#585f6b" stroke-width="1.5" marker-end="url(#f1)"/>
+  <text x="540" y="162" font-size="12" fill="#585f6b">적재는 노드마다 따로 이뤄진다</text>
+
+  <text x="24" y="208" font-size="12" font-family="monospace" fill="#585f6b">kind 클러스터</text>
+
+  <rect x="24" y="220" width="300" height="160" rx="6" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+  <text x="42" y="250" font-size="12.5" font-family="monospace" fill="#1f4d8f">obs-control-plane</text>
+  <text x="42" y="282" font-size="12.5" fill="#585f6b">이미지는 적재되지만</text>
+  <text x="42" y="304" font-size="12.5" fill="#585f6b">앱 파드는 뜨지 않는다</text>
+  <text x="42" y="336" font-size="11.5" font-family="monospace" fill="#8f4408">control-plane 테인트</text>
+
+  <rect x="350" y="220" width="300" height="160" rx="6" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.8"/>
+  <text x="368" y="250" font-size="12" font-family="monospace" fill="#2e7d4f">obs-worker · workload=apps</text>
+  <rect x="368" y="266" width="126" height="38" rx="4" fill="#f5f6f7" stroke="#2e7d4f"/>
+  <text x="431" y="291" font-size="12.5" fill="#15181d" text-anchor="middle">order-api ×2</text>
+  <rect x="504" y="266" width="126" height="38" rx="4" fill="#f5f6f7" stroke="#2e7d4f"/>
+  <text x="567" y="291" font-size="12.5" fill="#15181d" text-anchor="middle">gateway ×1</text>
+  <text x="368" y="336" font-size="12.5" fill="#585f6b">노드셀렉터로 여기에 모은다</text>
+
+  <rect x="676" y="220" width="300" height="160" rx="6" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.5"/>
+  <text x="694" y="250" font-size="12" font-family="monospace" fill="#1f4d8f">obs-worker2 · observability</text>
+  <text x="694" y="282" font-size="12.5" fill="#585f6b">04장에서 관측 스택이</text>
+  <text x="694" y="304" font-size="12.5" fill="#585f6b">들어올 자리다</text>
+
+  <text x="24" y="424" font-size="13" fill="#8f4408">노드를 나중에 추가하면 그 노드에는 이미지가 없다 — 다시 적재해야 한다</text>
+  <text x="24" y="450" font-size="13" fill="#585f6b">파드가 어느 노드에 떴는지는 kubectl get pods -o wide 의 NODE 열로 본다</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> 이미지가 노드 안에 이미 있으므로 <code>imagePullPolicy</code> 를 <code>IfNotPresent</code> 로 두어야 한다.
+  기본값은 태그가 <code>latest</code> 일 때 <code>Always</code> 가 되는데, 그러면 존재하지 않는 레지스트리로 나가려다 <code>ImagePullBackOff</code> 에 빠진다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>맥에 이미지가 생겼는지.</strong> 아직 클러스터와는 무관하다.
+    <span class="chk">확인 <code>docker images | grep '^obs/'</code> → <code>obs/order-api</code> · <code>obs/gateway</code> 두 줄</span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>노드 안까지 들어갔는지.</strong> <code>docker images</code> 로는 알 수 없다. 노드 안의 런타임에 물어야 한다.
+    <span class="chk">확인 <code>docker exec obs-worker crictl images | grep obs/</code> → <code>docker.io/obs/order-api 0.0.1</code></span>
+  </span></li>
+  <li><span class="b" style="background:#2e7d4f">3</span><span>
+    <strong>파드가 의도한 노드에 떴는지.</strong> 셋 다 <code>obs-worker</code> 여야 한다.
+    <span class="chk">확인 <code>kubectl -n apps get pods -o wide</code> → <code>1/1 Running</code> 세 줄, <code>NODE</code> 열이 전부 <code>obs-worker</code></span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>이 배치를 만드는 설정 — image · imagePullPolicy · nodeSelector</h4>
+
+<p>그림의 파드가 <strong>가운데 상자에만</strong> 있는 것도, 레지스트리를 찾아가지 않는 것도 매니페스트 세 줄이 정한다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/10-order-api.yaml — 배치와 이미지를 정하는 부분</span>
+<pre><code class="language-yaml">spec:
+  template:
+    spec:
+      # 01장에서 노드에 붙여 둔 라벨. 이 줄이 그림의 가운데 상자를 고른다.
+      nodeSelector:
+        workload: apps
+      containers:
+        - name: order-api
+          image: obs/order-api:0.0.1     # 태그를 박는다. latest 를 쓰지 않는다
+          # 레지스트리가 없으므로 반드시 IfNotPresent
+          imagePullPolicy: IfNotPresent
+          ports:
+            # 이 포트 '이름'을 06장 ServiceMonitor 가 참조한다
+            - name: http
+              containerPort: 8080</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>설정</th><th>그림의 무엇을 만드나</th><th>빠지거나 틀리면</th></tr>
+  <tr><td><code>nodeSelector: workload: apps</code></td><td>파드가 가운데 상자에만 뜬다</td><td>워커 두 대에 흩어진다. 라벨이 없는 노드뿐이면 <code>Pending</code></td></tr>
+  <tr><td><code>image: ...:0.0.1</code></td><td>적재해 둔 이미지와 이름·태그가 일치</td><td>철자가 다르면 <code>ErrImagePull</code></td></tr>
+  <tr><td><code>imagePullPolicy: IfNotPresent</code></td><td>레지스트리로 나가지 않는다</td><td><code>Always</code> 면 노드에 있어도 받으러 나간다</td></tr>
+  <tr><td><code>ports.name: http</code></td><td>—</td><td>06장 ServiceMonitor 가 포트를 못 찾는다</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">컨트롤 플레인에 앱이 뜨지 않는 이유</span>
+  <p>노드셀렉터를 빼도 컨트롤 플레인에는 앱이 뜨지 않는다. kubeadm 이 그 노드에 <code>node-role.kubernetes.io/control-plane:NoSchedule</code> 테인트를 걸어 두기 때문이다. 이미지는 세 노드 모두에 적재되지만 파드는 워커에만 뜬다.</p>
+</blockquote>
+
+
+<h3>프로브 세 개가 맡는 시간 구간</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" role="img" aria-label="startupProbe readinessProbe livenessProbe가 각각 맡는 시간 구간">
+  <rect width="1000" height="400" fill="#ffffff"/>
+  <text x="130" y="48" font-size="14.5" font-weight="700" fill="#15181d">세 프로브가 시간을 나눠 갖는다</text>
+
+  <line x1="470" y1="62" x2="470" y2="352" stroke="#d8dbe0" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <rect x="130" y="76" width="340" height="66" rx="6" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.6"/>
+  <text x="148" y="104" font-size="13" font-family="monospace" fill="#1f4d8f">startupProbe</text>
+  <text x="148" y="128" font-size="12.5" fill="#15181d">기동이 끝날 때까지 다른 둘을 막는다</text>
+  <text x="486" y="116" font-size="12.5" fill="#585f6b">성공하면 역할이 끝나고 다시 실행되지 않는다</text>
+
+  <rect x="470" y="166" width="480" height="66" rx="6" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.6"/>
+  <text x="488" y="194" font-size="13" font-family="monospace" fill="#2e7d4f">readinessProbe</text>
+  <text x="488" y="218" font-size="12.5" fill="#15181d">실패하면 서비스에서 빠진다 — 재시작은 없다</text>
+  <text x="140" y="204" font-size="12.5" fill="#585f6b">기동 중에는 판정하지 않는다</text>
+
+  <rect x="470" y="256" width="480" height="66" rx="6" fill="#ffffff" stroke="#8f4408" stroke-width="1.6"/>
+  <text x="488" y="284" font-size="13" font-family="monospace" fill="#8f4408">livenessProbe</text>
+  <text x="488" y="308" font-size="12.5" fill="#15181d">실패하면 컨테이너를 재시작한다</text>
+  <text x="140" y="294" font-size="12.5" fill="#585f6b">기동 중에는 판정하지 않는다</text>
+
+  <line x1="130" y1="352" x2="950" y2="352" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="130" y="378" font-size="12" font-family="monospace" fill="#585f6b">0초</text>
+  <text x="470" y="378" font-size="12" font-family="monospace" fill="#585f6b" text-anchor="middle">기동 완료 (약 8초)</text>
+  <text x="950" y="378" font-size="12" font-family="monospace" fill="#585f6b" text-anchor="end">운영 중</text>
+</svg>
+<figcaption>
+  <b>그림 2.</b> <code>startupProbe</code> 가 없으면 <code>livenessProbe</code> 가 기동 중인 앱을 죽은 것으로 보고 재시작시키고,
+  다시 기동하다 또 죽는 <em>부팅 루프</em>가 만들어진다. 스프링 앱에 프로브를 걸 때 가장 흔한 사고다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>기동이 끝났는지.</strong> 롤아웃이 끝날 때까지 기다린다.
+    <span class="chk">확인 <code>kubectl -n apps rollout status deploy/order-api --timeout=180s</code> → <code>successfully rolled out</code></span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>트래픽을 받을 준비가 됐는지.</strong> READY 가 <code>1/1</code> 이라는 것이 readiness 통과의 뜻이다.
+    <span class="chk">확인 <code>kubectl -n apps get pods</code> → <code>READY 1/1</code>, <code>RESTARTS 0</code></span>
+  </span></li>
+  <li><span class="b" style="background:#8f4408">3</span><span>
+    <strong>재시작이 없는지.</strong> 숫자가 늘고 있으면 liveness 가 기동을 못 기다린 것이다.
+    <span class="chk">확인 <code>kubectl -n apps get pods -w</code> → <code>RESTARTS</code> 가 계속 0</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>구간을 나누는 설정 — failureThreshold × periodSeconds</h4>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/10-order-api.yaml — 프로브 세 개</span>
+<pre><code class="language-yaml">startupProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: http
+  periodSeconds: 2          # 2초마다
+  failureThreshold: 30      # 30번까지 봐준다 = 최대 60초
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness    # liveness 와 경로가 다르다
+    port: http
+  periodSeconds: 5
+  failureThreshold: 3
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: http
+  periodSeconds: 10
+  failureThreshold: 3</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>값</th><th>계산</th><th>의미</th></tr>
+  <tr><td>startup <code>2s × 30</code></td><td>최대 60초</td><td>이 안에 기동이 끝나야 한다. JVM 기동이 8초 내외이므로 여유가 크다</td></tr>
+  <tr><td>readiness <code>5s × 3</code></td><td>15초</td><td>15초 연속 실패하면 트래픽에서 뺀다</td></tr>
+  <tr><td>liveness <code>10s × 3</code></td><td>30초</td><td>30초 연속 실패해야 재시작한다. 짧게 잡으면 사고가 난다</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">경로가 두 개인 이유</span>
+  <p>02장에서 <code>management.endpoint.health.probes.enabled: true</code> 를 넣었기 때문에 <code>/actuator/health/liveness</code> 와 <code>/readiness</code> 두 경로가 생겼다. liveness 는 “프로세스가 살아 있나”만 보고, readiness 는 “의존성까지 준비됐나”를 본다. <strong>이 구분이 없으면 두 프로브가 같은 것을 보게 되어 프로브를 나눈 의미가 사라진다.</strong></p>
+</blockquote>
+
+
+<h2><span class="n">04</span>실습 파일 위치</h2>
+
+<div class="srcbox">
+  <span class="fp">저장소 안의 위치</span>
+<pre><code class="language-text">study/labs/
+├── apps/
+│   ├── order-api/Dockerfile      06절 대안 빌드에서 쓴다
+│   └── redeploy.sh               11절 재배포 루틴
+└── k8s/
+    ├── 00-namespace.yaml         apps 네임스페이스
+    ├── 10-order-api.yaml         Deployment + Service
+    └── 20-gateway.yaml           Deployment + Service(NodePort 30080)</code></pre>
+</div>
+
+<pre><code class="language-bash">cd study/labs
+ls k8s/</code></pre>
+
+
+<h2><span class="n">05</span>이미지 빌드 — 빌드팩</h2>
+
+<p class="cap">목적: Dockerfile 없이 이미지를 만든다. 빌드팩이 JRE 선택 · 계층 분리 · 메모리 계산까지 한다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/apps/order-api/build.gradle — 파일 끝에 추가</span>
+<pre><code class="language-groovy">tasks.named('bootBuildImage') {
+    imageName = "obs/order-api:0.0.1"
+    // 최신 우분투 LTS 기반, 자바 관련 버트팩만 담은 빌더
+    builder = "paketobuildpacks/builder-noble-java-tiny:latest"
+    environment = [
+        "BP_JVM_VERSION": "21",
+        "BP_JVM_TYPE": "JRE",
+        // 서비스 바인딩을 쓰지 않으므로 불필요한 jar 주입을 끈다
+        "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true"
+    ]
+}</code></pre>
+</div>
+
+<p>gateway 프로젝트에도 같은 블록을 넣고 <code>imageName</code> 만 <code>obs/gateway:0.0.1</code> 로 바꾼다.</p>
+
+<pre><code class="language-bash">cd study/labs/apps/order-api &amp;&amp; ./gradlew bootBuildImage
+cd ../gateway &amp;&amp; ./gradlew bootBuildImage
+
+docker images | grep '^obs/'</code></pre>
+
+<p class="cap">--- 출력 (해시와 크기는 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">obs/gateway     0.0.1   3f2a91c4e7b8   ...   289MB
+obs/order-api   0.0.1   b71c05de9a12   ...   276MB</code></pre>
+
+<blockquote class="warn">
+  <span class="label">빌더 태그의 latest 는 예외다</span>
+  <p>위 <code>builder</code> 값에만 <code>latest</code> 가 있다. 이것은 <strong>실행되는 이미지가 아니라 빌드 도구</strong>이고, 결과물에는 포함되지 않는다. 배포되는 이미지(<code>imageName</code>)에는 예외 없이 버전 태그를 박는다. 사내 파이프라인이라면 빌더도 다이제스트로 고정하는 편이 낫다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">태그를 올려 가며 쓰는 이유</span>
+  <p>코드를 고칠 때마다 <code>0.0.2</code>, <code>0.0.3</code> 으로 올리면 “지금 도는 파드가 어느 코드인지”가 명확해진다. 같은 태그를 덮어쓰면 새 이미지가 반영될 때도, 캐시된 옛 이미지가 뜰 때도 있어 원인을 찾느라 시간을 버린다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">Apple Silicon</span>
+  <p>Spring Boot 3.4 부터 빌드팩이 멀티 아키텍처를 지원해 M 시리즈 맥에서는 arm64 이미지가 만들어진다. kind 노드도 arm64 이므로 그대로 맞는다. 문제는 인텔 맥과 섞였을 때인데, 각자 자기 맥에서 빌드하면 된다. <strong>이미지 파일을 서로 주고받지 않는다.</strong></p>
+</blockquote>
+
+
+<h2><span class="n">06</span>이미지 빌드 — Dockerfile (대안)</h2>
+
+<p>사내 파이프라인이 Dockerfile 기반이라면 이쪽을 쓴다. 계층 분리를 직접 해야 한다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/apps/order-api/Dockerfile</span>
+<pre><code class="language-dockerfile">FROM eclipse-temurin:21-jdk AS builder
+WORKDIR /build
+COPY . .
+RUN ./gradlew bootJar --no-daemon
+RUN cp build/libs/*.jar app.jar \
+ &amp;&amp; java -Djarmode=tools -jar app.jar extract --layers --launcher --destination extracted
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+RUN useradd -u 1000 -m app
+USER 1000
+COPY --from=builder /build/extracted/dependencies/ ./
+COPY --from=builder /build/extracted/spring-boot-loader/ ./
+COPY --from=builder /build/extracted/snapshot-dependencies/ ./
+COPY --from=builder /build/extracted/application/ ./
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70.0"
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]</code></pre>
+</div>
+
+<pre><code class="language-bash">cd study/labs/apps/order-api
+docker build -t obs/order-api:0.0.1 .</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>줄</th><th>왜 그렇게 쓰나</th></tr>
+  <tr><td><code>COPY --from=builder .../dependencies/</code> 를 네 번</td><td>의존성 · 로더 · 스냅숏 · 애플리케이션 순으로 나눠 넣는다. 코드만 고치면 <strong>마지막 계층만</strong> 다시 만들어져 빌드가 빨라진다</td></tr>
+  <tr><td><code>useradd -u 1000</code> + <code>USER 1000</code></td><td>숫자 UID 로 지정한다. 이름으로 지정하면 kubelet 이 <code>runAsNonRoot</code> 를 검증하지 못해 파드가 뜨지 않는다</td></tr>
+  <tr><td><code>MaxRAMPercentage=70.0</code></td><td>JVM 이 컨테이너 메모리 제한의 70% 까지만 힙으로 쓰게 한다</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">jarmode 옵션이 바뀌었다</span>
+  <p><code>-Djarmode=layertools</code> 는 Spring Boot 3.3 에서 폐기 예고됐고 4.x 에서 제거 수순이다. 현재 형태는 <code>-Djarmode=tools ... extract --layers --launcher</code> 이며, <code>--layers</code> 와 <code>--launcher</code> 를 명시해야 예전과 같은 결과가 나온다. 계층 디렉터리 이름이 헷갈리면 <code>java -Djarmode=tools -jar app.jar list-layers</code> 로 확인한다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">메모리 설정의 차이</span>
+  <p>빌드팩 이미지는 <strong>메모리 계산기</strong>가 컨테이너 제한을 읽어 힙 크기를 자동으로 정한다. Dockerfile 로 직접 만들면 그 장치가 없으므로 <code>-XX:MaxRAMPercentage</code> 를 직접 줘야 한다. 주지 않으면 JVM 이 제한의 25% 만 힙으로 쓰거나, 반대로 제한을 넘겨 <code>OOMKilled</code> 로 죽는다.</p>
+</blockquote>
+
+
+<h2><span class="n">07</span>kind 에 이미지 적재</h2>
+
+<p class="cap">목적: 맥의 이미지 저장소에 있는 것을 노드 컨테이너 안으로 옮긴다.</p>
+
+<pre><code class="language-bash">kind load docker-image obs/order-api:0.0.1 --name obs
+kind load docker-image obs/gateway:0.0.1 --name obs</code></pre>
+
+<p>이미지 하나에 20~60초 걸린다. 노드 3개 모두에 복사되기 때문이다.</p>
+
+<pre><code class="language-bash"># 노드 안에 실제로 들어갔는지 확인
+docker exec obs-worker crictl images | grep obs/</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">docker.io/obs/gateway     0.0.1   3f2a91c4e7b8f   289MB
+docker.io/obs/order-api   0.0.1   b71c05de9a12c   276MB</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>이름 앞에 <code>docker.io/</code> 가 붙는 것은 정상이다. containerd 가 레지스트리 접두사를 채워 넣기 때문이며, 매니페스트에는 <code>obs/order-api:0.0.1</code> 로 써도 그대로 해석된다. 여기서 아무것도 안 나오면 다음 절로 가지 않는다 — 파드는 반드시 <code>ErrImagePull</code> 로 떨어진다.</p>
+</blockquote>
+
+
+<h2><span class="n">08</span>매니페스트</h2>
+
+<h3>네임스페이스</h3>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/00-namespace.yaml</span>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    app.kubernetes.io/part-of: obs-study</code></pre>
+</div>
+
+<h3>order-api</h3>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/10-order-api.yaml</span>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: order-api
+    app.kubernetes.io/part-of: obs-study
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0     # 기존 파드를 먼저 내리지 않는다
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: order-api
+        app.kubernetes.io/part-of: obs-study
+    spec:
+      # 01장에서 노드에 붙여둔 라벨
+      nodeSelector:
+        workload: apps
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: order-api
+          image: obs/order-api:0.0.1
+          # 레지스트리가 없으므로 반드시 IfNotPresent
+          imagePullPolicy: IfNotPresent
+          ports:
+            # 이 포트 '이름'을 06장 ServiceMonitor가 참조한다
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              # CPU limit은 일부러 두지 않는다 — 스로틀링으로 지연이 왜곡된다
+              memory: 640Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    # 06장 ServiceMonitor가 이 라벨로 서비스를 찾는다
+    app.kubernetes.io/name: order-api
+    app.kubernetes.io/part-of: obs-study
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: order-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http</code></pre>
+</div>
+
+<p class="cap">프로브의 <code>httpGet</code> 은 지면을 아끼려고 한 줄로 접었다. 저장소 파일은 여러 줄 형식이며 의미는 같다.</p>
+
+<h3>gateway</h3>
+
+<div class="srcbox">
+  <span class="fp">study/labs/k8s/20-gateway.yaml — order-api 와 다른 부분만</span>
+<pre><code class="language-yaml">          env:
+            # 02장에서 ${ORDER_API_URI:...} 로 열어둔 자리.
+            # 클러스터 안에서는 서비스 이름이 곧 DNS 이름이다.
+            - name: ORDER_API_URI
+              value: http://order-api.apps.svc.cluster.local:8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: apps
+spec:
+  # 01장에서 뚫어둔 호스트 포트 30080과 짝을 이룬다
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30080</code></pre>
+</div>
+
+<blockquote>
+  <span class="label">서비스 이름이 DNS 이름이 된다</span>
+  <p><code>order-api.apps.svc.cluster.local</code> 은 <code>&lt;서비스&gt;.&lt;네임스페이스&gt;.svc.cluster.local</code> 형식이다. 같은 네임스페이스 안에서는 <code>order-api</code> 만 써도 되지만, 어디를 가리키는지 명확하게 두려고 전체 이름을 쓴다. 02장에서 환경변수로 열어 둔 자리가 여기서 채워진다 — 로컬에서는 <code>localhost:8081</code>, 클러스터에서는 서비스 DNS 이름이다.</p>
+</blockquote>
+
+<blockquote class="warn">
+  <span class="label">CPU limit 을 두지 않은 것은 의도된 선택이다</span>
+  <p>CPU 제한을 걸면 쿠버네티스는 CFS 쿼터로 스로틀링을 건다. 그러면 응답 시간 그래프에 애플리케이션과 무관한 톱니가 생기고, 06~07장에서 “이 지연이 코드 때문인가 스로틀링 때문인가”를 구분할 수 없게 된다. 메모리는 제한한다 — 압축 불가능한 자원이라 제한이 없으면 노드 전체가 위험해진다. 다만 이 판단은 <strong>실습 환경 기준</strong>이다. 공용 클러스터라면 CPU 제한이 필요하다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">더 조일 수 있는 것 — readOnlyRootFilesystem</span>
+  <p>운영 환경이라면 <code>readOnlyRootFilesystem: true</code> 를 추가한다. 다만 톰캣이 임시 디렉터리를 쓰므로 <code>/tmp</code> 에 <code>emptyDir</code> 볼륨을 붙여야 하고, 빌드팩 이미지는 쓰기 가능한 경로를 추가로 요구할 수 있다. 실습에서는 원인 파악에 시간이 새는 것을 피하려고 넣지 않았다.</p>
+</blockquote>
+
+
+<h2><span class="n">09</span>배포와 검증</h2>
+
+<pre><code class="language-bash">kubectl apply -f k8s/00-namespace.yaml
+kubectl apply -f k8s/10-order-api.yaml
+kubectl apply -f k8s/20-gateway.yaml
+
+kubectl -n apps rollout status deploy/order-api --timeout=180s
+kubectl -n apps rollout status deploy/gateway --timeout=180s</code></pre>
+
+<h3>1. 파드가 의도한 노드에 떴는가</h3>
+
+<pre><code class="language-bash">kubectl -n apps get pods -o wide</code></pre>
+
+<p class="cap">--- 출력 (파드 접미사와 AGE 는 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">NAME                         READY   STATUS    RESTARTS   AGE   NODE
+gateway-7d9c4b8f6-qk2xp      1/1     Running   0          52s   obs-worker
+order-api-6b8f7d5c9-h4nm2    1/1     Running   0          58s   obs-worker
+order-api-6b8f7d5c9-t8wcv    1/1     Running   0          58s   obs-worker</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>셋 다 <code>obs-worker</code> 에 있어야 한다. <code>obs-worker2</code> 에 떴다면 노드셀렉터가 빠진 것이고, <code>Pending</code> 이면 라벨이 안 붙었거나 자원이 모자란 것이다 — 10절에서 그 경우의 이벤트를 직접 본다.</p>
+</blockquote>
+
+<h3>2. 맥의 브라우저에서 접근되는가</h3>
+
+<pre><code class="language-bash">curl -s -X POST http://localhost:30080/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"item":"latte","quantity":3}' | python3 -m json.tool</code></pre>
+
+<p>01장에서 <code>hostPort: 30080</code> 을 컨트롤 플레인 노드에 뚫어 뒀고 서비스의 <code>nodePort</code> 가 30080 이라, 맥의 <code>localhost:30080</code> 이 그대로 게이트웨이에 닿는다. <strong>파드가 다른 노드에 있어도 동작한다</strong> — NodePort 는 모든 노드에서 열리기 때문이다.</p>
+
+<h3>3. 서비스 DNS 로 서로를 찾는가</h3>
+
+<pre><code class="language-bash">kubectl -n apps exec deploy/gateway -- \
+  curl -s -o /dev/null -w '%{http_code}\n' \
+  http://order-api.apps.svc.cluster.local:8080/actuator/health</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p><code>200</code> 이 나와야 한다. 빌드팩 이미지에 <code>curl</code> 이 없어 명령 자체가 실패하면, <code>kubectl -n apps logs deploy/gateway</code> 로 라우팅 오류가 없는지 확인하는 것으로 대체한다. 502 가 나온다면 <code>kubectl -n apps get endpointslices</code> 로 파드 IP 가 잡혀 있는지 본다.</p>
+</blockquote>
+
+<h3>4. 메트릭 엔드포인트가 클러스터 안에서 열려 있는가</h3>
+
+<p class="cap">목적: 04장 진입 조건을 확인한다. 여기서 0 이면 프로메테우스를 설치해도 앱 메트릭은 보이지 않는다.</p>
+
+<pre><code class="language-bash">kubectl -n apps port-forward svc/order-api 18080:8080 &gt;/dev/null 2&gt;&amp;1 &amp;
+sleep 2
+curl -s http://localhost:18080/actuator/prometheus | grep -c '^orders_'
+curl -s http://localhost:18080/actuator/prometheus | grep -c 'http_server_requests_seconds_bucket'
+kill %1</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>두 숫자 모두 0 보다 커야 한다. 두 번째가 0 이면 02장 <code>application.yml</code> 이 이미지에 반영되지 않은 것이다 — 태그를 올려 다시 빌드한다.</p>
+</blockquote>
+
+<h3>5. 부하를 넣어 그래프의 재료를 만든다</h3>
+
+<pre><code class="language-bash">for i in $(seq 1 100); do
+  curl -s -o /dev/null -X POST http://localhost:30080/api/orders \
+    -H 'Content-Type: application/json' \
+    -d '{"item":"latte","quantity":3}'
+done
+
+for i in $(seq 1 20); do
+  curl -s -o /dev/null "http://localhost:30080/api/chaos/error?rate=0.3"
+done</code></pre>
+
+<p>04장에서 프로메테우스를 붙였을 때 그래프가 평평하면 볼 것이 없다. 여기서 넣은 트래픽이 첫 화면의 재료가 된다.</p>
+
+
+<h2><span class="n">10</span>일부러 실패시키기 — 파드가 안 뜨는 두 가지 이유</h2>
+
+<p>배포가 실패하는 대부분은 <strong>이미지를 못 찾거나, 놓을 노드를 못 찾거나</strong> 둘 중 하나다. 두 경우 모두 <code>kubectl get pods</code> 의 STATUS 만으로는 부족하고 <strong>이벤트를 읽어야</strong> 한다. 실제로 만들어 본다.</p>
+
+<p class="cap">아래 출력은 kind 클러스터(Kubernetes 1.37)에서 재현했다 (확인 2026-09-13). 임시 네임스페이스를 쓰므로 실습 중인 <code>apps</code> 에는 영향이 없다.</p>
+
+<h3>실패 1 — 적재하지 않은 태그</h3>
+
+<p class="cap">목적: <code>ErrImagePull</code> 의 진짜 원인을 이벤트에서 읽는다.</p>
+
+<pre><code class="language-bash">kubectl create ns probe-demo
+kubectl -n probe-demo run pull-fail --image=obs/order-api:9.9.9 --restart=Never
+kubectl -n probe-demo get pod pull-fail</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">NAME        READY   STATUS         RESTARTS   AGE
+pull-fail   0/1     ErrImagePull   0          8s</code></pre>
+
+<pre><code class="language-bash">kubectl -n probe-demo describe pod pull-fail | sed -n '/^Events:/,$p'</code></pre>
+
+<p class="cap">--- 출력 (앞의 Scheduled 줄은 생략) ---</p>
+
+<pre class="out"><code class="language-text">Events:
+  Type     Reason     Age   From      Message
+  ----     ------     ----  ----      -------
+  ...
+  Normal   Pulling    6s    kubelet   Pulling image "obs/order-api:9.9.9"
+  Warning  Failed     5s    kubelet   Failed to pull image "obs/order-api:9.9.9": failed to pull and unpack image
+                                      "docker.io/obs/order-api:9.9.9": failed to resolve reference
+                                      "docker.io/obs/order-api:9.9.9": pull access denied, repository does not exist
+                                      or may require authorization: server message: insufficient_scope: authorization failed
+  Warning  Failed     5s    kubelet   Error: ErrImagePull
+  Normal   BackOff    5s    kubelet   Back-off pulling image "obs/order-api:9.9.9"
+  Warning  Failed     5s    kubelet   Error: ImagePullBackOff</code></pre>
+
+<blockquote class="ok">
+  <span class="label">읽는 법</span>
+  <p>핵심은 <code>docker.io/obs/order-api:9.9.9</code> 다. <strong>노드에 그 태그가 없으니 도커 허브로 나갔다</strong>는 뜻이고, 거기에도 없으니 <code>pull access denied</code> 가 돌아왔다. 인증 문제처럼 보이지만 <strong>인증 문제가 아니다</strong> — 없는 저장소를 조회하면 도커 허브는 “권한 없음”으로 답한다. 자격 증명을 넣으려 들면 시간을 버린다.</p>
+  <p>또 하나. 처음엔 <code>ErrImagePull</code>, 몇 초 뒤 <code>ImagePullBackOff</code> 로 바뀐다. 둘은 다른 상태가 아니라 <strong>같은 실패의 첫 시도와 재시도 대기</strong>다.</p>
+</blockquote>
+
+<p>고치는 방법은 둘이다 — 적재해 둔 태그를 쓰거나, 그 태그를 적재하거나.</p>
+
+<pre><code class="language-bash">docker exec obs-worker crictl images | grep obs/    # 어느 태그가 있는지부터 본다
+kind load docker-image obs/order-api:0.0.1 --name obs</code></pre>
+
+<h3>실패 2 — 라벨이 없는 노드를 고르게 했을 때</h3>
+
+<p class="cap">목적: <code>Pending</code> 에 머무는 파드의 이유를 스케줄러 이벤트에서 읽는다.</p>
+
+<pre><code class="language-bash">kubectl -n probe-demo run pend --image=nginx:1.29-alpine --restart=Never \
+  --overrides='{"spec":{"nodeSelector":{"workload":"apps"}}}'
+kubectl -n probe-demo get pod pend</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">NAME   READY   STATUS    RESTARTS   AGE
+pend   0/1     Pending   0          6s</code></pre>
+
+<pre><code class="language-bash">kubectl -n probe-demo describe pod pend | sed -n '/^Events:/,$p'</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">Events:
+  Type     Reason            Age   From               Message
+  ----     ------            ----  ----               -------
+  Warning  FailedScheduling  6s    default-scheduler  0/3 nodes are available: 1 node(s) had untolerated taint(s),
+                                                      2 node(s) didn't match Pod's node affinity/selector.
+                                                      preemption: 0/3 nodes are available: 3 Preemption is not
+                                                      helpful for scheduling.</code></pre>
+
+<blockquote class="ok">
+  <span class="label">읽는 법</span>
+  <p><code>0/3 nodes are available</code> 뒤의 <strong>내역이 답</strong>이다. 1대는 테인트 때문에(컨트롤 플레인), 2대는 라벨이 안 맞아서 탈락했다. 즉 <code>workload=apps</code> 라벨을 가진 노드가 하나도 없다는 뜻이다. <code>preemption ... not helpful</code> 은 “다른 파드를 밀어내도 소용없다”는 말이라 <strong>자원 부족이 아니라는 근거</strong>가 된다 — 자원이 문제였다면 <code>Insufficient cpu</code> 같은 문구가 나온다.</p>
+</blockquote>
+
+<p>확인과 정리.</p>
+
+<pre><code class="language-bash">kubectl get nodes -L workload      # WORKLOAD 열이 비어 있으면 01장 설정으로 돌아간다
+kubectl delete ns probe-demo</code></pre>
+
+
+<h2><span class="n">11</span>코드를 고쳤을 때의 재배포 루틴</h2>
+
+<p>이 시리즈에서 앱을 여러 번 고치게 된다. 매번 반복할 절차를 스크립트로 둔다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/apps/redeploy.sh</span>
+<pre><code class="language-bash">#!/usr/bin/env bash
+# 사용법: ./redeploy.sh order-api 0.0.2
+set -euo pipefail
+
+APP="${1:?앱 이름을 지정하세요 (order-api | gateway)}"
+TAG="${2:?태그를 지정하세요 (예: 0.0.2)}"
+IMAGE="obs/${APP}:${TAG}"
+
+cd "$(dirname "$0")/${APP}"
+./gradlew bootBuildImage --imageName="${IMAGE}"
+
+kind load docker-image "${IMAGE}" --name obs
+
+kubectl -n apps set image "deploy/${APP}" "${APP}=${IMAGE}"
+kubectl -n apps rollout status "deploy/${APP}" --timeout=180s
+
+echo "완료: ${IMAGE}"</code></pre>
+</div>
+
+<pre><code class="language-bash">chmod +x study/labs/apps/redeploy.sh
+study/labs/apps/redeploy.sh order-api 0.0.2</code></pre>
+
+<blockquote class="warn">
+  <span class="label">태그를 그대로 두고 rollout restart 하면</span>
+  <p>같은 태그로 이미지를 다시 적재한 뒤 <code>kubectl rollout restart</code> 를 하면 새 이미지가 반영될 때도, 캐시된 옛 이미지가 그대로 뜰 때도 있다. 원인을 찾느라 30분을 쓰는 대신 <strong>태그를 올린다.</strong> 위 스크립트가 태그를 필수 인자로 받는 이유다.</p>
+</blockquote>
+
+
+<h2><span class="n">12</span>자주 겪는 문제</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>증상</th><th>원인과 조치</th></tr>
+  <tr><td><code>ErrImagePull</code> / <code>ImagePullBackOff</code></td><td><code>kind load</code> 를 하지 않았거나 <code>imagePullPolicy</code> 가 <code>Always</code> 다. 태그에 <code>latest</code> 를 썼는지도 본다 (10절 실패 1)</td></tr>
+  <tr><td><code>CreateContainerConfigError</code> + <code>image has non-numeric user</code></td><td><code>runAsNonRoot: true</code> 만 쓰고 <code>runAsUser</code> 를 생략했을 때. 이미지의 USER 가 이름(예: <code>cnb</code>)이면 kubelet 이 검증하지 못한다. <code>runAsUser: 1000</code> 을 명시한다</td></tr>
+  <tr><td>파드가 <code>Pending</code></td><td>노드셀렉터에 맞는 노드가 없거나 자원 부족. 이벤트의 내역을 읽는다 (10절 실패 2)</td></tr>
+  <tr><td><code>CrashLoopBackOff</code> 인데 로그는 정상 기동 중</td><td>liveness 가 기동을 기다려 주지 못했다. <code>startupProbe</code> 의 <code>failureThreshold × periodSeconds</code> 가 기동 시간보다 긴지 확인</td></tr>
+  <tr><td><code>OOMKilled</code> (종료 코드 137)</td><td>메모리 제한 대비 힙이 크다. 빌드팩 이미지가 아니면 <code>-XX:MaxRAMPercentage</code> 를 70 이하로 주거나 limit 을 올린다</td></tr>
+  <tr><td><code>localhost:30080</code> 이 응답 없음</td><td>서비스의 <code>nodePort</code> 와 01장 <code>hostPort</code> 가 어긋났다. <code>kubectl -n apps get svc gateway</code> 로 실제 값 확인</td></tr>
+  <tr><td>게이트웨이가 502 / 503</td><td><code>ORDER_API_URI</code> 의 서비스 이름·네임스페이스 오타. <code>kubectl -n apps get endpointslices</code> 에 파드 IP 가 있는지도 확인</td></tr>
+  <tr><td>메트릭에 <code>_bucket</code> 이 없음</td><td>02장 <code>application.yml</code> 이 이미지에 반영되지 않았다. 태그를 올려 다시 빌드</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">2026년에 알아 둘 것 — In-Place Pod Resize</span>
+  <p>쿠버네티스 1.35 에서 파드를 재시작하지 않고 CPU·메모리 요청과 제한을 바꾸는 기능이 정식이 됐다. 09장에서 자원 튜닝을 다룰 때, 예전처럼 재배포하지 않고 조정하는 방법을 함께 본다.</p>
+</blockquote>
+
+
+<div class="appendix">
+
+<h2>부록 A. 완료 체크리스트</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>확인</th><th>기대값</th></tr>
+  <tr><td><code>docker exec obs-worker crictl images | grep -c obs/</code></td><td><code>2</code></td></tr>
+  <tr><td><code>kubectl -n apps get pods</code></td><td>3줄 모두 <code>1/1 Running</code>, <code>RESTARTS 0</code></td></tr>
+  <tr><td><code>kubectl -n apps get pods -o wide</code></td><td><code>NODE</code> 열이 전부 <code>obs-worker</code></td></tr>
+  <tr><td><code>curl -s -o /dev/null -w '%{http_code}' -X POST localhost:30080/api/orders ...</code></td><td><code>201</code></td></tr>
+  <tr><td>포트포워드 후 <code>... | grep -c '^orders_'</code></td><td>0 보다 크다</td></tr>
+  <tr><td>포트포워드 후 <code>... | grep -c 'http_server_requests_seconds_bucket'</code></td><td>0 보다 크다</td></tr>
+  <tr><td><code>kubectl -n apps get svc order-api -o jsonpath='{.metadata.labels}'</code></td><td><code>app.kubernetes.io/name</code> 이 있다</td></tr>
+  <tr><td><code>kubectl -n apps get svc order-api -o jsonpath='{.spec.ports[0].name}'</code></td><td><code>http</code></td></tr>
+  <tr><td><code>redeploy.sh</code> 로 태그를 올려 재배포</td><td>한 번 실행해 봤다 (이해 확인)</td></tr>
+</table>
+</div>
+
+<h2>부록 B. 명령어 레퍼런스</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>명령</th><th>하는 일</th></tr>
+  <tr><td><code>./gradlew bootBuildImage</code></td><td>빌드팩으로 이미지 생성. Dockerfile 없이 만든다</td></tr>
+  <tr><td><code>docker build -t obs/order-api:0.0.1 .</code></td><td>Dockerfile 방식(대안). 태그를 반드시 박는다</td></tr>
+  <tr><td><code>kind load docker-image obs/order-api:0.0.1 --name obs</code></td><td>노드 안으로 이미지 적재. 이것 없이는 <code>ErrImagePull</code></td></tr>
+  <tr><td><code>docker exec obs-worker crictl images</code></td><td>노드 안 런타임 저장소 확인. <code>docker images</code> 로는 알 수 없다</td></tr>
+  <tr><td><code>kubectl apply -f k8s/</code></td><td>네임스페이스·디플로이먼트·서비스를 한 번에</td></tr>
+  <tr><td><code>kubectl -n apps rollout status deploy/order-api</code></td><td>롤아웃 완료까지 대기. 실패하면 0이 아닌 종료 코드</td></tr>
+  <tr><td><code>kubectl -n apps get pods -o wide</code></td><td>어느 노드에 떴는지 확인</td></tr>
+  <tr><td><code>kubectl -n apps describe pod &lt;파드&gt;</code></td><td>뜨지 않을 때 이벤트부터 읽는다</td></tr>
+  <tr><td><code>kubectl -n apps get endpointslices</code></td><td>서비스가 실제로 어느 파드 IP 로 보내는지</td></tr>
+  <tr><td><code>kubectl -n apps port-forward svc/order-api 18080:8080</code></td><td>클러스터 안 서비스를 맥의 포트로 잠시 끌어온다</td></tr>
+  <tr><td><code>kubectl -n apps set image deploy/order-api order-api=obs/order-api:0.0.2</code></td><td>이미지 태그만 바꿔 롤링 업데이트</td></tr>
+</table>
+</div>
+
+<h2>부록 C. 참고 출처</h2>
+
+<div class="src">
+<ul>
+  <li>Spring Boot — Dockerfile 과 계층형 jar (jarmode tools) — https://docs.spring.io/spring-boot/reference/packaging/container-images/dockerfiles.html</li>
+  <li>layertools 폐기와 tools 모드 전환 — https://github.com/spring-projects/spring-boot/issues/48568</li>
+  <li>Paketo 빌드팩과 noble-java-tiny 빌더 — https://blog.paketo.io/posts/spring-boot-performance/</li>
+  <li>빌드팩 멀티 아키텍처 지원(Boot 3.4+) — https://dev.to/dashaun/multi-architecture-spring-oci-from-anywhere-with-paketo-1ic2</li>
+  <li>kind — 로컬 이미지 적재와 레지스트리 — https://kind.sigs.k8s.io/docs/user/local-registry/</li>
+  <li>쿠버네티스 프로브 설정 — https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/</li>
+  <li>이미지 풀 정책 — https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy</li>
+  <li>노드셀렉터와 어피니티 — https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/</li>
+  <li>In-Place Pod Resize — https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/</li>
+</ul>
+</div>
+
+</div>
+
+<div class="pager">
+  <a href="ch02-instrumented-app.html">
+    <span class="dir">← 이전</span>
+    <span class="t">02 · 계측 가능한 애플리케이션</span>
+  </a>
+  <a class="next" href="ch04-prometheus-stack.html">
+    <span class="dir">다음 →</span>
+    <span class="t">04 · 프로메테우스 스택 설치</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

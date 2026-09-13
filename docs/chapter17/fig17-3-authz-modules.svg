@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow173" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-dead { fill: #fafaf8; stroke: #b8860b; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-warn { font-size: 10px; font-weight: 600; fill: #b8860b; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-h" x="20" y="26">인가 모듈 4종 — --authorization-mode로 순서대로 구성, 하나라도 승인하면 통과</text>
+
+  <rect class="box-dead" x="20" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="120" y="64" text-anchor="middle">ABAC</text>
+  <text class="t-sub" x="120" y="84" text-anchor="middle">각 노드의 로컬 파일에</text>
+  <text class="t-sub" x="120" y="100" text-anchor="middle">정책을 둠</text>
+  <text class="t-warn" x="120" y="120" text-anchor="middle">멀티 컨트롤 플레인엔 비권장</text>
+
+  <rect class="box-accent" x="240" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="340" y="64" text-anchor="middle">RBAC</text>
+  <text class="t-sub" x="340" y="84" text-anchor="middle">쿠버네티스 API로</text>
+  <text class="t-sub" x="340" y="100" text-anchor="middle">정책을 선언 (4장)</text>
+  <text class="t-sub" x="340" y="120" text-anchor="middle">사실상 표준</text>
+
+  <rect class="box" x="460" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="560" y="64" text-anchor="middle">Webhook</text>
+  <text class="t-sub" x="560" y="84" text-anchor="middle">원격 REST 엔드포인트가</text>
+  <text class="t-sub" x="560" y="100" text-anchor="middle">승인 여부를 판단</text>
+  <text class="t-sub" x="560" y="120" text-anchor="middle">외부 시스템과 연동 시</text>
+
+  <rect class="box" x="680" y="40" width="200" height="90" rx="4"/>
+  <text class="t-title" x="780" y="64" text-anchor="middle">Node</text>
+  <text class="t-sub" x="780" y="84" text-anchor="middle">kubelet 전용</text>
+  <text class="t-sub" x="780" y="104" text-anchor="middle">자기 노드 관련 요청만</text>
+  <text class="t-sub" x="780" y="120" text-anchor="middle">인가하는 전용 모듈</text>
+
+  <!-- SubjectAccessReview 흐름 -->
+  <text class="t-h" x="20" y="176">디버깅 도구 — SubjectAccessReview 계열 API</text>
+
+  <rect class="box" x="20" y="192" width="270" height="70" rx="4"/>
+  <text class="t-title" x="155" y="216" text-anchor="middle">SelfSubjectAccessReview</text>
+  <text class="t-sub" x="155" y="236" text-anchor="middle">"나는 이걸 할 수 있나?"</text>
+  <text class="t-sub" x="155" y="250" text-anchor="middle">(kubectl auth can-i가 바로 이것)</text>
+
+  <rect class="box" x="315" y="192" width="270" height="70" rx="4"/>
+  <text class="t-title" x="450" y="216" text-anchor="middle">SubjectAccessReview</text>
+  <text class="t-sub" x="450" y="236" text-anchor="middle">"이 유저는 이걸 할 수 있나?"</text>
+  <text class="t-sub" x="450" y="250" text-anchor="middle">관리자가 남을 대신 확인</text>
+
+  <rect class="box" x="610" y="192" width="270" height="70" rx="4"/>
+  <text class="t-title" x="745" y="216" text-anchor="middle">SelfSubjectRulesReview</text>
+  <text class="t-sub" x="745" y="236" text-anchor="middle">"나는 이 네임스페이스에서</text>
+  <text class="t-sub" x="745" y="250" text-anchor="middle">뭘 할 수 있나?" 전체 목록</text>
+
+  <line class="line" x1="450" y1="262" x2="450" y2="288" marker-end="url(#arrow173)"/>
+
+  <rect class="box" x="270" y="292" width="360" height="66" rx="4"/>
+  <text class="t-sub" x="450" y="316" text-anchor="middle">보통의 리소스처럼 kubectl로 생성해 결과를 바로 조회</text>
+  <text class="t-sub" x="450" y="334" text-anchor="middle">API 서버에 실제로 등록된 리소스가 아니라 "질의 전용" 오브젝트</text>
+
+  <text class="t-cap" x="450" y="384" text-anchor="middle">권한 문제로 막혔을 때 "왜"를 묻는 도구가 이미 API 안에 있다 — 로그를 뒤지기 전에 이걸 먼저 쓴다.</text>
+</svg>

@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:13px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+  <text class="t-h" x="40" y="46">같은 파드에 대해 세 곳이 서로 다른 것을 말한다</text>
+
+  <!-- 대상 -->
+  <rect class="node" x="40" y="70" width="150" height="112" rx="4"/>
+  <text class="t-sub" x="54" y="90">노드 위의 파드</text>
+  <rect class="accent" x="54" y="100" width="122" height="34" rx="3"/>
+  <text class="t-title" x="115" y="121" text-anchor="middle">order-api</text>
+  <rect class="box" x="54" y="140" width="122" height="30" rx="3"/>
+  <text class="t-mono" x="115" y="159" text-anchor="middle">/actuator/prometheus</text>
+
+  <!-- 수집원 3 -->
+  <rect class="node" x="238" y="66" width="228" height="54" rx="4"/>
+  <text class="t-title" x="352" y="88" text-anchor="middle">kubelet 내장 cAdvisor</text>
+  <text class="t-mono" x="352" y="106" text-anchor="middle">container_memory_working_set_bytes</text>
+
+  <rect class="node" x="238" y="130" width="228" height="54" rx="4"/>
+  <text class="t-title" x="352" y="152" text-anchor="middle">kube-state-metrics</text>
+  <text class="t-mono" x="352" y="170" text-anchor="middle">kube_deployment_spec_replicas</text>
+
+  <rect class="node" x="238" y="194" width="228" height="54" rx="4"/>
+  <text class="t-title" x="352" y="216" text-anchor="middle">애플리케이션 자신</text>
+  <text class="t-mono" x="352" y="234" text-anchor="middle">http_server_requests_seconds</text>
+
+  <path class="line" d="M 190 112 L 232 96" marker-end="url(#ar1)"/>
+  <path class="line" d="M 190 155 L 232 155" marker-end="url(#ar1)"/>
+  <path class="line" d="M 176 158 L 210 158 L 210 221 L 232 221" marker-end="url(#ar1)"/>
+
+  <!-- 소비자 2 -->
+  <rect class="accent" x="530" y="66" width="308" height="86" rx="4"/>
+  <text class="t-title" x="684" y="90" text-anchor="middle">Prometheus</text>
+  <text class="t-sub" x="684" y="108" text-anchor="middle">30초마다 긁어 시계열로 쌓는다</text>
+  <text class="t-mono" x="684" y="126" text-anchor="middle">retention 3d · 84,771 시계열</text>
+  <text class="t-sub" x="684" y="144" text-anchor="middle">과거를 되짚을 수 있다</text>
+
+  <rect class="node" x="530" y="164" width="308" height="84" rx="4"/>
+  <text class="t-title" x="684" y="188" text-anchor="middle">metrics-server</text>
+  <text class="t-sub" x="684" y="206" text-anchor="middle">최근값 하나만 메모리에 들고 있다</text>
+  <text class="t-mono" x="684" y="224" text-anchor="middle">kubectl top · HPA 전용</text>
+  <text class="t-sub" x="684" y="242" text-anchor="middle">기록이 없다</text>
+
+  <path class="aline" d="M 466 93 L 524 100" marker-end="url(#ar2)"/>
+  <path class="aline" d="M 466 157 L 524 118" marker-end="url(#ar2)"/>
+  <path class="aline" d="M 466 221 L 524 136" marker-end="url(#ar2)"/>
+  <path class="line" d="M 466 100 L 496 100 L 496 200 L 524 200" marker-end="url(#ar1)"/>
+  <text class="t-sub" x="497" y="264" text-anchor="middle">같은 kubelet 에서</text>
+
+  <!-- 대비 -->
+  <rect class="soft" x="40" y="284" width="798" height="146" rx="4"/>
+  <text class="t-h" x="56" y="308">같은 파드, 다른 질문</text>
+
+  <rect class="box" x="56" y="320" width="252" height="96" rx="3"/>
+  <text class="t-title" x="182" y="342" text-anchor="middle">cAdvisor</text>
+  <text class="t-sub" x="182" y="360" text-anchor="middle">얼마나 <tspan font-weight="600">쓰고 있나</tspan></text>
+  <text class="t-mono" x="182" y="380" text-anchor="middle">174Mi</text>
+  <text class="t-sub" x="182" y="400" text-anchor="middle">컨테이너 런타임이 잰 실측</text>
+
+  <rect class="box" x="322" y="320" width="252" height="96" rx="3"/>
+  <text class="t-title" x="448" y="342" text-anchor="middle">kube-state-metrics</text>
+  <text class="t-sub" x="448" y="360" text-anchor="middle">얼마나 <tspan font-weight="600">달라고 적었나</tspan></text>
+  <text class="t-mono" x="448" y="380" text-anchor="middle">requests 384Mi · replicas 2</text>
+  <text class="t-sub" x="448" y="400" text-anchor="middle">매니페스트를 읽어 옮긴 값</text>
+
+  <rect class="accent" x="588" y="320" width="234" height="96" rx="3"/>
+  <text class="t-title" x="705" y="342" text-anchor="middle">애플리케이션</text>
+  <text class="t-sub" x="705" y="360" text-anchor="middle">무슨 <tspan font-weight="600">일을 했나</tspan></text>
+  <text class="t-mono" x="705" y="380" text-anchor="middle">요청 수 · 지연 · 에러율</text>
+  <text class="t-warn" x="705" y="400" text-anchor="middle">M20 까지는 수집되지 않는다</text>
+</svg>

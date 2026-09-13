@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:13px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
+  <text class="t-h" x="40" y="46">문지기가 둘이다 — 어드미션과 kubelet</text>
+  <text class="t-sub" x="40" y="66">둘 다 통과해야 컨테이너가 뜬다. 막힌 곳에 따라 증상이 다르다</text>
+
+  <!-- 흐름 -->
+  <rect class="node" x="40" y="88" width="130" height="52" rx="4"/>
+  <text class="t-title" x="105" y="110" text-anchor="middle">kubectl apply</text>
+  <text class="t-mono" x="105" y="128" text-anchor="middle">Deployment</text>
+  <path class="line" d="M 170 114 L 208 114" marker-end="url(#ar1)"/>
+
+  <rect class="box" x="210" y="88" width="130" height="52" rx="4"/>
+  <text class="t-title" x="275" y="110" text-anchor="middle">컨트롤러</text>
+  <text class="t-mono" x="275" y="128" text-anchor="middle">ReplicaSet → Pod</text>
+  <path class="line" d="M 340 114 L 378 114" marker-end="url(#ar1)"/>
+
+  <rect class="warnbox" x="380" y="88" width="180" height="52" rx="4"/>
+  <text class="t-title" x="470" y="110" text-anchor="middle">① 어드미션 (PSA)</text>
+  <text class="t-mono" x="470" y="128" text-anchor="middle">파드 스펙을 본다</text>
+  <path class="line" d="M 560 114 L 598 114" marker-end="url(#ar1)"/>
+
+  <rect class="warnbox" x="600" y="88" width="160" height="52" rx="4"/>
+  <text class="t-title" x="680" y="110" text-anchor="middle">② kubelet</text>
+  <text class="t-mono" x="680" y="128" text-anchor="middle">이미지를 본다</text>
+  <path class="line" d="M 760 114 L 798 114" marker-end="url(#ar1)"/>
+  <text class="t-acc" x="828" y="118">실행</text>
+
+  <!-- 막혔을 때 -->
+  <rect class="soft" x="40" y="162" width="820" height="128" rx="4"/>
+  <text class="t-h" x="56" y="186">어디서 막혔는지 어떻게 아는가</text>
+
+  <rect class="box" x="56" y="198" width="392" height="78" rx="3"/>
+  <text class="t-title" x="252" y="218" text-anchor="middle">① 어드미션에서 막히면</text>
+  <text class="t-mono" x="66" y="238">kubectl apply    → Warning 만 나오고 성공</text>
+  <text class="t-mono" x="66" y="254">kubectl get deploy → 0/1, 파드가 없다</text>
+  <text class="t-warn" x="66" y="270">describe rs 의 FailedCreate 에 진짜 이유가 있다</text>
+
+  <rect class="box" x="468" y="198" width="392" height="78" rx="3"/>
+  <text class="t-title" x="664" y="218" text-anchor="middle">② kubelet 에서 막히면</text>
+  <text class="t-mono" x="478" y="238">파드는 만들어진다 (스케줄까지 된다)</text>
+  <text class="t-mono" x="478" y="254">STATUS = CreateContainerConfigError</text>
+  <text class="t-warn" x="478" y="270">describe pod 의 Failed 이벤트에 이유가 있다</text>
+
+  <!-- 세 수준 -->
+  <text class="t-h" x="56" y="322">세 수준이 막는 것</text>
+  <rect class="box" x="56" y="334" width="256" height="70" rx="3"/>
+  <text class="t-title" x="184" y="354" text-anchor="middle">privileged</text>
+  <text class="t-sub" x="184" y="372" text-anchor="middle">아무것도 막지 않는다</text>
+  <text class="t-sub" x="184" y="390" text-anchor="middle">시스템 구성요소용</text>
+
+  <rect class="accent" x="322" y="334" width="256" height="70" rx="3"/>
+  <text class="t-title" x="450" y="354" text-anchor="middle">baseline</text>
+  <text class="t-sub" x="450" y="372" text-anchor="middle">알려진 권한 상승을 막는다</text>
+  <text class="t-mono" x="450" y="390" text-anchor="middle">hostPath · privileged · hostNetwork</text>
+
+  <rect class="warnbox" x="588" y="334" width="272" height="70" rx="3"/>
+  <text class="t-title" x="724" y="354" text-anchor="middle">restricted</text>
+  <text class="t-sub" x="724" y="372" text-anchor="middle">모범 사례까지 강제한다</text>
+  <text class="t-mono" x="724" y="390" text-anchor="middle">비루트 · drop ALL · seccomp</text>
+</svg>

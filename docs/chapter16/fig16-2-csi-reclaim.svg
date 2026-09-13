@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow162" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .box-dead { fill: #fafaf8; stroke: #b23b3b; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-dead { font-size: 10.5px; fill: #b23b3b; font-weight: 600; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 상단: in-tree → CSI -->
+  <text class="t-h" x="20" y="28">볼륨 플러그인 — in-tree에서 CSI로</text>
+
+  <rect class="box-dead" x="20" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="150" y="68" text-anchor="middle">in-tree 플러그인</text>
+  <text class="t-sub" x="150" y="88" text-anchor="middle">쿠버네티스 코드 안에 내장</text>
+  <text class="t-dead" x="150" y="108" text-anchor="middle">AWS EBS·Azure Disk 등 대부분 폐기</text>
+
+  <line class="line" x1="280" y1="82" x2="326" y2="82" marker-end="url(#arrow162)"/>
+
+  <rect class="box-accent" x="330" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="460" y="68" text-anchor="middle">CSI 드라이버</text>
+  <text class="t-sub" x="460" y="88" text-anchor="middle">(Container Storage Interface)</text>
+  <text class="t-sub" x="460" y="106" text-anchor="middle">벤더가 독립 배포 · 현재 표준</text>
+
+  <rect class="box" x="620" y="42" width="260" height="80" rx="4"/>
+  <text class="t-title" x="750" y="68" text-anchor="middle">신규 구축 시</text>
+  <text class="t-sub" x="750" y="88" text-anchor="middle">클라우드 프로바이더의 CSI 드라이버를</text>
+  <text class="t-sub" x="750" y="104" text-anchor="middle">StorageClass에서 지정</text>
+
+  <!-- 하단: Reclaim Policy -->
+  <text class="t-h" x="20" y="164">persistentVolumeReclaimPolicy — 원서 예제의 값은 폐기됨</text>
+
+  <rect class="box" x="20" y="178" width="270" height="90" rx="4"/>
+  <text class="t-title" x="155" y="204" text-anchor="middle">Retain</text>
+  <text class="t-sub" x="155" y="224" text-anchor="middle">클레임 삭제돼도 데이터·PV 보존</text>
+  <text class="t-sub" x="155" y="240" text-anchor="middle">관리자가 수동으로 정리</text>
+  <text class="t-sub" x="155" y="256" text-anchor="middle">→ 프로덕션 기본 권장</text>
+
+  <rect class="box" x="315" y="178" width="270" height="90" rx="4"/>
+  <text class="t-title" x="450" y="204" text-anchor="middle">Delete</text>
+  <text class="t-sub" x="450" y="224" text-anchor="middle">클레임 삭제 시 PV와</text>
+  <text class="t-sub" x="450" y="240" text-anchor="middle">실제 스토리지까지 자동 삭제</text>
+  <text class="t-sub" x="450" y="256" text-anchor="middle">→ 동적 프로비저닝 기본값</text>
+
+  <rect class="box-dead" x="610" y="178" width="270" height="90" rx="4"/>
+  <text class="t-title" x="745" y="204" text-anchor="middle">Recycle</text>
+  <text class="t-dead" x="745" y="224" text-anchor="middle">공식 폐기(deprecated)</text>
+  <text class="t-sub" x="745" y="242" text-anchor="middle">— 원서 16.3.1 예제가 쓰는 값</text>
+  <text class="t-sub" x="745" y="258" text-anchor="middle">지금은 Retain 또는 Delete만</text>
+
+  <text class="t-cap" x="450" y="330" text-anchor="middle">원서 예제의 PV YAML은 persistentVolumeReclaimPolicy: Recycle을 쓴다 —</text>
+  <text class="t-cap" x="450" y="352" text-anchor="middle">실습할 땐 Retain(보존 후 수동 정리) 또는 Delete(자동 삭제)로 바꿔 쓴다.</text>
+</svg>

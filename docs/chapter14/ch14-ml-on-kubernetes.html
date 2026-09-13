@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CH14 쿠버네티스에서 머신러닝 실행하기 — 쿠버네티스 스터디 노트</title>
+<!--
+  폰트 선택 이유: 본문은 Pretendard(한글 장문 가독성에 최적화된 산세리프),
+  코드는 IBM Plex Mono 계열(0/O, 1/l 구분 명확). CDN 미로딩·오프라인 시 시스템 한글 폰트로 폴백.
+  그림: 인라인 SVG 임베드 — 이 파일 하나로 완전하게 표시. 수정은 <svg> 블록 안 <text>를 직접 고친다.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .ch-no { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 34px; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 15.5px; }
+  .meta { margin-top: 16px; font-size: 13px; color: var(--sub); }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 15px; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 14.5px; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 22px; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 16.5px; }
+  strong { font-weight: 700; }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 14px 0 18px; }
+  pre code { background: none; border: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 14.5px; }
+  .note-2026 .lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 12.5px; color: var(--sub); word-break: break-all; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 13px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="ch-no">CHAPTER 14</div>
+  <h1>쿠버네티스에서 머신러닝 실행하기</h1>
+  <p class="ch-desc">머신러닝 워크로드는 쿠버네티스가 가진 거의 모든 기능을 동시에, 그것도 가장 극단적인 강도로 요구한다 — 스케줄링, 특수 하드웨어, 스토리지, 네트워킹. 이 장은 그 요구를 원서가 쓰인 2024년의 "훈련 중심" 세계에서 출발해, 2026년 현재의 인프라 지형(특히 GPU 스케줄링의 근본적 전환)까지 잇는다.</p>
+  <div class="meta">2026-08 기준 변경 사항 주석 포함 · 이 장은 원서 대비 변화 폭이 가장 큰 장 중 하나입니다</div>
+</header>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. ML 워크플로는 데이터셋 준비 → 모델 개발 → 훈련 → 제공(서빙) 4단계다 — 원서는 훈련에 집중하지만, 2026년 실무 비중은 서빙 쪽으로 크게 이동했다.</p>
+  <p>2. GPU를 "정수 개수"로 요청하던 디바이스 플러그인 모델은 저물고 있다 — 2026년 현재는 속성 기반으로 정확히 매칭하는 DRA가 표준(GA)이다.</p>
+  <p>3. 분산 훈련 하나가 스케줄링(8장)·네트워킹(9장)·스토리지(16장)를 동시에 극한으로 요구한다 — 이 장은 사실상 지금까지 배운 것들의 "가장 가혹한 시험대"다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s14-1"><span class="num">14.1</span>머신러닝에 쿠버네티스를 사용하면 좋은 점</a>
+  <a href="#s14-2"><span class="num">14.2</span>머신러닝 워크플로</a>
+  <a href="#s14-3"><span class="num">14.3</span>클러스터 관리자가 고려해야 할 사항</a>
+  <a href="#s14-4"><span class="num">14.4</span>데이터 과학자의 관심사</a>
+  <a href="#s14-5"><span class="num">14.5</span>쿠버네티스 머신러닝 모범 사례</a>
+</nav>
+
+<section id="s14-1">
+  <h2 class="sec"><span class="num">14.1</span>머신러닝에 쿠버네티스를 사용하면 좋은 점</h2>
+  <p class="lead">쿠버네티스가 이미 잘하는 것들 — 리소스 추상화, 스케줄링, 확장성, 이식성 — 은 머신러닝 워크로드에도 그대로 이득이 된다. 온프레미스든 클라우드든 같은 매니페스트로 훈련 잡을 굴릴 수 있고, GPU 같은 특수 자원도 CPU·메모리와 같은 방식(요청·제한)으로 다룰 수 있다는 것이 핵심 매력이다.</p>
+</section>
+
+<section id="s14-2">
+  <h2 class="sec"><span class="num">14.2</span>머신러닝 워크플로</h2>
+  <p>딥러닝의 요구사항을 이해하려면 먼저 전체 워크플로를 알아야 한다. 크게 네 단계다.</p>
+  <ul class="tight">
+    <li><strong>① 데이터셋 준비</strong> — 스토리지, 인덱싱, 카탈로그화. 수백 MB부터 PB 단위까지 다양해, 규모에 맞는 블록·오브젝트 저장소가 필요하다.</li>
+    <li><strong>② 모델 개발</strong> — 데이터 과학자가 알고리즘을 설계·공유하는 단계. JupyterHub 같은 툴이 다른 워크로드와 비슷하게 동작해 쿠버네티스에 쉽게 올라간다.</li>
+    <li><strong>③ 훈련</strong> — 데이터셋으로 모델을 학습시킨다. 스케줄링·특수 하드웨어·스토리지·네트워킹을 전부 동시에 요구하는, 쿠버네티스의 모든 기능을 시험하는 단계다.</li>
+    <li><strong>④ 제공(서빙)</strong> — 훈련된 모델이 클라이언트의 요청에 추론으로 응답하는 단계.</li>
+  </ul>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow141" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-weight { font-size: 11px; font-weight: 700; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 4단계 -->
+  <rect class="box" x="20" y="40" width="190" height="90" rx="4"/>
+  <text class="t-title" x="115" y="68" text-anchor="middle">① 데이터셋 준비</text>
+  <text class="t-sub" x="115" y="90" text-anchor="middle">스토리지·인덱싱</text>
+  <text class="t-sub" x="115" y="106" text-anchor="middle">카탈로그화</text>
+
+  <line class="line" x1="210" y1="85" x2="246" y2="85" marker-end="url(#arrow141)"/>
+
+  <rect class="box" x="250" y="40" width="190" height="90" rx="4"/>
+  <text class="t-title" x="345" y="68" text-anchor="middle">② 모델 개발</text>
+  <text class="t-sub" x="345" y="90" text-anchor="middle">JupyterHub 등</text>
+  <text class="t-sub" x="345" y="106" text-anchor="middle">알고리즘 설계·공유</text>
+
+  <line class="line" x1="440" y1="85" x2="476" y2="85" marker-end="url(#arrow141)"/>
+
+  <rect class="box" x="480" y="40" width="190" height="90" rx="4"/>
+  <text class="t-title" x="575" y="68" text-anchor="middle">③ 훈련</text>
+  <text class="t-sub" x="575" y="90" text-anchor="middle">스케줄링·특수 HW</text>
+  <text class="t-sub" x="575" y="106" text-anchor="middle">스토리지·네트워킹 총동원</text>
+
+  <line class="line" x1="670" y1="85" x2="706" y2="85" marker-end="url(#arrow141)"/>
+
+  <rect class="box" x="710" y="40" width="170" height="90" rx="4"/>
+  <text class="t-title" x="795" y="68" text-anchor="middle">④ 제공(서빙)</text>
+  <text class="t-sub" x="795" y="90" text-anchor="middle">추론 요청 처리</text>
+
+  <!-- 원서 vs 2026 무게중심 바 -->
+  <rect class="box" x="20" y="160" width="860" height="140" rx="6"/>
+  <text class="t-title" x="40" y="186">14.3절의 실제 분량 배분 — 원서 대 2026년 현실</text>
+
+  <text class="t-sub" x="40" y="212">원서 14.3절 (8개 하위 절)</text>
+  <rect x="220" y="200" width="600" height="18" fill="#f0f0f0" stroke="#c8c8c8"/>
+  <rect x="220" y="200" width="560" height="18" fill="#c8c8c8"/>
+  <text class="t-weight" x="500" y="213" text-anchor="middle" fill="#555">훈련 관련 내용 — 거의 전부</text>
+  <rect x="780" y="200" width="40" height="18" fill="#2456c4" opacity="0.5"/>
+
+  <text class="t-sub" x="40" y="250">2026년 실제 워크로드 비중 (업계 다수 관측)</text>
+  <rect x="220" y="238" width="600" height="18" fill="#f0f0f0" stroke="#c8c8c8"/>
+  <rect x="220" y="238" width="260" height="18" fill="#c8c8c8"/>
+  <text class="t-weight" x="350" y="251" text-anchor="middle" fill="#555">훈련</text>
+  <rect x="480" y="238" width="340" height="18" fill="#2456c4"/>
+  <text class="t-weight" x="650" y="251" text-anchor="middle" fill="#ffffff">추론 서빙 — 상당 비중</text>
+
+  <text class="t-sub" x="40" y="284">LLM 추론 서빙이 폭발적으로 늘며 워크로드 성격 자체가 달라졌다 — 이 장 뒤에 서빙 인프라를 별도로 다룬다.</text>
+
+  <text class="t-cap" x="450" y="322" text-anchor="middle">4단계 워크플로 자체는 그대로 유효하다 — 다만 14.3절이 훈련에 쏟는 비중만큼 실무 관심사가 이동했다.</text>
+</svg>
+    <figcaption>그림 14-1. 4단계 워크플로는 그대로 유효하다. 다만 원서 14.3절의 실제 분량과 2026년 실무 비중을 나란히 보면, 무게중심이 어디로 이동했는지 보인다.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석 — 무게중심 이동</span>
+    원서의 4단계 워크플로 자체는 지금도 정확하다. 다만 뒤이은 14.3절은 8개 하위 절 전부를 <strong>훈련</strong>에 쓰고, <strong>서빙</strong>은 워크플로 도입부에서 한 번 언급된 뒤 다시 등장하지 않는다. 2026년 현재는 정반대다 — LLM 추론 서빙이 폭발적으로 늘며, "머신러닝을 쿠버네티스에서 돌린다"는 말의 실무적 의미가 상당 부분 <strong>서빙 인프라 운영</strong>으로 옮겨갔다. vLLM 같은 추론 엔진, KServe 같은 서빙 전용 플랫폼, 9장에서 다룬 Gateway API Inference Extension(추론 트래픽에 특화된 라우팅)이 이 새 영역의 표준 도구로 떠올랐다. 이 장의 나머지(14.3)는 원서 그대로 훈련에 집중하되, 서빙은 별도로 학습할 영역임을 여기서 짚어 둔다.
+    <span class="src">출처: 9장 갱신 주석(Gateway API 확장) 참고 · 업계 동향 자료 다수(2026) 교차 확인</span>
+  </div>
+</section>
+
+<section id="s14-3">
+  <h2 class="sec"><span class="num">14.3</span>쿠버네티스 클러스터 관리자가 고려해야 할 사항</h2>
+  <p class="lead">데이터 과학자 팀을 지원하는 클러스터 관리자가 마주치는 가장 큰 어려움은, 훈련이라는 워크로드가 평소 다루던 웹 서비스와 근본적으로 다른 자원 패턴을 요구한다는 것이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow143" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-center { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10px; fill: #555555; }
+    .t-ref { font-size: 10.5px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #999999; stroke-width: 1.1; fill: none; }
+  </style>
+
+  <!-- 중심 -->
+  <rect class="box-center" x="350" y="190" width="200" height="80" rx="6"/>
+  <text class="t-title" x="450" y="222" text-anchor="middle" font-size="14">분산 훈련 잡</text>
+  <text class="t-sub" x="450" y="244" text-anchor="middle">(14.3.2)</text>
+  <text class="t-sub" x="450" y="258" text-anchor="middle">GPU 8개, 며칠간 실행</text>
+
+  <!-- 스케줄링 -->
+  <rect class="box" x="60" y="30" width="220" height="90" rx="4"/>
+  <text class="t-title" x="170" y="56" text-anchor="middle">스케줄링·리소스 제약</text>
+  <text class="t-sub" x="170" y="76" text-anchor="middle">배치 워크로드 · 리소스 집중</text>
+  <text class="t-ref" x="170" y="96" text-anchor="middle">8장 스케줄러·QoS와 동일 원리</text>
+  <line class="line" x1="230" y1="120" x2="370" y2="196" marker-end="url(#arrow143)"/>
+
+  <!-- 특수 하드웨어 -->
+  <rect class="box" x="620" y="30" width="220" height="90" rx="4"/>
+  <text class="t-title" x="730" y="56" text-anchor="middle">특수 하드웨어</text>
+  <text class="t-sub" x="730" y="76" text-anchor="middle">GPU·드라이버·커널 모듈</text>
+  <text class="t-ref" x="730" y="96" text-anchor="middle">그림 14-2의 DRA</text>
+  <line class="line" x1="670" y1="120" x2="530" y2="196" marker-end="url(#arrow143)"/>
+
+  <!-- 스토리지 -->
+  <rect class="box" x="60" y="340" width="220" height="90" rx="4"/>
+  <text class="t-title" x="170" y="366" text-anchor="middle">스토리지</text>
+  <text class="t-sub" x="170" y="386" text-anchor="middle">데이터셋 배포 · 체크포인트</text>
+  <text class="t-ref" x="170" y="406" text-anchor="middle">16장 PV·PVC와 동일 원리</text>
+  <line class="line" x1="230" y1="340" x2="370" y2="264" marker-end="url(#arrow143)"/>
+
+  <!-- 네트워킹 -->
+  <rect class="box" x="620" y="340" width="220" height="90" rx="4"/>
+  <text class="t-title" x="730" y="366" text-anchor="middle">네트워킹 · 전용 프로토콜</text>
+  <text class="t-sub" x="730" y="386" text-anchor="middle">파라미터 서버 간 가변 분산</text>
+  <text class="t-ref" x="730" y="406" text-anchor="middle">9장 CNI · NCCL/RDMA</text>
+  <line class="line" x1="670" y1="340" x2="530" y2="264" marker-end="url(#arrow143)"/>
+
+  <text class="t-cap" x="450" y="450" text-anchor="middle">분산 훈련 하나가 8장(스케줄링)·9장(네트워킹)·16장(스토리지)의 개념을 동시에, 그것도 극단적인 강도로 요구한다 — 이것이 14.3절이 8개 하위 절로 나뉜 이유다.</text>
+</svg>
+    <figcaption>그림 14-3. 분산 훈련 잡 하나가 건드리는 영역. 8개 하위 절이 왜 이렇게 많은지에 대한 답이기도 하다.</figcaption>
+  </figure>
+
+  <h3>14.3.1 모델 훈련</h3>
+  <p>훈련에는 CPU·GPU가 필요하고, 리소스를 더 투입할수록 더 빨리 끝난다. 대부분의 훈련은 필요한 자원이 갖춰진 단일 머신에서 수행된다 — 분산 훈련(다음 절)은 그 자체로 별도의 난이도를 갖는다.</p>
+
+  <h3>14.3.2 분산 훈련</h3>
+  <p>여러 머신에 훈련을 분산하는 것은 원서 집필 시점 기준 "아직 걸음마 단계"였다 — GPU 8개가 필요하다면, 4개짜리 서버 2대보다 8개짜리 서버 1대가 거의 항상 빠르다. 여러 머신에 걸치는 순간 네트워크가 병목이 되기 쉽기 때문이다(14.3.7).</p>
+
+  <h3>14.3.3 리소스 제약조건</h3>
+  <p>머신러닝 워크로드는 클러스터 전반에 걸쳐 특정한 구성을 요구한다. 자원 소모는 주로 훈련 단계에 집중되며, 훈련은 대부분 <strong>배치성 워크로드</strong>다 — 8장의 오토스케일링 논의가 여기서 직접 적용된다.</p>
+
+  <h3>14.3.4 특수 하드웨어</h3>
+  <p>모델 훈련은 GPU 같은 특수 하드웨어에서 압도적으로 효율적이다. 쿠버네티스는 전통적으로 <dfn class="term">디바이스 플러그인 <span class="en">(Device Plugin)</span></dfn>을 통해 이런 자원에 접근했다 — 파드가 <code>nvidia.com/gpu: 1</code>처럼 정수 개수로 요청하면 스케줄러가 남은 개수만 보고 배치하는 단순한 모델이다.</p>
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow142" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-lane { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-old { font-size: 11px; fill: #888888; }
+    .t-title { font-size: 12.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 왼쪽: 디바이스 플러그인 (원서 기준) -->
+  <rect class="lane" x="20" y="20" width="410" height="330" rx="6"/>
+  <text class="t-lane" x="36" y="44">디바이스 플러그인 (원서 14.3.4 기준)</text>
+  <text class="t-old" x="36" y="60">2017년부터 · 정수 카운트 모델</text>
+
+  <rect class="box" x="40" y="76" width="370" height="66" rx="4"/>
+  <text class="t-title" x="225" y="102" text-anchor="middle">파드가 요청: nvidia.com/gpu: 1</text>
+  <text class="t-sub" x="225" y="122" text-anchor="middle">"GPU 하나 줘" — 그 이상 표현 불가</text>
+
+  <rect class="box" x="40" y="160" width="370" height="90" rx="4"/>
+  <text class="t-title" x="225" y="186" text-anchor="middle">스케줄러가 아는 것</text>
+  <text class="t-sub" x="225" y="208" text-anchor="middle">이 노드에 GPU가 몇 개 남았는지만</text>
+  <text class="t-sub" x="225" y="224" text-anchor="middle">어떤 모델인지, 메모리가 얼마인지,</text>
+  <text class="t-sub" x="225" y="240" text-anchor="middle">토폴로지는 어떤지 — 전혀 모름</text>
+
+  <rect class="box" x="40" y="268" width="370" height="66" rx="4"/>
+  <text class="t-title" x="225" y="294" text-anchor="middle">실무 우회책</text>
+  <text class="t-sub" x="225" y="314" text-anchor="middle">노드 레이블 + 테인트/톨러레이션으로</text>
+  <text class="t-sub" x="225" y="330" text-anchor="middle">사람이 수동으로 세밀 제어를 흉내</text>
+
+  <!-- 오른쪽: DRA -->
+  <rect class="lane" x="460" y="20" width="420" height="330" rx="6"/>
+  <text class="t-lane" x="476" y="44">DRA (Dynamic Resource Allocation)</text>
+  <text class="t-old" x="476" y="60">쿠버네티스 1.34 GA · resource.k8s.io</text>
+
+  <rect class="box-accent" x="480" y="76" width="380" height="66" rx="4"/>
+  <text class="t-title" x="670" y="102" text-anchor="middle">ResourceClaim — 속성으로 요청</text>
+  <text class="t-sub" x="670" y="122" text-anchor="middle">"메모리 80GB 이상, H100 모델" 등 CEL로 표현</text>
+
+  <rect class="box-accent" x="480" y="160" width="380" height="90" rx="4"/>
+  <text class="t-title" x="670" y="186" text-anchor="middle">DeviceClass · ResourceSlice</text>
+  <text class="t-sub" x="670" y="208" text-anchor="middle">드라이버가 노드별 실제 장비 속성을</text>
+  <text class="t-sub" x="670" y="224" text-anchor="middle">스케줄러에 구조화된 데이터로 공개</text>
+  <text class="t-sub" x="670" y="240" text-anchor="middle">→ MIG 파티셔닝·공유도 인식</text>
+
+  <rect class="box-accent" x="480" y="268" width="380" height="66" rx="4"/>
+  <text class="t-title" x="670" y="294" text-anchor="middle">스케줄러가 직접 최적 매칭</text>
+  <text class="t-sub" x="670" y="314" text-anchor="middle">레이블·테인트 수작업 없이 실제 하드웨어로</text>
+  <text class="t-sub" x="670" y="330" text-anchor="middle">"유동적인 자원 풀"처럼 다룸</text>
+
+  <line class="line" x1="410" y1="180" x2="456" y2="180" marker-end="url(#arrow142)"/>
+
+  <text class="t-cap" x="450" y="382" text-anchor="middle">NVIDIA가 자사 DRA 드라이버를 CNCF에 기증했고, KAI 스케줄러가 갱 스케줄링·큐잉을 더한 참조 구현으로 떠올랐다.</text>
+  <text class="t-cap" x="450" y="404" text-anchor="middle">PersistentVolume/PVC가 스토리지에 한 일을, DRA는 GPU 같은 가속기에 대해 한다고 보면 된다.</text>
+</svg>
+    <figcaption>그림 14-2. 디바이스 플러그인(정수 카운트)과 DRA(속성 기반 매칭)의 근본적 차이.</figcaption>
+  </figure>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석 — GPU 스케줄링의 세대교체</span>
+    디바이스 플러그인 모델은 2017년부터 거의 그대로였다 — <code>nvidia.com/gpu: 1</code>은 "GPU 하나"라고만 말할 뿐, 어떤 모델인지 메모리가 얼마인지 토폴로지가 어떤지는 스케줄러가 전혀 몰랐다. 실무에서는 이를 노드 레이블과 테인트/톨러레이션(14.5절)으로 우회해 왔다. <strong>이 한계가 근본적으로 해소된 것</strong>이 <dfn class="term">DRA <span class="en">(Dynamic Resource Allocation)</span></dfn>다 — <code>resource.k8s.io</code> API 그룹으로, 워크로드가 <code>ResourceClaim</code>에 필요한 장비 속성(예: "메모리 80GB 이상")을 CEL 표현식으로 선언하면, 드라이버가 <code>ResourceSlice</code>로 공개한 실제 노드별 장비 속성과 스케줄러가 직접 매칭한다. <strong>쿠버네티스 1.34에서 GA</strong>, 1.35부터는 기능 게이트가 기본 활성으로 고정됐다. NVIDIA가 자사 DRA 드라이버를 CNCF에 기증했고, 갱 스케줄링·큐잉을 더한 <dfn class="term">KAI 스케줄러</dfn>가 AI 워크로드 참조 구현으로 떠올랐다. PV/PVC가 스토리지에 해 준 일을, DRA는 GPU 같은 가속기에 대해 해 준다고 이해하면 된다.
+    <span class="src">출처: kubernetes.io/blog(DRA GA 발표) · CNCF 블로그(DRA 이해하기, 2026) · Google Cloud 블로그(DRA GA 안정화 설명)</span>
+  </div>
+
+  <h3>14.3.5 라이브러리, 드라이버, 커널 모듈</h3>
+  <p>특수 하드웨어에 접근하려면 전용 라이브러리·드라이버·커널 모듈이 필요하고, 컨테이너 안에서 이를 쓰려면 컨테이너 런타임에 마운트되어 있어야 한다 — "그냥 컨테이너 안에 다 넣으면 되지 않나?" 싶겠지만, 호스트 커널과 버전이 어긋나면 동작하지 않는다.</p>
+
+  <h3>14.3.6 스토리지</h3>
+  <p>머신러닝 워크플로에서 가장 중요한 요소로 꼽힌다 — 훈련 중 데이터셋을 워커 노드 전체에 배포하는 문제, 체크포인트 저장·복구 문제 모두 스토리지 설계에 달려 있다.</p>
+
+  <h3>14.3.7 네트워킹</h3>
+  <p>분산 훈련일수록 네트워크가 성패를 가른다 — 파라미터 서버 아키텍처에서는 각 노드가 파라미터 서버와 끊임없이 가중치를 주고받는다. 노드 간 대역폭·지연이 곧 훈련 속도다.</p>
+
+  <h3>14.3.8 전용 프로토콜</h3>
+  <p>벤더마다 다르지만, 목표는 같다 — 분산 훈련의 병목이 되는 통신 구간을 최대한 제거하는 것. NCCL(GPU 간 집합 통신), RDMA(CPU를 거치지 않는 원격 메모리 접근) 같은 프로토콜이 이 역할을 한다.</p>
+</section>
+
+<section id="s14-4">
+  <h2 class="sec"><span class="num">14.4</span>데이터 과학자의 관심사</h2>
+  <p>지금까지는 클러스터 관리자의 시점이었다. 쿠버네티스 비전문가인 데이터 과학자가 쓰기 편하게 만들어 주는 도구들도 있다.</p>
+  <ul class="tight">
+    <li><strong>Kubeflow</strong> — 쿠버네티스 네이티브 머신러닝 툴킷. JupyterHub, 파이프라인, 훈련용 커스텀 컨트롤러를 포함한다.</li>
+    <li><strong>Polyaxon</strong> — 여러 프레임워크를 지원하는 워크플로 관리 툴. 오픈소스·상용 버전이 있다.</li>
+    <li><strong>Pachyderm</strong> — 데이터셋 준비·버저닝·파이프라인에 특화된 엔터프라이즈 플랫폼.</li>
+  </ul>
+  <div class="note-2026">
+    <span class="lbl">2026-08 기준 갱신 주석</span>
+    Kubeflow는 그동안 프로젝트로서 한층 성숙했고, 그 생태계 안에서 <dfn class="term">KServe</dfn>가 <strong>서빙 전용</strong> 서브프로젝트로 독립적인 위상을 가지게 됐다 — 14.2절 갱신 주석에서 언급한 서빙 무게중심 이동의 실제 수혜자다. 분산 컴퓨팅 프레임워크 <dfn class="term">Ray</dfn>도 쿠버네티스 위에서(KubeRay 오퍼레이터로) 훈련·서빙 양쪽에 널리 쓰이는 선택지로 자리잡았다. Polyaxon·Pachyderm은 여전히 존재하지만, 신규 구축에서는 Kubeflow·KServe·Ray 조합이 훨씬 자주 언급된다.
+  </div>
+</section>
+
+<section id="s14-5">
+  <h2 class="sec"><span class="num">14.5</span>쿠버네티스 머신러닝 모범 사례</h2>
+  <table>
+    <tr><th>원칙</th><th>왜 / 확인 질문</th></tr>
+    <tr><td>배치 워크로드는 클러스터 오토스케일러로</td><td>GPU 노드가 안 쓰는 시간에도 비용을 내며 켜져 있진 않은가?</td></tr>
+    <tr><td>확장 리소스 키로 테인트하는 관례를 지킨다</td><td><code>key: nvidia.com/gpu, effect: NoSchedule</code> 같은 표준 관례를 따르는가? (ExtendedResourceToleration 어드미션 컨트롤러 활용 가능)</td></tr>
+    <tr><td>모델 훈련은 전 구간을 지속적으로 관찰</td><td>GPU·CPU·네트워크·스토리지 사용률을 다 같이 추적하는가, GPU만 보고 있진 않은가?</td></tr>
+    <tr><td>GPU 풀가동을 최우선 목표로</td><td>가장 비싼 자원(GPU)이 다른 병목 때문에 놀고 있진 않은가?</td></tr>
+    <tr><td>혼합 워크로드 클러스터는 격리를 신중히</td><td>일반 비즈니스 서비스와 훈련 잡이 같은 클러스터에서 자원을 다투고 있진 않은가? (12장 멀티클러스터 논의와 연결)</td></tr>
+    <tr><td>GPU 스케줄링은 DRA 전환을 검토</td><td>여전히 디바이스 플러그인 + 수작업 레이블로 세밀 제어를 흉내 내고 있진 않은가?</td></tr>
+  </table>
+</section>
+
+<footer>
+  출처: kubernetes.io/blog(DRA GA) · CNCF 블로그(DRA 이해하기, 2026) · Google Cloud 블로그(DRA 안정화) — 세부 출처는 각 절의 갱신 주석에 명기 · 검증일 2026-08-15<br>
+  그림은 인라인 SVG로 임베드되어 이 파일 하나로 완전하게 표시됩니다. 동일 그림의 단독 .svg 파일(fig14-1 ~ fig14-3)도 제공됩니다.
+</footer>
+
+</div>
+</body>
+</html>

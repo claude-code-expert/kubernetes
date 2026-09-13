@@ -1,0 +1,17 @@
+# 개발 — 작게, 빠르게. 노드 하나로도 뜬다.
+api:
+  replicas: 1
+  logLevel: debug
+  resources:
+    requests: {cpu: 10m, memory: 48Mi}
+    limits: {memory: 128Mi}
+  topologySpread:
+    enabled: false             # 노드가 하나면 이 제약이 스케줄을 막는다
+web:
+  replicas: 1
+redis:
+  storage: 512Mi
+autoscaling:
+  enabled: false               # 개발에서는 replicas 를 직접 본다
+pdb:
+  enabled: false               # 파드가 1개면 PDB 가 오히려 드레인을 막는다

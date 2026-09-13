@@ -1,0 +1,39 @@
+# M17 — 부하에 따라 파드 수를 조정한다.
+#
+# 전제: journal-api 컨테이너에 requests.cpu 가 있어야 한다 (M16 에서 50m 으로 넣었다).
+# HPA 는 "현재 사용량이 requests 의 몇 퍼센트인가"로 계산하므로, requests 가 없으면
+# TARGETS 가 <unknown> 으로 남고 아무 일도 일어나지 않는다.
+#
+# 30-journal-api.yaml 에서 replicas 를 지운 것도 이 리소스 때문이다.
+# 두 곳에 파드 수가 적혀 있으면 apply 할 때마다 HPA 가 정한 값이 되돌아간다.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: journal-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: journal-api
+  minReplicas: 3            # PDB 의 minAvailable 2 보다 커야 노드를 비울 수 있다 (M16)
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50    # requests(50m) 의 50% = 파드당 25m
+  behavior:
+    scaleUp:
+      # 부족한 상태를 끌지 않는다. 다만 한 번에 50% 씩만 늘려 과잉 확장을 막는다.
+      stabilizationWindowSeconds: 0
+      policies:
+        - {type: Percent, value: 50, periodSeconds: 30}
+    scaleDown:
+      # 기본값은 300초다. 실측(M17): 기본값이면 부하가 끝나고 3분 6초 뒤에야 첫 축소가
+      # 시작되고 3개로 돌아오는 데 4분 52초가 걸렸다. 30초로 줄이면 16초 / 1분 47초다.
+      # 짧게 잡을수록 비용은 아끼지만 부하가 오르내릴 때 파드 수가 진동한다.
+      stabilizationWindowSeconds: 30
+      policies:
+        - {type: Pods, value: 1, periodSeconds: 30}

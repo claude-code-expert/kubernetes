@@ -1,0 +1,36 @@
+# M34 — study 클러스터에서 "가져오는" 쪽.
+#
+# edge 의 서비스를 study 안에서 평범한 서비스 이름으로 쓴다.
+# 앱은 상대가 다른 클러스터에 있다는 것을 모른다 — 그것이 목적이다.
+#
+# MCS API(ServiceExport/ServiceImport)가 표준화하려는 것이 정확히 이 작업이고,
+# 컨트롤러가 없으면 이렇게 손으로 쓴다.
+apiVersion: v1
+kind: Service
+metadata:
+  name: greeter-edge
+  namespace: m34
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 31080     # 상대 클러스터의 NodePort
+      protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: greeter-edge-1
+  namespace: m34
+  labels:
+    kubernetes.io/service-name: greeter-edge
+addressType: IPv4
+ports:
+  - name: http
+    port: 31080
+    protocol: TCP
+endpoints:
+  # edge 클러스터의 노드 주소들. 노드가 늘면 여기도 늘려야 한다 —
+  # 이 갱신을 사람이 하는 것이 이 방식의 가장 큰 문제다.
+  - addresses: ["172.20.0.6"]
+    conditions: {ready: true}

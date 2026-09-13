@@ -1,0 +1,18 @@
+# M13 에서 만든 것과 같은 컨피그맵·시크릿. 네임스페이스가 다르므로 다시 만든다.
+# 컨피그맵과 시크릿은 네임스페이스를 넘지 못한다 (M13 실패 ①의 세 번째 원인).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: journal-config
+data:
+  APP_GREETING: "hello from configmap v1"
+  LOG_LEVEL: "warn"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: journal-secret
+type: Opaque
+stringData:
+  # 실습용 값이다. 실제 비밀번호를 이 파일에 적고 깃에 커밋하지 않는다 (M31 SOPS·External Secrets).
+  REDIS_PASSWORD: "s3cr3t-pass"

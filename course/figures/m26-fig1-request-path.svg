@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+  <text class="t-h" x="40" y="46">요청 하나가 저장되기까지 — 정책이 끼어드는 자리</text>
+
+  <rect class="node" x="40" y="70" width="112" height="46" rx="4"/>
+  <text class="t-title" x="96" y="90" text-anchor="middle">인증</text>
+  <text class="t-mono" x="96" y="107" text-anchor="middle">M23</text>
+  <path class="line" d="M 152 93 L 182 93" marker-end="url(#ar1)"/>
+
+  <rect class="node" x="184" y="70" width="112" height="46" rx="4"/>
+  <text class="t-title" x="240" y="90" text-anchor="middle">인가 RBAC</text>
+  <text class="t-mono" x="240" y="107" text-anchor="middle">M23</text>
+  <path class="line" d="M 296 93 L 326 93" marker-end="url(#ar1)"/>
+
+  <rect class="accent" x="328" y="70" width="146" height="46" rx="4"/>
+  <text class="t-title" x="401" y="90" text-anchor="middle">뮤테이팅 어드미션</text>
+  <text class="t-mono" x="401" y="107" text-anchor="middle">기본값을 넣는다</text>
+  <path class="aline" d="M 474 93 L 504 93" marker-end="url(#ar2)"/>
+
+  <rect class="accent" x="506" y="70" width="160" height="46" rx="4"/>
+  <text class="t-title" x="586" y="90" text-anchor="middle">밸리데이팅 어드미션</text>
+  <text class="t-mono" x="586" y="107" text-anchor="middle">PSA · VAP · 웹훅</text>
+  <path class="line" d="M 666 93 L 696 93" marker-end="url(#ar1)"/>
+
+  <rect class="node" x="698" y="70" width="142" height="46" rx="4"/>
+  <text class="t-title" x="769" y="90" text-anchor="middle">etcd 에 저장</text>
+  <text class="t-mono" x="769" y="107" text-anchor="middle">여기부터 실재한다</text>
+
+  <text class="t-sub" x="40" y="140">변형이 먼저, 검증이 나중이다. 검증은 <tspan font-family="ui-monospace,Consolas,monospace">변형된 결과</tspan>를 본다</text>
+
+  <!-- 정책+바인딩 -->
+  <rect class="soft" x="40" y="158" width="400" height="146" rx="4"/>
+  <text class="t-h" x="56" y="182">정책과 바인딩은 따로다</text>
+  <rect class="accent" x="56" y="194" width="170" height="52" rx="3"/>
+  <text class="t-title" x="141" y="214" text-anchor="middle">Policy</text>
+  <text class="t-mono" x="141" y="232" text-anchor="middle">무엇을 검사하는가</text>
+  <path class="aline" d="M 226 220 L 258 220" marker-end="url(#ar2)"/>
+  <rect class="accent" x="260" y="194" width="164" height="52" rx="3"/>
+  <text class="t-title" x="342" y="214" text-anchor="middle">Binding</text>
+  <text class="t-mono" x="342" y="232" text-anchor="middle">어디에·어떻게</text>
+  <text class="t-warn" x="56" y="268">정책만 만들면 아무것도 검사하지 않는다</text>
+  <text class="t-sub" x="56" y="288">바인딩의 validationActions 가 Warn 인지 Deny 인지가 승격 단계다</text>
+
+  <!-- 선택 -->
+  <rect class="soft" x="456" y="158" width="384" height="146" rx="4"/>
+  <text class="t-h" x="472" y="182">웹훅과 무엇이 다른가</text>
+  <rect class="box" x="472" y="194" width="352" height="44" rx="3"/>
+  <text class="t-mono" x="482" y="212">웹훅 — 파드·인증서·가용성을 직접 운영</text>
+  <text class="t-sub" x="482" y="229">임의 로직 가능. 그 프록시가 죽으면 클러스터가 멈춘다</text>
+  <rect class="accent" x="472" y="246" width="352" height="44" rx="3"/>
+  <text class="t-mono" x="482" y="264">VAP — API 서버 안에서 CEL 로 평가</text>
+  <text class="t-acc" x="482" y="281">운영할 것이 없다. 대신 외부 조회·상태 저장은 못 한다</text>
+
+  <!-- 실패 -->
+  <text class="t-h" x="56" y="336">막힌 자리를 읽는 법</text>
+  <rect class="warnbox" x="56" y="348" width="384" height="72" rx="3"/>
+  <text class="t-mono" x="66" y="368">CEL 타입 오류</text>
+  <text class="t-sub" x="66" y="386">apply 는 성공한다. 오류는 status.typeChecking 에만 있다</text>
+  <text class="t-warn" x="66" y="404">failurePolicy: Fail 이면 위반 없는 요청까지 거부된다</text>
+
+  <rect class="warnbox" x="456" y="348" width="384" height="72" rx="3"/>
+  <text class="t-mono" x="466" y="368">이미 배포된 위반</text>
+  <text class="t-sub" x="466" y="386">정책은 새 요청에만 걸린다. 돌던 것은 계속 돈다</text>
+  <text class="t-warn" x="466" y="404">--dry-run=server 로 하나씩 다시 제출해 찾아낸다</text>
+</svg>

@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · 프로메테우스 스택 설치 — 쿠버네티스 관측성</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+.why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="index.html">← 목차로</a>
+  <span class="where">CHAPTER 04 / 11</span>
+</div>
+
+<header>
+  <div class="docnum">쿠버네티스 관측성</div>
+  <h1>프로메테우스 스택 설치</h1>
+  <p class="lede">헬름 차트 하나로 프로메테우스·Alertmanager·그라파나·node-exporter·kube-state-metrics 가 한꺼번에 올라온다. 설치는 명령 두 줄이고, 이 장의 내용은 <strong>타깃이 전부 UP 으로 뜨는지 확인하는 절차</strong>다.</p>
+</header>
+
+<h2><span class="n">01</span>왜 이 장이 필요한가</h2>
+
+<p>03장에서 앱이 <code>/actuator/prometheus</code> 를 열어 뒀다. 그런데 아무도 그것을 읽지 않는다. 읽어 갈 쪽을 세우는 것이 이 장이다.</p>
+
+<p>설치 자체는 <code>helm upgrade --install</code> 한 줄이다. 진짜 내용은 그다음이다 — <strong>01장에서 넣은 bind-address 패치가 값을 하는지 여기서 판가름 난다</strong>. 패치가 없으면 <code>kube-controller-manager</code> · <code>kube-scheduler</code> · <code>etcd</code> · <code>kube-proxy</code> 네 타깃이 DOWN 으로 남고, 고치려면 클러스터를 다시 만들어야 한다. 즉 <strong>03장 앱 배포까지 다시 하게 된다</strong>. 그래서 01장에서 미리 넣어 둔 것이고, 이 장의 검증 절이 그 채점표다.</p>
+
+<p>또 하나 미리 알아 둘 것이 있다. 이 장을 마쳐도 <strong>우리 앱 메트릭은 여전히 안 보인다.</strong> 앱은 자동으로 잡히지 않는다. 그 연결이 06장의 주제이고, 여기서는 “클러스터 자체를 보는 눈”까지만 만든다.</p>
+
+
+<h2><span class="n">02</span>알아야 할 개념</h2>
+
+<h3>메트릭이 나오는 곳이 하나가 아니다</h3>
+
+<p class="cap">책 3.4 · 3.5 — “메모리 사용량이 왜 두 군데서 다르게 나오나”에서 헤매지 않으려면</p>
+
+<p>넷을 말로 구분하려 하지 말고, 각각을 <strong>직접 질의해서 나온 메트릭 이름으로</strong> 구분하는 것이 이 장의 실습이다. 이름의 접두사가 곧 출처다 — <code>container_</code> 는 cAdvisor, <code>node_</code> 는 node-exporter, <code>kube_</code> 는 kube-state-metrics 다.</p>
+
+<h3>오퍼레이터는 스크레이프하지 않는다</h3>
+
+<p>가장 많이 오해하는 부분이다. <dfn class="term">프로메테우스 오퍼레이터</dfn>는 메트릭을 수집하지 않는다. <code>ServiceMonitor</code> 같은 커스텀 리소스를 읽어 <strong>프로메테우스의 설정 파일을 만들어 주는 것</strong>이 전부이고, 실제 스크레이프는 프로메테우스 본체가 한다.</p>
+
+<p>이 구분이 06장에서 값을 한다. “ServiceMonitor 를 만들었는데 타깃에 안 보인다”의 원인을 ① 선언이 잘못됨 ② 오퍼레이터가 그것을 <em>고르지 않음</em> ③ 네트워크·인증 실패 셋 중 하나로 좁힐 수 있다.</p>
+
+<h3>계층적으로 본다</h3>
+
+<p>책이 권하는 순서는 노드 → 클러스터 구성요소 → 애드온 → 애플리케이션이다. 파드가 자꾸 대기 상태에 빠지면 먼저 노드 자원을 보고, 문제없으면 스케줄러를, 그다음 애플리케이션을 본다. 순서를 뒤집으면 앱 로그만 하루 종일 보게 된다.</p>
+
+<h3>CRD 는 헬름이 관리해 주지 않는다</h3>
+
+<p>차트를 <strong>처음 설치</strong>할 때는 CRD 가 함께 생성된다. 그런데 <code>helm upgrade</code> 로 차트 버전을 올릴 때 <strong>CRD 는 갱신되지 않는다</strong>. 헬름의 설계상 그렇다. 그리고 <code>helm uninstall</code> 로도 지워지지 않는다. 실습 중에 차트 버전을 올릴 일이 생기면 지우고 다시 설치하는 편이 빠르다.</p>
+
+<h3>용어 정리</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
+  <tr><td>cAdvisor</td><td>Container Advisor</td><td>컨테이너의 실제 자원 사용을 재는 구성요소. kubelet 에 내장돼 있다. 모든 컨테이너 메트릭의 진실 공급원</td></tr>
+  <tr><td>metrics-server</td><td>Metrics Server</td><td>리소스 메트릭 API 의 구현체. <code>kubectl top</code> 과 HPA 가 이것을 쓴다. <strong>장기 저장을 하지 않는다</strong></td></tr>
+  <tr><td>node-exporter</td><td>Node Exporter</td><td><strong>기계의 상태</strong>를 낸다 — 이 노드의 메모리가 몇 바이트 남았는가. 노드마다 하나(DaemonSet)</td></tr>
+  <tr><td>kube-state-metrics</td><td>Kube State Metrics</td><td><strong>API 서버가 아는 상태</strong>를 낸다 — 레플리카 3개를 원하는데 실제로는 2개인가. 클러스터에 하나</td></tr>
+  <tr><td>프로메테우스 오퍼레이터</td><td>Prometheus Operator</td><td>CRD 를 감시해 프로메테우스 설정을 대신 써 주는 컨트롤러. 스크레이프는 하지 않는다</td></tr>
+  <tr><td>CRD</td><td>Custom Resource Definition</td><td>쿠버네티스에 새 리소스 종류를 추가하는 정의. <code>ServiceMonitor</code> 가 이렇게 생긴 것이다</td></tr>
+  <tr><td>ServiceMonitor</td><td>Service Monitor</td><td>“이 라벨을 가진 서비스의 이 포트를 긁어라”를 선언하는 커스텀 리소스 (06장)</td></tr>
+  <tr><td>PrometheusRule</td><td>Prometheus Rule</td><td>알림 규칙과 기록 규칙을 선언하는 커스텀 리소스 (07장)</td></tr>
+  <tr><td>Alertmanager</td><td>Alertmanager</td><td>발생한 알림을 묶고 억제하고 라우팅하는 구성요소 (07장)</td></tr>
+  <tr><td>스크레이프</td><td>Scrape</td><td>프로메테우스가 대상의 <code>/metrics</code> 를 HTTP 로 긁어 오는 동작</td></tr>
+  <tr><td>타깃</td><td>Target</td><td>스크레이프 대상 하나. 살아 있으면 <code>up</code> 이 1 이다</td></tr>
+  <tr><td>job</td><td>Job (라벨)</td><td>같은 종류의 타깃 묶음에 붙는 라벨. <code>kubelet</code> · <code>node-exporter</code> 같은 값</td></tr>
+  <tr><td>보존 기간</td><td>Retention</td><td>시계열을 며칠 보관할지. 실습은 3일로 짧게 잡는다</td></tr>
+  <tr><td>PVC</td><td>Persistent Volume Claim</td><td>디스크를 달라는 요청. 없으면 파드 재시작 시 시계열이 사라진다</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">metrics-server 는 “10분 전 CPU” 에 답하지 못한다</span>
+  <p>리소스 메트릭 API 는 <strong>현재 값만</strong> 제공한다. 과거를 묻는 질문에 답하려고 프로메테우스를 설치하는 것이다. 전임자 힙스터(Heapster)가 데이터 싱크 설계 문제로 사용 중단됐고, 리소스 메트릭 API 를 집계 API 로 표준화하면서 지금 형태가 됐다.</p>
+</blockquote>
+
+<div class="goals">
+  <h3>이 장을 마치면 할 수 있는 것</h3>
+  <ol>
+    <li>차트 하나가 무엇을 설치하는지 구성요소별로 말하고, <code>kubectl -n monitoring get pods</code> 의 각 줄이 무엇인지 짚을 수 있다.</li>
+    <li>메트릭 네 출처를 <em>질의해서</em> 구분할 수 있다 — 이름 접두사로 출처를 안다.</li>
+    <li><code>sum by (job) (up)</code> 한 줄로 타깃 상태를 판정하고, 01장 패치가 걸렸는지 확인할 수 있다.</li>
+    <li>타깃이 실패했을 때 <code>connection refused</code> · <code>x509</code> · <code>401</code> 을 각각 다른 원인으로 읽을 수 있다.</li>
+    <li>차트 버전을 고정해 팀과 공유하고, 없는 버전을 지정했을 때의 에러를 알아볼 수 있다.</li>
+  </ol>
+</div>
+
+
+<h2><span class="n">03</span>최종적으로 만들 것</h2>
+
+<p>이 장이 끝나면 <code>monitoring</code> 네임스페이스에 파드 여덟 개가 돌고, <code>localhost:30900/targets</code> 에 타깃 목록이 뜬다. 그리고 그 목록에서 <strong>DOWN 이 하나도 없어야</strong> 한다.</p>
+
+<h3>메트릭이 나오는 네 곳</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" role="img" aria-label="cAdvisor metrics-server node-exporter kube-state-metrics 네 출처에서 프로메테우스가 메트릭을 당겨 가는 구조">
+  <rect width="1000" height="560" fill="#ffffff"/>
+  <text x="500" y="42" font-size="17" font-weight="700" fill="#15181d" text-anchor="middle">넷을 말로 구분하지 말고 메트릭 이름으로 구분한다</text>
+
+  <defs>
+    <marker id="g1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="76" width="440" height="96" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="106" font-size="13" font-family="monospace" fill="#1f4d8f">cAdvisor</text>
+  <text x="42" y="130" font-size="12.5" fill="#15181d">컨테이너가 실제로 쓴 CPU·메모리. kubelet 에 내장</text>
+  <text x="42" y="156" font-size="12" font-family="monospace" fill="#585f6b">container_cpu_usage_seconds_total · 노드마다</text>
+
+  <rect x="24" y="186" width="440" height="96" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="216" font-size="13" font-family="monospace" fill="#1f4d8f">metrics-server</text>
+  <text x="42" y="240" font-size="12.5" fill="#15181d">kubectl top 과 HPA 가 쓰는 현재 값</text>
+  <text x="42" y="266" font-size="12" font-family="monospace" fill="#8f4408">과거를 묻는 질문에는 답하지 못한다</text>
+
+  <rect x="24" y="296" width="440" height="96" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="326" font-size="13" font-family="monospace" fill="#1f4d8f">node-exporter</text>
+  <text x="42" y="350" font-size="12.5" fill="#15181d">기계의 상태 — 이 노드에 메모리가 얼마 남았나</text>
+  <text x="42" y="376" font-size="12" font-family="monospace" fill="#585f6b">node_memory_MemAvailable_bytes · 노드마다</text>
+
+  <rect x="24" y="406" width="440" height="96" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="436" font-size="13" font-family="monospace" fill="#1f4d8f">kube-state-metrics</text>
+  <text x="42" y="460" font-size="12.5" fill="#15181d">API 서버가 아는 상태 — 원하는 수와 실제 수</text>
+  <text x="42" y="486" font-size="12" font-family="monospace" fill="#585f6b">kube_deployment_status_replicas · 클러스터에 하나</text>
+
+  <path d="M468 124 L592 262" fill="none" stroke="#6a4a9c" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#g1)"/>
+  <path d="M468 234 L592 284" fill="none" stroke="#6a4a9c" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#g1)"/>
+  <path d="M468 344 L592 316" fill="none" stroke="#6a4a9c" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#g1)"/>
+  <path d="M468 454 L592 338" fill="none" stroke="#6a4a9c" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#g1)"/>
+
+  <rect x="600" y="230" width="376" height="140" rx="6" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.8"/>
+  <text x="788" y="272" font-size="16" font-weight="700" fill="#6a4a9c" text-anchor="middle">Prometheus</text>
+  <text x="788" y="302" font-size="12.5" fill="#585f6b" text-anchor="middle">30초마다 네 곳을 모두 당겨 온다</text>
+  <text x="788" y="330" font-size="12" font-family="monospace" fill="#585f6b" text-anchor="middle">localhost:30900</text>
+  <text x="788" y="354" font-size="12.5" fill="#585f6b" text-anchor="middle">여기에 시계열로 쌓인다</text>
+
+  <text x="788" y="410" font-size="13" fill="#15181d" text-anchor="middle">네 곳 모두 프로메테우스가 당겨 온다 — 보내 주는 쪽은 없다</text>
+
+  <line x1="24" y1="524" x2="976" y2="524" stroke="#d8dbe0" stroke-width="1"/>
+  <text x="24" y="548" font-size="13" fill="#8f4408">같은 "메모리"라도 출처가 다르면 값이 다르다 — 컨테이너가 쓴 양과 노드에 남은 양은 다른 질문이다</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> node-exporter 와 kube-state-metrics 는 이름이 비슷해 자주 헷갈린다.
+  전자는 <strong>기계</strong>를 보고 후자는 <strong>API 서버의 기대값</strong>을 본다. 전자는 노드마다 하나(DaemonSet), 후자는 클러스터에 하나면 된다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>노드의 상태를 묻는다.</strong> node-exporter 가 살아 있는지 확인하는 질의다.
+    <span class="chk">확인 <code>node_memory_MemAvailable_bytes / 1024^3</code> → 노드 수만큼의 줄, GiB 단위 숫자</span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>API 서버의 기대값을 묻는다.</strong> kube-state-metrics 가 살아 있는지 본다.
+    <span class="chk">확인 <code>count(kube_pod_info)</code> → 클러스터 전체 파드 수 (한 자릿수~수십)</span>
+  </span></li>
+  <li><span class="b" style="background:#2e7d4f">3</span><span>
+    <strong>컨테이너가 실제로 쓴 양을 묻는다.</strong> cAdvisor 경로가 살아 있는지 본다.
+    <span class="chk">확인 <code>sum by (namespace) (container_memory_working_set_bytes{namespace="apps"})</code> → 바이트 단위 숫자 한 줄</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>이 네 곳을 켜는 설정 — 차트의 스위치</h4>
+
+<p>네 출처 중 <strong>셋은 차트가 알아서</strong> 켠다(cAdvisor 는 kubelet 에 내장, node-exporter 와 kube-state-metrics 는 차트가 설치). 값 파일에서 우리가 정하는 것은 <em>어디에 둘지</em>와 <em>컨트롤 플레인 타깃을 켤지</em>다.</p>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/kps-values.yaml — 배치와 스위치</span>
+<pre><code class="language-yaml">prometheus:
+  prometheusSpec:
+    nodeSelector:
+      workload: observability     # 01장 라벨. 관측 스택을 obs-worker2 에 모은다
+    scrapeInterval: 30s           # 그림의 "30초마다"
+
+kube-state-metrics:
+  nodeSelector:
+    workload: observability
+
+# 01장에서 bind-address 를 0.0.0.0 으로 열어둔 덕분에 아래가 동작한다.
+# 패치가 없으면 네 개 모두 DOWN 이다.
+kubeControllerManager:
+  enabled: true
+kubeScheduler:
+  enabled: true
+kubeEtcd:
+  enabled: true
+kubeProxy:
+  enabled: true</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>출처</th><th>어떻게 켜지나</th><th>값 파일에서 정하는 것</th></tr>
+  <tr><td>cAdvisor</td><td>kubelet 에 내장. 차트가 kubelet 타깃을 만든다</td><td>없다</td></tr>
+  <tr><td>node-exporter</td><td>차트가 DaemonSet 으로 설치</td><td>자원 요청 정도</td></tr>
+  <tr><td>kube-state-metrics</td><td>차트가 Deployment 로 설치</td><td><code>nodeSelector</code></td></tr>
+  <tr><td>컨트롤 플레인 4종</td><td><code>enabled: true</code> + <strong>01장 bind-address 패치</strong></td><td>포트와 TLS 옵션 (06절)</td></tr>
+</table>
+</div>
+
+
+<h3>선언이 스크레이프가 되기까지</h3>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 420" role="img" aria-label="사람이 ServiceMonitor를 선언하면 오퍼레이터가 설정을 만들고 프로메테우스가 타깃을 긁는 흐름">
+  <rect width="1000" height="420" fill="#ffffff"/>
+
+  <defs>
+    <marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#585f6b"/>
+    </marker>
+    <marker id="g3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="60" width="290" height="120" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="92" font-size="14" font-weight="700" fill="#15181d">1. 사람이 선언한다</text>
+  <text x="42" y="118" font-size="12" font-family="monospace" fill="#585f6b">ServiceMonitor</text>
+  <text x="42" y="140" font-size="12" font-family="monospace" fill="#585f6b">PrometheusRule</text>
+  <text x="42" y="164" font-size="12.5" fill="#585f6b">kubectl apply 로 올린다</text>
+
+  <line x1="316" y1="120" x2="351" y2="120" stroke="#585f6b" stroke-width="2" marker-end="url(#g2)"/>
+
+  <rect x="355" y="60" width="290" height="120" rx="6" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.8"/>
+  <text x="373" y="92" font-size="14" font-weight="700" fill="#6a4a9c">2. 오퍼레이터</text>
+  <text x="373" y="118" font-size="12.5" fill="#585f6b">CRD 를 감시하다가</text>
+  <text x="373" y="140" font-size="12.5" fill="#585f6b">스크레이프 설정을 만들어</text>
+  <text x="373" y="164" font-size="12.5" fill="#585f6b">Secret 으로 저장한다</text>
+
+  <line x1="647" y1="120" x2="682" y2="120" stroke="#585f6b" stroke-width="2" marker-end="url(#g2)"/>
+
+  <rect x="686" y="60" width="290" height="120" rx="6" fill="#ffffff" stroke="#2e7d4f" stroke-width="1.8"/>
+  <text x="704" y="92" font-size="14" font-weight="700" fill="#2e7d4f">3. 프로메테우스</text>
+  <text x="704" y="118" font-size="12.5" fill="#585f6b">설정을 다시 읽고</text>
+  <text x="704" y="140" font-size="12.5" fill="#585f6b">직접 HTTP 요청을 보내</text>
+  <text x="704" y="164" font-size="12.5" fill="#585f6b">메트릭을 가져온다</text>
+
+  <line x1="800" y1="182" x2="800" y2="236" stroke="#2e7d4f" stroke-width="2" marker-end="url(#g3)"/>
+  <text x="818" y="214" font-size="12" font-family="monospace" fill="#2e7d4f">GET /metrics</text>
+
+  <rect x="686" y="240" width="290" height="86" rx="6" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="704" y="272" font-size="13" fill="#15181d">타깃 — 파드 · 노드 · 컨트롤 플레인</text>
+  <text x="704" y="300" font-size="12" font-family="monospace" fill="#8f4408">여기서 실패하면 up == 0</text>
+
+  <text x="42" y="232" font-size="12.5" fill="#8f4408">오퍼레이터는 메트릭을</text>
+  <text x="42" y="256" font-size="12.5" fill="#8f4408">한 바이트도 긁지 않는다</text>
+
+  <line x1="24" y1="352" x2="976" y2="352" stroke="#d8dbe0" stroke-width="1"/>
+  <text x="24" y="382" font-size="13" fill="#15181d">타깃이 안 보일 때 의심할 곳 — ① 선언이 잘못됨  ② 오퍼레이터가 고르지 않음  ③ 네트워크·인증 실패</text>
+  <text x="24" y="406" font-size="12.5" fill="#585f6b">①은 kubectl 로, ②는 프로메테우스 Secret 으로, ③은 /targets 의 Error 열로 판정한다</text>
+</svg>
+<figcaption>
+  <b>그림 2.</b> ②번 단계에 함정이 있다. 오퍼레이터는 아무 <code>ServiceMonitor</code> 나 읽지 않고,
+  프로메테우스 리소스에 정의된 <em>셀렉터</em>에 맞는 것만 고른다. 기본값은 “헬름 릴리스 이름과 같은 <code>release</code> 라벨을 가진 것”이다 — 06장의 첫 관문이다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>선언이 클러스터에 있는지.</strong> 지금은 차트가 만든 것들만 있다.
+    <span class="chk">확인 <code>kubectl -n monitoring get servicemonitors</code> → 차트가 만든 열 몇 줄</span>
+  </span></li>
+  <li><span class="b" style="background:#6a4a9c">2</span><span>
+    <strong>오퍼레이터가 그것을 골랐는지.</strong> 골라 만든 설정이 Secret 에 들어 있다.
+    <span class="chk">확인 <code>kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}'</code> → <code>{"matchLabels":{"release":"kps"}}</code></span>
+  </span></li>
+  <li><span class="b" style="background:#2e7d4f">3</span><span>
+    <strong>실제로 긁고 있는지.</strong> 이 장의 최종 판정이다.
+    <span class="chk">확인 <code>curl -s --get localhost:30900/api/v1/query --data-urlencode 'query=up == 0'</code> → <code>result</code> 가 빈 배열</span>
+  </span></li>
+</ul>
+
+<h4><span class="why">WHY</span>②번의 셀렉터 — release 라벨</h4>
+
+<p>오퍼레이터가 무엇을 고르는지는 <strong>프로메테우스 리소스</strong>에 적혀 있다. 값 파일에서 따로 건드리지 않으면 차트가 기본값을 넣는다.</p>
+
+<pre><code class="language-bash">kubectl -n monitoring get prometheus -o yaml \
+  | grep -A3 'serviceMonitorSelector'</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-yaml">    serviceMonitorSelector:
+      matchLabels:
+        release: kps</code></pre>
+
+<blockquote class="warn">
+  <span class="label">이 한 줄이 06장의 첫 관문이다</span>
+  <p>우리가 만들 <code>ServiceMonitor</code> 에 <code>release: kps</code> 라벨이 없으면, 문법이 완벽해도 오퍼레이터가 <strong>그것을 아예 읽지 않는다</strong>. 에러도 나지 않는다 — 그냥 조용히 무시된다. 06장에서 이것을 먼저 틀려 보고 고친다. 릴리스 이름을 <code>kps</code> 로 정한 이유이기도 하다.</p>
+</blockquote>
+
+
+<h2><span class="n">04</span>실습 파일 위치</h2>
+
+<div class="srcbox">
+  <span class="fp">저장소 안의 위치</span>
+<pre><code class="language-text">study/labs/monitoring/
+├── kps-values.yaml       ← 이 장에서 쓰는 값 파일
+├── loki-values.yaml      08장
+├── alloy-values.yaml     08장
+└── dashboards/           05장 대시보드 JSON</code></pre>
+</div>
+
+<pre><code class="language-bash">cd study/labs/monitoring
+ls</code></pre>
+
+
+<h2><span class="n">05</span>차트 버전 확정</h2>
+
+<p class="cap">목적: 팀 전체가 같은 차트 버전을 쓰게 만든다. 버전이 갈리면 07장에서 대시보드 JSON 이 어긋난다.</p>
+
+<p>문서에 버전을 박아 두지 않는다. 설치 직전에 확인하고, 그 값을 공유한다.</p>
+
+<pre><code class="language-bash">helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm search repo prometheus-community/kube-prometheus-stack --versions | head -4</code></pre>
+
+<p class="cap">--- 출력 (숫자는 실습 당일에 다르다) ---</p>
+
+<pre class="out"><code class="language-text">NAME                                            CHART VERSION   APP VERSION
+prometheus-community/kube-prometheus-stack      88.3.0          v0.91.0
+prometheus-community/kube-prometheus-stack      88.2.1          v0.91.0
+prometheus-community/kube-prometheus-stack      88.1.0          v0.90.2</code></pre>
+
+<blockquote class="ok">
+  <span class="label">읽는 법</span>
+  <p><strong>CHART VERSION</strong> 은 차트의 버전, <strong>APP VERSION</strong> 은 프로메테우스 오퍼레이터의 버전이다. 둘은 따로 움직인다. 아래 설치 명령의 <code>--version</code> 에 맨 위 값을 넣는다. 이 문서는 88.3.0 기준으로 쓴다.</p>
+</blockquote>
+
+<blockquote class="warn">
+  <span class="label">CRD 는 헬름이 업그레이드해 주지 않는다</span>
+  <p>처음 설치할 때는 CRD 가 함께 생성되지만 <code>helm upgrade</code> 로는 갱신되지 않고, <code>helm uninstall</code> 로도 지워지지 않는다. 메이저 버전을 건너뛰어 올릴 때는 릴리스 노트를 읽고 CRD 를 <code>kubectl apply</code> 로 먼저 갱신해야 한다. 실습 중이라면 지우고 다시 설치하는 편이 빠르다 — 12절에 절차가 있다.</p>
+</blockquote>
+
+
+<h2><span class="n">06</span>값 파일</h2>
+
+<div class="srcbox">
+  <span class="fp">study/labs/monitoring/kps-values.yaml — 프로메테우스 본체</span>
+<pre><code class="language-yaml">prometheus:
+  service:
+    # 01장에서 뚫어둔 호스트 포트 30900과 짝
+    type: NodePort
+    nodePort: 30900
+  prometheusSpec:
+    # 관측 스택은 obs-worker2에 모은다
+    nodeSelector:
+      workload: observability
+
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # 실습용. 로컬 디스크를 아끼기 위해 짧게 잡는다.
+    retention: 3d
+    retentionSize: 4GB
+
+    # kind에는 local-path 기반 기본 StorageClass(standard)가 이미 있다.
+    # storageSpec을 생략하면 emptyDir이 되어 파드 재시작 시 데이터가 사라진다.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 8Gi
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 900Mi
+      limits:
+        memory: 1600Mi</code></pre>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>설정</th><th>정하는 것</th><th>빼면</th></tr>
+  <tr><td><code>nodePort: 30900</code></td><td>맥에서 여는 주소</td><td>임의 포트가 배정돼 01장 매핑과 어긋난다</td></tr>
+  <tr><td><code>scrapeInterval: 30s</code></td><td>얼마나 자주 긁을지</td><td>차트 기본값(보통 30s)을 쓴다. 짧게 잡으면 시계열이 촘촘해지고 디스크를 더 쓴다</td></tr>
+  <tr><td><code>retention: 3d</code></td><td>며칠 보관할지</td><td>기본 10일. 노트북 디스크가 줄어든다</td></tr>
+  <tr><td><code>storageSpec</code></td><td>디스크를 붙인다</td><td><strong>emptyDir 이 되어 파드가 재시작하면 시계열이 전부 사라진다</strong></td></tr>
+</table>
+</div>
+
+<div class="srcbox">
+  <span class="fp">kps-values.yaml — 컨트롤 플레인 타깃</span>
+<pre><code class="language-yaml"># 01장에서 bind-address를 0.0.0.0으로 열어둔 덕분에
+# 아래 설정이 실제로 동작한다. 패치가 없으면 전부 DOWN이다.
+kubeControllerManager:
+  enabled: true
+  service:
+    port: 10257
+    targetPort: 10257
+  serviceMonitor:
+    # HTTPS를 끄지 않는다. kind의 인증서는 노드 IP를 SAN에 갖고 있지 않으므로
+    # 검증만 건너뛴다.
+    https: true
+    insecureSkipVerify: true
+
+kubeScheduler:
+  enabled: true
+  service:
+    port: 10259
+    targetPort: 10259
+  serviceMonitor:
+    https: true
+    insecureSkipVerify: true
+
+kubeEtcd:
+  enabled: true
+  service:
+    # 2379는 상호 TLS가 필요한 클라이언트 포트다.
+    # 메트릭 전용 2381을 쓴다 (01장 listen-metrics-urls 설정).
+    port: 2381
+    targetPort: 2381
+  serviceMonitor:
+    scheme: http
+
+kubeProxy:
+  enabled: true
+  service:
+    port: 10249
+    targetPort: 10249</code></pre>
+</div>
+
+<blockquote class="warn">
+  <span class="label">insecureSkipVerify 를 쓰는 이유와 한계</span>
+  <p>컨트롤 플레인 구성요소는 HTTPS 로 메트릭을 제공하는데, 인증서에 노드 IP 가 들어 있지 않아 이름 검증에 실패한다. 로컬 클러스터에서는 검증만 건너뛰는 것이 현실적이다. <strong>암호화와 토큰 인증은 그대로 유지</strong>되므로, 아예 HTTPS 를 끄고 평문 포트를 여는 방법보다 안전하다. 운영 클러스터에서는 적절한 SAN 을 가진 인증서를 발급해 이 옵션을 끄는 것이 정답이다.</p>
+</blockquote>
+
+<blockquote>
+  <span class="label">차트 기본값과 겹치는 부분이 있다</span>
+  <p>최근 차트는 <code>kubeEtcd</code> 의 포트를 이미 2381 로 두는 등 기본값이 개선됐다. 그래도 명시적으로 적는 이유는 <strong>값 파일만 읽어도 “왜 이 포트인가”가 드러나게</strong> 하기 위해서다. 기본값에 의존하면 차트가 바뀌었을 때 원인을 찾기 어렵다.</p>
+</blockquote>
+
+<div class="srcbox">
+  <span class="fp">kps-values.yaml — 그라파나와 나머지 (설정은 05장에서)</span>
+<pre><code class="language-yaml">grafana:
+  # 실습 전용 비밀번호. 운영에서는 Secret으로 주입한다.
+  adminPassword: obs-study
+  nodeSelector:
+    workload: observability
+  service:
+    type: NodePort
+    nodePort: 30300
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      workload: observability
+
+prometheusOperator:
+  nodeSelector:
+    workload: observability
+
+kube-state-metrics:
+  nodeSelector:
+    workload: observability</code></pre>
+</div>
+
+
+<h2><span class="n">07</span>설치</h2>
+
+<pre><code class="language-bash">helm upgrade --install kps prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  --version 88.3.0 \
+  -f kps-values.yaml \
+  --wait --timeout 15m</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>옵션</th><th>하는 일</th></tr>
+  <tr><td><code>upgrade --install</code></td><td>없으면 설치, 있으면 갱신. 재실행해도 안전하다</td></tr>
+  <tr><td><code>kps</code></td><td>릴리스 이름. <strong>이 값이 리소스 이름과 <code>release</code> 라벨에 들어간다</strong> — 06장 ServiceMonitor 의 라벨 값이 된다</td></tr>
+  <tr><td><code>--create-namespace</code></td><td><code>monitoring</code> 네임스페이스를 없으면 만든다</td></tr>
+  <tr><td><code>--version</code></td><td>차트 버전 고정. 빼면 그날의 최신이 설치돼 팀마다 달라진다</td></tr>
+  <tr><td><code>--wait --timeout 15m</code></td><td>파드가 Ready 가 될 때까지 기다린다. 5~8분간 출력이 없는 것이 정상이다</td></tr>
+</table>
+</div>
+
+<pre><code class="language-bash">kubectl -n monitoring get pods</code></pre>
+
+<p class="cap">--- 출력 (파드 접미사는 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">NAME                                              READY   STATUS    RESTARTS   AGE
+alertmanager-kps-kube-prometheus-alertmanager-0   2/2     Running   0          4m
+kps-grafana-6d4f8c7b95-2xvqk                      3/3     Running   0          4m
+kps-kube-prometheus-operator-7c9b6d4f8-lm5zt      1/1     Running   0          4m
+kps-kube-state-metrics-5f7d9c8b64-w9pqr           1/1     Running   0          4m
+kps-prometheus-node-exporter-4kt2m                1/1     Running   0          4m
+kps-prometheus-node-exporter-9xnbd                1/1     Running   0          4m
+kps-prometheus-node-exporter-vc8sl                1/1     Running   0          4m
+prometheus-kps-kube-prometheus-prometheus-0       2/2     Running   0          4m</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>node-exporter 가 <strong>3개</strong>여야 한다 — 노드 수와 같다. DaemonSet 이기 때문이다. 그라파나 파드가 <code>3/3</code> 인 이유는 대시보드와 데이터소스를 감시하는 사이드카 2개가 함께 뜨기 때문이다(05장). 파드 이름에 들어간 <code>kps</code> 가 릴리스 이름이다.</p>
+</blockquote>
+
+<pre><code class="language-bash"># CRD가 등록됐는지
+kubectl get crd | grep monitoring.coreos.com
+
+# 스토리지가 실제로 붙었는지 (Bound여야 한다)
+kubectl -n monitoring get pvc</code></pre>
+
+
+<h2><span class="n">08</span>타깃 검증 — 이 장의 핵심</h2>
+
+<p>브라우저에서 <code>localhost:30900/targets</code> 를 열면 타깃 목록이 보인다. 하지만 눈으로 세는 것보다 질의로 확인하는 편이 빠르고 정확하다.</p>
+
+<p class="cap">목적: job 별로 살아 있는 타깃 수를 센다.</p>
+
+<pre><code class="language-bash">curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=sum by (job) (up)' \
+  | jq -r '.data.result[] | "\(.metric.job)\t\(.value[1])"' \
+  | sort</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">alertmanager                1
+apiserver                   1
+coredns                     2
+kps-grafana                 1
+kube-controller-manager     1
+kube-dns                    2
+kube-etcd                   1
+kube-proxy                  3
+kube-scheduler              1
+kube-state-metrics          1
+kubelet                     3
+node-exporter               3
+prometheus                  1
+prometheus-operator         1</code></pre>
+
+<blockquote class="ok">
+  <span class="label">여기가 01장의 채점 결과다</span>
+  <p><code>kube-controller-manager</code> · <code>kube-scheduler</code> · <code>kube-etcd</code> · <code>kube-proxy</code> 네 개가 1 이상이면 bind-address 패치가 제대로 걸린 것이다. 아예 안 나오거나 0 이면 01장으로 돌아가야 하고, <strong>클러스터를 다시 만들어야 하므로 03장 앱 배포도 다시 하게 된다.</strong></p>
+  <p><code>kube-proxy</code> 와 <code>kubelet</code> 과 <code>node-exporter</code> 가 3 인 것은 노드마다 하나씩이기 때문이다. 이 숫자가 2 라면 노드 하나가 빠진 것이다.</p>
+</blockquote>
+
+<p class="cap">목적: 실패한 타깃만 골라 본다. 이상적으로는 아무것도 안 나와야 한다.</p>
+
+<pre><code class="language-bash">curl -s --get http://localhost:30900/api/v1/query \
+  --data-urlencode 'query=up == 0' \
+  | jq -r '.data.result[] | "\(.metric.job)  \(.metric.instance)"'</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p>출력이 비어 있으면 통과다. 무언가 나오면 <code>/targets</code> 화면에서 해당 항목의 <strong>Error</strong> 열을 읽는다. 문구에 따라 원인이 갈린다.</p>
+</blockquote>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Error 열 문구</th><th>무엇이 문제인가</th><th>어디를 보나</th></tr>
+  <tr><td><code>connection refused</code></td><td>포트가 그 주소로 열려 있지 않다</td><td>01장 bind-address 패치</td></tr>
+  <tr><td><code>context deadline exceeded</code></td><td>연결은 되는데 응답이 없다</td><td>포트 번호. etcd 라면 2379 가 아니라 2381 인지</td></tr>
+  <tr><td><code>x509: cannot validate certificate</code></td><td>인증서 이름 검증 실패</td><td><code>insecureSkipVerify: true</code> 가 빠졌다</td></tr>
+  <tr><td><code>401</code> / <code>403</code></td><td>인증은 됐는데 권한이 없다</td><td>RBAC. 차트가 만든 ClusterRole 확인</td></tr>
+</table>
+</div>
+
+
+<h2><span class="n">09</span>기본 타깃 지도</h2>
+
+<p>지금 수집되고 있는 것들의 정체다. 07장 대시보드의 재료가 전부 여기서 나온다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>job</th><th>포트</th><th>무엇을 알려주나</th></tr>
+  <tr><td><code>apiserver</code></td><td>6443</td><td>API 요청 지연·에러율. 클러스터 건강의 1차 지표</td></tr>
+  <tr><td><code>kubelet</code></td><td>10250</td><td>노드별 파드·컨테이너 상태. <strong>cAdvisor 컨테이너 지표가 여기 포함</strong></td></tr>
+  <tr><td><code>node-exporter</code></td><td>9100</td><td>CPU·메모리·디스크·네트워크 (USE 지표의 재료)</td></tr>
+  <tr><td><code>kube-state-metrics</code></td><td>8080</td><td>레플리카 수, 파드 재시작 횟수, PVC 상태</td></tr>
+  <tr><td><code>kube-controller-manager</code></td><td>10257</td><td>컨트롤러 큐 깊이, 조정 지연 — 01장 패치 필요</td></tr>
+  <tr><td><code>kube-scheduler</code></td><td>10259</td><td>스케줄링 시도·지연 — 01장 패치 필요</td></tr>
+  <tr><td><code>kube-etcd</code></td><td>2381</td><td>디스크 동기화 지연, DB 크기 — 01장 패치 필요</td></tr>
+  <tr><td><code>kube-proxy</code></td><td>10249</td><td>규칙 동기화 지연 — 01장 패치 필요</td></tr>
+  <tr><td><code>coredns</code> / <code>kube-dns</code></td><td>9153</td><td>DNS 질의 수와 실패율</td></tr>
+  <tr><td><code>prometheus</code> 외</td><td>—</td><td>스택 자기 자신의 상태</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">목록에 우리 앱이 없다</span>
+  <p>앱은 자동으로 잡히지 않는다. 06장에서 <code>ServiceMonitor</code> 를 만들어야 <code>order-api</code> 와 <code>gateway</code> 가 이 표에 추가된다. 지금 <code>orders_created_total</code> 을 질의하면 결과가 비어 있는 것이 정상이다.</p>
+</blockquote>
+
+
+<h2><span class="n">10</span>첫 PromQL 다섯 개</h2>
+
+<p><code>localhost:30900/graph</code> 에서 실행해 본다. 본격적인 질의는 06장에서 다루고, 여기서는 설치가 제대로 됐는지 확인하는 정도만 쓴다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>질의</th><th>확인하는 것</th></tr>
+  <tr><td><code>up</code></td><td>모든 타깃의 생사. 값이 1이면 마지막 스크레이프 성공</td></tr>
+  <tr><td><code>count(kube_pod_info)</code></td><td>클러스터 전체 파드 수. kube-state-metrics 동작 확인</td></tr>
+  <tr><td><code>sum by (node) (kube_pod_info)</code></td><td>노드별 파드 분포. 03장 노드셀렉터가 먹었는지 보인다</td></tr>
+  <tr><td><code>node_memory_MemAvailable_bytes / 1024^3</code></td><td>노드별 여유 메모리(GiB). node-exporter 동작 확인</td></tr>
+  <tr><td><code>rate(apiserver_request_total[5m])</code></td><td>API 서버 초당 요청 수. <code>rate()</code> 감각 익히기</td></tr>
+</table>
+</div>
+
+<p>이름의 접두사를 보면 출처를 알 수 있다 — <code>kube_</code> 는 kube-state-metrics, <code>node_</code> 는 node-exporter, <code>container_</code> 는 cAdvisor, <code>apiserver_</code> 는 API 서버 자신이다. <strong>그림 1의 네 상자가 이 접두사로 구분된다.</strong></p>
+
+
+<h2><span class="n">11</span>일부러 실패시키기 — 버전과 CRD</h2>
+
+<p class="cap">아래 두 출력은 Helm v4.2.4 · kind 클러스터(Kubernetes 1.37)에서 재현했다 (확인 2026-09-13). 둘 다 클러스터를 바꾸지 않는다.</p>
+
+<h3>실패 1 — 문서에 박힌 버전이 사라졌을 때</h3>
+
+<p class="cap">목적: 버전을 고정하는 습관의 대가를 미리 겪는다. 차트 저장소는 옛 버전을 영원히 두지 않는다.</p>
+
+<pre><code class="language-bash">helm upgrade --install kps prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  --version 999.0.0 --dry-run=client</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">Error: chart "kube-prometheus-stack" matching 999.0.0 not found in prometheus-community index.
+(try 'helm repo update'): no chart version found for kube-prometheus-stack-999.0.0</code></pre>
+
+<blockquote class="ok">
+  <span class="label">읽는 법</span>
+  <p>메시지가 친절하게 <code>try 'helm repo update'</code> 를 권한다. <strong>먼저 그것부터 한다</strong> — 로컬 인덱스가 오래돼 새 버전을 모르는 경우가 실제로 흔하다. 업데이트 후에도 같은 메시지가 나오면 그 버전이 정말 없는 것이고, 05절의 <code>helm search repo --versions</code> 로 현재 있는 목록을 확인해 고른다.</p>
+  <p><code>--dry-run=client</code> 를 붙였으므로 클러스터에는 아무 일도 일어나지 않는다. 설치 전에 값 파일과 버전을 점검할 때 쓰는 방법이다.</p>
+</blockquote>
+
+<h3>실패 2 — CRD 가 없는데 커스텀 리소스를 올릴 때</h3>
+
+<p class="cap">목적: 06장에서 만날 에러를 미리 본다. 설치 순서가 틀렸거나 apiVersion 이 틀리면 같은 메시지가 난다.</p>
+
+<pre><code class="language-bash">cat &lt;&lt;'EOF' | kubectl apply --dry-run=server -f -
+apiVersion: monitoring.coreos.com/v1beta1   # 실제로는 v1 이다
+kind: ServiceMonitor
+metadata:
+  name: bogus
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: none
+  endpoints:
+    - port: http
+EOF</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">error: resource mapping not found for name: "bogus" namespace: "monitoring" from "STDIN":
+no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1beta1"
+ensure CRDs are installed first</code></pre>
+
+<blockquote class="ok">
+  <span class="label">읽는 법</span>
+  <p><code>no matches for kind</code> 는 <strong>“그런 종류의 리소스를 이 클러스터가 모른다”</strong>는 뜻이다. 원인은 둘 중 하나다 — CRD 가 아직 설치되지 않았거나, <code>apiVersion</code> 을 틀리게 적었거나. 어느 쪽인지는 등록된 버전을 직접 물어보면 갈린다.</p>
+</blockquote>
+
+<pre><code class="language-bash">kubectl get crd servicemonitors.monitoring.coreos.com \
+  -o jsonpath='{.spec.versions[*].name}'</code></pre>
+
+<p>값이 나오면 CRD 는 있는 것이고, 나온 버전(<code>v1</code>)을 쓰면 된다. 명령 자체가 <code>NotFound</code> 로 실패하면 차트가 CRD 를 만들지 못한 것이다 — 07절 설치로 돌아간다.</p>
+
+
+<h2><span class="n">12</span>자주 겪는 문제</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>증상</th><th>원인과 조치</th></tr>
+  <tr><td>설치가 <code>timed out waiting for the condition</code> 으로 실패</td><td>대개 메모리 부족. <code>kubectl -n monitoring get pods</code> 로 <code>Pending</code> 파드를 찾고 <code>describe</code> 의 Events 를 본다. Docker Desktop 할당을 10 GiB 이상으로 올린다</td></tr>
+  <tr><td>프로메테우스 파드가 <code>Pending</code>, PVC 도 <code>Pending</code></td><td>기본 StorageClass 가 없거나 노드셀렉터와 볼륨의 노드 친화성이 충돌. <code>kubectl get sc</code> 에 <code>standard (default)</code> 가 있는지 확인</td></tr>
+  <tr><td><code>kube-controller-manager</code> 타깃이 목록에 아예 없음</td><td>값 파일에서 <code>enabled: false</code> 이거나 해당 서비스의 셀렉터에 맞는 파드가 없다. <code>kubectl -n kube-system get svc | grep kps</code> 로 서비스 생성 여부 확인</td></tr>
+  <tr><td>타깃은 있는데 <code>connection refused</code></td><td>01장 bind-address 패치 누락. 클러스터 재생성이 필요하다</td></tr>
+  <tr><td>etcd 타깃이 <code>context deadline exceeded</code></td><td>2379(클라이언트 포트)로 붙고 있다. <code>kubeEtcd.service.targetPort</code> 가 2381 인지 확인</td></tr>
+  <tr><td><code>x509: cannot validate certificate</code></td><td><code>insecureSkipVerify: true</code> 가 빠졌다</td></tr>
+  <tr><td><code>localhost:30900</code> 접속 불가</td><td>01장 <code>hostPort: 30900</code> 과 값 파일의 <code>nodePort: 30900</code> 이 어긋났다</td></tr>
+  <tr><td><code>no matches for kind "ServiceMonitor"</code></td><td>CRD 미설치 또는 <code>apiVersion</code> 오타 (11절 실패 2)</td></tr>
+  <tr><td>대시보드가 비어 있고 <code>No data</code></td><td>05장에서 다룬다. 지금은 프로메테우스 UI 만 확인하면 된다</td></tr>
+</table>
+</div>
+
+<h3>다시 설치하기</h3>
+
+<pre><code class="language-bash">helm -n monitoring uninstall kps
+
+# PVC는 남는다. 데이터까지 지우려면 명시적으로 삭제한다.
+kubectl -n monitoring delete pvc --all
+
+# CRD는 uninstall로 지워지지 않는다. 완전히 초기화하려면 삭제한다.
+# 주의: 다른 릴리스가 같은 CRD를 쓰고 있으면 함께 깨진다.
+kubectl get crd -o name | grep monitoring.coreos.com | xargs -r kubectl delete</code></pre>
+
+<blockquote class="warn">
+  <span class="label">마지막 줄은 되돌릴 수 없다</span>
+  <p>CRD 를 지우면 그 종류의 리소스가 <strong>전부 함께 사라진다</strong>. 직접 만든 <code>ServiceMonitor</code> 와 <code>PrometheusRule</code> 도 같이 없어진다. 실습 클러스터에서만 쓴다.</p>
+</blockquote>
+
+
+<div class="appendix">
+
+<h2>부록 A. 완료 체크리스트</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>확인</th><th>기대값</th></tr>
+  <tr><td><code>kubectl -n monitoring get pods</code></td><td>모든 파드가 <code>Running</code></td></tr>
+  <tr><td><code>kubectl -n monitoring get pods | grep -c node-exporter</code></td><td><code>3</code> (노드 수와 같다)</td></tr>
+  <tr><td><code>kubectl -n monitoring get pvc</code></td><td><code>Bound</code></td></tr>
+  <tr><td><code>kubectl get crd | grep -c monitoring.coreos.com</code></td><td>0 보다 크다</td></tr>
+  <tr><td><code>up == 0</code> 질의</td><td>결과가 비어 있다</td></tr>
+  <tr><td><code>sum by (job) (up)</code> 질의</td><td><code>kube-controller-manager</code> · <code>kube-scheduler</code> · <code>kube-etcd</code> · <code>kube-proxy</code> 네 job 이 모두 있다</td></tr>
+  <tr><td><code>curl -s -o /dev/null -w '%{http_code}' localhost:30900/targets</code></td><td><code>200</code></td></tr>
+  <tr><td><code>curl -s -o /dev/null -w '%{http_code}' localhost:30300/login</code></td><td><code>200</code> (admin / obs-study)</td></tr>
+  <tr><td><code>kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}'</code></td><td><code>release: kps</code> (06장에서 쓴다)</td></tr>
+  <tr><td>팀이 쓸 차트 버전 기록</td><td>값 파일 주석이나 README 에 적었다 (이해 확인)</td></tr>
+</table>
+</div>
+
+<h2>부록 B. 명령어 레퍼런스</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>명령</th><th>하는 일</th></tr>
+  <tr><td><code>helm repo add prometheus-community https://prometheus-community.github.io/helm-charts</code></td><td>차트 저장소 등록</td></tr>
+  <tr><td><code>helm repo update</code></td><td>로컬 인덱스 갱신. 버전이 안 보일 때 먼저 한다</td></tr>
+  <tr><td><code>helm search repo prometheus-community/kube-prometheus-stack --versions</code></td><td>설치 가능한 차트 버전 목록</td></tr>
+  <tr><td><code>helm upgrade --install kps ... -f kps-values.yaml</code></td><td>스택 설치. 재실행해도 안전하다</td></tr>
+  <tr><td><code>helm ... --dry-run=client</code></td><td>클러스터를 건드리지 않고 값과 버전만 점검</td></tr>
+  <tr><td><code>helm -n monitoring uninstall kps</code></td><td>릴리스 삭제. PVC 와 CRD 는 남는다</td></tr>
+  <tr><td><code>kubectl -n monitoring get pods</code></td><td>설치된 파드가 전부 Running·Ready 인지</td></tr>
+  <tr><td><code>kubectl get crd | grep monitoring.coreos.com</code></td><td>오퍼레이터가 쓰는 커스텀 리소스 종류 확인</td></tr>
+  <tr><td><code>curl -s --get localhost:30900/api/v1/query --data-urlencode 'query=...'</code></td><td>PromQL 을 API 로 실행. 이 장의 핵심 검증</td></tr>
+  <tr><td><code>kubectl -n monitoring get prometheus -o yaml</code></td><td>오퍼레이터가 무엇을 고르는지(셀렉터) 확인</td></tr>
+</table>
+</div>
+
+<h2>부록 C. 참고 출처</h2>
+
+<div class="src">
+<ul>
+  <li>kube-prometheus-stack 차트 — https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack</li>
+  <li>차트 기본값 (kubeEtcd 포트, serviceMonitor 옵션) — https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml</li>
+  <li>차트 최신 버전 확인 — https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack</li>
+  <li>헬름과 CRD 의 관계 — https://helm.sh/docs/chart_best_practices/custom_resource_definitions/</li>
+  <li>프로메테우스 오퍼레이터 설계 — https://prometheus-operator.dev/docs/getting-started/design/</li>
+  <li>kubeadm 클러스터에서 컨트롤 플레인 메트릭 노출 배경 — https://github.com/prometheus-operator/kube-prometheus/blob/main/docs/kube-prometheus-on-kubeadm.md</li>
+  <li>리소스 메트릭 파이프라인 (metrics-server 의 위치) — https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/</li>
+  <li>kube-state-metrics 문서 — https://github.com/kubernetes/kube-state-metrics</li>
+</ul>
+</div>
+
+</div>
+
+<div class="pager">
+  <a href="ch03-containerize-deploy.html">
+    <span class="dir">← 이전</span>
+    <span class="t">03 · 컨테이너화와 배포</span>
+  </a>
+  <a class="next" href="ch05-grafana-dashboards.html">
+    <span class="dir">다음 →</span>
+    <span class="t">05 · 그라파나와 대시보드</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

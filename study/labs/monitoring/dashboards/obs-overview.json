@@ -1,0 +1,47 @@
+{
+  "uid": "obs-study-overview",
+  "title": "Obs Study — 클러스터 한눈에",
+  "tags": ["obs-study"],
+  "timezone": "Asia/Seoul",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "스크레이프 실패 타깃 수",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "count(up == 0) or vector(0)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "노드별 여유 메모리 (GiB)",
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "decgbytes" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "node_memory_MemAvailable_bytes{job=\"node-exporter\"} / 1024^3",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "노드별 파드 수",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (node) (kube_pod_info)",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    }
+  ]
+}

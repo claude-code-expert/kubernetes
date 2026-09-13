@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+    </marker>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+    .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
+  <text class="t-h" x="40" y="46">자격 증명이 어디에 있는가로 갈린다</text>
+
+  <!-- 푸시 -->
+  <rect class="soft" x="40" y="66" width="400" height="140" rx="4"/>
+  <text class="t-title" x="56" y="90">푸시 — CI 가 클러스터에 apply</text>
+  <rect class="warnbox" x="56" y="102" width="150" height="46" rx="3"/>
+  <text class="t-mono" x="66" y="122">CI 러너</text>
+  <text class="t-warn" x="66" y="139">kubeconfig 를 갖는다</text>
+  <path class="wline" d="M 206 125 L 258 125" marker-end="url(#ar3)"/>
+  <text class="t-warn" x="232" y="117" text-anchor="middle">apply</text>
+  <rect class="nsbox" x="260" y="102" width="164" height="46" rx="3"/>
+  <text class="t-mono" x="342" y="130" text-anchor="middle">클러스터</text>
+  <text class="t-sub" x="56" y="172">외부에서 안으로 들어온다 — 방화벽에 구멍이 필요하다</text>
+  <text class="t-warn" x="56" y="192">클러스터 자격 증명이 가장 넓게 노출된 곳에 있다</text>
+
+  <!-- 풀 -->
+  <rect class="soft" x="456" y="66" width="384" height="140" rx="4"/>
+  <text class="t-title" x="472" y="90">풀 — 클러스터가 저장소를 당긴다</text>
+  <rect class="box" x="472" y="102" width="140" height="46" rx="3"/>
+  <text class="t-mono" x="482" y="122">깃 저장소</text>
+  <text class="t-sub" x="482" y="139">읽기 권한만 준다</text>
+  <path class="aline" d="M 664 125 L 616 125" marker-end="url(#ar2)"/>
+  <text class="t-acc" x="640" y="117" text-anchor="middle">clone</text>
+  <rect class="accent" x="666" y="102" width="158" height="46" rx="3"/>
+  <text class="t-mono" x="745" y="122" text-anchor="middle">클러스터 안 컨트롤러</text>
+  <text class="t-acc" x="745" y="139" text-anchor="middle">권한이 안에만 있다</text>
+  <text class="t-sub" x="472" y="172">안에서 밖으로 나간다 — 인바운드 구멍이 없다</text>
+  <text class="t-acc" x="472" y="192">클러스터를 늘려도 저장소 설정은 그대로다</text>
+
+  <!-- 되돌림 루프 -->
+  <text class="t-h" x="56" y="238">selfHeal — 손으로 바꾼 것은 되돌아간다</text>
+  <rect class="node" x="56" y="250" width="150" height="46" rx="3"/>
+  <text class="t-mono" x="131" y="270" text-anchor="middle">kubectl scale 5</text>
+  <text class="t-sub" x="131" y="287" text-anchor="middle">01:04:20</text>
+  <path class="line" d="M 206 273 L 240 273" marker-end="url(#ar1)"/>
+  <rect class="accent" x="242" y="250" width="176" height="46" rx="3"/>
+  <text class="t-mono" x="330" y="270" text-anchor="middle">컨트롤러가 차이를 본다</text>
+  <text class="t-sub" x="330" y="287" text-anchor="middle">OutOfSync</text>
+  <path class="line" d="M 418 273 L 452 273" marker-end="url(#ar1)"/>
+  <rect class="accent" x="454" y="250" width="176" height="46" rx="3"/>
+  <text class="t-mono" x="542" y="270" text-anchor="middle">저장소 상태로 덮는다</text>
+  <text class="t-acc" x="542" y="287" text-anchor="middle">replicas=2 · 01:04:25</text>
+  <rect class="warnbox" x="654" y="250" width="186" height="46" rx="3"/>
+  <text class="t-warn" x="664" y="270">긴급 수정도 사라진다</text>
+  <text class="t-sub" x="664" y="287">고치려면 커밋해야 한다</text>
+
+  <!-- 시크릿 -->
+  <rect class="soft" x="56" y="316" width="784" height="106" rx="4"/>
+  <text class="t-h" x="70" y="340">시크릿을 저장소에 두는 방법</text>
+  <rect class="warnbox" x="70" y="352" width="240" height="58" rx="3"/>
+  <text class="t-mono" x="80" y="372">평문 커밋</text>
+  <text class="t-warn" x="80" y="390">이력에 영원히 남는다</text>
+  <text class="t-sub" x="80" y="404">지워도 과거 커밋에 있다</text>
+  <rect class="accent" x="322" y="352" width="240" height="58" rx="3"/>
+  <text class="t-mono" x="332" y="372">SOPS — 값만 암호화</text>
+  <text class="t-acc" x="332" y="390">메타데이터는 평문이라 diff 가 읽힌다</text>
+  <text class="t-sub" x="332" y="404">복호화 키 관리가 남는다</text>
+  <rect class="box" x="574" y="352" width="252" height="58" rx="3"/>
+  <text class="t-mono" x="584" y="372">외부 저장소 참조</text>
+  <text class="t-sub" x="584" y="390">저장소에는 이름만 둔다</text>
+  <text class="t-sub" x="584" y="404">비밀 관리 시스템이 따로 필요하다</text>
+</svg>

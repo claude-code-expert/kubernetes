@@ -1,0 +1,14 @@
+# course/labs/monitoring/ingress-nginx-values.yaml
+# kind 전용 값. 컨트롤 플레인 노드(ingress-ready=true)에 호스트 포트로 붙인다.
+controller:
+  hostPort:
+    enabled: true            # 노드의 80/443 을 컨트롤러가 직접 잡는다
+  service:
+    type: NodePort           # kind 에는 LoadBalancer 를 만들어 줄 컨트롤러가 없다
+  nodeSelector:
+    ingress-ready: "true"    # M01 kind 설정에서 붙인 라벨
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Equal
+      effect: NoSchedule
+  watchIngressWithoutClass: true

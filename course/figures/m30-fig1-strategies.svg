@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
+    </marker>
+  </defs>
+  <style>
+    .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+    .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+    .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+    .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+    .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+    .t-h { font-size:13px; font-weight:700; fill:#333333; }
+    .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+    .t-sub { font-size:11px; fill:#555555; }
+    .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+    .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+    .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+    .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+  </style>
+
+  <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
+  <text class="t-h" x="40" y="46">세 전략이 각각 무엇을 사고 무엇을 판다</text>
+
+  <!-- 롤링 -->
+  <rect class="soft" x="40" y="66" width="264" height="150" rx="4"/>
+  <text class="t-title" x="56" y="90">롤링</text>
+  <text class="t-mono" x="56" y="110">디플로이먼트 기본</text>
+  <rect class="box" x="56" y="120" width="232" height="30" rx="3"/>
+  <text class="t-sub" x="66" y="140">자원 추가 거의 없음</text>
+  <rect class="warnbox" x="56" y="156" width="232" height="48" rx="3"/>
+  <text class="t-warn" x="66" y="176">되돌리는 데 같은 시간이 든다</text>
+  <text class="t-sub" x="66" y="194">나쁜 버전이 전체로 번지는 중에 안다</text>
+
+  <!-- 블루/그린 -->
+  <rect class="soft" x="318" y="66" width="264" height="150" rx="4"/>
+  <text class="t-title" x="334" y="90">블루/그린</text>
+  <text class="t-mono" x="334" y="110">서비스 셀렉터 교체</text>
+  <rect class="accent" x="334" y="120" width="232" height="30" rx="3"/>
+  <text class="t-acc" x="344" y="140">전환도 복구도 patch 한 번</text>
+  <rect class="warnbox" x="334" y="156" width="232" height="48" rx="3"/>
+  <text class="t-warn" x="344" y="176">자원을 두 배로 상시 점유</text>
+  <text class="t-sub" x="344" y="194">전환은 전부 아니면 전무다</text>
+
+  <!-- 카나리 -->
+  <rect class="soft" x="596" y="66" width="264" height="150" rx="4"/>
+  <text class="t-title" x="612" y="90">카나리</text>
+  <text class="t-mono" x="612" y="110">Argo Rollouts + 분석</text>
+  <rect class="accent" x="612" y="120" width="232" height="30" rx="3"/>
+  <text class="t-acc" x="622" y="140">영향 범위를 비율로 제한</text>
+  <rect class="warnbox" x="612" y="156" width="232" height="48" rx="3"/>
+  <text class="t-warn" x="622" y="176">판정할 메트릭이 있어야 성립</text>
+  <text class="t-sub" x="622" y="194">배포 시간이 길어진다</text>
+
+  <!-- 카나리 판정 흐름 -->
+  <text class="t-h" x="56" y="248">판정은 사람이 아니라 PromQL 이 한다</text>
+  <rect class="node" x="56" y="260" width="128" height="52" rx="4"/>
+  <text class="t-mono" x="120" y="282" text-anchor="middle">setWeight 20</text>
+  <text class="t-sub" x="120" y="299" text-anchor="middle">5개 중 1개</text>
+  <path class="line" d="M 184 286 L 214 286" marker-end="url(#ar1)"/>
+  <rect class="accent" x="216" y="260" width="180" height="52" rx="4"/>
+  <text class="t-mono" x="306" y="280" text-anchor="middle">AnalysisRun</text>
+  <text class="t-sub" x="306" y="298" text-anchor="middle">20초 x 3회 성공률 질의</text>
+  <path class="line" d="M 396 274 L 426 262" marker-end="url(#ar1)"/>
+  <path class="wline" d="M 396 298 L 426 312" marker-end="url(#ar2)"/>
+
+  <rect class="accent" x="428" y="238" width="196" height="46" rx="4"/>
+  <text class="t-mono" x="438" y="258">result[0] &gt;= 0.95</text>
+  <text class="t-acc" x="438" y="275">다음 단계로 승격</text>
+
+  <rect class="warnbox" x="428" y="290" width="196" height="46" rx="4"/>
+  <text class="t-mono" x="438" y="310">failed 2 &gt; failureLimit 1</text>
+  <text class="t-warn" x="438" y="327">즉시 중단하고 stable 로</text>
+
+  <rect class="box" x="644" y="238" width="216" height="98" rx="4"/>
+  <text class="t-h" x="656" y="260">실측값</text>
+  <text class="t-mono" x="656" y="280">나쁜 버전: 0.615 / 0.658</text>
+  <text class="t-mono" x="656" y="300">고친 버전: 1 / 1 / 1</text>
+  <text class="t-sub" x="656" y="322">FAULT_RATE 0.4 가 만든 차이</text>
+
+  <!-- abort vs undo -->
+  <rect class="soft" x="56" y="352" width="804" height="72" rx="4"/>
+  <text class="t-h" x="70" y="376">abort 와 undo 는 다른 명령이다</text>
+  <text class="t-mono" x="70" y="396">abort — 진행을 멈추고 트래픽을 stable 로. 상태는 Degraded 로 남는다</text>
+  <text class="t-mono" x="70" y="414">undo  — 스펙을 이전 리비전으로 되돌린다. 그래야 Healthy 가 된다</text>
+</svg>

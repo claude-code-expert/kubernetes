@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow133" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .cluster { fill: none; stroke: #2456c4; stroke-width: 1.2; }
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cluster { font-size: 13px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 클러스터 1 -->
+  <rect class="cluster" x="30" y="30" width="380" height="200" rx="6"/>
+  <text class="t-cluster" x="46" y="52">클러스터 1</text>
+
+  <rect class="box" x="50" y="66" width="160" height="56" rx="4"/>
+  <text class="t-title" x="130" y="90" text-anchor="middle">Service: database</text>
+  <text class="t-sub" x="130" y="108" text-anchor="middle">평범한 ClusterIP</text>
+
+  <line class="line" x1="130" y1="122" x2="130" y2="150" marker-end="url(#arrow133)"/>
+
+  <rect class="box-accent" x="50" y="154" width="160" height="56" rx="4"/>
+  <text class="t-title" x="130" y="178" text-anchor="middle">ServiceExport</text>
+  <text class="t-sub" x="130" y="196" text-anchor="middle">"이 서비스를 공유합니다"</text>
+
+  <!-- mcs-controller -->
+  <rect class="box" x="240" y="110" width="150" height="56" rx="4"/>
+  <text class="t-title" x="315" y="132" text-anchor="middle">mcs-controller</text>
+  <text class="t-sub" x="315" y="150" text-anchor="middle">(Submariner·Cilium 등)</text>
+
+  <line class="line" x1="210" y1="182" x2="270" y2="166" marker-end="url(#arrow133)"/>
+
+  <!-- 클러스터 2 -->
+  <rect class="cluster" x="490" y="30" width="380" height="200" rx="6"/>
+  <text class="t-cluster" x="506" y="52">클러스터 2</text>
+
+  <line class="line" x1="390" y1="138" x2="546" y2="138" marker-end="url(#arrow133)"/>
+
+  <rect class="box-accent" x="550" y="66" width="160" height="56" rx="4"/>
+  <text class="t-title" x="630" y="90" text-anchor="middle">ServiceImport</text>
+  <text class="t-sub" x="630" y="108" text-anchor="middle">클러스터 안의 표현</text>
+
+  <line class="line" x1="630" y1="122" x2="630" y2="150" marker-end="url(#arrow133)"/>
+
+  <rect class="box" x="550" y="154" width="160" height="56" rx="4"/>
+  <text class="t-title" x="630" y="178" text-anchor="middle">DNS로 접근</text>
+  <text class="t-sub" x="630" y="196" text-anchor="middle">database.production.svc.clusterset.local</text>
+
+  <!-- 하단 설명 -->
+  <rect class="box" x="30" y="248" width="840" height="60" rx="6"/>
+  <text class="t-sub" x="50" y="272">양쪽 클러스터에 mcs-controller가 떠 있어야 하고, 이를 실제로 구현하는 것이 Submariner·Cilium Cluster Mesh 같은 프로젝트다.</text>
+  <text class="t-sub" x="50" y="290">쿠버네티스 자체가 표준 API(KEP-1645)만 정의하고, 실제 연결은 구현체에 맡기는 구조 — CNI와 같은 패턴이다.</text>
+
+  <text class="t-cap" x="450" y="326" text-anchor="middle">13.3절의 "수동 셀렉터리스 서비스 + 감시 데몬" 패턴을 표준 API로 정식화한 것이 MCS API다.</text>
+</svg>

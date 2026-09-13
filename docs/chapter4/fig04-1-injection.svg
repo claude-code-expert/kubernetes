@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow41" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .group { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-lbl { font-size: 12.5px; font-weight: 600; fill: #2456c4; }
+    .t-lbl2 { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 소스 -->
+  <rect class="box-accent" x="20" y="130" width="200" height="120" rx="4"/>
+  <text class="t-title" x="120" y="172" text-anchor="middle">ConfigMap / Secret</text>
+  <text class="t-sub" x="120" y="194" text-anchor="middle">키-값 구성 데이터</text>
+  <text class="t-sub" x="120" y="212" text-anchor="middle">(etcd에 저장)</text>
+
+  <!-- 파드 프레임 -->
+  <rect class="group" x="560" y="40" width="320" height="320" rx="6"/>
+  <text class="t-sub" x="576" y="62">파드</text>
+  <rect class="box" x="580" y="76" width="280" height="266" rx="4"/>
+  <text class="t-sub" x="596" y="98">컨테이너</text>
+
+  <rect class="box" x="600" y="110" width="240" height="64" rx="4"/>
+  <text class="t-title" x="720" y="136" text-anchor="middle">환경 변수</text>
+  <text class="t-sub" x="720" y="156" text-anchor="middle">JOURNAL_ENTRIES=10</text>
+
+  <rect class="box" x="600" y="230" width="240" height="64" rx="4"/>
+  <text class="t-title" x="720" y="256" text-anchor="middle">마운트된 파일</text>
+  <text class="t-sub" x="720" y="276" text-anchor="middle">/etc/config/… (tmpfs 가능)</text>
+
+  <!-- 경로 ①: env / envFrom -->
+  <polyline class="line" points="220,170 410,170 410,142 596,142" marker-end="url(#arrow41)"/>
+  <text class="t-lbl" x="302" y="156" text-anchor="middle">① env · envFrom</text>
+  <text class="t-lbl2" x="315" y="192" text-anchor="middle">재시작 전엔 갱신 미반영</text>
+
+  <!-- 경로 ②: 볼륨 마운트 -->
+  <polyline class="line" points="220,230 410,230 410,262 596,262" marker-end="url(#arrow41)"/>
+  <text class="t-lbl" x="302" y="218" text-anchor="middle">② 볼륨 마운트</text>
+  <text class="t-lbl2" x="313" y="252" text-anchor="middle">갱신 자동 반영 · subPath 예외</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="382" text-anchor="middle">같은 오브젝트라도 주입 경로에 따라 "고쳤을 때 언제 반영되는가"가 다르다 — 4.2절 사고의 대부분이 이 차이에서 난다.</text>
+</svg>

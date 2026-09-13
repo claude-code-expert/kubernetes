@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: order-api
+    app.kubernetes.io/part-of: obs-study
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: order-api
+        app.kubernetes.io/part-of: obs-study
+    spec:
+      # 01단계에서 노드에 붙여둔 라벨
+      nodeSelector:
+        workload: apps
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: order-api
+          image: obs/order-api:0.0.1
+          # 레지스트리가 없으므로 반드시 IfNotPresent
+          imagePullPolicy: IfNotPresent
+          ports:
+            # 이 포트 '이름'을 06단계 ServiceMonitor가 참조한다
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              # CPU limit은 일부러 두지 않는다 — 스로틀링으로 지연이 왜곡된다
+              memory: 640Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    # 06단계 ServiceMonitor가 이 라벨로 서비스를 찾는다
+    app.kubernetes.io/name: order-api
+    app.kubernetes.io/part-of: obs-study
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: order-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

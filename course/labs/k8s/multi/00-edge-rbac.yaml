@@ -1,0 +1,33 @@
+# M32 — edge 클러스터에 만드는 것. Argo CD 가 이 계정으로 들어온다.
+#
+# cluster-admin 을 주는 것은 실습이라서다. 실제로는 배포할 네임스페이스에
+# 한정한 Role/RoleBinding 을 쓴다 (M23 의 기준).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-manager
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: argocd-manager
+    namespace: kube-system
+---
+# 만료되지 않는 토큰. M23 에서 본 대로 kubectl create token 은 수명이 짧아
+# 컨트롤러가 쓰기에 맞지 않는다.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-manager-token
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: argocd-manager
+type: kubernetes.io/service-account-token

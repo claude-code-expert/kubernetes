@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .group { fill: none; stroke: #999999; stroke-width: 1; stroke-dasharray: 5 4; }
+    .t-title { font-size: 14px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 11.5px; fill: #555555; }
+    .t-lbl { font-size: 12px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+    .line-rep { stroke: #2456c4; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- frontend 파드 -->
+  <rect class="box" x="20" y="170" width="150" height="70" rx="4"/>
+  <text class="t-title" x="95" y="199" text-anchor="middle">frontend 파드</text>
+  <text class="t-sub" x="95" y="219" text-anchor="middle">저널 API</text>
+
+  <!-- frontend → 쓰기 서비스 -->
+  <polyline class="line" points="170,190 225,190 225,90 276,90" marker-end="url(#arrow)"/>
+  <text class="t-lbl" x="197" y="178" text-anchor="middle">쓰기</text>
+
+  <!-- frontend → 읽기 서비스 -->
+  <polyline class="line" points="170,220 225,220 225,320 276,320" marker-end="url(#arrow)"/>
+  <text class="t-lbl" x="197" y="242" text-anchor="middle">읽기</text>
+
+  <!-- 쓰기 서비스 -->
+  <rect class="box-accent" x="280" y="60" width="190" height="60" rx="4"/>
+  <text class="t-title" x="375" y="85" text-anchor="middle">Service: redis</text>
+  <text class="t-sub" x="375" y="104" text-anchor="middle">redis-0 한 파드만 셀렉트</text>
+
+  <!-- 읽기 서비스 -->
+  <rect class="box-accent" x="280" y="290" width="190" height="60" rx="4"/>
+  <text class="t-title" x="375" y="315" text-anchor="middle">Service: redis-readonly</text>
+  <text class="t-sub" x="375" y="334" text-anchor="middle">레플리카 3개 전체 셀렉트</text>
+
+  <!-- StatefulSet 그룹 -->
+  <rect class="group" x="595" y="35" width="285" height="330" rx="4"/>
+  <text class="t-sub" x="610" y="58">StatefulSet: redis (replicas: 3)</text>
+
+  <!-- redis-0 -->
+  <rect class="box" x="630" y="75" width="215" height="50" rx="4"/>
+  <text class="t-title" x="737" y="96" text-anchor="middle">redis-0</text>
+  <text class="t-sub" x="737" y="114" text-anchor="middle">마스터 · 쓰기 수신</text>
+
+  <!-- redis-1 -->
+  <rect class="box" x="630" y="180" width="215" height="50" rx="4"/>
+  <text class="t-title" x="737" y="201" text-anchor="middle">redis-1</text>
+  <text class="t-sub" x="737" y="219" text-anchor="middle">복제본</text>
+
+  <!-- redis-2 -->
+  <rect class="box" x="630" y="285" width="215" height="50" rx="4"/>
+  <text class="t-title" x="737" y="306" text-anchor="middle">redis-2</text>
+  <text class="t-sub" x="737" y="324" text-anchor="middle">복제본</text>
+
+  <!-- 쓰기 서비스 → redis-0 -->
+  <line class="line" x1="470" y1="88" x2="626" y2="88" marker-end="url(#arrow)"/>
+
+  <!-- 읽기 서비스 → 세 파드 (버스: x=560) -->
+  <polyline class="line" points="470,320 560,320"/>
+  <line class="line" x1="560" y1="112" x2="560" y2="320"/>
+  <line class="line" x1="560" y1="112" x2="626" y2="112" marker-end="url(#arrow)"/>
+  <line class="line" x1="560" y1="205" x2="626" y2="205" marker-end="url(#arrow)"/>
+  <line class="line" x1="560" y1="312" x2="626" y2="312" marker-end="url(#arrow)"/>
+
+  <!-- 복제 흐름: redis-0 → redis-1 → redis-2 -->
+  <line class="line-rep" x1="737" y1="125" x2="737" y2="176" marker-end="url(#arrow)"/>
+  <text class="t-lbl" x="750" y="155">복제</text>
+  <line class="line-rep" x1="737" y1="230" x2="737" y2="281" marker-end="url(#arrow)"/>
+  <text class="t-lbl" x="750" y="260">복제</text>
+
+  <!-- 캡션 -->
+  <text class="t-cap" x="450" y="404" text-anchor="middle">셀렉터를 다르게 건 서비스 두 개로 쓰기(마스터 전용)와 읽기(전체 분산)를 분리한다 (1.8절).</text>
+</svg>

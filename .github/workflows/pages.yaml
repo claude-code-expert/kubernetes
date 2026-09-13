@@ -1,0 +1,64 @@
+# 교육 자료 두 과정을 GitHub Pages 로 배포한다.
+#
+# 저장소 루트를 통째로 올리지 않는 이유는 book/ 의 출판사 맛보기 PDF 와
+# docs/ 의 구자산을 웹 페이지로 색인시키지 않기 위해서다.
+# 필요한 두 디렉터리만 골라 _site 로 조립한다.
+#
+#   /          랜딩 (.github/pages-index.html)
+#   /course/   38편 과정
+#   /study/    관측성 11장
+#
+# 이 배치는 저장소의 디렉터리 구조와 같다. 그래서 문서 안의 상대 링크
+# (study 에서 ../course/cheatsheet-kubectl.html 같은 것)가 로컬에서 열 때와
+# 배포본에서 똑같이 동작한다.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'course/**'
+      - 'study/**'
+      - '.github/pages-index.html'
+      - '.github/workflows/pages.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write          # deploy-pages 가 OIDC 로 배포 권한을 받는다
+
+# 배포는 취소하지 않는다. 중간에 끊으면 사이트가 반쯤 갱신된 상태로 남는다.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+
+      # 사이트를 조립한다. labs 의 매니페스트·소스도 함께 올라가므로
+      # 수강생이 클론하지 않고 브라우저에서 바로 열어볼 수 있다.
+      - name: 사이트 조립
+        run: |
+          mkdir -p _site
+          cp .github/pages-index.html _site/index.html
+          cp -r course _site/course
+          cp -r study  _site/study
+          echo "--- 조립 결과 ---"
+          find _site -maxdepth 2 -type d | sort
+          echo "파일 $(find _site -type f | wc -l) 개"
+
+      # Jekyll 을 태우지 않는 경로라 .nojekyll 은 필요 없다.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

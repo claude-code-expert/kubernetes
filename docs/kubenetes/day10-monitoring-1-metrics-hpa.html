@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D10 · 모니터링 ① — 클러스터가 지금 어떤 상태인지 숫자로 본다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D9와 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 3단계 운영 품질 · Day 10</p>
+  <h1>모니터링 ① — 클러스터가 지금 어떤 상태인지 숫자로 본다</h1>
+  <p class="lede">파드 열몇 개가 3노드에 흩어져 있고 DB가 하나 있다. <code>kubectl get</code>은 "지금"만 보여 준다. 시간축이 있는 숫자가 있어야 "언제부터 나빠졌나"에 답한다. 오늘은 두 층을 올린다. 스케줄러와 HPA가 쓰는 짧은 수명의 리소스 지표(metrics-server), 그리고 저장하고 그래프로 보고 경보를 거는 시계열 저장소(Prometheus·Grafana). 마지막에 CPU 사용률로 order-api를 자동으로 늘리는 HPA를 건다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 40분 · 따라하기 80분</b></span>
+    <span>전제 <b>D9 완료 · week1/ 기준 배치 · 메모리 8GB 이상 VM</b></span>
+    <span>버전 <b>metrics-server (Helm 최신) · kube-prometheus-stack 88.x · Kubernetes v1.36</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<div class="wrap"><div class="note warn" style="margin-top:20px">
+  <h5>오늘 가장 많이 나는 실수</h5>
+  <p>D3부터 기본 네임스페이스가 <code>study</code>다. 오늘 설치하는 것은 전부 <code>monitoring</code>·<code>kube-system</code>에 들어간다. <code>kubectl get pods</code>가 비어 보이면 <code>-n monitoring</code>을 빠뜨린 것이다. 이 문서의 명령은 모두 <code>-n</code>을 명시한다.</p>
+</div></div>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>메트릭·로그·트레이스와 USE·RED·골든 시그널의 차이를 말하고, 오늘 보는 지표가 어느 층에서 나오는지 가리킨다.</li>
+    <li><code>kubectl top</code>이 동작하게 하고, 그 숫자가 어디서 오는지 설명한다.</li>
+    <li>kube-prometheus-stack을 설치해 Grafana 내장 대시보드에서 노드·네임스페이스·파드 리소스를 읽는다.</li>
+    <li>PromQL 다섯 개를 써서 재시작 수·노드 메모리·컨테이너 CPU·가용 레플리카·타깃 상태를 조회한다.</li>
+    <li>HPA를 걸고 부하를 넣어 replicas가 늘었다 줄어드는 것을 <code>get hpa -w</code>와 Grafana 양쪽에서 본다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+
+  <h3>1.1 세 종류의 신호</h3>
+  <table>
+    <thead><tr><th style="width:110px">신호</th><th>형태</th><th>답하는 질문</th><th style="width:130px">이 교재</th></tr></thead>
+    <tbody>
+      <tr><td>메트릭</td><td>숫자 + 시각 + 라벨. 작고 집계 가능.</td><td>얼마나 많이, 얼마나 빨리, 언제부터</td><td>오늘·D11</td></tr>
+      <tr><td>로그</td><td>텍스트 이벤트. 크고 상세.</td><td>그때 정확히 무슨 일이</td><td>D11</td></tr>
+      <tr><td>트레이스</td><td>요청 하나가 거친 경로와 구간별 시간.</td><td>어느 구간이 느린가</td><td>D14 지도</td></tr>
+    </tbody>
+  </table>
+  <p>블랙박스 모니터링은 밖에서 두드려 본다(<code>curl localhost/orders</code>가 200인가). 화이트박스는 안에서 내놓는 숫자를 본다(요청 수, 힙 사용량). 오늘은 쿠버네티스가 자동으로 내놓는 화이트박스 지표만 쓰고, 앱이 직접 내놓는 지표는 D11이다.</p>
+
+  <h3>1.2 무엇을 볼 것인가: USE, RED, 골든 시그널</h3>
+  <table>
+    <thead><tr><th style="width:150px">기법</th><th>대상</th><th>지표</th></tr></thead>
+    <tbody>
+      <tr><td><b>USE</b></td><td>리소스(CPU, 메모리, 디스크, 네트워크)</td><td>Utilization(사용률) · Saturation(대기 큐) · Errors</td></tr>
+      <tr><td><b>RED</b></td><td>서비스(요청을 받는 것)</td><td>Rate(초당 요청) · Errors(실패율) · Duration(지연 분포)</td></tr>
+      <tr><td><b>골든 시그널</b></td><td>둘을 합친 SRE 관점</td><td>Latency · Traffic · Errors · Saturation</td></tr>
+    </tbody>
+  </table>
+  <p>오늘의 대시보드는 USE다. 노드와 파드의 CPU·메모리·네트워크. RED는 앱이 요청을 세어야 하므로 D11에서 Micrometer를 붙인 뒤 만든다. 대시보드를 열었을 때 "이 패널은 USE의 U인가 RED의 D인가"를 붙여 보면 무엇이 빠졌는지 보인다.</p>
+
+  <h3>1.3 쿠버네티스 메트릭의 층</h3>
+  <p>지표는 여러 곳에서 나오고, 소비자도 둘이다. 짧은 수명의 현재값을 쓰는 <b>리소스 메트릭 파이프라인</b>과, 저장해서 그래프로 보는 <b>Prometheus 파이프라인</b>이 나란히 있다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 340" width="100%" role="img" aria-label="쿠버네티스 메트릭의 생산자와 두 소비 경로">
+    <!-- producers -->
+    <text x="20" y="24" font-size="12" font-weight="600" fill="#1a1a1a">생산자 (노드·컨트롤 플레인)</text>
+    <rect x="20" y="36" width="200" height="54" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="56" font-size="12" font-weight="600" fill="#1d4ed8">kubelet · cAdvisor</text>
+    <text x="32" y="74" font-size="11" fill="#4a4a4a">컨테이너 CPU·메모리·네트워크</text>
+    <rect x="20" y="100" width="200" height="54" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="120" font-size="12" font-weight="600" fill="#1d4ed8">node-exporter</text>
+    <text x="32" y="138" font-size="11" fill="#4a4a4a">노드 OS: 디스크·부하·파일시스템</text>
+    <rect x="20" y="164" width="200" height="54" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="184" font-size="12" font-weight="600" fill="#1d4ed8">kube-state-metrics</text>
+    <text x="32" y="202" font-size="11" fill="#4a4a4a">오브젝트 상태: 레플리카 수·재시작·phase</text>
+    <rect x="20" y="228" width="200" height="54" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="248" font-size="12" font-weight="600" fill="#1d4ed8">apiserver · etcd · scheduler</text>
+    <text x="32" y="266" font-size="11" fill="#4a4a4a">컨트롤 플레인 자체 지표</text>
+    <rect x="20" y="292" width="200" height="40" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="32" y="316" font-size="12" fill="#15803d">앱 /actuator/prometheus (D11)</text>
+    <!-- path A: metrics-server -->
+    <line x1="220" y1="63" x2="330" y2="63" stroke="#c2410c" stroke-width="1.2"/><polygon points="324,59 332,63 324,67" fill="#c2410c"/>
+    <rect x="336" y="36" width="190" height="54" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+    <text x="348" y="56" font-size="12" font-weight="600" fill="#c2410c">metrics-server</text>
+    <text x="348" y="74" font-size="11" fill="#4a4a4a">저장 안 함 · 최근값만 · 경량</text>
+    <line x1="526" y1="63" x2="620" y2="63" stroke="#c2410c" stroke-width="1.2"/><polygon points="614,59 622,63 614,67" fill="#c2410c"/>
+    <rect x="626" y="24" width="254" height="78" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+    <text x="638" y="44" font-size="12" font-weight="600" fill="#c2410c">리소스 메트릭 API</text>
+    <text x="638" y="62" class="mono" font-size="11" fill="#4a4a4a">kubectl top nodes / pods</text>
+    <text x="638" y="78" class="mono" font-size="11" fill="#4a4a4a">HPA (autoscaling/v2)</text>
+    <text x="638" y="94" font-size="11" fill="#767676">"지금 얼마나 쓰나"에만 답한다</text>
+    <!-- path B: prometheus -->
+    <line x1="220" y1="127" x2="330" y2="180" stroke="#6d28d9" stroke-width="1.2"/>
+    <line x1="220" y1="191" x2="330" y2="191" stroke="#6d28d9" stroke-width="1.2"/>
+    <line x1="220" y1="255" x2="330" y2="200" stroke="#6d28d9" stroke-width="1.2"/>
+    <line x1="220" y1="312" x2="330" y2="210" stroke="#6d28d9" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <line x1="220" y1="80" x2="330" y2="175" stroke="#6d28d9" stroke-width="1.2"/>
+    <polygon points="324,186 336,191 324,196" fill="#6d28d9"/>
+    <rect x="336" y="150" width="190" height="80" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="348" y="170" font-size="12" font-weight="600" fill="#6d28d9">Prometheus</text>
+    <text x="348" y="188" font-size="11" fill="#4a4a4a">30초마다 pull(scrape)</text>
+    <text x="348" y="204" font-size="11" fill="#4a4a4a">시계열 저장 · PromQL</text>
+    <text x="348" y="220" font-size="11" fill="#4a4a4a">규칙 평가 → Alertmanager</text>
+    <line x1="526" y1="190" x2="620" y2="190" stroke="#6d28d9" stroke-width="1.2"/><polygon points="614,186 622,190 614,194" fill="#6d28d9"/>
+    <rect x="626" y="150" width="254" height="80" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="638" y="170" font-size="12" font-weight="600" fill="#6d28d9">Grafana</text>
+    <text x="638" y="188" font-size="11" fill="#4a4a4a">PromQL로 패널을 그린다</text>
+    <text x="638" y="204" font-size="11" fill="#4a4a4a">내장 대시보드 30여 개</text>
+    <text x="638" y="220" font-size="11" fill="#767676">"언제부터 어떻게 변했나"에 답한다</text>
+    <!-- operator -->
+    <rect x="336" y="256" width="544" height="66" rx="3" fill="#f7f7f7" stroke="#d9d9d9" stroke-width="1.2"/>
+    <text x="348" y="276" font-size="12" font-weight="600" fill="#4a4a4a">Prometheus Operator (kube-prometheus-stack이 설치)</text>
+    <text x="348" y="294" font-size="11" fill="#4a4a4a">ServiceMonitor · PodMonitor · PrometheusRule CRD를 읽어 Prometheus 설정을 자동 생성.</text>
+    <text x="348" y="310" font-size="11" fill="#4a4a4a">스크레이프 대상을 YAML 오브젝트로 선언한다. release 라벨로 어느 Prometheus가 읽을지 정한다(D11).</text>
+  </svg>
+  <figcaption>도판 1. 파랑=생산자, 주황=리소스 메트릭 경로(현재값), 보라=Prometheus 경로(시계열). 같은 kubelet 지표가 두 경로로 간다.</figcaption>
+  </figure>
+
+  <h3>1.4 Prometheus 모델 다섯 가지</h3>
+  <ul>
+    <li><b>pull</b> — 앱이 보내지 않는다. Prometheus가 <code>/metrics</code>를 주기적으로 긁어 간다. 대상이 죽으면 <code>up=0</code>이 남는다.</li>
+    <li><b>시계열</b> — 이름 + 라벨 집합이 하나의 시계열. <code>container_cpu_usage_seconds_total{namespace="study", pod="order-api-…"}</code>.</li>
+    <li><b>타입</b> — counter(누적, 줄지 않음), gauge(현재값), histogram(구간별 누적 + 합계·개수). 요청 수는 counter, 메모리는 gauge, 지연 시간은 histogram.</li>
+    <li><b>rate</b> — counter는 그대로 그리면 우상향 직선이라 의미가 없다. <code>rate(x[5m])</code>로 초당 증가량을 본다.</li>
+    <li><b>집계</b> — <code>sum by (pod) (…)</code>. 라벨을 남기고 나머지를 합친다.</li>
+  </ul>
+  <p>오늘 쓰는 PromQL은 이 다섯으로 충분하다. D11에서 histogram_quantile 하나를 더한다.</p>
+
+  <h3>1.5 HPA</h3>
+  <p><dfn title="HorizontalPodAutoscaler">HPA</dfn>는 리소스 메트릭 API(도판 1의 주황 경로)에서 파드들의 CPU 사용량을 읽어 목표 사용률에 맞게 replicas를 조절한다. 사용률은 <b>requests 대비</b>다. D8에서 requests를 250m으로 잡았으므로 "50%"는 파드당 125m을 뜻한다. 계산은 <code>원하는 개수 = ceil(현재 개수 × 현재 사용률 / 목표 사용률)</code>이고, 15초마다 평가한다. 늘리는 것은 즉시, 줄이는 것은 기본 5분 안정화 창을 두어 튀는 것을 막는다. HPA가 replicas를 소유하므로 디플로이먼트 파일에서는 <code>replicas</code>를 빼야 apply할 때 충돌하지 않는다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비 · 두 스택 설치</h2>
+
+  <h3>2.1 metrics-server</h3>
+<pre><code><span class="p">$</span> kubectl top nodes
+<span class="c">error: Metrics API not available</span>
+
+<span class="p">$</span> helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+<span class="p">$</span> helm repo update
+<span class="p">$</span> helm install metrics-server metrics-server/metrics-server -n kube-system \
+    --set 'args={--kubelet-insecure-tls}'
+<span class="p">$</span> kubectl -n kube-system rollout status deployment/metrics-server
+<span class="p">$</span> sleep 30 &amp;&amp; kubectl top nodes
+<span class="c">NAME                    CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)
+desktop-control-plane   182m         4%       1102Mi          14%
+desktop-worker          96m          2%       1480Mi          19%
+desktop-worker2         88m          2%       1391Mi          17%</span>
+<span class="p">$</span> kubectl top pods -n study --sort-by=memory | head -5
+<span class="c">NAME                          CPU(cores)   MEMORY(bytes)
+postgres-0                    3m           38Mi
+order-api-…                   4m           212Mi
+order-api-…                   4m           209Mi
+gateway-…                     3m           168Mi</span></code></pre>
+  <p class="expect"><b>확인</b> — kind 노드의 kubelet 인증서는 자체 서명이라 <code>--kubelet-insecure-tls</code>가 필요하다. 클라우드에서는 빼야 한다. <code>top</code>의 숫자는 kubelet → metrics-server → 리소스 메트릭 API를 거쳐 온 최근 값이고 저장되지 않는다. 지금 이 숫자가 D8의 requests(order-api CPU 250m)와 비교되어 HPA가 판단한다.</p>
+
+  <h3>2.2 kube-prometheus-stack</h3>
+<pre><code><span class="p">$</span> helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+<span class="p">$</span> helm repo update
+<span class="p">$</span> helm search repo prometheus-community/kube-prometheus-stack --versions | head -3
+<span class="c">NAME                                          CHART VERSION   APP VERSION   DESCRIPTION
+prometheus-community/kube-prometheus-stack    88.x.y          v0.9x.0       kube-prometheus-stack collects Kubernetes manifests…</span>
+
+<span class="p">$</span> mkdir -p ~/k8s-study/day10 &amp;&amp; cd ~/k8s-study/day10
+<span class="p">$</span> cat &gt; kps-values.yaml &lt;&lt;'EOF'
+grafana:
+  adminPassword: study
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+alertmanager:
+  enabled: true
+EOF
+<span class="p">$</span> helm install kps prometheus-community/kube-prometheus-stack \
+    -n monitoring --create-namespace \
+    --version 88.3.0 -f kps-values.yaml
+<span class="c">NAME: kps
+NAMESPACE: monitoring
+STATUS: deployed</span>
+
+<span class="p">$</span> kubectl -n monitoring get pods
+<span class="c">NAME                                                   READY   STATUS    RESTARTS   AGE
+alertmanager-kps-kube-prometheus-stack-alertmanager-0  2/2     Running   0          2m
+kps-grafana-…                                          3/3     Running   0          2m
+kps-kube-prometheus-stack-operator-…                   1/1     Running   0          2m
+kps-kube-state-metrics-…                               1/1     Running   0          2m
+kps-prometheus-node-exporter-…  (노드마다 하나, 3개)   1/1     Running   0          2m
+prometheus-kps-kube-prometheus-stack-prometheus-0      2/2     Running   0          2m</span>
+
+<span class="p">$</span> kubectl -n monitoring get servicemonitors | head -5
+<span class="c">NAME                                        AGE
+kps-grafana                                 2m
+kps-kube-prometheus-stack-apiserver         2m
+kps-kube-prometheus-stack-kubelet           2m
+kps-kube-state-metrics                      2m</span>
+<span class="p">$</span> kubectl -n monitoring get prometheus kps-kube-prometheus-stack-prometheus -o jsonpath='{.spec.serviceMonitorSelector}{"\n"}'
+<span class="c">{"matchLabels":{"release":"kps"}}</span></code></pre>
+  <p class="expect"><b>확인</b> — 차트 하나로 도판 1의 보라색 요소 전부(Operator, Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics)와 스크레이프 대상(ServiceMonitor)이 생겼다. Prometheus는 스테이트풀셋(<code>prometheus-…-0</code>)이고 Alertmanager도 그렇다(D9). 마지막 줄이 D11의 핵심이다. 이 Prometheus는 <code>release: kps</code> 라벨이 있는 ServiceMonitor만 읽는다. 차트 버전은 <code>helm search</code>로 나온 최신 88.x로 바꿔도 된다.</p>
+  <div class="note">
+    <h5>메모리가 부족하면</h5>
+    <p>Prometheus + Grafana + Alertmanager가 1.5GB 안팎을 쓴다. 파드가 <code>Pending</code>이면 <code>describe</code>의 <code>Insufficient memory</code>를 확인하고 Docker Desktop VM 메모리를 10GB로 올리거나 <code>order-api-canary</code>·<code>gateway</code>를 잠시 0으로 줄인다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>Prometheus UI: 타깃과 첫 쿼리</h3>
+    <p class="why">무엇을 긁고 있는지부터 본다. 터미널 A에서 port-forward를 켜 둔다.</p>
+<pre><code><span class="c"># 터미널 A</span>
+<span class="p">$</span> kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090</code></pre>
+    <p>브라우저에서 <code>http://localhost:9090/targets</code>를 연다. 스크레이프 대상 그룹이 열 개 안팎 보이고 대부분 <code>UP</code>이다. <code>kube-scheduler</code>·<code>kube-controller-manager</code>·<code>etcd</code>가 DOWN이면 kind 노드가 그 포트를 localhost에만 열어서다. 오늘 실습에는 영향이 없다.</p>
+<pre><code><span class="c"># 터미널 B — HTTP API로 같은 것을 조회</span>
+<span class="p">$</span> q() { curl -s "localhost:9090/api/v1/query" --data-urlencode "query=$1" | python3 -c 'import sys,json; r=json.load(sys.stdin)["data"]["result"]; [print(x["metric"].get("job",x["metric"].get("pod","")), x["value"][1]) for x in r[:8]]'; }
+<span class="p">$</span> q 'count by (job) (up == 1)'
+<span class="c">apiserver 1
+coredns 2
+kube-state-metrics 1
+kubelet 3
+node-exporter 3
+prometheus 1
+...</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — <code>up</code>은 Prometheus가 대상마다 자동으로 만드는 지표다. 1이면 긁혔고 0이면 못 긁었다. kubelet 3, node-exporter 3은 노드 수다. 셸 함수 <code>q</code>는 오늘 계속 쓴다. 이 API가 곧 Grafana가 부르는 것이다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>PromQL 다섯 개</h3>
+    <p class="why">1.4절의 다섯 요소를 하나씩 쓴다. 출력은 시각에 따라 다르다.</p>
+<pre><code><span class="c"># (1) 재시작 수 — counter, kube-state-metrics가 낸다</span>
+<span class="p">$</span> q 'sum by (pod) (kube_pod_container_status_restarts_total{namespace="study"} &gt; 0)'
+<span class="c">(D8·D9에서 재시작된 파드가 남아 있으면 보인다. 없으면 빈 출력)</span>
+
+<span class="c"># (2) 노드 메모리 여유 — gauge, node-exporter</span>
+<span class="p">$</span> q 'node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes'
+<span class="c">node-exporter 0.81
+node-exporter 0.79
+node-exporter 0.80</span>
+
+<span class="c"># (3) 컨테이너 CPU — counter를 rate로, 파드별 합계 (cAdvisor via kubelet)</span>
+<span class="p">$</span> q 'sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="study", container!=""}[5m]))'
+<span class="c">gateway-… 0.003
+order-api-… 0.004
+order-api-… 0.004
+postgres-0 0.002
+...</span>
+
+<span class="c"># (4) 디플로이먼트 가용 레플리카 — gauge, kube-state-metrics</span>
+<span class="p">$</span> q 'kube_deployment_status_replicas_available{namespace="study"}'
+<span class="c">gateway 2
+order-api 4
+order-api-canary 1</span>
+
+<span class="c"># (5) CPU 사용률을 requests 대비로 — 두 지표를 나눈다 (HPA가 보는 값과 같은 뜻)</span>
+<span class="p">$</span> q 'sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="study", container="app"}[2m])) / sum by (pod) (kube_pod_container_resource_requests{namespace="study", container="app", resource="cpu"})'
+<span class="c">order-api-… 0.016
+order-api-… 0.015
+...</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — (3)과 (5)의 <code>container!=""</code>·<code>container="app"</code>은 파드 전체 합계 행(container 라벨이 빈 것)과 pause 컨테이너를 빼기 위한 필터다. (5)가 1.6%라는 것은 250m 중 4m을 쓴다는 뜻이고, 이 값이 HPA 목표(50%)에 닿으려면 부하가 30배는 필요하다. 5단계에서 그 부하를 만든다. 지표 이름은 <code>localhost:9090/graph</code>의 자동완성이나 <code>curl localhost:9090/api/v1/label/__name__/values</code>로 찾는다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>Grafana 내장 대시보드 읽기</h3>
+    <p class="why">같은 지표를 그래프로. 어느 패널이 어느 PromQL인지 확인한다.</p>
+<pre><code><span class="c"># 터미널 C</span>
+<span class="p">$</span> kubectl -n monitoring port-forward svc/kps-grafana 3000:80</code></pre>
+    <p><code>http://localhost:3000</code> → <code>admin</code> / <code>study</code>. 왼쪽 Dashboards에서 세 개를 순서대로 연다.</p>
+    <ol>
+      <li><b>Node Exporter / Nodes</b> — 노드를 고르면 CPU·부하·메모리·디스크·네트워크. USE의 U와 S. 2.1절의 <code>kubectl top nodes</code>와 CPU 값이 대략 맞는지 본다.</li>
+      <li><b>Kubernetes / Compute Resources / Namespace (Pods)</b> — 네임스페이스 <code>study</code>를 고른다. 파드별 CPU·메모리를 <b>requests·limits와 함께</b> 보여 준다. order-api의 메모리가 limit 512Mi 중 얼마인지, CPU가 requests 250m 중 얼마인지 읽는다.</li>
+      <li><b>Kubernetes / Compute Resources / Pod</b> — 파드 하나를 고르면 컨테이너별 시계열. 아래 <code>postgres-0</code>을 골라 D9에서 재시작한 시각 부근의 끊김을 찾아본다.</li>
+    </ol>
+    <p>아무 패널의 제목을 눌러 <b>Edit</b>을 열면 PromQL이 보인다. 2단계 (3)과 거의 같은 식이 들어 있다. 대시보드는 마법이 아니라 쿼리 묶음이다.</p>
+    <p class="expect"><b>읽을 것</b> — 패널마다 "이건 USE의 무엇인가"를 붙여 본다. 지금 있는 대시보드에는 RED가 하나도 없다. 요청 수·오류율·지연은 쿠버네티스가 모르기 때문이다. 그것이 D11의 일이다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>HPA를 건다</h3>
+    <p class="why">디플로이먼트 파일에서 <code>replicas</code>를 빼고, HPA가 소유하게 한다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/week1
+<span class="p">$</span> sed -i.bak '/^  replicas: 4$/d' 20-order-api-deploy.yaml &amp;&amp; rm 20-order-api-deploy.yaml.bak
+<span class="p">$</span> grep -c '^  replicas' 20-order-api-deploy.yaml
+<span class="c">0</span>
+<span class="p">$</span> cat &gt; 24-order-api-hpa.yaml &lt;&lt;'EOF'
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-api
+  namespace: study
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-api
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+EOF
+<span class="p">$</span> kubectl apply -f 24-order-api-hpa.yaml -f 20-order-api-deploy.yaml
+<span class="p">$</span> sleep 30 &amp;&amp; kubectl get hpa order-api
+<span class="c">NAME        REFERENCE              TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+order-api   Deployment/order-api   cpu: 2%/50%   2         8         2          30s</span>
+<span class="p">$</span> kubectl get deploy order-api
+<span class="c">NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+order-api   2/2     2            2           6d</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 파일에서 replicas를 뺐으므로 apply가 4를 건드리지 않았고, HPA가 사용률 2%를 보고 <code>minReplicas</code> 2로 줄였다. TARGETS의 2%가 2단계 (5)와 같은 값이다. <code>stabilizationWindowSeconds</code>를 60으로 줄인 것은 실습 시간 때문이다. 운영 기본값은 300초다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>부하를 넣고 늘어나는 것을 본다</h3>
+    <p class="why">클러스터 안에서 order-api 서비스를 쉬지 않고 두드리는 파드 4개를 띄운다. 터미널 D에서 <code>kubectl get hpa order-api -w</code>를 켜 둔다.</p>
+<pre><code><span class="p">$</span> cat &gt; ~/k8s-study/day10/load.yaml &lt;&lt;'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load
+  namespace: study
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: load
+  template:
+    metadata:
+      labels:
+        app: load
+    spec:
+      containers:
+      - name: hey
+        image: busybox:1.37
+        command: ["sh", "-c", "while true; do wget -qO- http://order-api:8080/orders &gt;/dev/null 2&gt;&amp;1; done"]
+        resources:
+          requests:
+            cpu: 50m
+            memory: 16Mi
+EOF
+<span class="p">$</span> kubectl apply -f ~/k8s-study/day10/load.yaml</code></pre>
+<pre><code><span class="c"># 터미널 D (미리 켜 둔 -w)</span>
+<span class="c">NAME        REFERENCE              TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+order-api   Deployment/order-api   cpu: 2%/50%    2         8         2          3m
+order-api   Deployment/order-api   cpu: 141%/50%  2         8         2          4m
+order-api   Deployment/order-api   cpu: 141%/50%  2         8         6          4m
+order-api   Deployment/order-api   cpu: 68%/50%   2         8         6          5m
+order-api   Deployment/order-api   cpu: 47%/50%   2         8         8          5m
+order-api   Deployment/order-api   cpu: 39%/50%   2         8         8          6m</span></code></pre>
+<pre><code><span class="p">$</span> kubectl get pods -l app=order-api -o custom-columns='NODE:.spec.nodeName' --no-headers | sort | uniq -c
+<span class="c">   4 desktop-worker
+   4 desktop-worker2</span>
+<span class="p">$</span> kubectl describe hpa order-api | sed -n '/^Events/,$p'
+<span class="c">Events:
+  Type    Reason             Age   From                       Message
+  ----    ------             ----  ----                       -------
+  Normal  SuccessfulRescale  2m    horizontal-pod-autoscaler  New size: 6; reason: cpu resource utilization (percentage of request) above target
+  Normal  SuccessfulRescale  1m    horizontal-pod-autoscaler  New size: 8; reason: cpu resource utilization (percentage of request) above target</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 141%는 "requests 250m의 1.41배 = 352m을 쓴다"는 뜻이다. 계산 <code>ceil(2 × 141 / 50) = 6</code>으로 한 번에 6이 됐고, 다시 계산해 8(상한)까지 갔다. D8의 토폴로지 제약 덕에 8개가 4:4로 놓였다. 부하가 계속되는데 8에서 멈춘 것은 <code>maxReplicas</code> 때문이고, 사용률이 39%로 내려간 것은 8개가 나눠 받기 때문이다. Grafana의 Namespace (Pods) 대시보드를 이 시점에 보면 order-api CPU 그래프가 계단처럼 오른 것이 보인다.</p>
+<pre><code><span class="p">$</span> kubectl delete -f ~/k8s-study/day10/load.yaml
+<span class="c"># 터미널 D — 60초 안정화 뒤</span>
+<span class="c">order-api   Deployment/order-api   cpu: 3%/50%    2         8         8          8m
+order-api   Deployment/order-api   cpu: 2%/50%    2         8         2          9m</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 부하를 빼자 사용률은 곧 2%로 떨어졌지만 replicas는 60초를 기다린 뒤 2로 내려갔다. 안정화 창이 없으면 잠깐의 정적에도 줄였다가 다시 늘리는 진동이 생긴다. Grafana에서 늘어난 시각과 줄어든 시각을 찾아 그 사이 간격을 읽어 둔다. 터미널 D는 <kbd>Ctrl-C</kbd>.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>기록: 지금 클러스터의 숫자 다섯 개</h3>
+    <p class="why">D11·D14에서 "정상일 때는 얼마였나"가 필요하다. 지금 적어 둔다.</p>
+<pre><code><span class="p">$</span> q 'sum(kube_pod_status_phase{phase="Running"})'
+<span class="c"> 34</span>
+<span class="p">$</span> q 'sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / 1024/1024/1024'
+<span class="c"> 4.6</span>
+<span class="p">$</span> q 'sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))'
+<span class="c"> 0.42</span>
+<span class="p">$</span> q 'count(up == 0)'
+<span class="c"> 0    ← 또는 kind에서 못 긁는 컨트롤 플레인 대상 수</span>
+<span class="p">$</span> q 'sum by (namespace) (kube_pod_container_status_restarts_total) &gt; 0'</code></pre>
+    <p class="expect"><b>읽을 것</b> — 이 다섯 줄이 클러스터의 평상시 기준선이다. D14에서 장애를 넣었을 때 어느 숫자가 먼저 움직이는지 본다. 값은 환경마다 다르다. 자기 값을 <code>~/k8s-study/day10/baseline.txt</code>에 적어 둔다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <div class="check">
+    <ol>
+      <li><code>kubectl top pods -n study</code>의 CPU 값이 어느 컴포넌트를 거쳐 오는지 순서대로 말한다.</li>
+      <li>PromQL로 study 네임스페이스 파드별 메모리 사용량(<code>container_memory_working_set_bytes</code>)을 파드별 합계로 조회한다.</li>
+      <li>Grafana에서 order-api 파드 하나의 CPU 패널을 열어 그 PromQL을 읽고, <code>rate</code>가 왜 들어 있는지 설명한다.</li>
+      <li>부하를 걸어 HPA가 replicas를 늘리는 과정을 <code>get hpa -w</code>와 Grafana 그래프 양쪽에서 같은 시각으로 보인다.</li>
+      <li>부하를 뺀 뒤 replicas가 바로 줄지 않는 이유를 필드 이름으로 말한다.</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D11로 간다. 2번이 막히면 2단계 (3)의 필터를 그대로 두고 지표 이름만 바꾼다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">모니터링 스택과 HPA는 남긴다. 부하 생성기는 지웠다. port-forward 터미널은 닫는다.</p>
+<pre><code><span class="p">$</span> kubectl get deploy load -n study 2&gt;&amp;1 | tail -1
+<span class="c">Error from server (NotFound): deployments.apps "load" not found</span>
+<span class="p">$</span> kubectl get hpa -n study
+<span class="c">NAME        REFERENCE              TARGETS      MINPODS   MAXPODS   REPLICAS   AGE
+order-api   Deployment/order-api   cpu: 2%/50%  2         8         2          20m</span>
+<span class="p">$</span> cd ~/k8s-study/week1 &amp;&amp; kubectl diff -f . ; echo "exit=$?"
+<span class="c">exit=0</span>
+<span class="p">$</span> helm list -A
+<span class="c">NAME            NAMESPACE               CHART                          STATUS
+eg              envoy-gateway-system    gateway-helm-v1.9.1            deployed
+headlamp        kube-system             headlamp-0.x.y                 deployed
+kps             monitoring              kube-prometheus-stack-88.3.0   deployed
+metrics-server  kube-system             metrics-server-3.x.y           deployed</span></code></pre>
+  <p>order-api는 이제 2개로 돈다. D8의 PDB(<code>minAvailable: 3</code>)가 2개일 때는 만족될 수 없어 <code>ALLOWED DISRUPTIONS 0</code>이 된다. D14의 drain 전에 <code>minAvailable</code>을 1로 고치거나 <code>maxUnavailable: 1</code>로 바꿔야 한다. 오늘은 그대로 두고 문제로 남긴다.</p>
+
+  <div class="note">
+    <h5>D11 예고</h5>
+    <p>오늘 대시보드에는 RED가 없다. 내일 order-api와 gateway에 Micrometer를 붙여 <code>/actuator/prometheus</code>를 내놓고, ServiceMonitor로 Prometheus에 등록한다. 그때 <code>release: kps</code> 라벨을 일부러 빼서 Targets에 안 뜨는 것을 겪은 뒤 고친다. p95 지연과 오류율 대시보드를 만들고, 알림 규칙을 걸고, Loki + Alloy로 로그를 같은 시간축에 놓는다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>리소스 메트릭 파이프라인 — <a href="https://kubernetes.io/ko/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/">kubernetes.io/ko/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/</a> · metrics-server — <a href="https://github.com/kubernetes-sigs/metrics-server">github.com/kubernetes-sigs/metrics-server</a></li>
+    <li>HPA — <a href="https://kubernetes.io/ko/docs/tasks/run-application/horizontal-pod-autoscale/">kubernetes.io/ko/docs/tasks/run-application/horizontal-pod-autoscale/</a></li>
+    <li>kube-prometheus-stack 차트 — <a href="https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack">github.com/prometheus-community/helm-charts/…/kube-prometheus-stack</a> · Prometheus Operator — <a href="https://prometheus-operator.dev/">prometheus-operator.dev</a></li>
+    <li>PromQL 기초 — <a href="https://prometheus.io/docs/prometheus/latest/querying/basics/">prometheus.io/docs/prometheus/latest/querying/basics/</a> · 지표 타입 — <a href="https://prometheus.io/docs/concepts/metric_types/">prometheus.io/docs/concepts/metric_types/</a></li>
+    <li>USE 방법 (Brendan Gregg) — <a href="https://www.brendangregg.com/usemethod.html">brendangregg.com/usemethod.html</a> · 골든 시그널 (Google SRE Book, Monitoring Distributed Systems) — <a href="https://sre.google/sre-book/monitoring-distributed-systems/">sre.google/sre-book/monitoring-distributed-systems/</a></li>
+    <li>프로젝트 자료 — 관측성 실습 시리즈 트랙 A · <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day09-storage-statefulset.html">← D9 스토리지와 스테이트풀셋</a><a href="day11-monitoring-2-app-metrics-alerts-logs.html">D11 모니터링 ② →</a></div>
+</div></footer>
+</body>
+</html>

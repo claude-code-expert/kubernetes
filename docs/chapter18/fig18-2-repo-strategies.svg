@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-code { font-size: 9.5px; font-family: monospace; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- ① 단일 리포 -->
+  <rect class="box" x="20" y="20" width="205" height="190" rx="6"/>
+  <text class="t-title" x="40" y="44">① 단일 리포지터리</text>
+  <text class="t-code" x="40" y="66">app-x/</text>
+  <text class="t-code" x="40" y="80">app-y/</text>
+  <text class="t-code" x="40" y="94">ops-team/flux/</text>
+  <text class="t-sub" x="40" y="126">가장 단순, 작은 팀에 적합</text>
+  <text class="t-sub" x="40" y="144">회사가 크면 관심사가</text>
+  <text class="t-sub" x="40" y="160">뒤섞여 한계 도달</text>
+
+  <!-- ② 팀별 리포 -->
+  <rect class="box-accent" x="240" y="20" width="205" height="190" rx="6"/>
+  <text class="t-title" x="260" y="44">② 팀별 리포지터리</text>
+  <text class="t-code" x="260" y="66">ops-team/</text>
+  <text class="t-code" x="260" y="80">team-x/app-x/</text>
+  <text class="t-code" x="260" y="94">team-y/</text>
+  <text class="t-sub" x="260" y="126">관심사 분리 · 정리 용이</text>
+  <text class="t-sub" x="260" y="144">확신 없으면 여기서 시작</text>
+  <text class="t-sub" x="260" y="160">(원서 권장 기본값)</text>
+
+  <!-- ③ 앱별 리포 -->
+  <rect class="box" x="460" y="20" width="205" height="190" rx="6"/>
+  <text class="t-title" x="480" y="44">③ 애플리케이션별 리포</text>
+  <text class="t-code" x="480" y="66">ops-team-repo/</text>
+  <text class="t-code" x="480" y="80">team-x-repo/</text>
+  <text class="t-code" x="480" y="94">  app-x/deploy/</text>
+  <text class="t-sub" x="480" y="126">팀 단위 읽기 권한 세밀 제어</text>
+  <text class="t-sub" x="480" y="144">단점: 전체를 한눈에</text>
+  <text class="t-sub" x="480" y="160">볼 수 없음</text>
+
+  <!-- ④ 환경별 브랜치 -->
+  <rect class="box" x="680" y="20" width="200" height="190" rx="6"/>
+  <text class="t-title" x="700" y="44">④ 환경별 브랜치</text>
+  <text class="t-code" x="700" y="66">main</text>
+  <text class="t-code" x="700" y="80">staging</text>
+  <text class="t-code" x="700" y="94">dev</text>
+  <text class="t-sub" x="700" y="126">머지만으로 환경 갱신</text>
+  <text class="t-sub" x="700" y="144">브랜치 충돌 위험,</text>
+  <text class="t-sub" x="700" y="160">헬름·쿠스토마이즈와 상성 나쁨</text>
+
+  <!-- 권장 표 -->
+  <rect class="box" x="20" y="230" width="860" height="90" rx="6"/>
+  <text class="t-title" x="40" y="256">18.7절 모범 사례가 강하게 권하는 조합</text>
+  <text class="t-sub" x="40" y="280">④ 환경별 브랜치는 쓰지 않는다 — 대신 같은 브랜치 안에서 환경별 폴더를 나눈다.</text>
+  <text class="t-sub" x="40" y="298">폴더 구조는 헬름·쿠스토마이즈 같은 템플릿 툴과 자연스럽게 맞물리고, 브랜치 충돌 위험도 없다.</text>
+
+  <text class="t-cap" x="450" y="358" text-anchor="middle">넷 중 정답은 없다 — 조직 규모와 팀 구성에 달렸다. 다만 ④(브랜치)만은 원서도, 실무도 피하라고 입을 모은다.</text>
+  <text class="t-cap" x="450" y="380" text-anchor="middle">확신이 없다면 ②(팀별 리포지터리)에서 시작해 필요할 때 ③으로 쪼갠다.</text>
+</svg>

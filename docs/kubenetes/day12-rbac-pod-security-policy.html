@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D12 · 누가 무엇을 할 수 있나 — RBAC·파드 시큐리티·네트워크 정책·어드미션</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D11과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 4단계 보안과 자동화 · Day 12</p>
+  <h1>누가 무엇을 할 수 있나 — RBAC·파드 시큐리티·네트워크 정책·어드미션</h1>
+  <p class="lede">D7에서 시크릿이 <code>get secret -o yaml</code> 한 줄로 열리는 것을 봤다. 진짜 보호막은 인코딩이 아니라 접근 권한이다. API 서버로 오는 요청은 세 관문을 순서대로 지난다. 누구인가(인증), 해도 되는가(인가), 내용이 규칙에 맞는가(어드미션). 오늘은 세 관문을 하나씩 만지고, 파드가 노드에서 할 수 있는 일을 제한하고, 파드끼리의 통신을 제한하는 정책을 쓴다. 그리고 관문을 통과한 이미지에 <code>latest</code> 태그가 없도록 클러스터가 스스로 거부하게 한다.</p>
+  <div class="meta">
+    <span>소요 <b>이론 45분 · 따라하기 75분</b></span>
+    <span>전제 <b>D11 완료 · Headlamp 설치됨(D3)</b></span>
+    <span>버전 <b>Kubernetes v1.36 (PSA GA · ValidatingAdmissionPolicy GA) · kindnet CNI</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#setup">실습 준비</a></li>
+  <li><a href="#lab">따라하기</a></li>
+  <li><a href="#checkpoint">체크포인트</a></li>
+  <li><a href="#cleanup">정리</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>요청 하나가 인증 → 인가 → 어드미션을 지나는 순서를 말하고, 각 관문에서 거부됐을 때의 오류 메시지를 구분한다.</li>
+    <li>파드는 조회되지만 시크릿은 Forbidden인 계정을 만들어 kubectl과 Headlamp 양쪽에서 확인한다.</li>
+    <li>파드 안에서 ServiceAccount 토큰으로 API 서버를 호출해 보고, 필요 없는 토큰 마운트를 끈다.</li>
+    <li>Pod Security Admission의 세 수준을 네임스페이스 라벨로 걸고, restricted에서 거부되는 파드를 securityContext로 고친다.</li>
+    <li>NetworkPolicy를 쓰고 이 CNI에서 집행되지 않음을 확인하며, ValidatingAdmissionPolicy로 <code>latest</code> 태그를 거부한다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론</h2>
+
+  <h3>1.1 세 관문</h3>
+  <figure>
+  <svg viewBox="0 0 900 250" width="100%" role="img" aria-label="API 서버의 인증·인가·어드미션 세 관문">
+    <rect x="20" y="70" width="120" height="60" rx="3" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+    <text x="32" y="94" font-size="12" font-weight="600" fill="#1a1a1a">요청</text>
+    <text x="32" y="112" class="mono" font-size="11" fill="#4a4a4a">kubectl apply</text>
+    <line x1="140" y1="100" x2="178" y2="100" stroke="#767676" stroke-width="1.2"/><polygon points="172,96 180,100 172,104" fill="#767676"/>
+    <rect x="184" y="50" width="190" height="100" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="196" y="72" font-size="12" font-weight="600" fill="#1d4ed8">① 인증 Authentication</text>
+    <text x="196" y="92" font-size="11" fill="#4a4a4a">누구인가. 인증서·토큰·OIDC</text>
+    <text x="196" y="110" font-size="11" fill="#4a4a4a">→ 사용자명 + 그룹</text>
+    <text x="196" y="136" font-size="11" fill="#c2410c">실패: 401 Unauthorized</text>
+    <line x1="374" y1="100" x2="412" y2="100" stroke="#767676" stroke-width="1.2"/><polygon points="406,96 414,100 406,104" fill="#767676"/>
+    <rect x="418" y="50" width="190" height="100" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="430" y="72" font-size="12" font-weight="600" fill="#1d4ed8">② 인가 Authorization</text>
+    <text x="430" y="92" font-size="11" fill="#4a4a4a">해도 되는가. RBAC</text>
+    <text x="430" y="110" font-size="11" fill="#4a4a4a">동사 × 리소스 × 네임스페이스</text>
+    <text x="430" y="136" font-size="11" fill="#c2410c">실패: 403 Forbidden</text>
+    <line x1="608" y1="100" x2="646" y2="100" stroke="#767676" stroke-width="1.2"/><polygon points="640,96 648,100 640,104" fill="#767676"/>
+    <rect x="652" y="30" width="228" height="140" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="664" y="52" font-size="12" font-weight="600" fill="#1d4ed8">③ 어드미션 Admission</text>
+    <text x="664" y="72" font-size="11" fill="#4a4a4a">내용이 규칙에 맞는가</text>
+    <text x="664" y="92" font-size="11" fill="#4a4a4a">변경(mutating) 웹훅 →</text>
+    <text x="664" y="108" font-size="11" fill="#4a4a4a">검증(validating): 내장 PSA,</text>
+    <text x="664" y="124" font-size="11" fill="#4a4a4a">ValidatingAdmissionPolicy(CEL), 웹훅</text>
+    <text x="664" y="156" font-size="11" fill="#c2410c">실패: 4xx + 정책 메시지</text>
+    <line x1="766" y1="170" x2="766" y2="200" stroke="#6d28d9" stroke-width="1.5"/><polygon points="762,194 766,202 770,194" fill="#6d28d9"/>
+    <text x="700" y="224" font-size="12" font-weight="600" fill="#6d28d9">etcd에 저장</text>
+    <text x="20" y="200" font-size="11" fill="#767676">읽기 요청(get/list)은 어드미션을 거치지 않는다. 어드미션은 쓰기(create/update/delete)에만 붙는다.</text>
+    <text x="20" y="218" font-size="11" fill="#767676">D5·D6에서 본 데이터 경로(파드 간 트래픽)는 이 관문과 무관하다. 그 쪽은 NetworkPolicy가 맡는다.</text>
+  </svg>
+  <figcaption>도판 1. 401은 "누군지 모르겠다", 403은 "알겠는데 안 된다", 어드미션 거부는 "되는데 내용이 틀렸다". 오류 코드로 어느 관문인지 안다.</figcaption>
+  </figure>
+
+  <h3>1.2 인증: 사람과 파드의 신분</h3>
+  <p>사람은 kubeconfig의 클라이언트 인증서(D2에서 본 <code>docker-desktop</code> 사용자가 이것이다)나 외부 IdP의 OIDC 토큰으로 인증한다. 쿠버네티스에는 사용자 오브젝트가 없다. 인증서의 CN이 곧 사용자명이고 O가 그룹이다. 파드는 <dfn title="ServiceAccount">서비스어카운트(ServiceAccount)</dfn>로 인증한다. 네임스페이스마다 <code>default</code> SA가 있고, 파드는 명시하지 않으면 그것을 쓴다. kubelet이 파드에 단기 토큰(기본 1시간, 자동 갱신)을 <code>/var/run/secrets/kubernetes.io/serviceaccount/token</code>에 넣어 주고, 파드는 그것으로 API 서버에 말할 수 있다. 사용자명은 <code>system:serviceaccount:&lt;ns&gt;:&lt;name&gt;</code>이다.</p>
+  <p>API를 부를 일이 없는 앱(order-api·gateway가 그렇다)에 토큰이 마운트되어 있으면 공격 표면일 뿐이다. <code>automountServiceAccountToken: false</code>로 끈다.</p>
+
+  <h3>1.3 인가: RBAC 네 오브젝트</h3>
+  <table>
+    <thead><tr><th style="width:150px">오브젝트</th><th>범위</th><th>뜻</th></tr></thead>
+    <tbody>
+      <tr><td><code>Role</code></td><td>네임스페이스</td><td>동사(get·list·watch·create·update·patch·delete)와 리소스의 목록. "무엇을 할 수 있나"</td></tr>
+      <tr><td><code>ClusterRole</code></td><td>클러스터</td><td>같은 것을 클러스터 범위로. 노드·네임스페이스 같은 비네임스페이스 리소스는 여기에만 적을 수 있다</td></tr>
+      <tr><td><code>RoleBinding</code></td><td>네임스페이스</td><td>Role 또는 ClusterRole을 주체(사용자·그룹·SA)에게 <b>그 네임스페이스 안에서</b> 준다</td></tr>
+      <tr><td><code>ClusterRoleBinding</code></td><td>클러스터</td><td>ClusterRole을 클러스터 전체에서 준다. D3에서 Headlamp에 <code>cluster-admin</code>을 이렇게 줬다</td></tr>
+    </tbody>
+  </table>
+  <p>Role을 만드는 것만으로는 아무도 권한을 갖지 않는다. 바인딩이 범위를 정한다. 같은 ClusterRole(예: 내장 <code>view</code>)을 RoleBinding으로 묶으면 네임스페이스 하나에서만, ClusterRoleBinding으로 묶으면 전부에서 유효하다. RBAC은 <b>허용만</b> 쌓인다. 거부 규칙이 없으므로 권한은 최소로 시작해 필요한 만큼만 더한다. 시크릿에 <code>list</code>를 주면 그 네임스페이스의 비밀이 전부 열린다는 것을 기억한다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 200" width="100%" role="img" aria-label="Role, RoleBinding, 주체의 관계">
+    <rect x="20" y="40" width="220" height="110" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="32" y="62" font-size="12" font-weight="600" fill="#1d4ed8">Role pod-viewer (study)</text>
+    <text x="32" y="84" class="mono" font-size="11" fill="#4a4a4a">resources: [pods, pods/log]</text>
+    <text x="32" y="100" class="mono" font-size="11" fill="#4a4a4a">verbs: [get, list, watch]</text>
+    <text x="32" y="128" font-size="11" fill="#767676">무엇을 (권한의 내용)</text>
+    <rect x="340" y="40" width="220" height="110" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+    <text x="352" y="62" font-size="12" font-weight="600" fill="#6d28d9">RoleBinding (study)</text>
+    <text x="352" y="84" class="mono" font-size="11" fill="#4a4a4a">roleRef: Role/pod-viewer</text>
+    <text x="352" y="100" class="mono" font-size="11" fill="#4a4a4a">subjects: [SA dev-kim]</text>
+    <text x="352" y="128" font-size="11" fill="#767676">누구에게 · 어디서 (범위)</text>
+    <rect x="660" y="40" width="220" height="110" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+    <text x="672" y="62" font-size="12" font-weight="600" fill="#15803d">주체</text>
+    <text x="672" y="84" font-size="11" fill="#4a4a4a">ServiceAccount dev-kim</text>
+    <text x="672" y="100" font-size="11" fill="#4a4a4a">(사용자 · 그룹도 가능)</text>
+    <text x="672" y="128" font-size="11" fill="#767676">누가 (인증된 신분)</text>
+    <line x1="340" y1="95" x2="240" y2="95" stroke="#6d28d9" stroke-width="1.2"/><polygon points="246,91 238,95 246,99" fill="#6d28d9"/>
+    <line x1="560" y1="95" x2="660" y2="95" stroke="#6d28d9" stroke-width="1.2"/><polygon points="654,91 662,95 654,99" fill="#6d28d9"/>
+    <text x="20" y="184" font-size="11" fill="#767676">바인딩이 없으면 Role은 종이일 뿐이다. 같은 Role을 다른 바인딩으로 다른 사람에게 재사용한다.</text>
+  </svg>
+  <figcaption>도판 2. 파랑=내용, 보라=연결, 초록=신분. 권한은 세 개가 다 맞아야 생긴다.</figcaption>
+  </figure>
+
+  <h3>1.4 어드미션: 내용을 검사한다</h3>
+  <p>RBAC은 "파드를 만들 수 있나"까지만 본다. YAML 안에 <code>privileged: true</code>가 있는지는 보지 않는다. 특권 컨테이너 하나면 그 노드의 모든 비밀이 열리므로, 내용을 검사하는 관문이 따로 있다.</p>
+  <table>
+    <thead><tr><th style="width:230px">수단</th><th>방식</th><th>오늘</th></tr></thead>
+    <tbody>
+      <tr><td><dfn title="Pod Security Admission">Pod Security Admission</dfn></td><td>내장. 네임스페이스 라벨로 <code>privileged</code> / <code>baseline</code> / <code>restricted</code> 세 수준을 <code>enforce</code>(거부)·<code>audit</code>(감사 로그)·<code>warn</code>(경고) 세 모드로 건다. 파드 spec만 본다.</td><td>4·5단계</td></tr>
+      <tr><td><dfn title="ValidatingAdmissionPolicy">ValidatingAdmissionPolicy</dfn></td><td>내장. CEL 표현식으로 아무 리소스나 검증. 웹훅 서버가 필요 없다. 정책과 바인딩이 분리돼 같은 정책을 여러 범위에 다른 모드(Deny·Warn·Audit)로 건다.</td><td>7단계</td></tr>
+      <tr><td>Kyverno</td><td>외부 정책 엔진(CNCF Graduated). YAML로 검증·변경·생성·이미지 서명 검증까지. 웹훅으로 동작.</td><td>비교표</td></tr>
+      <tr><td>OPA Gatekeeper</td><td>외부. Rego 언어. 감사 리포트가 강점.</td><td>비교표</td></tr>
+    </tbody>
+  </table>
+  <p>선택 기준은 단순하다. 파드 보안 기준선은 PSA로(무료, 내장, 표준). 그 밖의 검증(태그 금지, 라벨 필수, 리소스 필수)은 VAP로. 변경(기본값 주입)·생성·서명 검증이 필요해지면 그때 Kyverno를 본다.</p>
+
+  <h3>1.5 PSA 세 수준</h3>
+  <table>
+    <thead><tr><th style="width:120px">수준</th><th>금지하는 것</th><th style="width:180px">우리 파드</th></tr></thead>
+    <tbody>
+      <tr><td><code>privileged</code></td><td>없음. 제한 없음.</td><td>—</td></tr>
+      <tr><td><code>baseline</code></td><td>privileged 컨테이너, hostPath·hostNetwork·hostPID, 위험한 capability 추가, 기본 seccomp 해제</td><td>전부 통과</td></tr>
+      <tr><td><code>restricted</code></td><td>baseline + root 실행 금지, 권한 상승 금지, capability 전부 drop, seccomp RuntimeDefault 필수</td><td>securityContext 없이는 전부 거부</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.6 NetworkPolicy</h3>
+  <p><dfn title="NetworkPolicy">네트워크 정책</dfn>은 파드 단위의 방화벽이다. 기본은 전부 허용이고, 어떤 파드를 선택하는 정책이 하나라도 생기면 그 파드는 정책에 적힌 것 외에는 거부된다(정책이 있는 방향에 한해). 규칙은 D3의 라벨 셀렉터로 쓴다. 단, 이것은 <b>명세</b>이고 집행은 CNI 플러그인이 한다. kind의 기본 <code>kindnet</code>은 라우팅만 하고 정책을 집행하지 않는다. 오브젝트는 만들어지지만 아무 일도 안 생긴다. Cilium·Calico로 바꾸면 같은 오브젝트가 그대로 동작한다. 6단계에서 그 사실을 직접 확인한다.</p>
+</div></section>
+
+<!-- ════════════════ 실습 준비 ════════════════ -->
+<section id="setup"><div class="wrap">
+  <h2><span class="n">2</span>실습 준비</h2>
+<pre><code><span class="p">$</span> mkdir -p ~/k8s-study/day12 &amp;&amp; cd ~/k8s-study/day12
+<span class="p">$</span> kubectl config get-contexts
+<span class="c">CURRENT   NAME             CLUSTER          AUTHINFO         NAMESPACE
+*         docker-desktop   docker-desktop   docker-desktop   study</span>
+<span class="p">$</span> kubectl auth whoami
+<span class="c">ATTRIBUTES   VALUE
+Username     kubernetes-admin
+Groups       [kubeadm:cluster-admins system:authenticated]</span>
+<span class="p">$</span> kubectl auth can-i '*' '*' --all-namespaces
+<span class="c">yes</span></code></pre>
+  <p class="expect"><b>확인</b> — 지금 신분은 <code>kubernetes-admin</code>이고 그룹 <code>kubeadm:cluster-admins</code>가 <code>cluster-admin</code> ClusterRole에 묶여 있다. 그래서 뭐든 된다. 오늘 만드는 계정은 이 반대편이다.</p>
+</div></section>
+
+<!-- ════════════════ 따라하기 ════════════════ -->
+<section id="lab"><div class="wrap">
+  <h2><span class="n">3</span>따라하기</h2>
+
+  <!-- Step 1 -->
+  <div class="step" id="s1">
+    <h3><span class="sn">1</span>Role은 종이다: 바인딩 전과 후</h3>
+    <p class="why">개발자 계정 <code>dev-kim</code>(SA로 대신한다)을 만들고, Role을 만든 뒤에도 권한이 없음을 <code>can-i --as</code>로 본다.</p>
+<pre><code><span class="p">$</span> kubectl create serviceaccount dev-kim
+<span class="p">$</span> cat &gt; rbac-pod-viewer.yaml &lt;&lt;'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-viewer
+  namespace: study
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+EOF
+<span class="p">$</span> kubectl apply -f rbac-pod-viewer.yaml
+<span class="p">$</span> kubectl auth can-i list pods --as=system:serviceaccount:study:dev-kim
+<span class="c">no</span>
+
+<span class="p">$</span> cat &gt; rbac-pod-viewer-binding.yaml &lt;&lt;'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-kim-pod-viewer
+  namespace: study
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pod-viewer
+subjects:
+- kind: ServiceAccount
+  name: dev-kim
+  namespace: study
+EOF
+<span class="p">$</span> kubectl apply -f rbac-pod-viewer-binding.yaml
+<span class="p">$</span> for r in pods secrets configmaps deployments.apps; do printf '%-18s ' $r; kubectl auth can-i list $r --as=system:serviceaccount:study:dev-kim; done
+<span class="c">pods               yes
+secrets            no
+configmaps         no
+deployments.apps   yes</span>
+<span class="p">$</span> kubectl auth can-i list pods -n default --as=system:serviceaccount:study:dev-kim
+<span class="c">no</span>
+<span class="p">$</span> kubectl auth can-i delete pods --as=system:serviceaccount:study:dev-kim
+<span class="c">no</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — Role만 있을 때는 <code>no</code>, 바인딩 후 <code>yes</code>. 시크릿·컨피그맵은 Role에 없으니 no, default 네임스페이스는 바인딩 범위 밖이니 no, delete는 동사 목록에 없으니 no. <code>--as</code>는 관리자가 남의 권한을 미리 확인하는 표준 방법이다.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="s2">
+    <h3><span class="sn">2</span>그 계정으로 실제로 써 본다: kubectl 컨텍스트와 Headlamp</h3>
+    <p class="why">토큰을 발급해 kubeconfig에 두 번째 사용자를 만든다. 403이 어떻게 생겼는지 본다.</p>
+<pre><code><span class="p">$</span> TOKEN=$(kubectl create token dev-kim --duration=2h)
+<span class="p">$</span> kubectl config set-credentials dev-kim --token="$TOKEN"
+<span class="p">$</span> kubectl config set-context dev-kim --cluster=docker-desktop --user=dev-kim --namespace=study
+<span class="p">$</span> kubectl --context=dev-kim auth whoami
+<span class="c">ATTRIBUTES   VALUE
+Username     system:serviceaccount:study:dev-kim
+Groups       [system:serviceaccounts system:serviceaccounts:study system:authenticated]</span>
+
+<span class="p">$</span> kubectl --context=dev-kim get pods | head -3
+<span class="c">NAME                          READY   STATUS    RESTARTS   AGE
+gateway-…                     1/1     Running   0          1d
+order-api-…                   1/1     Running   0          1d</span>
+<span class="p">$</span> kubectl --context=dev-kim get secrets
+<span class="c">Error from server (Forbidden): secrets is forbidden: User "system:serviceaccount:study:dev-kim" cannot list resource "secrets" in API group "" in the namespace "study"</span>
+<span class="p">$</span> kubectl --context=dev-kim delete pod -l app=order-api
+<span class="c">Error from server (Forbidden): pods "order-api-…" is forbidden: User "system:serviceaccount:study:dev-kim" cannot delete resource "pods" in API group "" in the namespace "study"</span>
+<span class="p">$</span> kubectl --context=dev-kim get pods -n monitoring
+<span class="c">Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:study:dev-kim" cannot list resource "pods" in API group "" in the namespace "monitoring"</span>
+<span class="p">$</span> kubectl --context=dev-kim logs deployment/order-api --tail=1
+<span class="c">(로그 한 줄 — pods/log 허용)</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 403 메시지가 정확하다. 누가(User), 무엇을(동사·리소스·API 그룹), 어디서(네임스페이스). 권한 문제를 만나면 이 한 줄을 그대로 Role과 대조하면 된다. <code>pods/log</code>는 파드의 하위 리소스라 따로 적어야 로그를 볼 수 있다.</p>
+    <p>같은 토큰으로 Headlamp에 들어간다(D3 7단계의 port-forward를 다시 켠다). <code>echo $TOKEN</code>으로 복사해 로그인하면 네임스페이스 study의 파드와 디플로이먼트는 보이고, <b>Secrets</b>·<b>ConfigMaps</b> 메뉴는 비어 있거나 403을 표시하며, 네임스페이스 선택에서 monitoring을 골라도 아무것도 안 나온다. Headlamp는 kubectl과 같은 관문을 지난다.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="s3">
+    <h3><span class="sn">3</span>파드의 신분: 토큰으로 API를 부르고, 마운트를 끈다</h3>
+    <p class="why">order-api 파드 안에는 지금 default SA의 토큰이 있다. 그것으로 API 서버를 불러 본다.</p>
+<pre><code><span class="p">$</span> POD=$(kubectl get pod -l app=order-api -o jsonpath='{.items[0].metadata.name}')
+<span class="p">$</span> kubectl exec $POD -- ls /var/run/secrets/kubernetes.io/serviceaccount/
+<span class="c">ca.crt  namespace  token</span>
+<span class="p">$</span> kubectl exec $POD -- sh -c 'curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/api/v1/namespaces/study/pods' | head -6
+<span class="c">{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "status": "Failure",
+  "message": "pods is forbidden: User \"system:serviceaccount:study:default\" cannot list resource \"pods\" in API group \"\" in the namespace \"study\"",
+  "reason": "Forbidden",</span>
+<span class="p">$</span> kubectl exec $POD -- sh -c 'curl -s -o /dev/null -w "%{http_code}\n" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt https://kubernetes.default.svc/api/v1/namespaces/study/pods'
+<span class="c">401</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 토큰을 붙이면 403(인증은 됐고 인가에서 막힘), 안 붙이면 401(누군지 모름). 도판 1의 두 관문이 코드로 구분된다. <code>kubernetes.default.svc</code>는 API 서버를 가리키는 서비스(D5)이고 <code>ca.crt</code>는 D7에서 본 <code>kube-root-ca.crt</code>다. default SA는 권한이 없지만, 누군가 default SA에 RoleBinding을 붙이는 순간 이 파드는 그 권한을 그대로 상속한다. 앱이 API를 쓸 일이 없으면 토큰 자체를 없앤다.</p>
+<pre><code><span class="p">$</span> cd ~/k8s-study/week1
+<span class="p">$</span> cat &gt; 13-serviceaccounts.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: order-api
+  namespace: study
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gateway
+  namespace: study
+automountServiceAccountToken: false
+EOF
+<span class="p">$</span> python3 - &lt;&lt;'EOF'
+for p,sa in (('20-order-api-deploy.yaml','order-api'),('30-gateway.yaml','gateway')):
+    t=open(p).read()
+    if 'serviceAccountName' not in t:
+        t=t.replace('    spec:\n      terminationGracePeriodSeconds: 30\n','    spec:\n      serviceAccountName: %s\n      automountServiceAccountToken: false\n      terminationGracePeriodSeconds: 30\n'%sa,1) if 'terminationGracePeriodSeconds' in t else t.replace('    spec:\n      containers:\n','    spec:\n      serviceAccountName: %s\n      automountServiceAccountToken: false\n      containers:\n'%sa,1)
+    open(p,'w').write(t)
+EOF
+<span class="p">$</span> grep -c 'serviceAccountName' 20-order-api-deploy.yaml 30-gateway.yaml
+<span class="c">20-order-api-deploy.yaml:1
+30-gateway.yaml:1</span>
+<span class="p">$</span> kubectl apply -f 13-serviceaccounts.yaml -f 20-order-api-deploy.yaml -f 30-gateway.yaml
+<span class="p">$</span> kubectl rollout status deployment/order-api &amp;&amp; kubectl rollout status deployment/gateway
+<span class="p">$</span> POD=$(kubectl get pod -l app=order-api -o jsonpath='{.items[0].metadata.name}')
+<span class="p">$</span> kubectl exec $POD -- ls /var/run/secrets/kubernetes.io/serviceaccount/ 2&gt;&amp;1 | tail -1
+<span class="c">ls: cannot access '/var/run/secrets/kubernetes.io/serviceaccount/': No such file or directory</span>
+<span class="p">$</span> kubectl get pod $POD -o jsonpath='{.spec.serviceAccountName}{"\n"}'
+<span class="c">order-api</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 앱마다 전용 SA를 두고 토큰 마운트를 껐다. 파드 안에 토큰 디렉터리가 없다. 훗날 이 앱이 API를 써야 하면 그 SA에만 필요한 Role을 붙이고 마운트를 켠다. D11의 Alloy는 반대로 API를 써야 하는 앱이라 차트가 SA와 ClusterRole(<code>pods/log</code> 읽기)을 만들어 줬다.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="s4">
+    <h3><span class="sn">4</span>Pod Security Admission: 아무것도 안 하면 아무것도 안 막힌다</h3>
+    <p class="why">study에 baseline을 집행하고 restricted는 경고로 건다. 특권 파드가 거부되는 것을 본다.</p>
+<pre><code><span class="c"># 지금은 아무 제한이 없다</span>
+<span class="p">$</span> cat &gt; ~/k8s-study/day12/privileged-pod.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-demo
+spec:
+  containers:
+  - name: shell
+    image: busybox:1.37
+    command: ["sh", "-c", "sleep 3600"]
+    securityContext:
+      privileged: true
+EOF
+<span class="p">$</span> kubectl apply -f ~/k8s-study/day12/privileged-pod.yaml
+<span class="c">pod/privileged-demo created</span>
+<span class="p">$</span> kubectl exec privileged-demo -- sh -c 'ls /dev | wc -l; mount | grep -c " / "'
+<span class="c">300
+1</span>
+<span class="p">$</span> kubectl delete pod privileged-demo --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — 특권 컨테이너는 노드의 장치를 전부 본다(<code>/dev</code>에 300개). 여기서 노드 디스크를 마운트하면 D9의 PVC 디렉터리든 kubelet 인증서든 다 읽힌다. RBAC은 이것을 막지 못한다. "파드를 만들 권한"이 있는 사람이 만든 것이기 때문이다.</p>
+<pre><code><span class="p">$</span> cat &gt; 00-namespace.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: study
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+EOF
+<span class="p">$</span> kubectl apply -f 00-namespace.yaml
+<span class="c">Warning: existing pods in namespace "study" violate the new PodSecurity enforce level "baseline:latest"
+Warning: privileged-demo (and 0 other pods): privileged   ← 아직 Terminating 중이면 이 줄이 보인다
+namespace/study configured</span>
+<span class="p">$</span> kubectl apply -f ~/k8s-study/day12/privileged-pod.yaml
+<span class="c">Error from server (Forbidden): error when creating "…/privileged-pod.yaml": pods "privileged-demo" is forbidden: violates PodSecurity "baseline:latest": privileged (container "shell" must not set securityContext.privileged=true)</span>
+
+<span class="p">$</span> kubectl rollout restart deployment/order-api &amp;&amp; kubectl rollout status deployment/order-api
+<span class="c">Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "app" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "app" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "app" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "app" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+deployment.apps/order-api restarted
+deployment "order-api" successfully rolled out</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 라벨 네 줄로 네임스페이스에 정책이 걸렸다. 특권 파드는 <code>Forbidden</code>과 함께 <b>어느 필드가 왜</b> 위반인지 적혀 온다. 어드미션 거부는 RBAC 거부와 문장이 다르다("violates PodSecurity"). restricted는 <code>warn</code>이라 롤링 재시작은 성공했지만 경고 네 줄이 나왔다. 그 네 줄이 곧 다음 단계에서 고칠 목록이다. 운영 클러스터에 restricted enforce를 바로 걸면 이 네 줄이 전부 거부가 되어 장애가 난다. warn → 고치기 → enforce 순서다.</p>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="s5">
+    <h3><span class="sn">5</span>restricted를 통과하도록 securityContext를 고친다</h3>
+    <p class="why">경고 네 줄을 하나씩 없앤다. 그리고 restricted를 enforce하는 별도 네임스페이스에서 거부→통과를 확인한다.</p>
+<pre><code><span class="p">$</span> python3 - &lt;&lt;'EOF'
+sc_pod='''      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+'''
+sc_ctr='''        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+'''
+for p in ('20-order-api-deploy.yaml','30-gateway.yaml','22-order-api-canary.yaml'):
+    t=open(p).read()
+    if 'runAsNonRoot' in t: continue
+    t=t.replace('      containers:\n', sc_pod+'      containers:\n',1)
+    t=t.replace('        ports:\n        - containerPort: 8080\n', sc_ctr+'        ports:\n        - containerPort: 8080\n',1)
+    open(p,'w').write(t)
+EOF
+<span class="p">$</span> grep -cE 'runAsNonRoot|drop: \["ALL"\]' 20-order-api-deploy.yaml 30-gateway.yaml 22-order-api-canary.yaml
+<span class="c">20-order-api-deploy.yaml:2
+30-gateway.yaml:2
+22-order-api-canary.yaml:2</span>
+<span class="p">$</span> kubectl apply -f 20-order-api-deploy.yaml -f 30-gateway.yaml -f 22-order-api-canary.yaml
+<span class="c">deployment.apps/order-api configured      ← 경고 없음
+deployment.apps/gateway configured
+deployment.apps/order-api-canary configured</span>
+<span class="p">$</span> kubectl rollout status deployment/order-api &amp;&amp; kubectl rollout status deployment/gateway
+<span class="p">$</span> POD=$(kubectl get pod -l app=order-api -o jsonpath='{.items[0].metadata.name}')
+<span class="p">$</span> kubectl exec $POD -- id
+<span class="c">uid=10001 gid=10001 groups=10001</span>
+<span class="p">$</span> curl -s localhost/orders | cut -c1-60; echo
+<span class="c">{"version":"v6","host":"order-api-…","orders":[{"id":1,"it</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 경고가 사라졌고 앱은 UID 10001로 돈다. Temurin JRE 이미지는 root를 요구하지 않으므로 그대로 된다. 포트 8080은 1024 이상이라 비root로 열린다. 80을 쓰는 앱이었다면 포트를 바꾸거나 <code>NET_BIND_SERVICE</code> capability 하나만 더해야 한다. postgres는 <code>13-postgres</code>를 손대지 않았다. baseline은 통과하고 restricted 경고만 남는데, 비root 실행에는 PVC 소유권(fsGroup) 문제가 얽혀 오늘 범위를 넘는다. 경고로 남겨 둔다.</p>
+<pre><code><span class="c"># restricted enforce 네임스페이스에서 거부 → 통과를 직접 본다</span>
+<span class="p">$</span> kubectl create namespace study-restricted
+<span class="p">$</span> kubectl label namespace study-restricted pod-security.kubernetes.io/enforce=restricted
+<span class="p">$</span> kubectl run -n study-restricted plain --image=nginx:1.30
+<span class="c">Error from server (Forbidden): pods "plain" is forbidden: violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (…), unrestricted capabilities (…), runAsNonRoot != true (…), seccompProfile (…)</span>
+<span class="p">$</span> sed 's/namespace: study$/namespace: study-restricted/' 20-order-api-deploy.yaml | kubectl apply -f -
+<span class="c">deployment.apps/order-api created</span>
+<span class="p">$</span> sleep 20 &amp;&amp; kubectl get pods -n study-restricted
+<span class="c">NAME                         READY   STATUS             RESTARTS   AGE
+order-api-…                  0/1     CrashLoopBackOff   1          20s</span>
+<span class="p">$</span> kubectl logs -n study-restricted deployment/order-api --tail=3 | grep -i -m1 'configmap\|secret\|Connection'
+<span class="c">(컨피그맵·시크릿·DB가 이 네임스페이스에 없어 시작에 실패한다 — 어드미션은 통과했다)</span>
+<span class="p">$</span> kubectl delete namespace study-restricted --wait=false</code></pre>
+    <p class="expect"><b>읽을 것</b> — 같은 매니페스트가 restricted enforce에서 <b>생성 자체는 통과</b>했다(어드미션의 몫은 거기까지다). 크래시는 설정과 DB가 없어서이고 그것은 정책과 무관하다. 어드미션이 거부하면 오브젝트가 아예 안 생기고, 통과하면 그 다음은 D3의 진단 순서로 돌아간다. 두 종류를 섞지 않는다.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="s6">
+    <h3><span class="sn">6</span>NetworkPolicy: 쓰고, 집행되지 않음을 확인한다</h3>
+    <p class="why">order-api는 gateway와 Envoy에서만 받게 하는 정책이다. 오브젝트는 정확한데 이 CNI에서는 아무 일도 없다.</p>
+<pre><code><span class="p">$</span> cat &gt; 60-networkpolicy.yaml &lt;&lt;'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: order-api-ingress
+  namespace: study
+spec:
+  podSelector:
+    matchLabels:
+      app: order-api
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: gateway
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
+    ports:
+    - port: 8080
+EOF
+<span class="p">$</span> kubectl apply -f 60-networkpolicy.yaml
+<span class="p">$</span> kubectl describe networkpolicy order-api-ingress | sed -n '/^Spec/,$p'
+<span class="c">Spec:
+  PodSelector:     app=order-api
+  Allowing ingress traffic:
+    To Port: 8080/TCP
+    From:
+      PodSelector: app=gateway
+    From:
+      NamespaceSelector: kubernetes.io/metadata.name=envoy-gateway-system
+    From:
+      NamespaceSelector: kubernetes.io/metadata.name=monitoring
+  Not affecting egress traffic
+  Policy Types: Ingress</span>
+
+<span class="c"># 정책대로면 막혀야 하는 요청: 라벨 없는 임시 파드에서 직접 호출</span>
+<span class="p">$</span> kubectl run np-test --rm -it --restart=Never --image=busybox:1.37 -- wget -qO- -T 3 http://order-api:8080/ 2&gt;/dev/null
+<span class="c">order-api v6 on order-api-…</span>
+<span class="p">$</span> kubectl -n kube-system get ds kindnet -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+<span class="c">docker.io/kindest/kindnetd:v2026…</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 정책에 없는 파드에서의 요청이 통과했다. <code>kindnet</code>은 NetworkPolicy를 집행하지 않는다. 오브젝트는 옳고(<code>describe</code>가 의도대로 읽힌다) 집행자가 없을 뿐이다. 이 파일은 <code>week1/</code>에 남긴다. Cilium이나 Calico를 쓰는 클러스터에 그대로 가져가면 동작한다. 모니터링 네임스페이스를 허용한 이유는 D11의 Prometheus 스크레이프가 order-api의 8080으로 오기 때문이다. 정책을 걸 때 가장 자주 잊는 것이 이 관측 트래픽이다.</p>
+    <div class="note">
+      <h5>집행을 보고 싶다면 (선택, 30분)</h5>
+      <p>kind CLI로 <code>disableDefaultCNI: true</code> 클러스터를 따로 만들고 <code>cilium install</code>을 한 뒤 같은 정책을 적용하면 위 wget이 타임아웃된다. Docker Desktop 내장 클러스터는 CNI 교체를 지원하지 않으므로 별도 클러스터가 필요하다.</p>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="s7">
+    <h3><span class="sn">7</span>ValidatingAdmissionPolicy: <code>latest</code>를 거부한다</h3>
+    <p class="why">CEL 한 줄로 태그 없는 이미지를 막는다. 웹훅 서버 없이 API 서버가 직접 평가한다.</p>
+<pre><code><span class="p">$</span> cat &gt; 61-vap-image-tag.yaml &lt;&lt;'EOF'
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-image-tag
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+    - apiGroups: ["apps"]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["deployments", "statefulsets"]
+  variables:
+  - name: containers
+    expression: "has(object.spec.template) ? object.spec.template.spec.containers : object.spec.containers"
+  validations:
+  - expression: "variables.containers.all(c, c.image.contains(':') &amp;&amp; !c.image.endsWith(':latest'))"
+    message: "모든 컨테이너 이미지에 명시적 태그가 있어야 하며 :latest 는 금지된다"
+    reason: Invalid
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-image-tag-study
+spec:
+  policyName: require-image-tag
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: study
+EOF
+<span class="p">$</span> kubectl apply -f 61-vap-image-tag.yaml
+<span class="p">$</span> kubectl get validatingadmissionpolicy require-image-tag -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}'
+<span class="c">Ready=True</span>
+
+<span class="p">$</span> kubectl run tagless --image=nginx
+<span class="c">The pods "tagless" is invalid: : ValidatingAdmissionPolicy 'require-image-tag' with binding 'require-image-tag-study' denied request: 모든 컨테이너 이미지에 명시적 태그가 있어야 하며 :latest 는 금지된다</span>
+<span class="p">$</span> kubectl run tagged --image=nginx:latest 2&gt;&amp;1 | cut -c1-80
+<span class="c">The pods "tagged" is invalid: : ValidatingAdmissionPolicy 'require-image-tag' wi</span>
+<span class="p">$</span> kubectl run tagged --image=nginx:1.30 &amp;&amp; kubectl delete pod tagged --wait=false
+<span class="c">pod/tagged created
+pod "tagged" deleted</span>
+<span class="p">$</span> kubectl run tagless -n default --image=nginx &amp;&amp; kubectl delete pod tagless -n default --wait=false
+<span class="c">pod/tagless created      ← 바인딩이 study에만 걸려 있다
+pod "tagless" deleted</span>
+<span class="p">$</span> cd ~/k8s-study/week1 &amp;&amp; kubectl apply -f . --dry-run=server 2&gt;&amp;1 | grep -c denied
+<span class="c">0</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 정책(무엇을 검사하나)과 바인딩(어디에 어떤 강도로)이 분리됐다. 같은 정책을 다른 바인딩으로 default에는 <code>Warn</code>으로 걸 수도 있다. 메시지는 내가 쓴 문장 그대로 나온다. <code>variables</code>로 파드와 디플로이먼트의 컨테이너 경로 차이를 한 번에 흡수했다. 마지막 줄: <code>week1/</code>의 매니페스트는 전부 통과한다. 태그를 고정하라는 D4의 원칙이 이제 클러스터가 집행하는 규칙이 됐다. <code>kubectl explain validatingadmissionpolicy.spec</code>으로 필드를 더 볼 수 있다.</p>
+  </div>
+</div></section>
+
+<!-- ════════════════ 체크포인트 ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">4</span>체크포인트</h2>
+  <div class="check">
+    <ol>
+      <li><code>dev-kim</code> 컨텍스트로 파드는 조회되고 시크릿은 Forbidden인 것을 보이고, 403 메시지의 세 요소(누가·무엇·어디)를 읽는다.</li>
+      <li>같은 계정에 컨피그맵 읽기 권한을 <b>Role 수정 없이</b> 추가한다(힌트: 내장 ClusterRole <code>view</code>를 RoleBinding으로).</li>
+      <li>파드 안에서 토큰 없이 API를 부르면 401, 토큰을 붙이면 403임을 보인다.</li>
+      <li>restricted enforce 네임스페이스에서 거부되는 파드를 만들고 securityContext 네 항목을 채워 통과시킨다.</li>
+      <li>VAP를 하나 더 써서 <code>app</code> 라벨이 없는 디플로이먼트를 거부한다(<code>has(object.metadata.labels.app)</code>).</li>
+    </ol>
+  </div>
+  <p>5개 중 4개 이상이면 D13으로 간다. 2번이 막히면 1.3절의 "ClusterRole을 RoleBinding으로"를 다시 읽는다.</p>
+</div></section>
+
+<!-- ════════════════ 정리 ════════════════ -->
+<section id="cleanup"><div class="wrap">
+  <h2><span class="n">5</span>정리</h2>
+  <p class="sub">RBAC·SA·PSA 라벨·NetworkPolicy·VAP는 전부 <code>week1/</code>에 남긴다. 임시 컨텍스트는 지운다.</p>
+<pre><code><span class="p">$</span> kubectl config use-context docker-desktop
+<span class="p">$</span> kubectl config delete-context dev-kim &amp;&amp; kubectl config unset users.dev-kim
+<span class="p">$</span> cp ~/k8s-study/day12/rbac-pod-viewer.yaml ~/k8s-study/week1/14-rbac-pod-viewer.yaml
+<span class="p">$</span> cp ~/k8s-study/day12/rbac-pod-viewer-binding.yaml ~/k8s-study/week1/15-rbac-pod-viewer-binding.yaml
+<span class="p">$</span> kubectl get sa dev-kim -o yaml | grep -v -E 'uid:|resourceVersion:|creationTimestamp:' &gt; ~/k8s-study/week1/16-sa-dev-kim.yaml
+<span class="p">$</span> cd ~/k8s-study/week1 &amp;&amp; kubectl diff -f . ; echo "exit=$?"
+<span class="c">exit=0</span>
+<span class="p">$</span> ls | wc -l
+<span class="c">21</span>
+<span class="p">$</span> kubectl get ns study -o jsonpath='{.metadata.labels}{"\n"}'
+<span class="c">{"kubernetes.io/metadata.name":"study","pod-security.kubernetes.io/audit":"restricted","pod-security.kubernetes.io/enforce":"baseline","pod-security.kubernetes.io/enforce-version":"latest","pod-security.kubernetes.io/warn":"restricted"}</span></code></pre>
+  <p>남은 경고 하나: postgres가 restricted 경고를 낸다. D13에서 차트로 옮길 때 <code>fsGroup: 999</code>와 <code>runAsUser: 999</code>를 붙여 없애는 것을 과제로 둔다.</p>
+
+  <div class="note">
+    <h5>D13 예고</h5>
+    <p><code>week1/</code>에 파일이 21개다. 네임스페이스가 섞여 있고, 시크릿이 평문이고, dev/prod 차이를 표현할 수 없고, 파일을 지워도 클러스터의 리소스는 남는다. 내일 이 디렉터리를 Helm 차트로 감싸고, Kustomize로 같은 것을 다시 만들어 비교하고, HTTPRoute 가중치로 카나리를 단계적으로 옮기며 D11 대시보드로 오류율을 비교한 뒤, Argo CD로 "Git이 곧 클러스터"를 만든다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>API 접근 제어 개요 — <a href="https://kubernetes.io/ko/docs/concepts/security/controlling-access/">kubernetes.io/ko/docs/concepts/security/controlling-access/</a> · RBAC — <a href="https://kubernetes.io/ko/docs/reference/access-authn-authz/rbac/">kubernetes.io/ko/docs/reference/access-authn-authz/rbac/</a></li>
+    <li>서비스어카운트 — <a href="https://kubernetes.io/ko/docs/concepts/security/service-accounts/">kubernetes.io/ko/docs/concepts/security/service-accounts/</a> · 토큰 요청(<code>kubectl create token</code>) — <a href="https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_token/">kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_token/</a></li>
+    <li>Pod Security Admission — <a href="https://kubernetes.io/ko/docs/concepts/security/pod-security-admission/">kubernetes.io/ko/docs/concepts/security/pod-security-admission/</a> · 파드 시큐리티 스탠다드 — <a href="https://kubernetes.io/ko/docs/concepts/security/pod-security-standards/">kubernetes.io/ko/docs/concepts/security/pod-security-standards/</a></li>
+    <li>ValidatingAdmissionPolicy — <a href="https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/">kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/</a> · CEL — <a href="https://kubernetes.io/docs/reference/using-api/cel/">kubernetes.io/docs/reference/using-api/cel/</a></li>
+    <li>네트워크 정책 — <a href="https://kubernetes.io/ko/docs/concepts/services-networking/network-policies/">kubernetes.io/ko/docs/concepts/services-networking/network-policies/</a> · kind와 CNI — <a href="https://kind.sigs.k8s.io/docs/user/configuration/#disable-default-cni">kind.sigs.k8s.io/docs/user/configuration/#disable-default-cni</a></li>
+    <li>Kyverno — <a href="https://kyverno.io/">kyverno.io</a> · OPA Gatekeeper — <a href="https://open-policy-agent.github.io/gatekeeper/">open-policy-agent.github.io/gatekeeper/</a></li>
+    <li>프로젝트 자료 — <a href="01-쿠버네티스_보안_발표.html">쿠버네티스 보안 발표</a> (RBAC·파드 시큐리티 절) · <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day11-monitoring-2-app-metrics-alerts-logs.html">← D11 모니터링 ②</a><a href="day13-helm-kustomize-gitops.html">D13 Helm·Kustomize·GitOps →</a></div>
+</div></footer>
+</body>
+</html>

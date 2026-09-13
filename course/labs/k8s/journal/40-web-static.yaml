@@ -1,0 +1,66 @@
+# 정적 파일 서버. 페이지 자체는 컨피그맵으로 주입한다 (kustomization 의 configMapGenerator).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-static
+  labels:
+    app: web-static
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-static
+  template:
+    metadata:
+      labels:
+        app: web-static
+    spec:
+      # ── 파드 수준 보안 (M24) ────────────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101              # 이미지 안의 nginx 사용자
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: nginx
+          # 공식 nginx 이미지는 루트로 시작해 워커만 nginx 사용자로 떨어뜨린다.
+          # restricted 프로파일은 그 시작조차 허용하지 않으므로 비루트 이미지를 쓴다.
+          # 대신 80 이 아니라 8080 을 듣는다 — 1024 미만 포트는 비루트가 열 수 없다.
+          image: nginxinc/nginx-unprivileged:1.29-alpine
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:                        # M16 — 네임스페이스 전체를 Burstable 로 맞춘다
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+      volumes:
+        - name: content
+          configMap:
+            name: web-content      # kustomize 가 이름 뒤에 해시를 붙인다
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-static
+spec:
+  type: ClusterIP
+  selector:
+    app: web-static
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

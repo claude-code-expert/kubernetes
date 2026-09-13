@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow171" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13.5px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-q { font-size: 12px; font-weight: 700; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <rect class="box" x="20" y="110" width="140" height="80" rx="4"/>
+  <text class="t-title" x="90" y="144" text-anchor="middle">kubectl 요청</text>
+  <text class="t-sub" x="90" y="164" text-anchor="middle">API 서버로</text>
+
+  <line class="line" x1="160" y1="150" x2="206" y2="150" marker-end="url(#arrow171)"/>
+
+  <rect class="box" x="210" y="110" width="160" height="80" rx="4"/>
+  <text class="t-title" x="290" y="138" text-anchor="middle">① 인증</text>
+  <text class="t-q" x="290" y="160" text-anchor="middle">"너는 누구인가?"</text>
+  <text class="t-sub" x="290" y="178" text-anchor="middle">2장 · OIDC 등</text>
+
+  <line class="line" x1="370" y1="150" x2="416" y2="150" marker-end="url(#arrow171)"/>
+
+  <rect class="box" x="420" y="110" width="160" height="80" rx="4"/>
+  <text class="t-title" x="500" y="138" text-anchor="middle">② 인가</text>
+  <text class="t-q" x="500" y="160" text-anchor="middle">"무엇을 해도 되는가?"</text>
+  <text class="t-sub" x="500" y="178" text-anchor="middle">4장 RBAC · 17.2절</text>
+
+  <line class="line" x1="580" y1="150" x2="626" y2="150" marker-end="url(#arrow171)"/>
+
+  <rect class="box-accent" x="630" y="110" width="180" height="80" rx="4"/>
+  <text class="t-title" x="720" y="138" text-anchor="middle">③ 어드미션</text>
+  <text class="t-q" x="720" y="160" text-anchor="middle">"이 내용 그대로 저장해도 되는가?"</text>
+  <text class="t-sub" x="720" y="178" text-anchor="middle">17.1절 · 10장·11장</text>
+
+  <line class="line" x1="720" y1="190" x2="720" y2="226" marker-end="url(#arrow171)"/>
+
+  <rect class="box" x="630" y="230" width="180" height="60" rx="4"/>
+  <text class="t-title" x="720" y="266" text-anchor="middle">etcd에 저장</text>
+
+  <!-- 하단 설명 -->
+  <text class="t-cap" x="450" y="290" text-anchor="middle">세 관문은 순서가 고정이다 — 인증 없이 인가를 논할 수 없고, 인가를 통과하지 못하면 어드미션 단계에 아예 도달하지 못한다.</text>
+</svg>

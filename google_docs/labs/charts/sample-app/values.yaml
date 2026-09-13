@@ -1,0 +1,17 @@
+app:
+  replicas: 2
+  image:
+    repository: demo/k8s-sample-boot
+    tag: v1
+    pullPolicy: IfNotPresent
+  logLevel: info
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "8.2"
+  password: study-pass
+
+service:
+  port: 8080

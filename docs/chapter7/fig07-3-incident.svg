@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow73" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #b23b3b; stroke-width: 1.5; }
+    .t-step { font-size: 11.5px; font-weight: 700; fill: #b23b3b; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <text class="t-step" x="140" y="34" text-anchor="middle">① 즉시 — 지혈</text>
+  <rect class="box-accent" x="30" y="46" width="220" height="110" rx="4"/>
+  <text class="t-title" x="140" y="76" text-anchor="middle">영향받은 리전의 트래픽을</text>
+  <text class="t-title" x="140" y="94" text-anchor="middle">건강한 리전으로 전환</text>
+  <text class="t-sub" x="140" y="116" text-anchor="middle">목표: 10분 내 99% 드레인</text>
+  <text class="t-sub" x="140" y="134" text-anchor="middle">근본 원인 조사는 그다음이다</text>
+
+  <line class="line" x1="250" y1="101" x2="286" y2="101" marker-end="url(#arrow73)"/>
+
+  <text class="t-step" x="380" y="34" text-anchor="middle">② 안정화 후 — 조사</text>
+  <rect class="box" x="290" y="46" width="220" height="110" rx="4"/>
+  <text class="t-title" x="400" y="76" text-anchor="middle">체크리스트대로</text>
+  <text class="t-title" x="400" y="94" text-anchor="middle">근본 원인 파악</text>
+  <text class="t-sub" x="400" y="116" text-anchor="middle">스트레스 상황이 아닐 때</text>
+  <text class="t-sub" x="400" y="134" text-anchor="middle">미리 연습해 둔 절차대로</text>
+
+  <line class="line" x1="510" y1="101" x2="546" y2="101" marker-end="url(#arrow73)"/>
+
+  <text class="t-step" x="640" y="34" text-anchor="middle">③ 확정 후 — 롤백 또는 재개</text>
+  <rect class="box" x="550" y="46" width="320" height="110" rx="4"/>
+  <text class="t-title" x="710" y="76" text-anchor="middle">이전 버전으로 글로벌 롤백</text>
+  <text class="t-title" x="710" y="94" text-anchor="middle">또는 수정 후 웨이브 재개</text>
+  <text class="t-sub" x="710" y="116" text-anchor="middle">"조치 완료" 빌드를 서둘러</text>
+  <text class="t-sub" x="710" y="134" text-anchor="middle">다시 밀어붙이지 않는다</text>
+
+  <!-- 함정 인셋 -->
+  <rect class="box" x="30" y="186" width="840" height="90" rx="6"/>
+  <text class="t-title" x="50" y="212">잊기 쉬운 변수 — DNS 캐싱</text>
+  <text class="t-sub" x="50" y="234">DNS 기반 트래픽 전환은 클라이언트·리졸버의 캐시 TTL에 걸려 "전환했는데도" 일부 사용자는</text>
+  <text class="t-sub" x="50" y="252">여전히 장애 리전으로 간다. 평상시에 실제로 트래픽을 옮겨 보며 드레인 소요 시간을 재 두지</text>
+  <text class="t-sub" x="50" y="270">않으면, 장애 순간에 "몇 분이면 되겠지"라는 추측이 배신한다.</text>
+
+  <text class="t-cap" x="450" y="304" text-anchor="middle">순서가 핵심이다 — 원인을 다 알아내고서야 트래픽을 옮기면 이미 늦다. 지혈이 항상 먼저다.</text>
+</svg>

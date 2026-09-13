@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow112" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-q { font-size: 13px; font-weight: 700; fill: #111111; }
+    .t-title { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-lbl { font-size: 11.5px; fill: #555555; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 시작 질문 -->
+  <rect class="box" x="330" y="20" width="240" height="70" rx="4"/>
+  <text class="t-q" x="450" y="48" text-anchor="middle">단순 검증(validate)만</text>
+  <text class="t-q" x="450" y="66" text-anchor="middle">필요한가? (변형·생성 불필요)</text>
+
+  <line class="line" x1="380" y1="90" x2="200" y2="140" marker-end="url(#arrow112)"/>
+  <text class="t-lbl" x="260" y="108" text-anchor="middle">예</text>
+  <line class="line" x1="520" y1="90" x2="700" y2="140" marker-end="url(#arrow112)"/>
+  <text class="t-lbl" x="640" y="108" text-anchor="middle">아니오</text>
+
+  <!-- VAP -->
+  <rect class="box-accent" x="60" y="144" width="280" height="130" rx="4"/>
+  <text class="t-title" x="200" y="172" text-anchor="middle">ValidatingAdmissionPolicy</text>
+  <text class="t-sub" x="200" y="192" text-anchor="middle">쿠버네티스 내장 · CEL 표현식</text>
+  <text class="t-sub" x="200" y="212" text-anchor="middle">추가 컴포넌트 설치 불필요</text>
+  <text class="t-sub" x="200" y="232" text-anchor="middle">웹훅 지연도 없음</text>
+  <text class="t-sub" x="200" y="252" text-anchor="middle">한계: 외부 호출·상태 저장 불가</text>
+
+  <!-- 두번째 질문 -->
+  <rect class="box" x="560" y="144" width="280" height="70" rx="4"/>
+  <text class="t-q" x="700" y="172" text-anchor="middle">Rego·OPA를 이미 다른 곳</text>
+  <text class="t-q" x="700" y="190" text-anchor="middle">(API·Terraform)에도 쓰는가?</text>
+
+  <line class="line" x1="620" y1="214" x2="500" y2="264" marker-end="url(#arrow112)"/>
+  <text class="t-lbl" x="540" y="240" text-anchor="middle">아니오</text>
+  <line class="line" x1="780" y1="214" x2="780" y2="264" marker-end="url(#arrow112)"/>
+  <text class="t-lbl" x="800" y="240" text-anchor="middle">예</text>
+
+  <!-- Kyverno -->
+  <rect class="box-accent" x="360" y="268" width="280" height="130" rx="4"/>
+  <text class="t-title" x="500" y="296" text-anchor="middle">Kyverno</text>
+  <text class="t-sub" x="500" y="316" text-anchor="middle">정책도 그냥 YAML(신규 언어 없음)</text>
+  <text class="t-sub" x="500" y="336" text-anchor="middle">검증·변형·리소스 생성 모두 가능</text>
+  <text class="t-sub" x="500" y="356" text-anchor="middle">CNCF Graduated (2024)</text>
+  <text class="t-sub" x="500" y="376" text-anchor="middle">2026년 채택률 1위</text>
+
+  <!-- Gatekeeper -->
+  <rect class="box" x="660" y="268" width="220" height="130" rx="4"/>
+  <text class="t-title" x="770" y="296" text-anchor="middle">OPA Gatekeeper</text>
+  <text class="t-sub" x="770" y="316" text-anchor="middle">Rego 정책을 K8s 밖에서도</text>
+  <text class="t-sub" x="770" y="332" text-anchor="middle">그대로 재사용 가능</text>
+  <text class="t-sub" x="770" y="352" text-anchor="middle">CNCF Graduated</text>
+  <text class="t-sub" x="770" y="372" text-anchor="middle">기존 Rego 자산이 있다면 최적</text>
+
+  <text class="t-cap" x="450" y="432" text-anchor="middle">셋 다 CNCF 프로젝트거나 K8s 표준 API다 — "정답"은 하나가 아니라 요구사항에 달려 있다.</text>
+  <text class="t-cap" x="450" y="452" text-anchor="middle">실무에서는 단순 규칙은 VAP, 나머지는 Kyverno로 섞어 쓰는 조합이 2026년 현재 흔하다.</text>
+</svg>

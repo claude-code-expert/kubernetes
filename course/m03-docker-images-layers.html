@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 1 · 도커] M03 이미지와 레이어 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  폰트: 본문 Pretendard(CDN 실패 시 시스템 한글 폰트로 폴백), 코드 IBM Plex Mono 계열.
+  그림은 인라인 SVG — 이 파일 하나로 완전하게 표시된다. figures/에 동일 SVG를 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 03 / 38 · PART 1 도커</div>
+  <h1>이미지와 레이어</h1>
+  <p class="ch-desc">태그는 움직인다. 다이제스트는 움직이지 않는다. 이 한 문장의 차이가 "내 노트북에서는 됐는데요"의 절반을 만든다. 이미지를 열어 레이어를 세고, 태그와 다이제스트를 손으로 구분한다.</p>
+  <div class="meta">
+    <span class="tag">초반</span><span class="tag">40분</span><span class="tag">Docker Engine 29.2.1</span>
+    <br>2026-09-03 검증 · nginx:1.29-alpine · alpine:3.22 · 버전은 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m02-docker-container-basics.html">M02</a> 완료 — 로컬에 <code>nginx:1.29-alpine</code>과 <code>alpine:3.22</code> 이미지가 받아져 있다</li>
+    <li>없으면 <code>docker pull nginx:1.29-alpine alpine:3.22</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. <code>docker history</code>와 <code>image inspect</code>로 nginx 이미지 92.7MB가 어느 레이어에서 왔는지 짚고, 20줄짜리 히스토리 뒤에 실제 파일시스템 레이어는 8개뿐임을 센다.</p>
+  <p>2. <code>docker tag</code>로 같은 이름을 다른 이미지에 옮겨 <strong>태그는 포인터</strong>임을 3초 만에 재현하고, 되돌릴 수 없는 참조가 필요한 자리에는 <code>이름@sha256:…</code>으로 받는다.</p>
+  <p>3. <code>docker system df</code>로 회수 가능한 용량을 읽고, kind 노드 이미지를 날리지 않는 범위의 <code>prune</code>을 고른다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">3.1</span>왜 레이어를 알아야 하나</a>
+  <a href="#s2"><span class="num">3.2</span>이론 — 레이어 · 태그 · 다이제스트</a>
+  <a href="#s3"><span class="num">3.3</span>따라하기 ① 이미지를 열어본다</a>
+  <a href="#s4"><span class="num">3.4</span>따라하기 ② 태그와 다이제스트</a>
+  <a href="#s5"><span class="num">3.5</span>일부러 실패시키기</a>
+  <a href="#s6"><span class="num">3.6</span>디스크 관리</a>
+  <a href="#s7"><span class="num">3.7</span>체크포인트</a>
+  <a href="#s8"><span class="num">3.8</span>정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">3.1</span>왜 레이어를 알아야 하나</h2>
+  <p class="lead">M02에서 <code>docker run nginx:1.29-alpine</code>을 쳤을 때 도커는 92.7MB를 받아왔다. 다음에 같은 베이스를 쓰는 다른 이미지를 받으면 그만큼을 다시 받지 않는다. 이 구조를 모르면 빌드가 5초에 끝날 수 있는 상황에서 5분을 기다리게 된다(M04의 주제).</p>
+  <p>더 중요한 이유는 재현성이다. 팀원 A의 노트북에서는 통과한 테스트가 CI에서 실패한다. 둘 다 <code>myapp:latest</code>를 썼는데 내용이 다르기 때문이다. 쿠버네티스에서는 이 문제가 더 조용히 온다 — 파드가 재시작되면서 같은 태그를 다시 받았는데 그 사이 레지스트리의 태그가 다른 이미지를 가리키게 되면, 클러스터 안에서 <strong>버전이 섞인 파드</strong>가 돌아간다. 원인을 찾기 가장 어려운 종류의 장애다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">3.2</span>이론 — 레이어 · 태그 · 다이제스트</h2>
+  <h3>레이어</h3>
+  <p><dfn class="term">레이어 <span class="en">(Layer)</span></dfn>는 파일시스템의 변경분 한 뭉치다. Dockerfile의 <code>RUN</code> · <code>COPY</code> · <code>ADD</code> 명령 하나가 레이어 하나를 만든다. 이미지는 이 레이어들을 순서대로 쌓아 올린 것이고, 실행할 때 <dfn class="term">유니온 파일시스템 <span class="en">(Union Filesystem)</span></dfn>이 여러 층을 겹쳐 하나의 디렉터리 트리로 보여준다.</p>
+  <p>모든 레이어는 <strong>읽기 전용</strong>이다. 컨테이너를 실행하면 맨 위에 쓰기 가능한 레이어가 하나 추가되고, 컨테이너 안에서 만든 파일은 전부 여기 쌓인다. <code>docker rm</code>으로 컨테이너를 지우면 이 레이어만 사라진다 — 이미지는 그대로다. M02에서 컨테이너를 지워도 이미지가 남아 있던 이유가 이것이고, 컨테이너 안의 데이터를 살리려면 볼륨이 필요한 이유이기도 하다(M05).</p>
+  <p>레이어는 내용으로 식별되므로 <strong>공유된다.</strong> 같은 알파인 베이스를 쓰는 이미지가 다섯 개면 그 베이스 레이어는 디스크에 한 벌만 있다. 레지스트리에서 받을 때도 이미 가진 레이어는 건너뛴다.</p>
+  <h3>태그와 다이제스트</h3>
+  <table>
+    <tr><th></th><th>태그</th><th>다이제스트</th></tr>
+    <tr><td>생김새</td><td><code>nginx:1.29-alpine</code></td><td><code>nginx@sha256:5616878291a2…</code></td></tr>
+    <tr><td>정체</td><td>사람이 붙인 이름. 가리키는 대상을 바꿀 수 있다</td><td>이미지 내용을 SHA-256으로 계산한 값. 내용이 1바이트만 달라도 완전히 달라진다</td></tr>
+    <tr><td>같은 문자열이 내일도 같은 이미지인가</td><td><strong>보장 없음</strong></td><td>보장됨</td></tr>
+    <tr><td>쓰는 곳</td><td>사람이 읽고 고르는 자리</td><td>재현이 필요한 자리 — CI, 프로덕션 배포 매니페스트, M01의 kind 노드 이미지</td></tr>
+  </table>
+  <p>표의 "배포 매니페스트"는 쿠버네티스에 무엇을 띄울지 적은 YAML(파드 · 디플로이먼트 정의, M08부터)을 말한다. 이 모듈 뒤쪽에서 나오는 "레지스트리 매니페스트"는 다른 것이다 — 레지스트리가 이미지 하나의 레이어 목록과 설정을 적어둔 JSON 문서(OCI 이미지 매니페스트)로, 다이제스트는 바로 이 문서를 해시한 값이다. 두 낱말이 같은 문장에 나오면 앞에 붙은 수식어로 구분한다.</p>
+  <h3>latest를 쓰지 않는 근거 — 책 1.3.1</h3>
+  <p>책 1.3.1(이미지 관리 모범 사례)은 컨테이너 빌드 자체는 다루지 않는다고 선을 그으면서도 두 가지는 못 박는다. 프로덕션에서 <code>latest</code> 태그를 쓰지 말 것, 그리고 태그가 소스의 어느 시점을 가리키는지 알 수 있는 전략(버전 번호나 커밋 해시)을 세울 것. 이 과정이 첫 도커 모듈부터 태그를 강제하는 근거가 이 절이다.</p>
+  <p>이유는 위 표에 다 들어 있다. <code>latest</code>는 특별한 태그가 아니라 태그를 생략했을 때 채워지는 기본값일 뿐이고, "가장 최신"을 보장하지 않으며, 누군가 마지막으로 그 이름을 붙인 이미지를 가리킨다. 문제는 이것이 <strong>움직이는 포인터</strong>라는 점이 배포 시스템 안에서 세 번 증폭된다는 데 있다. 첫째, 무엇이 배포됐는지 기록이 남지 않는다 — 매니페스트에 <code>myapp:latest</code>라고 적혀 있으면 지난주 장애 때 돌던 것이 어느 빌드였는지 알 길이 없다. 둘째, 롤백이 불가능하다 — 이전 버전을 가리키는 이름이 없으므로 "직전으로 되돌린다"는 명령을 만들 수 없다. 셋째, 쿠버네티스는 노드에 이미 같은 태그의 이미지가 있으면 다시 받지 않는 것이 기본(<code>imagePullPolicy: IfNotPresent</code>)인데, <code>latest</code>만은 예외로 매번 받도록 정책이 바뀐다. 그래서 노드 A는 어제 캐시한 것을, 노드 B는 오늘 받은 것을 돌리는 상황이 같은 디플로이먼트 안에서 생긴다. 3.5절의 실패①이 이 셋째 상황을 노트북 한 대에서 재현한다.</p>
+  <p>반대로 태그를 커밋 해시나 버전으로 박으면 세 문제가 함께 사라진다. 매니페스트가 곧 배포 기록이 되고(책 1.2가 말하는 선언형 관리의 전제), 롤백은 이전 태그로 되돌리는 한 줄이 되며(M10), 모든 노드가 같은 바이트를 돈다. 여기서 더 나가 재현이 결정적인 자리 — CI 베이스 이미지, M01의 kind 노드 — 에는 태그 대신 다이제스트를 쓴다. 이 과정은 이 규칙을 예제 매니페스트에까지 적용하고, M26에서는 아예 클러스터가 <code>latest</code> 태그를 거부하도록 어드미션 정책을 만든다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">3.3</span>따라하기 ① 이미지를 열어본다</h2>
+
+  <div class="step">
+    <h4>1단계. 이미지 목록과 크기를 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이미지 하나가 차지하는 크기와 식별자를 확인한다.</p>
+<pre><code>docker images nginx --digests</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>REPOSITORY   TAG           DIGEST                                                                    IMAGE ID       CREATED        SIZE
+nginx        1.29-alpine   sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de   5616878291a2   4 months ago   92.7MB</code></div>
+    <p><code>CREATED</code>가 4개월 전인 것에 주의한다. 이것은 <strong>이미지가 빌드된 시각</strong>이지 내가 받은 시각이 아니다. 공식 이미지도 몇 달씩 그대로인 경우가 있고, 그 사이 베이스 OS에 보안 패치가 나왔을 수 있다 — M07에서 취약점 스캔으로 확인한다.</p>
+  </div>
+
+  <div class="step">
+    <h4>2단계. 레이어별 크기를 읽는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>92.7MB가 어디서 왔는지 분해한다. 이미지를 줄이려면 어디를 손대야 하는지 보인다.</p>
+<pre><code>docker history nginx:1.29-alpine</code></pre>
+    <span class="out-lbl">실행 결과 (위가 최신 레이어)</span>
+    <div class="out"><code>IMAGE          CREATED        CREATED BY                                      SIZE      COMMENT
+5616878291a2   4 months ago   RUN /bin/sh -c set -x     &amp;&amp; apkArch="$(cat …   50.7MB    buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   ENV ACME_VERSION=0.3.1                          0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   CMD ["nginx" "-g" "daemon off;"]                0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   STOPSIGNAL SIGQUIT                              0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   EXPOSE map[80/tcp:{}]                           0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   ENTRYPOINT ["/docker-entrypoint.sh"]            0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   COPY 30-tune-worker-processes.sh /docker-ent…   16.4kB    buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   COPY docker-entrypoint.sh / # buildkit          8.19kB    buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   RUN /bin/sh -c set -x     &amp;&amp; addgroup -g 101…   5.82MB    buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   ENV NGINX_VERSION=1.29.8                        0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   CMD ["/bin/sh"]                                 0B        buildkit.dockerfile.v0
+&lt;missing&gt;      4 months ago   ADD alpine-minirootfs-3.23.4-aarch64.tar.gz …   9.35MB    buildkit.dockerfile.v0
+(중간 ENV · COPY 줄 생략)</code></div>
+    <p>읽는 법이 셋이다.</p>
+    <ul class="tight">
+      <li><strong>맨 아래가 시작점이다.</strong> <code>ADD alpine-minirootfs…</code> 9.35MB가 알파인 리눅스 루트 파일시스템, 즉 베이스 이미지다. 그 위로 nginx 설치(<code>RUN … apkArch</code>) 50.7MB가 얹혔다</li>
+      <li><strong><code>0B</code> 레이어가 많다.</strong> <code>ENV</code> · <code>CMD</code> · <code>EXPOSE</code> · <code>ENTRYPOINT</code>는 메타데이터만 바꾸므로 파일이 늘지 않는다. 이미지 크기를 줄일 때 이런 줄은 건드릴 필요가 없다</li>
+      <li><strong><code>&lt;missing&gt;</code>은 오류가 아니다.</strong> 중간 레이어들은 별도의 이미지 ID를 갖지 않고 최상위 이미지에만 ID가 붙기 때문에 이렇게 표시된다</li>
+    </ul>
+    <div class="verdict"><span class="lbl">판정</span>가장 큰 레이어가 <code>RUN</code>으로 시작하는 줄이다. 이미지를 줄이는 작업은 거의 항상 <code>RUN</code> 레이어를 손보는 일이라는 것이 M04의 출발점이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계. 레이어 개수와 식별자를 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>레이어가 각각 자기 다이제스트를 갖는다는 것을 본다. 이 값이 캐시와 공유의 열쇠다.</p>
+<pre><code>docker image inspect nginx:1.29-alpine \
+  -f '{{len .RootFS.Layers}} layers{{"\n"}}{{range .RootFS.Layers}}{{.}}{{"\n"}}{{end}}'</code></pre>
+    <ul class="tight">
+      <li><code>-f</code> — Go 템플릿으로 필요한 필드만 뽑는다. <code>-f</code> 없이 <code>docker image inspect</code>만 치면 수백 줄 JSON이 나온다</li>
+    </ul>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>8 layers
+sha256:a8d26d037006414043b277ecb95287692d0960219289d9e27b0bcea0ce233b02
+sha256:257e65be0ed4bf3534235b52fda54bd942788b6baf7d5666061a2f361b062c4a
+sha256:33a80384617ddb8d6265698a2c457fcff4ece9efff9e634b800f9f9909b2ebce
+sha256:331ddb8f920db402ea6824dc03ea0f36c33dd7634fdf55588e8457d807e59105
+sha256:741a05ecf745cbe2819f97d1b8b4a58ed6cc9d718046f3fde16746c998b25c4e
+sha256:1eb24dfa6d46b4230eedc1749c46925e6e7af799004cfe1fe4be485600a31a39
+sha256:e7d873bb729e5649bd2e75cae267fdea3a27566dbdfdfde940931790459725fa
+sha256:0d0ac2b1a7779aca4f67fee492b376599d7b435ef5cb322da9c7e3329a197255</code></div>
+    <p><code>docker history</code>는 20줄이 넘었는데 실제 파일시스템 레이어는 8개다. 차이는 <code>0B</code> 메타데이터 레이어들이다. 다른 이미지가 이 중 하나와 같은 다이제스트를 가지면 그 레이어는 다시 받지도, 다시 저장하지도 않는다.</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">3.4</span>따라하기 ② 태그와 다이제스트</h2>
+
+  <div class="step">
+    <h4>4단계. 태그를 하나 더 붙여본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>태그가 이름표일 뿐 복사가 아니라는 것을 확인한다.</p>
+<pre><code>docker tag nginx:1.29-alpine myweb:v1
+docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}' | grep -E 'REPOSITORY|nginx|myweb|alpine'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>REPOSITORY   TAG           IMAGE ID       SIZE
+alpine       3.22          14358309a308   13.4MB
+myweb        v1            5616878291a2   92.7MB
+nginx        1.29-alpine   5616878291a2   92.7MB</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>myweb:v1</code>과 <code>nginx:1.29-alpine</code>의 <code>IMAGE ID</code>가 같다. 디스크 사용량도 92.7MB가 두 배로 늘지 않았다 — <code>SIZE</code> 열은 각 이미지의 총 크기를 보여줄 뿐이고 실제로는 같은 레이어를 공유한다.</div>
+    <p>이름만 붙었을 뿐 이미지는 하나다. <code>docker rmi myweb:v1</code>을 하면 태그만 떨어져 나가고 이미지 자체는 <code>nginx:1.29-alpine</code>이 참조하는 한 남는다.</p>
+  </div>
+
+  <div class="step">
+    <h4>5단계. 다이제스트로 받아본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>재현이 필요한 자리에서 쓰는 방식을 익힌다. M01에서 kind 노드 이미지에 쓴 것과 같은 방법이다.</p>
+<pre><code>docker images alpine --digests</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>REPOSITORY   TAG      DIGEST                                                                    IMAGE ID       CREATED        SIZE
+alpine       3.22     sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce   14358309a308   2 months ago   13.4MB</code></div>
+<pre><code>docker pull alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Digest: sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+Status: Image is up to date for alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+docker.io/library/alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce</code></div>
+    <p>이미 같은 내용을 갖고 있으므로 아무것도 받지 않고 <code>up to date</code>로 끝났다. 이 명령은 1년 뒤에 실행해도 정확히 같은 이미지를 가져온다. 태그였다면 그 사이 알파인 3.22의 패치 릴리스가 나오면서 다른 내용을 받았을 것이다.</p>
+<pre><code>docker image inspect alpine:3.22 -f 'Id={{.Id}}{{"\n"}}RepoDigests={{.RepoDigests}}'</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Id=sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+RepoDigests=[alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce]</code></div>
+    <div class="note-2026">
+      <span class="lbl">이 환경에서 Id와 RepoDigest가 같은 이유</span>
+      Docker 29의 기본 이미지 저장 방식(containerd 이미지 스토어)에서는 이미지 ID가 레지스트리 매니페스트(3.2절에서 구분한 OCI 이미지 매니페스트) 다이제스트와 같은 값이다. 예전 방식(그래프 드라이버)을 쓰는 환경에서는 ID가 이미지 <em>설정</em>의 다이제스트라서 <code>RepoDigests</code>와 <strong>다른 값</strong>으로 보인다. 둘 다 정상이며, 어느 쪽이든 <strong>레지스트리에 배포할 때 쓰는 값은 <code>RepoDigests</code></strong>다. 매니페스트에 다이제스트를 박을 때는 이 필드를 복사한다.
+      <span class="src">출처: docs.docker.com/engine/storage/containerd/</span>
+    </div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">3.5</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <span class="lbl">실패 ① — 태그를 옮겨 같은 이름이 다른 것을 가리키게 만든다</span>
+    <p>재현성이 깨지는 상황을 3초 만에 만들어 본다.</p>
+<pre><code># myweb:v1 은 지금 nginx 이미지를 가리킨다
+docker images myweb
+
+# 같은 태그를 알파인에 붙인다
+docker tag alpine:3.22 myweb:v1
+docker images myweb</code></pre>
+    <span class="out-lbl">실행 결과 — 태그 이동 전</span>
+    <div class="out"><code>WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+IMAGE      ID             DISK USAGE   CONTENT SIZE   EXTRA
+myweb:v1   5616878291a2       92.7MB         26.7MB</code></div>
+    <span class="out-lbl">실행 결과 — 태그 이동 후</span>
+    <div class="out"><code>WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+IMAGE      ID             DISK USAGE   CONTENT SIZE   EXTRA
+myweb:v1   14358309a308       13.4MB          4.21MB</code></div>
+    <p>Docker 29의 <code>docker images &lt;이름&gt;</code>은 위와 같은 새 표를 쓴다. <code>DISK USAGE</code>는 압축을 푼 로컬 사용량, <code>CONTENT SIZE</code>는 레지스트리에서 받는 압축 크기다. 스크립트에서 쓸 때는 경고 문구대로 <code>--format</code>을 지정한다.</p>
+    <p>같은 <code>myweb:v1</code>인데 내용이 완전히 다른 이미지가 됐다. 아무 경고도, 확인도 없었다. 레지스트리에 푸시할 때도 마찬가지로 조용히 덮인다.</p>
+    <p>이제 이 상황이 팀에서 어떻게 나타나는지 생각해 본다. 어제 <code>myweb:v1</code>을 받은 사람과 오늘 받은 사람이 다른 것을 실행한다. 쿠버네티스에서는 파드가 재시작될 때만 새로 받으므로 <strong>같은 디플로이먼트 안에서 파드마다 다른 버전</strong>이 돌 수 있다. 그래서 이 과정의 규칙은 두 가지다 — 태그를 재사용하지 않는다(빌드마다 새 태그: 깃 커밋 해시 등, M29), 재현이 중요한 자리에는 다이제스트를 쓴다.</p>
+<pre><code># 정리: 실습용 태그 제거
+docker rmi myweb:v1</code></pre>
+  </div>
+
+  <div class="fail">
+    <span class="lbl">실패 ② — 없는 태그를 요청한다</span>
+<pre><code>docker pull nginx:1.29-alpin</code></pre>
+    <span class="out-lbl">실행 결과</span>
+    <div class="out"><code>Error response from daemon: failed to resolve reference
+"docker.io/library/nginx:1.29-alpin": docker.io/library/nginx:1.29-alpin: not found</code></div>
+    <p>오타 하나다. 이 메시지는 앞으로 쿠버네티스에서 <code>ErrImagePull</code> · <code>ImagePullBackOff</code>라는 이름으로 다시 만난다(M10). 그때 원인은 셋 중 하나다 — 태그 오타, 레지스트리 인증 실패, 이미지가 실제로 없음. 지금 이 메시지를 본 사람은 첫 번째를 먼저 의심할 수 있다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">3.6</span>디스크 관리</h2>
+  <p>실습을 반복하면 디스크가 빠르게 찬다. 무엇이 얼마나 쓰고 있는지 먼저 본다.</p>
+<pre><code>docker system df</code></pre>
+  <span class="out-lbl">출력 형태 — 아래는 이 과정을 몇 주 반복한 노트북의 값이다. 수강생의 숫자는 이보다 훨씬 작고, 값을 맞춰 볼 필요는 없다</span>
+  <div class="out"><code>TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          15        6         25.68GB   17.71GB (68%)
+Containers      8         8         114.8MB   0B (0%)
+Local Volumes   20        5         4.239GB   1.913GB (45%)
+Build Cache     176       0         18.4GB    16.58GB</code></div>
+  <p>표는 항상 이 네 줄이다. 읽을 열은 <code>RECLAIMABLE</code> 하나로, 지금 아무것도 참조하지 않아 지워도 되는 양이다. M01~M03만 마친 시점이면 이미지 몇 개에 수백 MB 수준이고 빌드 캐시는 0에 가깝다. 위 예처럼 <code>Build Cache</code>가 수십 GB로 자라는 것은 M04부터 빌드를 반복하면서 생기는 일이다 — 그때 이 명령을 다시 쳐서 숫자가 어떻게 달라졌는지 보면 된다.</p>
+  <table>
+    <tr><th>명령</th><th>지우는 것</th><th>주의</th></tr>
+    <tr><td><code>docker image prune</code></td><td>태그가 없는(dangling) 이미지</td><td>안전한 편</td></tr>
+    <tr><td><code>docker builder prune</code></td><td>빌드 캐시</td><td>다음 빌드가 느려질 뿐</td></tr>
+    <tr><td><code>docker system prune</code></td><td>멈춘 컨테이너 + 미사용 네트워크 + dangling 이미지 + 빌드 캐시</td><td>다른 작업용 컨테이너가 멈춰 있으면 함께 지워진다</td></tr>
+    <tr><td><code>docker system prune -a --volumes</code></td><td>위 + 사용 중이지 않은 <strong>모든</strong> 이미지와 볼륨</td><td><strong>볼륨의 데이터가 사라진다.</strong> 실행 전 <code>docker volume ls</code>를 확인한다</td></tr>
+  </table>
+  <p>이 과정에서는 <code>docker builder prune</code>과 <code>docker image prune</code>까지만 습관으로 삼는다. kind 클러스터가 떠 있는 상태에서 <code>system prune -a</code>를 돌리면 노드 이미지까지 지워져 클러스터를 다시 만들어야 한다.</p>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">3.7</span>체크포인트</h2>
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>docker history nginx:1.29-alpine --format 'table {{.Size}}\t{{.CreatedBy}}' | head -2</code> → 첫 데이터 줄이 <code>50.7MB</code>, <code>RUN</code>으로 시작한다 (가장 큰 레이어가 맨 위)</li>
+      <li><code>docker history nginx:1.29-alpine --format '{{.Size}}' | grep -c '^0B$'</code> → <code>12</code> (히스토리 20줄 중 메타데이터만 바꾼 줄)</li>
+      <li><code>docker image inspect nginx:1.29-alpine -f '{{len .RootFS.Layers}}'</code> → <code>8</code></li>
+      <li><code>docker images --digests --format '{{.Repository}}:{{.Tag}} {{.Digest}}' alpine</code> → <code>alpine:3.22 sha256:14358309a308…</code></li>
+      <li><code>docker pull alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce</code> → <code>Status: Image is up to date</code> 줄</li>
+      <li><code>docker images myweb --format '{{.Repository}}'</code> → 빈 출력 (3.5절에서 태그를 지웠다)</li>
+      <li><code>docker pull nginx:1.29-alpin</code> → 마지막이 <code>not found</code>로 끝나는 에러 한 줄</li>
+      <li><code>docker system df --format '{{.Type}} {{.Reclaimable}}'</code> → 4줄, 각 줄 끝에 회수 가능한 용량</li>
+      <li>(이해 확인) 태그와 다이제스트의 차이를 한 문장으로 말하고, <code>0B</code> 레이어가 왜 생기는지 <code>ENV</code> · <code>CMD</code>를 예로 설명한다</li>
+    </ul>
+  </div>
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li>파일 산출물은 없다. 로컬 이미지 캐시의 <code>nginx:1.29-alpine</code> · <code>alpine:3.22</code>가 M05~M07의 재료로 남는다</li>
+      <li>실습용 태그 <code>myweb:v1</code>은 3.5절에서 지웠다. 남아 있다면 <code>docker rmi myweb:v1</code></li>
+    </ul>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">3.8</span>정리</h2>
+  <p>이 모듈은 컨테이너를 띄우지 않았고, 만든 것은 태그 하나(<code>myweb:v1</code>)뿐이며 그것은 3.5절 실패①의 마지막 명령에서 지웠다. 남아 있는지 확인만 한다.</p>
+<pre><code>docker images myweb
+docker rmi myweb:v1 2>/dev/null || true</code></pre>
+  <p><strong>이미지는 지우지 않는다.</strong> <code>nginx:1.29-alpine</code>은 M05(볼륨 · 네트워크)와 M06(Compose)에서 그대로 실행하고, <code>alpine:3.22</code>는 M07까지 디버그용 셸로 쓴다. 지우면 다음 모듈 첫머리에서 다시 받게 되니 손해만 있다.</p>
+  <p>디스크가 정말 급하면 3.6절의 순서를 따른다 — <code>docker system df</code>로 <code>RECLAIMABLE</code>을 먼저 읽고, <code>docker image prune</code>(태그 없는 이미지만)과 <code>docker builder prune</code>(빌드 캐시)까지만 쓴다. <code>docker system prune -a</code>는 kind 노드 이미지까지 지워 M01 클러스터를 다시 만들어야 하므로 이 과정에서는 손대지 않는다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m02-docker-container-basics.html">← M02 컨테이너는 프로세스다</a>
+  <a href="m04-docker-dockerfile-build.html">M04 Dockerfile — 빌드와 최적화 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금까지는 남이 만든 이미지를 받아 썼다. M04에서 직접 만든다. 같은 애플리케이션으로 두 가지를 비교한다 — <code>COPY</code> 줄의 순서 하나로 소스 한 줄을 고친 뒤의 재빌드에서 의존성 설치가 <code>CACHED</code>로 건너뛰어져 마지막 단계가 2.7초에서 1.6초로 줄고(실제 프로젝트에서는 이 자리가 몇 분짜리다), 멀티스테이지 빌드로 이미지가 1.68GB에서 246MB로, 배포 때 내려받는 양은 413MB에서 59.3MB로 줄어든다. 두 실험 모두 이 모듈에서 본 <code>docker history</code>로 어느 레이어가 달라졌는지 확인하며 진행한다.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
+  <ul>
+    <li>이미지 레이어 개념: https://docs.docker.com/get-started/docker-concepts/building-images/understanding-image-layers/</li>
+    <li>이미지 저장 방식(containerd 스토어): https://docs.docker.com/engine/storage/containerd/</li>
+    <li>docker image 명령 레퍼런스: https://docs.docker.com/reference/cli/docker/image/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.3.1 이미지 관리 모범 사례, 5.5 컨테이너 이미지 태깅</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · Docker Engine 29.2.1. 버전은 실습 당일 다시 확인한다.</p>
+</footer>
+</div>
+</body>
+</html>

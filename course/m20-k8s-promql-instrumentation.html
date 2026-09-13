@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 4 · 관측] M20 PromQL과 애플리케이션 계측 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 질의 결과는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+  그림은 인라인 SVG — figures/m20-fig1-label-chain.svg 에 같은 파일을 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 20 / 38 · PART 4 관측</div>
+  <h1>PromQL과 애플리케이션 계측</h1>
+  <p class="ch-desc">M19에서 <code>http_server_requests_seconds_count</code>를 질의했을 때 결과가 0건이었다. 앱은 지표를 내놓고 있는데 아무도 가져가지 않는 상태다. 이 모듈에서 그 연결을 만들되, <strong>세 번 실패시키고 세 번 고친다</strong>. 그다음 요청률·에러율·지연을 직접 질의하고, 평균 45ms 뒤에 숨은 790ms짜리 요청을 찾아낸다.</p>
+  <div class="meta">
+    <span class="tag">중반</span><span class="tag">95분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Prometheus Operator v0.93.1</span>
+    <br>2026-09-05 검증 (kind v0.33.0 · k6 v2.2.0) · 버전 숫자는 실습 당일 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m19-k8s-metrics-pipeline.html">M19</a> 완료 — 타깃이 전부 up이다. 확인: 프로메테우스 <code>/targets</code>에서 down이 0</li>
+    <li><code>order-api</code>가 떠 있다. 확인: <code>kubectl -n apps get deploy order-api</code>가 <code>2/2</code></li>
+    <li>k6가 설치돼 있다 (<a href="m01-setup-environment.html">M01</a>). 확인: <code>k6 version</code></li>
+    <li>고칠 파일: <code>course/labs/apps/journal-api/src/server.ts</code> · <code>package.json</code> · <code>course/labs/k8s/journal/30-journal-api.yaml</code></li>
+    <li>새로 쓰는 파일: <code>course/labs/k8s/monitoring/90-servicemonitors.yaml</code> · <code>course/labs/scripts/k6-red.js</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. ServiceMonitor의 라벨 세 겹을 하나씩 어긋뜨려 타깃이 <strong>에러 없이 조용히 사라지는</strong> 세 가지 방식을 재현하고 각각의 진단 경로를 익힌다.</p>
+  <p>2. 언어가 다른 두 앱에 같은 이름·같은 라벨의 지표를 붙이고, 요청률·에러율·지연을 하나의 질의로 함께 뽑는다.</p>
+  <p>3. 히스토그램 버킷을 잘못 잡으면 P50이 평균과 25배 어긋나는 것을 재현하고, 경계를 고쳐 실제 값을 되찾는다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">20.1</span>왜 앱은 긁히지 않는가</a>
+  <a href="#s2"><span class="num">20.2</span>이론 — 무엇을 재야 하는가</a>
+  <a href="#s3"><span class="num">20.3</span>따라하기 ① 라벨 세 겹을 잇는다</a>
+  <a href="#s4"><span class="num">20.4</span>따라하기 ② 두 번째 앱에 계측을 붙인다</a>
+  <a href="#s5"><span class="num">20.5</span>따라하기 ③ RED 질의를 쓴다</a>
+  <a href="#s6"><span class="num">20.6</span>따라하기 ④ 평균 뒤에 숨은 것을 찾는다</a>
+  <a href="#s7"><span class="num">20.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">20.8</span>운영 관점 — 계측의 값과 대가</a>
+  <a href="#s9"><span class="num">20.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">20.1</span>왜 앱은 긁히지 않는가</h2>
+  <p class="lead">M19 10단계에서 두 명령의 결과가 어긋났다. 파드 안에서 <code>/actuator/prometheus</code>를 부르면 274개 계열이 나오는데, 프로메테우스에 <code>http_server_requests_seconds_count</code>를 물으면 0건이었다.</p>
+  <p>클러스터 구성요소들은 전부 잘 나온다. kubelet도 KSM도 etcd도 나온다. 차이는 하나다 — <strong>그것들의 스크레이프 설정은 차트가 함께 만들어 줬고, 우리 앱의 것은 아무도 만들지 않았다.</strong></p>
+  <p>이 연결을 만드는 오브젝트가 <code>ServiceMonitor</code>다. 그런데 이것은 만들기는 쉽고 <strong>제대로 만들었는지 확인하기가 어렵다</strong>. 잘못 만들어도 <code>kubectl apply</code>는 성공하고, 오브젝트는 목록에 보이고, 오퍼레이터 로그에는 아무 말도 없다. 그저 타깃이 생기지 않을 뿐이다.</p>
+  <p>그래서 이 모듈은 성공 사례를 먼저 보여주지 않는다. 실무에서 실제로 겪는 세 가지 어긋남을 순서대로 만들고, 각각을 <strong>어떤 명령으로 진단하는지</strong>를 익힌 다음에 연결한다. 그 뒤라야 "왜 안 나오지"를 혼자 풀 수 있다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">20.2</span>이론 — 무엇을 재야 하는가</h2>
+  <p>지표를 붙일 수 있다고 해서 아무거나 붙이면 대시보드가 늘어날 뿐 판단은 늘지 않는다. 책 3.3이 소개하는 세 가지 묶음은 <strong>무엇부터 재야 하는가</strong>에 대한 답이고, 각각 대상이 다르다.</p>
+  <table>
+    <tr><th>묶음</th><th>무엇을</th><th>대상</th></tr>
+    <tr><td><dfn class="term">USE</dfn></td><td>사용률 · 포화도 · 오류<br><span class="t-sub">Utilization · Saturation · Errors</span></td><td><strong>자원</strong> — CPU, 메모리, 디스크, 큐</td></tr>
+    <tr><td><dfn class="term">RED</dfn></td><td>요청률 · 에러율 · 지연<br><span class="t-sub">Rate · Errors · Duration</span></td><td><strong>서비스</strong> — 요청을 받아 처리하는 것</td></tr>
+    <tr><td>4 골든 시그널</td><td>지연 · 트래픽 · 오류 · 포화도</td><td>둘을 합친 것. 구글 SRE 책의 분류</td></tr>
+    <tr><td><dfn class="term">SLO</dfn></td><td>"99%의 요청이 200ms 안에"</td><td>사용자와의 약속. M21에서 알림의 기준이 된다</td></tr>
+  </table>
+  <p>USE는 <strong>원인</strong> 쪽에, RED는 <strong>증상</strong> 쪽에 가깝다. CPU가 90%인 것(USE)은 문제일 수도 아닐 수도 있지만, P99가 3초인 것(RED)은 사용자가 이미 겪고 있는 일이다. 그래서 알림은 RED에 걸고 원인 규명은 USE로 내려간다 — 이것이 책 3.5가 말하는 <strong>계층적 모니터링</strong>의 실제 순서다.</p>
+  <p>M19까지 우리가 가진 것은 전부 USE 쪽이었다. cAdvisor의 CPU·메모리, 노드 익스포터의 디스크. RED는 <strong>애플리케이션만 답할 수 있다</strong> — 밖에서는 요청이 성공했는지 실패했는지 알 수 없기 때문이다. 그것이 앱을 계측해야 하는 이유다.</p>
+
+  <h3>ServiceMonitor — 라벨 세 겹</h3>
+  <p>프로메테우스 오퍼레이터를 쓰는 설치에서는 스크레이프 설정을 직접 쓰지 않는다. <code>ServiceMonitor</code>라는 오브젝트를 만들면 오퍼레이터가 그것을 읽어 설정을 생성한다. 연결이 성립하려면 세 곳의 라벨이 맞아야 한다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:12px; font-weight:700; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.6; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
+      <text class="t-h" x="40" y="46">세 겹이 다 맞아야 연결된다 — 하나만 어긋나면 에러 없이 사라진다</text>
+
+      <!-- Prometheus CR -->
+      <rect class="accent" x="40" y="70" width="240" height="80" rx="4"/>
+      <text class="t-title" x="160" y="92" text-anchor="middle">Prometheus (CR)</text>
+      <text class="t-mono" x="52" y="112">serviceMonitorSelector:</text>
+      <text class="t-mono" x="52" y="128">  matchLabels:</text>
+      <text class="t-mono" x="52" y="144">    release: kps</text>
+
+      <!-- ServiceMonitor -->
+      <rect class="accent" x="330" y="70" width="250" height="164" rx="4"/>
+      <text class="t-title" x="455" y="92" text-anchor="middle">ServiceMonitor</text>
+      <text class="t-mono" x="342" y="112">metadata.labels:</text>
+      <text class="t-mono" x="342" y="128">  release: kps</text>
+      <text class="t-mono" x="342" y="152">spec.selector.matchLabels:</text>
+      <text class="t-mono" x="342" y="168">  app: journal-api</text>
+      <text class="t-mono" x="342" y="192">spec.endpoints[0].port:</text>
+      <text class="t-mono" x="342" y="208">  http</text>
+      <text class="t-mono" x="342" y="224">  path: /metrics</text>
+
+      <!-- Service -->
+      <rect class="accent" x="630" y="70" width="228" height="164" rx="4"/>
+      <text class="t-title" x="744" y="92" text-anchor="middle">Service</text>
+      <text class="t-mono" x="642" y="112">metadata.labels:</text>
+      <text class="t-mono" x="642" y="128">  app: journal-api</text>
+      <text class="t-mono" x="642" y="152">spec.ports:</text>
+      <text class="t-mono" x="642" y="168">  - name: http</text>
+      <text class="t-mono" x="642" y="184">    port: 8080</text>
+      <text class="t-mono" x="642" y="212">spec.selector:</text>
+      <text class="t-mono" x="642" y="228">  app: journal-api</text>
+
+      <!-- 연결선 -->
+      <path class="aline" d="M 280 122 L 324 122" marker-end="url(#ar2)" marker-start="url(#ar2)"/>
+      <text class="t-acc" x="302" y="112" text-anchor="middle">①</text>
+
+      <path class="aline" d="M 580 164 L 624 122" marker-end="url(#ar2)" marker-start="url(#ar2)"/>
+      <text class="t-acc" x="604" y="132" text-anchor="middle">②</text>
+
+      <path class="aline" d="M 580 206 L 624 168" marker-end="url(#ar2)" marker-start="url(#ar2)"/>
+      <text class="t-acc" x="604" y="200" text-anchor="middle">③</text>
+
+      <!-- 주의 -->
+      <rect class="warnbox" x="630" y="244" width="228" height="42" rx="3"/>
+      <text class="t-warn" x="744" y="262" text-anchor="middle">spec.selector 는 파드를 묶는 것</text>
+      <text class="t-sub" x="744" y="278" text-anchor="middle">ServiceMonitor 가 보는 것이 아니다</text>
+
+      <!-- 어긋났을 때 -->
+      <rect class="soft" x="40" y="300" width="818" height="106" rx="4"/>
+      <text class="t-h" x="56" y="324">어긋났을 때 무엇이 보이나</text>
+
+      <rect class="box" x="56" y="336" width="256" height="58" rx="3"/>
+      <text class="t-title" x="184" y="356" text-anchor="middle">① release 라벨 누락</text>
+      <text class="t-mono" x="184" y="374" text-anchor="middle">kubectl get servicemonitor → 있음</text>
+      <text class="t-warn" x="184" y="388" text-anchor="middle">타깃 0건 · 로그에 아무 말 없음</text>
+
+      <rect class="box" x="322" y="336" width="256" height="58" rx="3"/>
+      <text class="t-title" x="450" y="356" text-anchor="middle">② selector 불일치</text>
+      <text class="t-mono" x="450" y="374" text-anchor="middle">Service 의 labels 를 본다</text>
+      <text class="t-warn" x="450" y="388" text-anchor="middle">타깃 0건 · 에러 없음</text>
+
+      <rect class="box" x="588" y="336" width="270" height="58" rx="3"/>
+      <text class="t-title" x="723" y="356" text-anchor="middle">③ port 를 숫자로</text>
+      <text class="t-mono" x="723" y="374" text-anchor="middle">port: "8080"  (이름이 아니다)</text>
+      <text class="t-warn" x="723" y="388" text-anchor="middle">타깃 0건 · 에러 없음</text>
+    </svg>
+    <figcaption>그림 20.1 — Prometheus CR → ServiceMonitor → Service로 이어지는 세 겹. 어느 하나가 어긋나도 에러 없이 타깃만 사라진다.</figcaption>
+  </figure>
+
+  <p>세 겹이 각각 다른 사람의 책임이라는 점이 중요하다. ①은 클러스터에 프로메테우스를 세운 사람이 정했고(<code>release: kps</code>), ②와 ③은 앱을 배포하는 사람이 쓴다. 앱 팀이 ①의 규칙을 모르면 아무리 정확한 <code>ServiceMonitor</code>를 써도 연결되지 않는다.</p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">20.3</span>따라하기 ① 라벨 세 겹을 잇는다</h2>
+
+  <div class="step">
+    <h4>1단계 — 먼저 틀리게 만들어 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>가장 흔한 어긋남을 재현하고, 그것이 얼마나 조용한지 확인한다.</p>
+    <p>공식 문서 예제를 그대로 옮기면 대개 이런 모습이 된다. <code>release</code> 라벨이 없다.</p>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  namespaceSelector:
+    matchNames: [apps]
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+EOF</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>servicemonitor.monitoring.coreos.com/order-api created</code></div>
+    <p>성공했다. 오브젝트도 보인다. 1분쯤 기다린 뒤 타깃을 센다.</p>
+<pre><code>kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 &amp;
+
+curl -s 'http://localhost:9090/api/v1/targets?state=any' | python3 -c "
+import json,sys
+d=json.load(sys.stdin)['data']['activeTargets']
+o=[t for t in d if 'order-api' in t.get('scrapePool','')]
+print('  order-api 타깃:',len(o),'건 / 전체',len(d))"
+
+curl -sG http://localhost:9090/api/v1/query \
+  --data-urlencode 'query=http_server_requests_seconds_count' \
+  | python3 -c "import json,sys;print('  메트릭:',len(json.load(sys.stdin)['data']['result']),'건')"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  order-api 타깃: 0 건 / 전체 28
+  메트릭: 0 건</code></div>
+    <p>오퍼레이터 로그를 봐도 단서가 없다.</p>
+<pre><code>kubectl -n monitoring logs deploy/kps-kube-prometheus-stack-operator --tail=200 | grep -i order-api</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>아무것도 출력되지 않는다. <strong>실패했다는 신호가 어디에도 없다.</strong> 오브젝트는 있고 에러도 없고 타깃만 없다. 이 조용함이 이 실습의 핵심이다 — 관측을 설정해 놓고 몇 달 뒤에야 "그 지표가 원래 없었다"는 것을 알게 되는 사고가 이렇게 생긴다.</div>
+  </div>
+
+  <div class="step">
+    <h4>2단계 — 진단한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>로그가 없을 때 어디를 봐야 하는지 순서를 익힌다. 세 명령이면 끝난다.</p>
+<pre><code># ① 프로메테우스가 무엇으로 고르는가
+kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}'
+
+# ② 내 ServiceMonitor 에 그 라벨이 있는가
+kubectl -n apps get servicemonitor order-api -o jsonpath='{.metadata.labels}'
+
+# ③ 생성된 스크레이프 설정에 내 앱이 들어갔는가
+kubectl -n monitoring get secret prometheus-kps-kube-prometheus-stack-prometheus \
+  -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip | grep -c 'apps/order-api'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"matchLabels":{"release":"kps"}}
+
+0</code></div>
+    <div class="verdict"><span class="lbl">판정</span>①은 <code>release: kps</code>를 요구하는데 ②는 <strong>비어 있다</strong>(둘째 줄이 빈 줄이다). ③이 <code>0</code>이라는 것은 오퍼레이터가 만든 설정에 이 앱이 아예 없다는 뜻이다. ③은 특히 유용하다 — <strong>오퍼레이터가 최종적으로 무엇을 만들었는지</strong>를 직접 보는 명령이라, 라벨 문제든 다른 문제든 여기서 갈린다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 고친다</h4>
+    <p class="purpose"><span class="lbl">목적</span>①을 맞추고 연결이 실제로 생기는지 확인한다.</p>
+<pre><code>kubectl -n apps label servicemonitor order-api release=kps</code></pre>
+    <p>1분쯤 기다린 뒤 다시 센다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  order-api 타깃: 2 건 / 전체 30
+    http://10.244.1.162:8080/actuator/prometheus up
+    http://10.244.2.134:8080/actuator/prometheus up
+  http_server_requests_seconds_count: 4 건</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드 수만큼 타깃이 생겼다. <strong>타깃은 서비스가 아니라 파드 단위</strong>다 — 서비스 뒤에 파드가 둘이면 둘 다 긁는다. 그래야 "3번 파드만 느리다"를 볼 수 있다. IP는 환경마다 다르다.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">20.4</span>따라하기 ② 두 번째 앱에 계측을 붙인다</h2>
+  <p><code>order-api</code>는 Micrometer가 알아서 지표를 만들어 줬다. <code>journal-api</code>에는 그런 것이 없다 — 직접 붙인다. 그러면서 <strong>두 앱의 지표 이름을 맞추는 일</strong>이 왜 중요한지 보게 된다.</p>
+
+  <div class="step">
+    <h4>4단계 — prom-client로 계측한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>Node 앱에 RED를 낼 수 있는 최소한의 지표를 붙인다.</p>
+<pre><code># package.json 의 dependencies 에 추가
+"prom-client": "^15.1.3"</code></pre>
+    <p><code>src/server.ts</code>에 넣을 것은 세 덩어리다 — 히스토그램 정의, 라벨 정규화 함수, 미들웨어.</p>
+<pre><code>import client from 'prom-client';
+
+// 프로세스·런타임 기본 지표(메모리·GC·이벤트 루프 지연 등)를 등록한다.
+client.collectDefaultMetrics();
+
+// 이름과 라벨을 order-api(Micrometer) 와 맞춘다.
+// 두 앱의 지표 이름이 다르면 대시보드와 알림 규칙을 앱마다 따로 써야 한다.
+const httpDuration = new client.Histogram({
+  name: 'http_server_requests_seconds',
+  help: 'HTTP 요청 처리 시간(초)',
+  labelNames: ['method', 'uri', 'status', 'outcome'] as const,
+  buckets: [0.05, 0.1, 0.2, 0.5, 1],
+});
+
+// uri 라벨에 실제 경로를 그대로 넣으면 안 된다. /api/entries/123 같은 값이
+// 요청마다 새 시계열을 만들어 카디널리티가 폭발한다 (M19 8절).
+function normalizeUri(req: Request): string {
+  const known = ['/healthz', '/readyz', '/metrics', '/api/entries'];
+  return known.includes(req.path) ? req.path : 'other';
+}
+
+function outcomeOf(status: number): string {
+  if (status &lt; 300) return 'SUCCESS';
+  if (status &lt; 400) return 'REDIRECTION';
+  if (status &lt; 500) return 'CLIENT_ERROR';
+  return 'SERVER_ERROR';
+}</code></pre>
+<pre><code>const app = express();
+app.use(express.json());
+
+// 모든 요청의 소요 시간을 잰다. 라우트보다 먼저 등록해야 전부 잡힌다.
+app.use((req: Request, res: Response, next: NextFunction) =&gt; {
+  const end = httpDuration.startTimer();
+  res.on('finish', () =&gt; {
+    end({
+      method: req.method,
+      uri: normalizeUri(req),
+      status: String(res.statusCode),
+      outcome: outcomeOf(res.statusCode),
+    });
+  });
+  next();
+});
+
+// 프로메테우스가 긁어 갈 엔드포인트.
+// order-api 는 액추에이터가 /actuator/prometheus 로 열지만, 여기서는 직접 연다.
+app.get('/metrics', async (_req: Request, res: Response) =&gt; {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});</code></pre>
+    <table>
+      <tr><th>선택</th><th>이유</th></tr>
+      <tr><td>미들웨어를 라우트보다 먼저</td><td>나중에 등록하면 그 앞의 라우트가 처리한 요청은 잡히지 않는다</td></tr>
+      <tr><td><code>res.on('finish')</code></td><td>응답이 끝난 시점에 상태 코드가 확정된다. 요청 시작 시점에는 알 수 없다</td></tr>
+      <tr><td><code>normalizeUri</code></td><td>경로에 ID가 들어가면 시계열이 무한히 늘어난다. 알려진 경로만 라벨로 쓰고 나머지는 <code>other</code></td></tr>
+      <tr><td>선언을 <code>app</code> 위에</td><td><code>const</code>는 호이스팅되지 않는다. 미들웨어보다 아래에 두면 요청이 올 때 <code>ReferenceError</code>가 난다</td></tr>
+    </table>
+    <div class="note-2026">
+      <span class="lbl">빌드가 한 번 깨진다</span>
+      <code>package.json</code>에 의존성만 더하고 빌드하면 이렇게 실패한다.
+      <br><code>ERROR: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1</code>
+      <br><code>npm ci</code>는 <code>package-lock.json</code>이 <code>package.json</code>과 정확히 맞아야 동작한다(M04 실패 ②에서 락 파일을 치웠을 때와 같은 이유다). <code>npm install --package-lock-only</code>로 락을 갱신하고 다시 빌드한다.
+    </div>
+<pre><code>docker run --rm -v "$PWD":/w -w /w node:22-alpine npm install --package-lock-only
+for v in v1 v2; do docker build -t "journal-api:$v" --build-arg "APP_VERSION=$v" .; done
+kind load docker-image journal-api:v1 journal-api:v2 --name study
+kubectl -n journal rollout restart deploy/journal-api
+kubectl -n journal rollout status deploy/journal-api</code></pre>
+    <span class="out-lbl">확인</span>
+<pre><code>kubectl -n journal exec deploy/journal-api -- sh -c 'wget -qO- localhost:8080/metrics | grep -c "^[a-z]"'</code></pre>
+    <div class="out"><code>97</code></div>
+    <div class="verdict"><span class="lbl">판정</span>97개 계열이다. <code>order-api</code>의 274개보다 적은 것은 JVM 지표(힙 영역별 사용량, GC, 스레드 풀)가 없기 때문이다. 런타임이 다르면 낼 수 있는 지표도 다르다.</div>
+  </div>
+
+  <div class="step">
+    <h4>5단계 — 두 앱의 지표를 나란히 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이름을 맞춘 것이 실제로 맞았는지, 그리고 무엇이 여전히 다른지 확인한다.</p>
+<pre><code>kubectl -n journal exec deploy/journal-api -- \
+  sh -c 'wget -qO- localhost:8080/metrics | grep "^http_server_requests_seconds_bucket" | head -1'
+
+kubectl -n apps exec deploy/order-api -- \
+  sh -c 'curl -s localhost:8080/actuator/prometheus | grep "^http_server_requests_seconds_bucket" | head -1'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>http_server_requests_seconds_bucket{le="0.05",method="GET",uri="/healthz",status="200",outcome="SUCCESS"} 1
+
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/actuator/health/**",le="0.001"} 16</code></div>
+    <div class="verdict"><span class="lbl">판정</span>지표 이름과 핵심 라벨 넷(<code>method</code>·<code>uri</code>·<code>status</code>·<code>outcome</code>)이 같다. 덕분에 20.5의 질의 하나가 두 앱을 함께 다룰 수 있다.</div>
+    <p>다른 점도 둘 있다. Micrometer는 <code>error</code>·<code>exception</code> 라벨을 더 붙이고, <strong>버킷 경계가 다르다</strong>(<code>le="0.05"</code> vs <code>le="0.001"</code>). 앞의 것은 무해하지만 뒤의 것은 20.7 실패 ③에서 문제가 된다.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계 — ServiceMonitor를 파일로 남긴다</h4>
+    <p class="purpose"><span class="lbl">목적</span>3단계에서 <code>kubectl label</code>로 급하게 고친 것을 매니페스트로 옮기고, 두 번째 앱의 것도 함께 쓴다.</p>
+    <p><code>course/labs/k8s/monitoring/90-servicemonitors.yaml</code>로 저장한다.</p>
+<pre><code>---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    release: kps                      # ① 이것이 없으면 오퍼레이터가 이 오브젝트를 보지 않는다
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api   # ② Service 에 붙은 라벨
+  namespaceSelector:
+    matchNames: [apps]
+  endpoints:
+    - port: http                      # ③ Service 의 포트 이름
+      path: /actuator/prometheus      # 스프링 액추에이터의 경로
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: journal-api
+  namespace: journal
+  labels:
+    release: kps
+spec:
+  selector:
+    matchLabels:
+      app: journal-api
+  namespaceSelector:
+    matchNames: [journal]
+  endpoints:
+    - port: http
+      path: /metrics                  # prom-client 를 직접 붙였으므로 경로가 다르다
+      interval: 30s
+      scrapeTimeout: 10s</code></pre>
+<pre><code>kubectl apply -f course/labs/k8s/monitoring/90-servicemonitors.yaml</code></pre>
+    <p>이번에도 <code>journal-api</code>는 잡히지 않는다. 그 이유는 20.7 실패 ②에서 다룬다 — 먼저 거기를 보고 고친 뒤 돌아온다. 고친 뒤의 상태는 이렇다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  http://10.244.1.162:8080/actuator/prometheus up
+  http://10.244.2.134:8080/actuator/prometheus up
+  http://10.244.1.167:8080/metrics up
+  http://10.244.1.168:8080/metrics up
+  http://10.244.2.142:8080/metrics up
+전체 33 {'up': 33}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>M19의 28개에 앱 타깃 5개(order-api 2 + journal-api 3)가 더해져 <strong>33/33</strong>이다. 경로가 서로 다른 것(<code>/actuator/prometheus</code>와 <code>/metrics</code>)도 보인다 — 계측 방식이 다르면 ServiceMonitor도 앱마다 따로 써야 한다.</div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">20.5</span>따라하기 ③ RED 질의를 쓴다</h2>
+
+  <div class="step">
+    <h4>7단계 — 부하를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>정상 요청만으로는 에러율도 지연 분포도 볼 것이 없다. 일부러 느린 요청과 실패를 섞는다.</p>
+    <p><code>order-api</code>의 <code>ChaosController</code>가 <code>/api/chaos/slow</code>와 <code>/api/chaos/error</code>를 제공한다. <code>course/labs/scripts/k6-red.js</code>로 저장한다.</p>
+<pre><code>export const options = {
+  scenarios: {
+    // 정상 트래픽 — RED 의 R(요청률)과 D(지연)의 기준선을 만든다
+    normal: {
+      executor: 'constant-arrival-rate',
+      rate: 30, timeUnit: '1s', duration: DURATION,
+      preAllocatedVUs: 20, maxVUs: 60, exec: 'normal',
+    },
+    // 느린 요청 — 히스토그램 꼬리를 만든다. P50 은 그대로인데 P99 만 오른다
+    slow: {
+      executor: 'constant-arrival-rate',
+      rate: 2, timeUnit: '1s', duration: DURATION,
+      preAllocatedVUs: 10, maxVUs: 40, exec: 'slow',
+    },
+    // 에러 — RED 의 E
+    errors: {
+      executor: 'constant-arrival-rate',
+      rate: 3, timeUnit: '1s', duration: DURATION,
+      preAllocatedVUs: 5, maxVUs: 20, exec: 'errors',
+    },
+  },
+};
+
+export function normal() {
+  http.get(`${ORDER}/api/orders`);
+  http.get(`http://localhost:${JOURNAL_PORT}/api/entries`, { headers: { Host: 'journal.local' } });
+}
+export function slow()   { http.get(`${ORDER}/api/chaos/slow?ms=800`); }
+export function errors() { http.get(`${ORDER}/api/chaos/error?rate=0.7`); }</code></pre>
+<pre><code>kubectl -n apps port-forward svc/order-api 18082:8080 &amp;
+k6 run -e DURATION=3m course/labs/scripts/k6-red.js</code></pre>
+    <p><strong>멈추는 방법</strong>: k6는 포그라운드로 돌면 Ctrl-C로 끝난다. port-forward는 따로 정리한다 — <code>pkill -f 'port-forward.*18082'</code>.</p>
+    <span class="out-lbl">출력 (k6 요약)</span>
+    <div class="out"><code>http_req_duration..: avg=27.25ms min=751µs med=2.16ms max=816.5ms p(90)=4.43ms p(95)=5.73ms
+http_req_failed....: 3.32%  389 out of 11704
+http_reqs..........: 11704  64.731413/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>k6가 보는 것은 <strong>클라이언트 관점</strong>이다. 여기서는 두 앱의 요청이 섞여 있어 p95가 5.73ms로 나오지만, 서버 쪽에서 앱별로 나눠 보면 전혀 다른 그림이 나온다 — 다음 단계가 그것이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>8단계 — R · E · D를 각각 뽑는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>이름을 맞춰 둔 덕에 질의 하나로 두 앱을 함께 다룰 수 있다는 것을 확인한다.</p>
+    <p>세 질의 모두 <code>rate()</code>로 시작한다. 카운터는 계속 증가하기만 하므로 <strong>그 자체로는 의미가 없고 증가 속도가 의미</strong>다.</p>
+<pre><code># R — 초당 요청 수
+sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    job=order-api   = 23.35
+    job=journal-api = 20.82</code></div>
+<pre><code># E — 5xx 비율
+sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+  / sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    job=order-api = 0.0594</code></div>
+    <p><code>order-api</code>는 5.94%가 나왔는데 <code>journal-api</code>는 <strong>아예 결과가 없다.</strong> 값이 0인 것이 아니라 시계열이 없다.</p>
+    <div class="verdict"><span class="lbl">판정</span>분자에 <code>status=~"5.."</code>인 시계열이 하나도 없으면 나눗셈의 결과도 없다. PromQL의 이항 연산은 <strong>양쪽에 다 있는 라벨 조합에 대해서만</strong> 계산하기 때문이다. 대시보드에서 이 패널이 <code>No data</code>가 되고, 알림 규칙이라면 <strong>에러가 없어서 조용한 것인지 규칙이 잘못된 것인지 구분되지 않는다.</strong></div>
+    <p>빈 결과를 0으로 채우려면 <code>or</code>로 대체 항을 둔다.</p>
+<pre><code>sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+  / sum by (job) (rate(http_server_requests_seconds_count[5m]))
+or (sum by (job) (rate(http_server_requests_seconds_count[5m])) * 0)</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    job=order-api   = 0.05979
+    job=journal-api = 0</code></div>
+    <p>뒤쪽 항은 "전체 요청률에 0을 곱한 것"이다. 값은 항상 0이지만 <strong>라벨 조합은 살아 있으므로</strong> 앞이 비었을 때 자리를 채운다.</p>
+<pre><code># D — 평균 지연
+sum by (job) (rate(http_server_requests_seconds_sum[5m]))
+  / sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    job=order-api   = 0.045    (45ms)
+    job=journal-api = 0.00103  (1.03ms)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 질의가 나왔다. <code>_count</code>와 <code>_sum</code>은 히스토그램이 자동으로 만들어 주는 짝이고, 둘을 나누면 평균이 된다. <strong>그런데 평균은 위험한 숫자다</strong> — 다음 절에서 그 이유를 본다.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">20.6</span>따라하기 ④ 평균 뒤에 숨은 것을 찾는다</h2>
+  <p>8단계에서 <code>order-api</code>의 평균 지연이 45ms로 나왔다. 나쁘지 않아 보인다. 그런데 7단계의 부하에는 800ms짜리 요청이 초당 2건씩 섞여 있었다 — <strong>평균이 그것을 삼켰다.</strong></p>
+
+  <div class="step">
+    <h4>9단계 — 분위수를 계산한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 데이터에서 평균과 P99가 얼마나 다른지 본다.</p>
+<pre><code>histogram_quantile(0.50, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))
+histogram_quantile(0.95, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))
+histogram_quantile(0.99, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))</code></pre>
+    <table>
+      <tr><th>부분</th><th>뜻</th></tr>
+      <tr><td><code>_bucket</code></td><td>히스토그램이 만드는 누적 카운터. <code>le</code>(less than or equal) 라벨이 경계다</td></tr>
+      <tr><td><code>sum by (job, le)</code></td><td>파드별로 흩어진 버킷을 앱 단위로 합친다. <strong><code>le</code>를 반드시 남겨야</strong> 분위수를 계산할 수 있다</td></tr>
+      <tr><td><code>histogram_quantile</code></td><td>버킷 사이를 선형 보간해 분위수를 추정한다. 정확한 값이 아니라 <strong>추정</strong>이다</td></tr>
+    </table>
+    <span class="out-lbl">출력 (order-api)</span>
+    <div class="out"><code>P50 = 0.00059  (0.59ms)
+P95 = 0.7252   (725ms)
+P99 = 0.7895   (790ms)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>절반의 요청은 <strong>0.59ms</strong>에 끝나는데 상위 1%는 <strong>790ms</strong>다. 1300배 차이다. 평균 45ms는 두 무리 사이 어디에도 해당하지 않는 숫자였다 — 그런 응답 시간을 겪는 요청은 사실상 없다.</div>
+  </div>
+
+  <div class="step">
+    <h4>10단계 — 범인을 찾는다</h4>
+    <p class="purpose"><span class="lbl">목적</span>"느리다"에서 "무엇이 느린가"로 좁힌다. 집계 축을 바꾸는 것이 전부다.</p>
+<pre><code>histogram_quantile(0.99,
+  sum by (uri, le) (rate(http_server_requests_seconds_bucket{job="order-api"}[5m])))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    uri=/api/chaos/slow      = 0.8047
+    uri=/actuator/prometheus = 0.006739
+    uri=/actuator/health/**  = 0.003423
+    uri=/api/orders          = 0.001389
+    uri=/api/chaos/error     = 0.001274</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>job</code> 대신 <code>uri</code>로 묶었을 뿐인데 범인이 드러났다. <code>/api/chaos/slow</code>가 805ms이고 나머지는 전부 7ms 이하다. <strong>정상 엔드포인트는 멀쩡한데 하나가 전체 P99를 끌어올린 것</strong>이고, 앱 단위 평균만 봤다면 "서비스가 좀 느리네" 이상은 알 수 없었다.</div>
+    <p>이것이 4단계에서 <code>uri</code>를 라벨로 넣은 이유다. 라벨은 <strong>나중에 쪼개 볼 축</strong>을 미리 정해 두는 일이고, 계측할 때 넣지 않은 축으로는 나중에 쪼갤 수 없다. 반대로 아무 축이나 넣으면 M19 8절의 카디널리티 문제가 온다 — 그 균형이 계측 설계다.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">20.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① 포트를 숫자로 적으면</h4>
+    <p>Service의 포트가 <code>8080</code>이니 ServiceMonitor에도 <code>8080</code>이라고 쓰는 것이 자연스러워 보인다.</p>
+    <span class="lbl">재현</span>
+<pre><code>kubectl -n apps patch servicemonitor order-api --type=json \
+  -p='[{"op":"replace","path":"/spec/endpoints/0/port","value":"8080"}]'</code></pre>
+    <span class="out-lbl">출력 (1분 뒤)</span>
+    <div class="out"><code>servicemonitor.monitoring.coreos.com/order-api patched
+  order-api 타깃: 0 건 / 전체 28
+order-api   4m24s          &lt;- ServiceMonitor 는 그대로 있다</code></div>
+    <span class="lbl">원인</span>
+    <p><code>endpoints[].port</code>는 Service의 <strong>포트 이름</strong>을 가리킨다. 숫자를 쓰려면 <code>targetPort</code> 필드를 써야 하고, 이름과 숫자는 서로 다른 필드다. 1단계와 같은 방식으로 조용히 사라진다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>kubectl -n apps patch servicemonitor order-api --type=json \
+  -p='[{"op":"replace","path":"/spec/endpoints/0/port","value":"http"}]'</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>타깃이 2건으로 돌아온다. Service에 포트 이름을 붙이는 습관(M11부터 <code>name: http</code>를 써 온 이유)이 여기서 값을 한다 — 이름이 없으면 ServiceMonitor를 쓸 수 없다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② Service의 labels와 selector를 헷갈리면</h4>
+    <p>6단계에서 <code>journal-api</code>의 ServiceMonitor를 <code>app: journal-api</code>로 골랐는데 잡히지 않았다. Service에 그 라벨이 분명히 있어 보였다.</p>
+    <span class="lbl">진단</span>
+<pre><code>kubectl -n journal get svc journal-api \
+  -o jsonpath='metadata.labels = {.metadata.labels}{"\n"}spec.selector = {.spec.selector}{"\n"}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>metadata.labels = {"app.kubernetes.io/managed-by":"kustomize","app.kubernetes.io/part-of":"journal"}
+spec.selector  = {"app":"journal-api"}</code></div>
+    <span class="lbl">원인</span>
+    <p><code>app: journal-api</code>는 <code>spec.selector</code>에 있다. 그것은 <strong>"이 서비스가 어느 파드를 묶을까"</strong>이고, ServiceMonitor가 보는 것은 <strong><code>metadata.labels</code> — "이 서비스는 누구인가"</strong>다. 두 필드가 같은 값을 갖는 경우가 많아 구분이 흐려지는데, M14의 kustomization이 <code>includeSelectors: false</code>로 공통 라벨을 붙이면서 둘이 갈렸다.</p>
+    <span class="lbl">고친다</span>
+<pre><code># 30-journal-api.yaml 의 Service 에 라벨을 추가한다
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api
+  labels:
+    # M20 의 ServiceMonitor 가 이 라벨로 이 서비스를 찾는다.
+    # spec.selector 는 "어느 파드를 묶을까"이고 metadata.labels 는 "나는 누구인가"다.
+    app: journal-api
+spec:
+  ...</code></pre>
+<pre><code>kubectl apply -k course/labs/k8s/journal</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>1분 뒤 타깃이 33/33이 된다. <code>journal-api</code> 파드 세 개가 각각 <code>/metrics</code>로 잡힌다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ 버킷 경계를 베껴 오면 분위수가 허수가 된다</h4>
+    <p>4단계에서 <code>journal-api</code>의 버킷을 <code>[0.05, 0.1, 0.2, 0.5, 1]</code>로 잡았다. <code>order-api</code>의 SLO 경계를 그대로 옮긴 값이다. 8단계에서 이 앱의 평균이 <strong>1.03ms</strong>였는데 분위수를 계산해 보면 이상하다.</p>
+    <span class="lbl">재현</span>
+<pre><code>histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job="journal-api"}[5m])))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>평균 = 1.03 ms
+P50  = 25.00 ms</code></div>
+    <p>평균보다 P50이 <strong>25배 크다.</strong> 지연 분포가 아무리 이상해도 이런 일은 생기지 않는다. 버킷을 직접 들여다본다.</p>
+<pre><code>sum by (le) (rate(http_server_requests_seconds_bucket{job="journal-api"}[5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    le=  0.05  20.533/s
+    le=   0.1  20.533/s
+    le=   0.2  20.533/s
+    le=   0.5  20.533/s
+    le=   1.0  20.533/s
+    le=  +Inf  20.533/s</code></div>
+    <span class="lbl">원인</span>
+    <p>모든 버킷의 값이 같다. 누적 히스토그램에서 이것은 <strong>전부 첫 버킷 안에 들어갔다</strong>는 뜻이다. 가장 작은 경계가 50ms인데 이 앱은 1ms대에서 응답하므로 당연하다.</p>
+    <p><code>histogram_quantile</code>은 버킷 사이를 <strong>선형 보간</strong>한다. 모든 값이 <code>[0, 0.05]</code> 구간에 있으면 P50은 그 구간의 절반인 <code>0.025</code>가 된다. 데이터가 아니라 <strong>보간이 만들어 낸 숫자</strong>다. 정확히 같은 방식으로 P95도 P99도 전부 가짜가 된다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>  // 버킷 경계는 이 앱의 실제 지연 분포에 맞춰야 한다.
+  // 처음에는 order-api 의 SLO 경계(50ms~1s)를 그대로 베꼈는데, 이 앱은 1ms 대에서
+  // 응답하므로 모든 요청이 첫 버킷에 몰렸다. 그러면 P50 이 [0, 0.05] 구간의
+  // 선형 보간값(25ms)으로 나온다 — 평균 1ms 와 25배 차이 나는 허수다.
+  buckets: [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],</code></pre>
+    <p>다시 빌드·배포하고 부하를 준 뒤 같은 질의를 친다.</p>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    le= 0.0005   1.007/s
+    le=  0.001  10.255/s
+    le= 0.0025  21.071/s
+    le=  0.005  21.580/s
+    le=   0.01  21.582/s
+    ...
+
+평균 = 1.15 ms
+P50  = 1.09 ms
+P95  = 2.45 ms
+P99  = 4.88 ms</code></div>
+    <div class="verdict"><span class="lbl">판정</span>버킷마다 값이 다르다 — 분포가 실제로 담겼다는 뜻이다. P50이 1.09ms로 평균과 맞고, P99가 4.88ms로 꼬리를 보여준다. <strong>같은 앱, 같은 부하인데 숫자가 달라진 것은 재는 자를 바꿨기 때문</strong>이다.</div>
+    <div class="note-2026">
+      <span class="lbl">경계는 함부로 바꾸지 않는다</span>
+      버킷 경계를 바꾸면 옛 정의의 시계열이 보존 기간 동안 그대로 남아 새 것과 섞인다. 실제로 바꾼 직후 질의에 옛 경계(<code>le=0.2</code>)가 0.191/s로 잠시 보였다. 그 구간의 그래프는 두 정의가 겹쳐 신뢰할 수 없으므로, <strong>경계는 계측을 설계할 때 정하고 이후에는 되도록 건드리지 않는다.</strong> 바꿔야 한다면 대시보드와 알림의 임계값도 함께 재검토한다.
+    </div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">20.8</span>운영 관점 — 계측의 값과 대가</h2>
+  <p>M19에서 시계열이 84,771개였다. 두 앱을 계측한 뒤를 다시 센다.</p>
+  <table>
+    <tr><th></th><th>M19 (계측 전)</th><th>M20 (계측 후)</th><th>버킷 조정 후</th></tr>
+    <tr><td>전체 시계열</td><td>84,771</td><td>87,630</td><td>87,705</td></tr>
+    <tr><td><code>http_server_requests_seconds</code> 계열</td><td>—</td><td>712</td><td>—</td></tr>
+    <tr><td>order-api 버킷 시계열</td><td>—</td><td>592</td><td>592</td></tr>
+    <tr><td>journal-api 버킷 시계열</td><td>—</td><td>72</td><td>144</td></tr>
+  </table>
+  <p>앱 둘을 계측한 대가가 시계열 약 3,000개다. 눈여겨볼 것은 <strong>두 앱의 차이</strong>다. <code>order-api</code>가 <code>journal-api</code>의 네 배에서 여덟 배인데, 이유는 두 가지다 — Micrometer의 기본 지수 버킷이 훨씬 촘촘하고, <code>error</code>·<code>exception</code> 라벨이 곱해진다.</p>
+  <p>그리고 실패 ③에서 경계를 6개에서 12개로 늘리자 <code>journal-api</code>의 버킷 시계열이 정확히 두 배가 됐다(72 → 144). <strong>버킷 하나가 시계열 하나다.</strong> 분위수의 정확도와 저장 비용이 정비례한다는 뜻이고, 그래서 "P99를 봐야 하는 지표"에만 히스토그램을 켜는 것이 원칙이다.</p>
+
+  <h3>어느 지표에 히스토그램을 켤 것인가</h3>
+  <p>기준은 <strong>그 값의 분포를 봐야 판단이 달라지는가</strong>다. 요청 처리 시간은 그렇다 — 평균만으로는 20.6에서 본 것처럼 사용자가 겪는 것을 못 본다. 반면 "현재 활성 커넥션 수"는 게이지 하나로 충분하고, 분포를 나눠 봐도 할 수 있는 일이 없다.</p>
+  <p>비용을 줄이는 방법도 있다. Micrometer라면 특정 URI에만 히스토그램을 켜거나, 프로메테우스 쪽에서 <code>metricRelabelings</code>로 필요 없는 버킷을 버릴 수 있다. 다만 버린 것은 나중에 되살릴 수 없으므로, <strong>지우기 전에 정말 안 볼 것인지</strong>를 확인한다.</p>
+
+  <h3>평균을 대시보드에 두지 않는다</h3>
+  <p>20.6의 결과를 다시 보면 <code>order-api</code>의 평균 45ms는 <strong>어떤 요청도 겪지 않은 값</strong>이었다. 절반은 0.59ms, 상위 1%는 790ms다. 평균은 이 둘을 섞어 아무도 경험하지 않는 숫자를 만든다.</p>
+  <p>그래서 지연은 P50·P95·P99를 함께 본다. P50은 "보통의 경험", P95·P99는 "나쁜 경험"이고, 둘 사이가 벌어지는 것 자체가 신호다. 20.6에서 P50과 P99가 1300배 차이 났을 때 이미 <strong>두 종류의 요청이 섞여 있다</strong>는 것을 알 수 있었고, <code>uri</code>로 쪼개니 실제로 그랬다.</p>
+
+  <h3>이름 규약이 왜 규약인가</h3>
+  <p>4단계에서 <code>journal-api</code>의 지표 이름을 <code>order-api</code>에 맞춘 덕에 8단계의 질의 하나가 두 앱을 함께 다뤘다. 맞추지 않았다면 대시보드 패널을 앱마다 따로 만들고, 알림 규칙도 따로 쓰고, 앱이 하나 늘 때마다 그 일을 반복해야 한다.</p>
+  <p>정하는 쪽이 프레임워크일 때는 그것을 따르는 편이 쉽다. Micrometer가 <code>http_server_requests_seconds</code>를 쓰므로 Node 앱을 거기 맞췄다. 반대로 했다면 Spring 쪽 이름을 전부 바꾸는 설정을 써야 했을 것이다. <strong>규약은 다수가 이미 쓰는 것을 고르는 편이 유지 비용이 낮다.</strong></p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">20.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl get servicemonitor -A -l release=kps --no-headers | grep -cE 'order-api|journal-api'</code> → <code>2</code></li>
+      <li><code>kubectl -n journal get svc journal-api -o jsonpath='{.metadata.labels.app}'</code> → <code>journal-api</code></li>
+      <li>port-forward 후 타깃 집계 → <strong>down이 0</strong>이고 앱 타깃(<code>/metrics</code>·<code>/actuator/prometheus</code>)이 5건</li>
+      <li>질의 <code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code> → <code>order-api</code>와 <code>journal-api</code> 두 줄</li>
+      <li>질의 <code>histogram_quantile(0.99, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))</code> → 두 줄, 값이 나온다</li>
+      <li>질의 <code>histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job="journal-api"}[5m])))</code> → <strong>0.01 미만</strong> (버킷을 고쳤다면 평균과 비슷하게 나온다)</li>
+      <li>질의 <code>count({__name__="http_server_requests_seconds_bucket",job="journal-api"})</code> → <code>144</code> 안팎</li>
+      <li><code>kubectl -n journal exec deploy/journal-api -- sh -c 'wget -qO- localhost:8080/metrics | grep -c "^[a-z]"'</code> → <code>90</code> 이상</li>
+      <li><code>pgrep -f 'k6-red' || echo none</code> → <code>none</code></li>
+      <li><code>pgrep -f 'port-forward.*18082' || echo none</code> → <code>none</code></li>
+      <li>(이해 확인) 5xx가 한 건도 없는 앱의 에러율 질의가 <code>0</code>이 아니라 <code>결과 없음</code>인 이유를 적어 본다</li>
+      <li>(이해 확인) 평균 45ms · P50 0.59ms · P99 790ms가 동시에 나올 수 있는 이유를 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/k8s/monitoring/90-servicemonitors.yaml</code> — 두 앱의 스크레이프 등록. M21의 알림 규칙이 여기서 들어온 지표를 쓴다</li>
+      <li><code>course/labs/scripts/k6-red.js</code> — 정상·지연·에러가 섞인 부하. M21에서 알림을 발화시키는 데 그대로 쓴다</li>
+      <li><code>course/labs/apps/journal-api/src/server.ts</code> · <code>package.json</code> · <code>package-lock.json</code> — <code>prom-client</code> 계측 추가</li>
+      <li><code>course/labs/k8s/journal/30-journal-api.yaml</code> — Service에 <code>app: journal-api</code> 라벨 추가</li>
+      <li>클러스터: 타깃 33개 전부 up. 두 앱의 RED 지표가 3일치 쌓이기 시작했다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 부하와 port-forward 를 멈춘다
+pkill -f k6-red 2&gt;/dev/null
+pkill -f 'port-forward.*18082' 2&gt;/dev/null
+pkill -f 'port-forward.*9090' 2&gt;/dev/null
+
+# 남아 있는지 확인
+pgrep -fl 'k6|port-forward' || echo "없음"</code></pre>
+  <p>관측 스택과 두 앱은 <strong>지우지 않는다.</strong> M21이 이 지표 위에 대시보드와 알림을 얹는다. 프로메테우스가 계속 3일치를 쌓고 있으므로, 며칠 뒤 실습을 재개해도 이 모듈에서 만든 부하의 흔적을 그래프로 되짚을 수 있다 — M19에서 세운 기록층이 이제 실제로 일하기 시작했다.</p>
+</section>
+
+<div class="navlinks">
+  <a href="m19-k8s-metrics-pipeline.html">← M19 메트릭 파이프라인과 프로메테우스 스택</a>
+  <a href="m21-k8s-dashboard-alerting.html">M21 대시보드와 알림 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈</h3>
+  <p>지금은 질의를 칠 때만 값을 본다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 그 사실을 알 방법이 없다. M21에서 두 가지를 만든다 — 늘 켜 두고 볼 수 있는 대시보드와, 사람을 부르는 알림이다. 대시보드는 M19 13단계에서 본 사이드카 방식으로 ConfigMap에 코드로 담고, 알림은 이 모듈에서 쓴 RED 질의를 임계값과 함께 <code>PrometheusRule</code>로 옮긴다. 그리고 <code>ChaosController</code>로 실제 지연과 에러를 만들어 <strong>pending → firing → resolved</strong> 상태 전이를 직접 관찰한다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>PromQL 기초: https://prometheus.io/docs/prometheus/latest/querying/basics/</li>
+    <li>histogram_quantile과 히스토그램: https://prometheus.io/docs/practices/histograms/</li>
+    <li>메트릭 이름·라벨 규약: https://prometheus.io/docs/practices/naming/</li>
+    <li>Prometheus Operator ServiceMonitor 문서: https://prometheus-operator.dev/docs/api-reference/api/</li>
+    <li>Micrometer의 HTTP 서버 메트릭: https://docs.spring.io/spring-boot/reference/actuator/metrics.html</li>
+    <li>prom-client (Node): https://github.com/siimon/prom-client</li>
+    <li>RED 방법: https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 3.3 모니터링 지표 · 3.5 계층적 모니터링</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · kube-prometheus-stack 89.2.2 · Spring Boot 4.1.0 · prom-client 15.1.3 · k6 v2.2.0</p>
+</footer>
+
+</div>
+</body>
+</html>

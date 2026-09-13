@@ -1,0 +1,43 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-api
+  namespace: apps
+  labels:
+    # ① 04단계 헬름 릴리스 이름과 일치해야 오퍼레이터가 고른다
+    release: kps
+spec:
+  # ② 이 라벨을 가진 Service를 찾는다 (03단계에서 붙여둔 것)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-api
+  namespaceSelector:
+    matchNames:
+      - apps
+  endpoints:
+    # ③ Service의 포트 '이름'이다. 숫자가 아니다.
+    - port: http
+      path: /actuator/prometheus
+      # 04단계 전역 설정과 같은 값. 명시해두면 나중에 이 서비스만 조정하기 쉽다.
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gateway
+  namespace: apps
+  labels:
+    release: kps
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  namespaceSelector:
+    matchNames:
+      - apps
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 10s

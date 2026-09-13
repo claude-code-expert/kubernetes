@@ -1,0 +1,63 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: obs-study-app-rules
+  namespace: apps
+  labels:
+    # ServiceMonitor와 같은 이유로 필요하다 (06단계 ①번 고리)
+    release: kps
+spec:
+  groups:
+    - name: obs-study-app
+      # 이 그룹의 규칙을 얼마나 자주 평가할지
+      interval: 30s
+      rules:
+        - alert: AppTargetDown
+          expr: up{namespace="apps"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.service }} 스크레이프 실패"
+            description: "{{ $labels.pod }} 를 1분 이상 긁지 못하고 있습니다."
+
+        - alert: AppHighErrorRate
+          expr: |
+            100 * (
+              sum by (service) (
+                rate(http_server_requests_seconds_count{namespace="apps", status=~"5.."}[5m])
+              )
+              /
+              sum by (service) (
+                rate(http_server_requests_seconds_count{namespace="apps"}[5m])
+              )
+            ) > 5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} 에러율 {{ $value | printf \"%.1f\" }}%"
+            description: "5xx 비율이 2분 이상 5%를 넘고 있습니다."
+
+        - alert: AppHighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le, service) (
+                rate(http_server_requests_seconds_bucket{namespace="apps"}[5m])
+              )
+            ) > 0.5
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} P95 {{ $value | printf \"%.2f\" }}초"
+            description: "P95 응답 시간이 3분 이상 500ms를 넘고 있습니다."
+
+        - alert: OrderRejectionSpike
+          expr: sum(rate(orders_rejected_total[5m])) > 0.2
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "주문 거부가 늘고 있습니다"
+            description: "초당 거부 건수가 5분 이상 0.2를 넘습니다. 클라이언트 오류 가능성."

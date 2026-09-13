@@ -1,0 +1,90 @@
+# M25 — 열어야 하는 경로만.
+---
+# ① DNS. 이그레스를 막으면 이름 해석부터 죽는다 (M25 실패 ①).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-dns, namespace: journal}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+# ② 인그레스 컨트롤러 → journal-api · web-static
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-from-ingress, namespace: journal}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [journal-api, web-static]}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # 아래 두 셀렉터는 같은 항목에 있으므로 AND 다.
+        # ingress-nginx 네임스페이스에 있으면서 컨트롤러 라벨을 가진 파드만.
+        # 하이픈을 하나 더 붙여 두 항목으로 쪼개면 OR 가 되어 네임스페이스 전체가 열린다 (M25 실패 ②).
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - {protocol: TCP, port: 8080}
+---
+# ③ journal-api → redis. 레디스는 이것 말고 아무 데서도 받지 않는다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-api-to-redis, namespace: journal}
+spec:
+  podSelector:
+    matchLabels: {app: redis}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: journal-api}
+      ports:
+        - {protocol: TCP, port: 6379}
+---
+# ④ journal-api 의 이그레스 — 레디스로만
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-api-egress, namespace: journal}
+spec:
+  podSelector:
+    matchLabels: {app: journal-api}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: redis}
+      ports:
+        - {protocol: TCP, port: 6379}
+---
+# ⑤ 프로메테우스가 긁어 갈 수 있게 (M20 의 ServiceMonitor 가 이 경로를 쓴다)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-scrape, namespace: journal}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [journal-api, web-static]}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - {protocol: TCP, port: 8080}

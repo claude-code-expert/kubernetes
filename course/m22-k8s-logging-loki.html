@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Part 4 · 관측] M22 로깅 — 도커 &amp; 쿠버네티스 과정</title>
+<!--
+  도커 & 쿠버네티스 교육 과정 교안. 제작 규약은 저장소 루트 CLAUDE.md,
+  커리큘럼 정본은 CURRICULUM.md.
+  이 문서의 질의 결과와 수치는 2026-09-05 kind study 클러스터에서 실제로 얻은 값이다.
+  그림은 인라인 SVG — figures/m22-fig1-label-vs-line.svg 에 같은 파일을 별도 보관.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555555;
+    --line: #d8d8d8;
+    --bg-soft: #f7f7f5;
+    --accent: #2456c4;
+    --warn: #a1442a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 브라우저 너비에 비례하는 기준 글자 크기. 이 아래의 모든 font-size는 rem이므로
+     본문·제목·코드가 같은 비율로 함께 커진다. 768px에서 15px, 1920px에서 18.5px. */
+  html { font-size: clamp(15px, 0.304vw + 12.67px, 18.5px); }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+  /* 본문 폭도 뷰포트에 비례한다. 좁은 화면은 92vw, 넓은 화면은 1180px에서 멈춘다 */
+  .wrap { width: min(92vw, clamp(720px, 78vw, 1180px)); margin: 0 auto; padding: clamp(32px, 3.6vw, 56px) clamp(14px, 2vw, 28px) 96px; }
+
+  /* 과정 식별 바 — 어느 과정의 몇 번째 모듈이고 도커/쿠버네티스 중 어느 트랙인지 */
+  .coursebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .cb-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .cb-name a { color: inherit; text-decoration: none; }
+  .cb-rail { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .cb-rail .seg { font-size: 0.75rem; color: var(--sub); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 9px; white-space: nowrap; }
+  .cb-rail .seg b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .cb-rail .seg.on { border-color: var(--accent); background: #f2f6fd; }
+  .cb-rail .seg.on b { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 28px; margin-bottom: 32px; }
+  .ch-no { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+  h1 { font-size: 2.125rem; font-weight: 700; margin: 6px 0 14px; letter-spacing: -0.01em; }
+  .ch-desc { color: var(--sub); font-size: 0.96875rem; }
+  .meta { margin-top: 16px; font-size: 0.8125rem; color: var(--sub); }
+  .meta .tag { display: inline-block; border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; margin-right: 6px; font-size: 0.78125rem; }
+
+  .prereq { border: 1px solid var(--line); border-left: 3px solid #999999; padding: 14px 20px; margin-bottom: 28px; font-size: 0.90625rem; background: #fcfcfb; }
+  .prereq .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--sub); }
+  .prereq ul { padding-left: 20px; margin-top: 6px; }
+  .prereq li { margin-bottom: 3px; }
+
+  .tldr { border: 1px solid var(--line); background: var(--bg-soft); padding: 20px 24px; margin-bottom: 40px; border-radius: 6px; }
+  .tldr h2 { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .tldr p { font-size: 0.9375rem; margin-bottom: 4px; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  nav.toc { margin-bottom: 48px; font-size: 0.90625rem; columns: 2; column-gap: 40px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid #efefef; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .num { color: var(--accent); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 56px; }
+  h2.sec { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; padding-top: 8px; }
+  h2.sec .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 1.0625rem; font-weight: 700; margin: 26px 0 10px; }
+  h4 { font-size: 0.96875rem; font-weight: 700; margin: 20px 0 8px; color: #333333; }
+  p { margin-bottom: 12px; }
+  p.lead { font-size: 1.03125rem; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  dfn.term { font-style: normal; font-weight: 700; text-decoration: underline dotted #9ab0e0 1.5px; text-underline-offset: 4px; }
+  dfn.term .en { font-weight: 500; color: var(--sub); font-size: 0.92em; }
+
+  code { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--bg-soft); border: 1px solid #ececec; padding: 1px 5px; border-radius: 3px; }
+  pre { background: #fafaf8; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 8px; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.84375rem; line-height: 1.6; }
+
+  .step { border-left: 2px solid var(--line); padding-left: 20px; margin: 28px 0 32px; }
+  .step > h4 { margin-top: 0; }
+  .purpose { font-size: 0.90625rem; color: var(--sub); margin-bottom: 10px; }
+  .purpose .lbl { font-weight: 700; color: var(--ink); margin-right: 6px; }
+
+  .out { background: #ffffff; border: 1px dashed #bdbdbd; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin: 0 0 10px; }
+  .out code { background: none; border: none; padding: 0; font-size: 0.8125rem; line-height: 1.55; color: #333333; }
+  .out-lbl { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--sub); margin: 10px 0 4px; }
+
+  .verdict { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 18px; margin: 10px 0 4px; font-size: 0.90625rem; background: #fbfcfe; }
+  .verdict .lbl { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .fail { border: 1px solid #e2c9c0; background: #fdf8f6; border-radius: 6px; padding: 18px 22px; margin: 26px 0; }
+  .fail h4 { margin-top: 0; color: var(--warn); }
+  .fail .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; color: var(--warn); margin-bottom: 6px; }
+
+  figure { margin: 22px 0 26px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #ffffff; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 0.8125rem; color: var(--sub); margin-top: 10px; padding: 0 4px; }
+
+  .note-2026 { border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 18px 0; font-size: 0.90625rem; }
+  .note-2026 .lbl { display: block; font-size: 0.78125rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .note-2026 .src { display: block; margin-top: 8px; font-size: 0.78125rem; color: var(--sub); word-break: break-all; }
+
+  .check { border: 1px solid var(--line); padding: 14px 18px; margin: 14px 0; font-size: 0.90625rem; border-radius: 6px; }
+  .check .lbl { font-weight: 700; margin-right: 8px; }
+  .check ul { padding-left: 20px; margin-top: 8px; }
+  .check li { margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+
+  ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }
+  ul.tight li, ol.tight li { margin-bottom: 6px; }
+
+  .deliver { border: 1px solid var(--line); background: var(--bg-soft); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 0.90625rem; }
+  .deliver .lbl { display: block; font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .deliver ul { padding-left: 20px; }
+  .deliver li { margin-bottom: 4px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding-top: 20px; font-size: 0.8125rem; color: var(--sub); }
+  footer h3 { font-size: 0.875rem; margin: 0 0 8px; color: var(--ink); }
+  footer ul { padding-left: 20px; margin-bottom: 14px; }
+  footer li { margin-bottom: 4px; word-break: break-all; }
+  .navlinks { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; font-size: 0.875rem; }
+  .navlinks a { text-decoration: none; }
+  /* 아직 만들지 않은 모듈 — 링크가 아니라 상태 표시 */
+  .soon { color: var(--sub); }
+  .soon .badge { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+
+  /* 좁은 화면에서는 목차를 한 단으로, 넓은 화면에서는 세 단으로 */
+  @media (max-width: 760px) {
+    nav.toc { columns: 1; }
+    .cb-rail { margin-left: 0; }
+    .navlinks { flex-direction: column; gap: 8px; }
+  }
+  @media (min-width: 1400px) {
+    nav.toc { columns: 3; column-gap: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="coursebar">
+  <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+</div>
+
+<header>
+  <div class="ch-no">MODULE 22 / 38 · PART 4 관측</div>
+  <h1>로깅</h1>
+  <p class="ch-desc">M21의 알림이 "에러율 5.9%"라고 말해 준다. 그런데 <strong>그 에러가 무엇이었는지</strong>는 메트릭이 답하지 못한다. 이 모듈에서 로그를 클러스터 밖으로 모은다. 먼저 <code>kubectl logs</code>가 어디서 멈추는지 재현하고, Loki와 Alloy를 세운 뒤, 로그 라벨을 잘못 잡으면 스트림이 어떻게 66배가 되는지 직접 만들어 본다.</p>
+  <div class="meta">
+    <span class="tag">중반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Loki 3.6.12</span><span class="tag">Alloy v1.19.2</span>
+    <br>2026-09-05 검증 (kind v0.33.0) · 차트 버전은 실습 당일 <code>helm search repo</code>로 다시 확인한다
+  </div>
+</header>
+
+<div class="prereq">
+  <span class="lbl">사전 조건</span>
+  <ul>
+    <li><a href="m21-k8s-dashboard-alerting.html">M21</a> 완료 — 대시보드와 알림 규칙이 있다. 확인: <code>kubectl -n monitoring get cm study-dashboards</code></li>
+    <li>두 앱이 떠 있다. 확인: <code>kubectl -n journal get deploy journal-api</code>와 <code>kubectl -n apps get deploy order-api</code>가 모두 Ready</li>
+    <li>노드에 메모리 여유가 1.5Gi 이상 있다. 확인: <code>kubectl top nodes</code></li>
+    <li>고칠 파일: <code>course/labs/apps/journal-api/src/server.ts</code> · <code>course/labs/k8s/apps/10-order-api.yaml</code> · <code>course/labs/monitoring/kps-values.yaml</code> · <code>course/labs/monitoring/dashboards/study-red.json</code></li>
+    <li>새로 쓰는 파일: <code>course/labs/monitoring/loki-values.yaml</code> · <code>alloy-values.yaml</code></li>
+  </ul>
+</div>
+
+<div class="tldr">
+  <h2>핵심 3줄</h2>
+  <p>1. 파드를 지우면 <code>kubectl logs</code>가 <code>NotFound</code>를 돌려주는 것을 확인하고, Loki와 Alloy로 로그를 파드 바깥에 남긴다.</p>
+  <p>2. 수집기를 세워도 앱이 요청마다 로그를 남기지 않으면 볼 것이 없다 — 두 앱에 각각 다른 방법으로 요청 로그를 켠다.</p>
+  <p>3. 로그 필드를 라벨로 승격시켜 스트림이 3개에서 66개가 되는 것을 직접 만들고 되돌린다.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="num">22.1</span>알림은 "몇 건"까지만 말한다</a>
+  <a href="#s2"><span class="num">22.2</span>이론 — 무엇을 모으고 어디에 둘 것인가</a>
+  <a href="#s3"><span class="num">22.3</span>따라하기 ① kubectl logs가 멈추는 곳</a>
+  <a href="#s4"><span class="num">22.4</span>따라하기 ② Loki와 Alloy를 세운다</a>
+  <a href="#s5"><span class="num">22.5</span>따라하기 ③ 앱이 로그를 남기게 한다</a>
+  <a href="#s6"><span class="num">22.6</span>따라하기 ④ LogQL로 찾는다</a>
+  <a href="#s7"><span class="num">22.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">22.8</span>운영 관점 — 로그는 비싸다</a>
+  <a href="#s9"><span class="num">22.9</span>체크포인트와 정리</a>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="num">22.1</span>알림은 "몇 건"까지만 말한다</h2>
+  <p class="lead">M21에서 <code>AppHighErrorRate</code>가 발화했을 때 알림이 알려준 것은 "<code>order-api</code> 에러율 5.9%"였다. 대응하는 사람이 다음에 하는 질문은 정해져 있다 — <strong>무슨 에러인가.</strong></p>
+  <p>메트릭은 그 질문에 답할 수 없다. <code>http_server_requests_seconds_count{status="500"}</code>는 500이 몇 번 났는지만 안다. 어떤 요청이었는지, 스택 트레이스가 무엇이었는지, 같은 사용자의 연속 요청이었는지는 <strong>숫자로 압축되면서 사라진</strong> 정보다.</p>
+  <p>M19 2절에서 메트릭과 로그를 나눌 때 이렇게 적었다 — "지금 에러율이 몇 퍼센트인가"는 메트릭이, "그 에러가 정확히 무엇이었나"는 로그가 답한다. 지금까지 앞쪽만 만들었다.</p>
+  <p>그리고 지금 우리가 로그를 보는 방법은 <code>kubectl logs</code> 하나뿐인데, 이것은 <strong>파드가 살아 있을 때만</strong> 쓸 수 있다. 새벽에 죽은 파드가 재시작되고 나면 그 파드가 무슨 말을 남겼는지 볼 방법이 없다. 22.3에서 그 경계를 정확히 확인한다.</p>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="num">22.2</span>이론 — 무엇을 모으고 어디에 둘 것인가</h2>
+  <p>책 3.8은 클러스터에서 모아야 할 로그를 넷으로 나눈다.</p>
+  <table>
+    <tr><th>대상</th><th>무엇</th><th>이 모듈에서</th></tr>
+    <tr><td>노드</td><td>kubelet, 컨테이너 런타임, 시스템 데몬</td><td>수집 대상에 들어간다</td></tr>
+    <tr><td>컨트롤 플레인</td><td>apiserver, 스케줄러, 컨트롤러 매니저, etcd</td><td><strong>수집되지 않는다</strong> — 22.4에서 이유를 본다</td></tr>
+    <tr><td>감사 <span class="t-sub">audit</span></td><td>누가 무엇을 언제 요청했는가</td><td>M27 보안에서 다룬다</td></tr>
+    <tr><td>애플리케이션</td><td>앱이 stdout으로 내보내는 것</td><td>이 모듈의 주 대상</td></tr>
+  </table>
+
+  <h3>stdout 원칙</h3>
+  <p>컨테이너 안에서 파일에 로그를 쓰면 <strong>파드가 사라질 때 함께 사라진다.</strong> 볼륨을 붙여 남길 수도 있지만 그러면 노드에 묶이고(M18), 수집기가 그 파일의 위치와 형식을 알아야 한다.</p>
+  <p>표준 방식은 <strong>표준 출력으로 내보내고 나머지는 플랫폼에 맡기는 것</strong>이다. 컨테이너 런타임이 그것을 노드의 파일로 받아 두고, 수집기가 그 파일이나 쿠버네티스 API를 통해 읽어 간다. 앱은 자기가 어디에 저장되는지 몰라도 된다.</p>
+  <p>사이드카로 로그를 모으는 방식도 있다 — 앱이 파일에 쓰고 같은 파드의 다른 컨테이너가 그것을 읽어 stdout으로 옮기는 것이다. 앱을 고칠 수 없을 때 쓰지만, 파드마다 컨테이너가 하나씩 늘고 메모리도 그만큼 든다. 고칠 수 있으면 앱이 직접 stdout으로 내보내는 편이 낫다.</p>
+
+  <h3>로키가 프로메테우스와 닮은 점과 다른 점</h3>
+  <p>로키는 "프로메테우스인데 로그용"이라고 소개되곤 한다. 닮은 것은 <strong>라벨로 대상을 고른다</strong>는 점이다. <code>{namespace="journal", app="journal-api"}</code>처럼 쓰는 것이 프로메테우스의 셀렉터와 같다.</p>
+  <p>다른 것이 중요하다. 로키는 <strong>로그 본문을 인덱싱하지 않는다.</strong> 라벨만 인덱싱하고 본문은 압축해 통째로 저장한다. 그래서 저장 비용이 싸고, 대신 본문 검색은 해당 스트림을 전부 읽어 훑는 방식이다. 라벨로 범위를 좁힌 뒤 본문을 훑는 것이 로키의 사용법이고, <strong>라벨을 잘못 잡으면 그 구조가 무너진다</strong> — 22.7 실패 ③에서 직접 만든다.</p>
+
+  <figure>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+        </marker>
+      </defs>
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .t-mono-s { font-size:9.5px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
+
+      <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
+      <text class="t-h" x="40" y="46">로키에서 라벨과 로그 본문은 값이 다르다</text>
+      <text class="t-sub" x="40" y="66">같은 정보를 어디에 두느냐가 저장 비용을 정한다</text>
+
+      <!-- 왼쪽: 올바른 방식 -->
+      <rect class="accent" x="40" y="86" width="390" height="180" rx="4"/>
+      <text class="t-title" x="235" y="110" text-anchor="middle">라벨은 적게, 본문은 그대로</text>
+      <rect class="box" x="56" y="122" width="358" height="46" rx="3"/>
+      <text class="t-mono" x="66" y="140">라벨  {namespace, app, container, pod}</text>
+      <text class="t-sub" x="66" y="158">값의 가짓수가 유한하고 미리 안다</text>
+      <rect class="box" x="56" y="176" width="358" height="76" rx="3"/>
+      <text class="t-mono-s" x="66" y="194">{"msg":"request","path":"/api/entries?req=1",</text>
+      <text class="t-mono-s" x="66" y="209"> "status":200,"durationMs":1}</text>
+      <text class="t-sub" x="66" y="230">path 는 본문 안에 있다. 조회는 | json 으로</text>
+      <text class="t-acc" x="66" y="246">스트림 3개</text>
+
+      <!-- 오른쪽: 잘못된 방식 -->
+      <rect class="warnbox" x="470" y="86" width="390" height="180" rx="4"/>
+      <text class="t-title" x="665" y="110" text-anchor="middle">본문 필드를 라벨로 승격시키면</text>
+      <rect class="box" x="486" y="122" width="358" height="46" rx="3"/>
+      <text class="t-mono" x="496" y="140">라벨  {…, path, status}</text>
+      <text class="t-warn" x="496" y="158">path 는 요청마다 다르다</text>
+      <rect class="box" x="486" y="176" width="358" height="76" rx="3"/>
+      <text class="t-mono-s" x="496" y="194">{app=journal-api, path="/api/entries?req=1"}</text>
+      <text class="t-mono-s" x="496" y="209">{app=journal-api, path="/api/entries?req=2"}</text>
+      <text class="t-mono-s" x="496" y="224">{app=journal-api, path="/api/entries?req=3"}  …</text>
+      <text class="t-warn" x="496" y="246">스트림 66개 — 요청 60건이 스트림 60개</text>
+
+      <path class="line" d="M 430 176 L 464 176" marker-end="url(#ar1)"/>
+      <text class="t-warn" x="447" y="168" text-anchor="middle">stage.labels</text>
+
+      <!-- 아래: 왜 그런가 -->
+      <rect class="soft" x="40" y="284" width="820" height="122" rx="4"/>
+      <text class="t-h" x="56" y="308">라벨 하나가 스트림 하나다</text>
+      <text class="t-sub" x="56" y="330">로키는 라벨 조합마다 별도의 인덱스와 청크를 만든다. 라벨 값의 가짓수가 곱해지면 그만큼 스트림이 생긴다.</text>
+
+      <rect class="box" x="56" y="342" width="256" height="52" rx="3"/>
+      <text class="t-title" x="184" y="362" text-anchor="middle">라벨에 넣을 것</text>
+      <text class="t-sub" x="184" y="380" text-anchor="middle">네임스페이스 · 앱 · 컨테이너 · 파드</text>
+
+      <rect class="warnbox" x="322" y="342" width="256" height="52" rx="3"/>
+      <text class="t-warn" x="450" y="362" text-anchor="middle">라벨에 넣지 말 것</text>
+      <text class="t-sub" x="450" y="380" text-anchor="middle">경로 · 사용자 ID · 요청 ID · 타임스탬프</text>
+
+      <rect class="box" x="588" y="342" width="272" height="52" rx="3"/>
+      <text class="t-title" x="724" y="362" text-anchor="middle">그것들은 어디에</text>
+      <text class="t-sub" x="724" y="380" text-anchor="middle">로그 본문. 조회는 | json · | pattern 으로</text>
+    </svg>
+    <figcaption>그림 22.1 — 라벨 조합 하나가 스트림 하나다. 요청마다 달라지는 값을 라벨로 올리면 스트림이 요청 수만큼 늘어난다.</figcaption>
+  </figure>
+
+  <div class="note-2026">
+    <span class="lbl">Promtail과 loki-stack은 쓰지 않는다</span>
+    검색하면 대부분 <strong>Promtail</strong>로 수집하고 <strong>loki-stack</strong> 차트로 설치한다. 둘 다 지금은 쓰면 안 되는 것인데, <code>helm search repo</code>에는 아무 표시 없이 그대로 나온다.
+    <br><code>helm search repo grafana/promtail   → 6.17.1 / appVersion 3.5.1</code>
+    <br><code>helm search repo grafana/loki-stack → 2.10.3 / appVersion v2.9.3</code>
+    <br>차트 메타데이터를 직접 봐야 보인다.
+    <br><code>helm show chart grafana/promtail | grep deprecated → deprecated: true</code>
+    <br><code>helm show chart grafana/loki-stack | grep deprecated → deprecated: true</code>
+    <br>Promtail은 2026-03-02로 수명이 끝났고 후속은 <strong>Grafana Alloy</strong>다. loki-stack은 <code>appVersion</code>이 <code>v2.9.3</code> — Loki 2.x 대에 멈춰 있다(현재 3.6.12). 이 모듈은 <code>grafana/loki</code>와 <code>grafana/alloy</code>를 따로 설치한다.
+    <span class="src">근거: <code>helm show chart</code> 출력 · grafana.com/docs/loki (Promtail EOL) · 2026-09-05 확인</span>
+  </div>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="num">22.3</span>따라하기 ① kubectl logs가 멈추는 곳</h2>
+
+  <div class="step">
+    <h4>1단계 — 로그를 남기고 죽는 파드를 만든다</h4>
+    <p class="purpose"><span class="lbl">목적</span>로그가 언제까지 보이고 언제 사라지는지 경계를 정확히 잡는다.</p>
+<pre><code>kubectl create ns m22
+
+cat &lt;&lt;'EOF' | kubectl -n m22 apply -f -
+apiVersion: v1
+kind: Pod
+metadata: {name: noisy}
+spec:
+  restartPolicy: Never
+  containers:
+    - name: c
+      image: alpine:3.22
+      resources: {requests: {cpu: 10m, memory: 16Mi}}
+      command: ["sh","-c","i=0; while [ $i -lt 30 ]; do echo \"{\\\"level\\\":\\\"info\\\",\\\"msg\\\":\\\"작업 $i\\\"}\"; i=$((i+1)); sleep 1; done; echo '{\"level\":\"error\",\"msg\":\"마지막에 터졌다\"}'; exit 1"]
+EOF</code></pre>
+    <p>30초 동안 로그를 찍고 마지막에 에러를 남기며 죽는 파드다. 세 시점에서 <code>kubectl logs</code>를 쳐 본다.</p>
+<pre><code># ① 실행 중
+kubectl -n m22 logs noisy | tail -3</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"level":"info","msg":"작업 10"}
+{"level":"info","msg":"작업 11"}
+{"level":"info","msg":"작업 12"}</code></div>
+<pre><code># ② 끝난 뒤
+kubectl -n m22 get pod noisy --no-headers
+kubectl -n m22 logs noisy | tail -2</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>noisy   0/1   Error   0     33s
+{"level":"info","msg":"작업 29"}
+{"level":"error","msg":"마지막에 터졌다"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드가 <code>Error</code> 상태로 끝났는데도 로그는 남아 있다. <strong>여기까지는 <code>kubectl logs</code>로 충분하다</strong> — 죽은 파드의 마지막 말을 읽을 수 있다.</div>
+<pre><code># ③ 파드를 지우면
+kubectl -n m22 delete pod noisy
+kubectl -n m22 logs noisy</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>pod "noisy" deleted from m22 namespace
+error: error from server (NotFound): pods "noisy" not found in namespace "m22"</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드 오브젝트가 사라지면 로그도 사라진다. <strong><code>kubectl logs</code>는 파드에 붙어 있는 기능</strong>이지 로그 저장소가 아니다.</div>
+  </div>
+
+  <h3>지워지는 일은 늘 일어난다</h3>
+  <p>"파드를 안 지우면 되지 않나" 싶지만, 실제로는 우리가 이 과정에서 이미 여러 번 지웠다.</p>
+  <table>
+    <tr><th>언제</th><th>어디서 봤나</th></tr>
+    <tr><td>롤아웃할 때마다 옛 파드가 지워진다</td><td>M10 · M15</td></tr>
+    <tr><td>HPA가 축소하면 파드가 사라진다</td><td>M17 — 8개에서 3개로</td></tr>
+    <tr><td>노드를 비우면 파드가 다른 노드로 옮겨진다</td><td>M16 <code>drain</code></td></tr>
+    <tr><td>OOM으로 죽고 재시작되면 옛 컨테이너 로그는 회전 대상이 된다</td><td>M16 실패 ③</td></tr>
+  </table>
+  <p>그리고 노드 자체의 로그 회전도 있다 — kubelet은 컨테이너 로그 파일 크기가 커지면 잘라 낸다. <strong>파드가 살아 있어도 오래된 로그는 사라진다.</strong> 로그를 클러스터 밖에 모아야 하는 이유가 이것이다.</p>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="num">22.4</span>따라하기 ② Loki와 Alloy를 세운다</h2>
+
+  <div class="step">
+    <h4>2단계 — 차트 버전을 확인한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>쓸 것과 쓰지 않을 것을 눈으로 갈라 둔다. 22.2의 정정이 실제로 어떻게 보이는지 확인한다.</p>
+<pre><code>helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+helm search repo grafana/loki       --versions | head -2
+helm search repo grafana/alloy      --versions | head -2
+helm search repo grafana/promtail   --versions | head -2
+helm search repo grafana/loki-stack --versions | head -2</code></pre>
+    <span class="out-lbl">출력 (헤더 생략)</span>
+    <div class="out"><code>grafana/loki        7.3.0    3.6.12
+grafana/alloy       1.12.1   v1.19.2
+grafana/promtail    6.17.1   3.5.1
+grafana/loki-stack  2.10.3   v2.9.3</code></div>
+<pre><code>helm show chart grafana/promtail   | grep -E 'deprecated|appVersion'
+helm show chart grafana/loki-stack | grep -E 'deprecated|appVersion'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>appVersion: 3.5.1
+deprecated: true
+appVersion: v2.9.3
+deprecated: true</code></div>
+    <div class="verdict"><span class="lbl">판정</span>둘 다 <code>deprecated: true</code>인데 <strong><code>helm search repo</code>에는 아무 표시가 없다.</strong> 검색만 하고 설치하면 알 방법이 없다는 뜻이고, 그래서 블로그와 예제가 아직 이것들을 쓴다. 새 도구를 넣기 전에 <code>helm show chart</code>를 한 번 보는 것이 습관이 되어야 한다.</div>
+  </div>
+
+  <div class="step">
+    <h4>3단계 — 로키를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>단일 인스턴스로 최소 구성을 만든다. 기본값은 노트북에 맞지 않는다.</p>
+    <p><code>course/labs/monitoring/loki-values.yaml</code>의 핵심 부분이다.</p>
+<pre><code>deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false          # 켜면 모든 요청에 X-Scope-OrgID 헤더가 필요해진다
+  commonConfig:
+    path_prefix: /var/loki
+    replication_factor: 1      # 단일 인스턴스이므로 1. 기본값(3)이면 기동하지 못한다
+  storage:
+    type: filesystem
+    bucketNames: {chunks: chunks, ruler: ruler, admin: admin}
+  schemaConfig:                # 명시하지 않으면 최근 차트는 설치가 실패한다
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index: {prefix: loki_index_, period: 24h}
+  limits_config:
+    allow_structured_metadata: true
+    volume_enabled: true
+    retention_period: 72h      # 실습용. 책 3.8 은 운영에서 30~45일을 권한다
+
+singleBinary:
+  replicas: 1
+  nodeSelector:
+    workload: observability    # 관측 스택을 한 노드에 모은다 (M16 · M19)
+  persistence: {enabled: true, size: 10Gi}
+  resources:
+    requests: {cpu: 100m, memory: 384Mi}
+    limits: {memory: 900Mi}</code></pre>
+    <p>차트가 <code>SingleBinary</code> 모드에서도 마이크로서비스 컴포넌트를 기본으로 켜므로 전부 <code>replicas: 0</code>으로 내려야 한다(<code>backend</code>·<code>read</code>·<code>write</code>·<code>ingester</code>·<code>querier</code>·<code>compactor</code> 등). 캐시(<code>chunksCache</code>·<code>resultsCache</code>)도 memcached 파드를 띄우므로 끈다 — 전체 값 파일은 저장소를 본다.</p>
+<pre><code>helm upgrade --install loki grafana/loki --namespace logging --create-namespace \
+  --version 7.3.0 -f course/labs/monitoring/loki-values.yaml --wait --timeout 10m
+
+kubectl -n logging get po --no-headers</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>loki-0                          2/2   Running   0   78s
+loki-gateway-7747766d57-zg8tw   1/1   Running   0   78s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>파드 둘이면 된다. <code>loki-0</code>이 스테이트풀셋(M18 — 로그 데이터를 PVC에 들고 있다)이고 <code>loki-gateway</code>가 앞단의 nginx다. 파드가 여럿 뜬다면 위의 <code>replicas: 0</code>이 빠진 것이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>4단계 — Alloy를 설치한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>파드 로그를 읽어 로키로 보내는 수집기를 노드마다 띄운다.</p>
+    <p>Alloy의 설정은 파이프라인 네 토막이다. <code>course/labs/monitoring/alloy-values.yaml</code>에 쓴다.</p>
+<pre><code>      // 1) 클러스터의 파드를 발견한다
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // 2) 어떤 라벨을 붙일지 고른다. **여기서 고르지 않은 메타데이터는 버려진다.**
+      //    라벨 하나가 스트림 하나이므로, 값의 가짓수가 많은 것을 넣으면
+      //    카디널리티가 폭발한다 (M19 8절의 프로메테우스 라벨과 같은 문제다).
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+        rule { source_labels = ["__meta_kubernetes_namespace"];            target_label = "namespace" }
+        rule { source_labels = ["__meta_kubernetes_pod_name"];             target_label = "pod" }
+        rule { source_labels = ["__meta_kubernetes_pod_container_name"];   target_label = "container" }
+        // 두 앱이 서로 다른 라벨 규칙을 쓴다.
+        // journal-api 는 app, order-api 는 app.kubernetes.io/name 이다.
+        rule { source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]; regex = "(.+)"; target_label = "app" }
+        rule { source_labels = ["__meta_kubernetes_pod_label_app"];                    regex = "(.+)"; target_label = "app" }
+      }
+
+      // 3) 쿠버네티스 API 로 로그를 읽는다.
+      //    호스트의 /var/log 를 마운트하는 방식과 달리 특권 컨테이너가 필요 없다 (M24).
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // 4) 로키로 밀어 넣는다
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.logging.svc.cluster.local/loki/api/v1/push"
+        }
+      }</code></pre>
+    <div class="note-2026">
+      <span class="lbl">라벨 둘을 <code>separator</code>로 잇지 않는다</span>
+      처음에는 <code>source_labels</code>에 둘을 나열하고 <code>separator = ""</code>로 이었다. 둘 다 가진 파드에서 값이 붙어 버린다.
+      <br><code>app = "kube-prometheus-stack-prometheus-operatorkube-prometheus-stack-operator"</code>
+      <br><code>regex = "(.+)"</code>를 붙인 규칙 두 개로 나누면 <strong>값이 있을 때만</strong> 적용되어 해결된다.
+    </div>
+<pre><code>helm upgrade --install alloy grafana/alloy --namespace logging \
+  --version 1.12.1 -f course/labs/monitoring/alloy-values.yaml --wait --timeout 8m
+
+kubectl -n logging get po --no-headers | grep alloy</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>alloy-r6r76   2/2   Running   0   33s
+alloy-xqznt   2/2   Running   0   33s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>데몬셋인데 <strong>2개다.</strong> 노드는 셋인데 컨트롤 플레인에는 뜨지 않았다 — 톨러레이션이 없어 테인트를 견디지 못한다(M16 7단계). 그래서 <strong>22.2 표의 "컨트롤 플레인" 로그가 수집되지 않는다.</strong> 실습에서는 그대로 두지만, 운영이라면 톨러레이션을 넣어야 apiserver·스케줄러의 로그를 볼 수 있다.</div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="num">22.5</span>따라하기 ③ 앱이 로그를 남기게 한다</h2>
+
+  <div class="step">
+    <h4>5단계 — 수집기가 무엇을 받고 있는지 본다</h4>
+    <p class="purpose"><span class="lbl">목적</span>설치가 끝났다고 로그가 보이는 것이 아니라는 것을 확인한다.</p>
+<pre><code>kubectl -n logging port-forward svc/loki-gateway 3100:80 &amp;
+
+curl -sG http://localhost:3100/loki/api/v1/labels
+curl -sG http://localhost:3100/loki/api/v1/query_range \
+  --data-urlencode 'query={namespace="journal", app="journal-api"}' \
+  --data-urlencode "start=$(( $(date +%s) - 600 ))000000000" \
+  --data-urlencode "end=$(date +%s)000000000"</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>['__stream_shard__', 'app', 'container', 'instance', 'job', 'namespace', 'pod', 'service_name']
+
+  스트림 0 개</code></div>
+    <div class="verdict"><span class="lbl">판정</span>라벨은 다 있는데 <strong>로그 줄이 하나도 없다.</strong> <code>{namespace="apps"}</code>도 마찬가지다. 수집기가 고장난 것이 아니라 <strong>두 앱이 기동할 때만 로그를 남기기 때문</strong>이다.</div>
+<pre><code>kubectl -n journal logs deploy/journal-api --tail=2
+kubectl -n apps    logs deploy/order-api   --tail=2</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>{"level":"info","msg":"listening","port":8080,"version":"v1"}
+{"level":"info","msg":"redis connected","url":"redis://default:...@redis-0.redis:6379"}
+
+2026-09-05T11:50:23.653Z  INFO 1 --- [order-api] ... Initializing Spring DispatcherServlet 'dispatcherServlet'</code></div>
+    <p><code>order-api</code>는 스트림 자체가 없었다. 마지막 로그가 11:50인데 Alloy는 13:31에 떴으므로, 그 사이 한 줄도 안 찍은 파드는 <strong>수집기가 존재조차 모른다.</strong></p>
+    <p>이것이 실무에서 자주 놓치는 지점이다. "로그 수집을 붙였다"는 것과 "볼 로그가 있다"는 것은 다른 일이고, <strong>앱이 무엇을 언제 찍는지는 앱을 만든 쪽의 결정</strong>이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>6단계 — journal-api에 구조화 요청 로그를 붙인다</h4>
+    <p class="purpose"><span class="lbl">목적</span>메트릭과 같은 자리에서 로그도 남긴다. M20에서 만든 미들웨어를 그대로 쓴다.</p>
+    <p><code>src/server.ts</code>의 계측 미들웨어에 로그 한 줄을 더한다.</p>
+<pre><code>  const end = httpDuration.startTimer();
+  const startedAt = Date.now();
+  res.on('finish', () =&gt; {
+    const uri = normalizeUri(req);
+    end({ method: req.method, uri, status: String(res.statusCode), outcome: outcomeOf(res.statusCode) });
+
+    // 요청 로그 (M22). 메트릭은 "몇 건인가"를, 로그는 "무엇이었나"를 답한다.
+    // 프로브 요청까지 남기면 로그의 대부분이 헬스 체크가 된다 — 걸러 낸다.
+    if (uri === '/healthz' || uri === '/readyz' || uri === '/metrics') return;
+    log(res.statusCode &gt;= 500 ? 'error' : 'info', 'request', {
+      method: req.method,
+      // path 를 그대로 남긴다. 라벨이 아니라 로그 본문이므로 카디널리티 문제가 없다 (22.8).
+      path: req.originalUrl,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt,
+      pod: INSTANCE,
+    });
+  });</code></pre>
+    <p>메트릭의 <code>uri</code> 라벨은 <code>normalizeUri()</code>로 정규화했지만 <strong>로그의 <code>path</code>는 원본을 그대로 남긴다.</strong> 라벨이 아니라 본문이므로 값의 가짓수가 문제되지 않고, 오히려 "어느 요청이었나"를 답하려면 원본이 필요하다. 이 구분이 22.7 실패 ③의 핵심이다.</p>
+<pre><code>for v in v1 v2; do docker build -t "journal-api:$v" --build-arg "APP_VERSION=$v" .; done
+kind load docker-image journal-api:v1 journal-api:v2 --name study
+kubectl -n journal rollout restart deploy/journal-api</code></pre>
+    <span class="out-lbl">확인</span>
+    <div class="out"><code>{"level":"info","msg":"request","method":"GET","path":"/api/entries","status":200,"durationMs":1,"pod":"journal-api-69d49f6788-fxs5p"}</code></div>
+    <div class="verdict"><span class="lbl">판정</span>요청마다 JSON 한 줄이 나온다. <strong>구조화 로그</strong>라 22.6에서 <code>| json</code>으로 필드를 꺼내 쓸 수 있다.</div>
+  </div>
+
+  <div class="step">
+    <h4>7단계 — order-api의 액세스 로그를 stdout으로 연다</h4>
+    <p class="purpose"><span class="lbl">목적</span>앱 코드를 고치지 않고 로그를 켜는 방법을 확인한다. 남의 앱을 다룰 때 쓰는 방식이다.</p>
+    <p>스프링 부트의 톰캣 액세스 로그는 기본으로 꺼져 있고, 켜면 <strong>파일에 쓴다.</strong> 22.2의 stdout 원칙에 맞추려면 대상을 <code>/dev/stdout</code>으로 돌려야 하는데, 톰캣은 파일 경로를 디렉터리와 접두사로 나눠 받는다.</p>
+<pre><code>          env:
+            - name: SERVER_TOMCAT_ACCESSLOG_ENABLED
+              value: "true"
+            - name: SERVER_TOMCAT_ACCESSLOG_DIRECTORY
+              value: /dev
+            - name: SERVER_TOMCAT_ACCESSLOG_PREFIX
+              value: stdout
+            - name: SERVER_TOMCAT_ACCESSLOG_SUFFIX
+              value: ""
+            - name: SERVER_TOMCAT_ACCESSLOG_BUFFERED
+              value: "false"
+            # 회전을 끄지 않으면 톰캣이 파일명 뒤에 날짜를 붙인다 — /dev/stdout.2026-09-05
+            # 그런 파일은 없으므로 액세스 로그가 조용히 사라진다.
+            - name: SERVER_TOMCAT_ACCESSLOG_ROTATE
+              value: "false"
+            # %D 는 처리 시간(밀리초). 기본 패턴에는 없어 지연을 로그로 못 본다.
+            - name: SERVER_TOMCAT_ACCESSLOG_PATTERN
+              value: '%h %l %u %t "%r" %s %b %D'</code></pre>
+<pre><code>kubectl apply -f course/labs/k8s/apps/10-order-api.yaml
+kubectl -n apps rollout status deploy/order-api
+# 요청을 몇 번 보낸 뒤
+kubectl -n apps logs deploy/order-api --tail=2</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>127.0.0.1 - - [05/Sep/2026:13:40:29 +0000] "GET /api/orders HTTP/1.1" 200 93 1611
+10.244.1.1 - - [05/Sep/2026:13:40:31 +0000] "GET /actuator/health/readiness HTTP/1.1" 200 25 7504</code></div>
+    <div class="verdict"><span class="lbl">판정</span>액세스 로그가 stdout으로 나온다. 환경 변수만으로 켰으므로 <strong>이미지를 다시 만들지 않았다.</strong> 다만 <code>journal-api</code>와 달리 <strong>프로브 요청까지 전부 남는다</strong> — 톰캣에는 경로별 제외가 없다. 22.8에서 이 비용을 다룬다.</div>
+    <p><code>ROTATE=false</code>를 빠뜨리면 아무 오류 없이 로그가 나오지 않는다. 이것도 M21 실패 ②와 같은 종류의 조용한 실패다 — 설정은 받아들여졌는데 결과가 없다.</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="num">22.6</span>따라하기 ④ LogQL로 찾는다</h2>
+  <p>부하를 걸어 로그를 쌓은 뒤 질의한다. M20에서 만든 <code>k6-red.js</code>를 그대로 쓴다.</p>
+
+  <div class="step">
+    <h4>8단계 — 얼마나 들어오고 있는지 센다</h4>
+    <p class="purpose"><span class="lbl">목적</span>LogQL이 프로메테우스처럼 집계 함수를 갖고 있다는 것을 확인한다.</p>
+<pre><code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))
+sum by (app) (rate({namespace=~"journal|apps"}[5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    app=journal-api = 3158
+    app=order-api   = 3794
+    app=web-static  = 120
+
+    app=journal-api = 9.03      (줄/초)
+    app=web-static  = 0.4</code></div>
+    <div class="verdict"><span class="lbl">판정</span>로그 줄 수를 시계열처럼 다룰 수 있다. <code>count_over_time</code>과 <code>rate</code>는 프로메테우스와 같은 이름이고 하는 일도 같다 — 다만 세는 대상이 샘플이 아니라 <strong>로그 줄</strong>이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>9단계 — 구조화 로그에서 필드를 꺼낸다</h4>
+    <p class="purpose"><span class="lbl">목적</span><code>| json</code> 파서를 쓰고, 그것이 왜 자주 실패하는지 본다.</p>
+<pre><code>sum by (status) (count_over_time({namespace="journal", app="journal-api"} | json [5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>pipeline error: 'JSONParserErr' for series: '{__error__="JSONParserErr",
+__error_details__="Value looks like object, but can't find closing '}' symbol",
+app="journal-api", container="api", ...</code></div>
+    <p>질의 <strong>전체</strong>가 실패했다. JSON이 아닌 줄이 하나라도 섞이면 이렇게 된다 — 우리 앱은 기동 로그도 JSON이지만, 긴 줄이 잘리거나 다른 컨테이너의 줄이 섞이면 언제든 생긴다.</p>
+<pre><code>sum by (status) (count_over_time({namespace="journal", app="journal-api"} | json | __error__="" [5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    status=200      = 2700
+    status=(없음)   = 9</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>| __error__=""</code>로 파싱 실패한 줄을 걸러 내면 동작한다. <strong>파서 뒤에는 거의 항상 이 필터가 붙는다</strong>고 생각하는 편이 낫다. <code>status</code>가 없는 9줄은 기동 로그처럼 <code>request</code>가 아닌 줄이다.</div>
+  </div>
+
+  <div class="step">
+    <h4>10단계 — 형식이 다른 로그는 pattern으로</h4>
+    <p class="purpose"><span class="lbl">목적</span>JSON이 아닌 액세스 로그에서도 필드를 꺼낸다.</p>
+    <p>톰캣 액세스 로그는 공백으로 나뉜 고정 형식이다. <code>| pattern</code>이 그런 줄에 이름을 붙인다.</p>
+<pre><code>sum by (status) (count_over_time({namespace="apps", app="order-api"}
+  | pattern `&lt;_&gt; &lt;_&gt; &lt;_&gt; [&lt;_&gt;] "&lt;method&gt; &lt;path&gt; &lt;_&gt;" &lt;status&gt; &lt;_&gt; &lt;dur&gt;` [5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>    status=200     = 3423
+    status=500     = 208
+    status=(없음)  = 178</code></div>
+    <div class="verdict"><span class="lbl">판정</span><code>&lt;_&gt;</code>는 "여기 뭔가 있는데 이름은 필요 없다"는 뜻이고, <code>&lt;status&gt;</code>처럼 이름을 주면 그 자리의 값이 필드가 된다. 이름이 없는 178줄은 스프링 기동 로그다 — 패턴에 맞지 않아 필드가 비었다.</div>
+  </div>
+
+  <div class="step">
+    <h4>11단계 — 로그와 메트릭을 대조한다</h4>
+    <p class="purpose"><span class="lbl">목적</span>같은 사건을 두 시스템에서 세어 보고, 숫자가 다른 이유를 이해한다.</p>
+<pre><code># 로그 쪽
+sum(count_over_time({namespace="apps", app="order-api"} |~ " 500 " [5m]))
+# 메트릭 쪽
+sum(increase(http_server_requests_seconds_count{job="order-api",status=~"5.."}[5m]))</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  [로그]   208
+  [메트릭] 249.8</code></div>
+    <div class="verdict"><span class="lbl">판정</span>같은 5분인데 <strong>숫자가 다르다.</strong> 로그는 실제로 찍힌 줄 수(정수)이고, <code>increase()</code>는 구간 경계에서 <strong>외삽</strong>하므로 소수점이 붙고 대개 더 크게 나온다.</div>
+    <p>이 차이를 없애려 하면 안 된다. 두 시스템은 다른 질문에 답하도록 만들어졌다 — 메트릭은 <strong>추세와 비율</strong>에, 로그는 <strong>개별 사건</strong>에 정확하다. 대시보드에서 두 숫자를 나란히 놓고 "왜 다르냐"는 질문을 받는 일이 자주 있는데, 답은 "원래 다르다"이다.</p>
+  </div>
+
+  <div class="step">
+    <h4>12단계 — 그라파나에 붙인다</h4>
+    <p class="purpose"><span class="lbl">목적</span>M21의 대시보드에서 메트릭과 로그를 같은 화면에 놓는다.</p>
+    <p>M19의 <code>kps-values.yaml</code>에 데이터소스를 더한다. M21에서 "M22에서 추가한다"고 비워 둔 자리다.</p>
+<pre><code>  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki                # 데이터소스는 이름이 아니라 uid 로 참조한다
+      access: proxy
+      # 그라파나 파드에서 접근하는 주소다. 브라우저 주소가 아니다.
+      url: http://loki-gateway.logging.svc.cluster.local
+      jsonData:
+        maxLines: 1000</code></pre>
+<pre><code>helm upgrade kps prometheus-community/kube-prometheus-stack -n monitoring \
+  --version 89.2.2 -f course/labs/monitoring/kps-values.yaml --wait
+
+curl -s -u admin:obs-study http://localhost:3000/api/datasources</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  Alertmanager type=alertmanager uid=alertmanager
+  Loki         type=loki        uid=loki
+  Prometheus   type=prometheus  uid=prometheus</code></div>
+    <p>그리고 M21에서 뺐던 로그 패널을 <code>study-red.json</code>에 되살린다. 두 앱의 로그 형식이 다르므로 정규식이 둘을 함께 잡게 한다.</p>
+<pre><code>{namespace=~"$namespace"} |~ " 5[0-9][0-9] |\"level\":\"error\""</code></pre>
+<pre><code>bash course/labs/scripts/apply-dashboards.sh</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>대시보드가 8패널이 되고, 맨 아래 로그 패널에 에러 줄이 보인다. <strong>위에서 "5xx가 늘었다"를 보고 아래로 내려 "무엇이었는지"를 읽는 것</strong>이 이 배치의 목적이다.</div>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="num">22.7</span>일부러 실패시키기</h2>
+
+  <div class="fail">
+    <h4>실패 ① 로그를 켰는데 아무것도 안 나온다</h4>
+    <p>7단계에서 <code>ROTATE</code>를 빠뜨렸을 때의 상태다. 환경 변수는 다 들어갔는데 로그가 없다.</p>
+    <span class="lbl">진단</span>
+<pre><code>kubectl -n apps get deploy order-api \
+  -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>SERVER_TOMCAT_ACCESSLOG_ENABLED=true
+SERVER_TOMCAT_ACCESSLOG_DIRECTORY=/dev
+SERVER_TOMCAT_ACCESSLOG_PREFIX=stdout
+SERVER_TOMCAT_ACCESSLOG_SUFFIX=
+SERVER_TOMCAT_ACCESSLOG_BUFFERED=false</code></div>
+    <p>설정은 정확히 들어갔다. 그런데 요청을 보내도 <code>kubectl logs</code>에는 기동 로그만 있다.</p>
+    <span class="lbl">원인</span>
+    <p>톰캣의 액세스 로그 밸브는 <strong>기본적으로 파일을 회전시킨다.</strong> 회전이 켜져 있으면 파일명 뒤에 날짜를 붙이므로 실제 대상이 <code>/dev/stdout.2026-09-05</code>가 되고, 그런 파일은 없다. 톰캣은 이 실패를 조용히 넘긴다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>            - name: SERVER_TOMCAT_ACCESSLOG_ROTATE
+              value: "false"</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>적용하고 요청을 보내면 액세스 로그가 나온다. <strong>"설정을 넣었는데 결과가 없다"는 상황에서는 그 설정이 만드는 <em>대상</em>을 확인해야 한다</strong> — 여기서는 파일 경로였다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ② | json 하나에 질의 전체가 깨진다</h4>
+    <p>9단계에서 이미 만났다. 다시 정리해 둔다.</p>
+    <span class="lbl">재현</span>
+<pre><code>{namespace="journal", app="journal-api"} | json | status &gt;= 400</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>pipeline error: 'JSONParserErr' ... "Value looks like object, but can't find closing '}' symbol"</code></div>
+    <span class="lbl">원인</span>
+    <p>로키의 파이프라인은 줄마다 적용되는데, 파싱에 실패한 줄에 <code>__error__</code> 라벨이 붙고 <strong>그것이 결과에 섞여 질의를 실패시킨다.</strong> 로그는 형식이 섞이는 것이 정상이므로(기동 로그, 라이브러리가 찍는 줄, 잘린 줄) 이 상황은 예외가 아니라 기본값에 가깝다.</p>
+    <span class="lbl">고친다</span>
+<pre><code>{namespace="journal", app="journal-api"} | json | __error__="" | status &gt;= 400</code></pre>
+    <div class="verdict"><span class="lbl">판정</span>파서 바로 뒤에 <code>| __error__=""</code>를 붙이는 것이 관용이다. 파싱 실패가 얼마나 되는지 궁금하면 반대로 <code>| __error__!=""</code>로 세어 본다 — 그 수가 크면 로그 형식을 정리해야 한다는 신호다.</div>
+  </div>
+
+  <div class="fail">
+    <h4>실패 ③ 로그 필드를 라벨로 올리면 스트림이 폭발한다</h4>
+    <p>"<code>path</code>로 자주 검색하니 라벨로 만들면 빠르겠다"는 판단이 이 사고를 만든다. 실제로 만들어 본다.</p>
+    <span class="lbl">실험 전 상태</span>
+<pre><code>curl -sG http://localhost:3100/loki/api/v1/series \
+  --data-urlencode 'match[]={namespace="journal"}' \
+  --data-urlencode "start=..." --data-urlencode "end=..."</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  journal 네임스페이스 스트림: 8
+  전체 스트림: 35</code></div>
+    <span class="lbl">재현 — Alloy에 승격 단계를 넣는다</span>
+<pre><code>      // ⚠ 실험용 — 로그 필드를 라벨로 승격시킨다. 실습 뒤 되돌린다.
+      loki.process "explode" {
+        stage.json {
+          expressions = { path = "path", status = "status" }
+        }
+        stage.labels {
+          values = { path = "", status = "" }
+        }
+        forward_to = [loki.write.default.receiver]
+      }</code></pre>
+    <p>그리고 <code>loki.source.kubernetes</code>의 <code>forward_to</code>를 <code>loki.process.explode.receiver</code>로 바꿔 이 단계를 거치게 한다.</p>
+<pre><code>helm upgrade alloy grafana/alloy -n logging --version 1.12.1 -f .../alloy-values.yaml --wait</code></pre>
+    <p>이제 서로 다른 경로로 요청을 보낸다. 실제 서비스에서 <code>/api/orders/12345</code>처럼 ID가 경로에 들어가는 상황을 흉내 낸 것이다.</p>
+<pre><code>kubectl -n journal exec curlbox -- sh -c \
+  'i=1; while [ $i -le 60 ]; do curl -s -o /dev/null "http://journal-api:8080/api/entries?req=$i"; i=$((i+1)); done'</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>  journal-api 스트림: 66
+  서로 다른 path 라벨: 61
+    /api/entries?req=20
+    /api/entries?req=32
+    /api/entries?req=2
+  전체 path 값: 61
+  라벨 목록: [..., 'namespace', 'path', 'pod', 'service_name', 'status']</code></div>
+    <table>
+      <tr><th></th><th>실험 전</th><th>실험 후</th></tr>
+      <tr><td><code>journal-api</code> 스트림</td><td>3</td><td><strong>66</strong></td></tr>
+      <tr><td><code>path</code> 라벨 값</td><td>없음</td><td><strong>61</strong></td></tr>
+    </table>
+    <div class="verdict"><span class="lbl">판정</span>요청 60건이 스트림 60개를 만들었다. <strong>라벨 조합 하나가 스트림 하나</strong>이고, 스트림마다 인덱스 항목과 청크가 따로 생긴다. 실제 서비스라면 하루에 수십만 스트림이 되고, 로키의 인제스터가 메모리를 다 쓴다.</div>
+    <span class="lbl">고친다 — 되돌린다</span>
+<pre><code># loki.process 단계를 지우고 forward_to 를 loki.write.default.receiver 로 되돌린 뒤
+helm upgrade alloy grafana/alloy -n logging --version 1.12.1 -f .../alloy-values.yaml --wait</code></pre>
+    <p>같은 정보를 찾는 올바른 방법은 <strong>라벨로 범위를 좁히고 본문을 훑는 것</strong>이다.</p>
+<pre><code>{namespace="journal", app="journal-api"} | json | __error__="" | path =~ "/api/entries.*"</code></pre>
+    <p>이쪽은 스트림을 늘리지 않는다. <code>path</code>가 본문 안에 있고, 파서가 질의 시점에 꺼내기 때문이다. <strong>느린 대신 안전하다</strong>는 것이 로키의 설계이고, 라벨을 늘리는 것은 그 설계를 거스르는 일이다.</p>
+    <p>승격이 필요한 값이 정말 있다면 <strong>구조화 메타데이터</strong>를 쓴다(<code>allow_structured_metadata: true</code>가 3단계 값 파일에 이미 있다). 라벨 인덱스를 늘리지 않으면서 줄마다 필드를 붙이는 방식이다.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="num">22.8</span>운영 관점 — 로그는 비싸다</h2>
+  <p>8단계에서 두 앱이 5분에 약 7,000줄을 찍었다. 부하가 30rps 남짓인 실습 환경에서다. 초당 300건을 받는 서비스라면 같은 비율로 <strong>하루 수천만 줄</strong>이 된다.</p>
+
+  <h3>무엇을 찍지 않을 것인가</h3>
+  <p>6단계에서 <code>journal-api</code>의 프로브 요청을 걸러 냈다. 걸러 내지 않으면 어떻게 되는지는 7단계의 <code>order-api</code>가 보여준다 — 액세스 로그의 상당수가 <code>/actuator/health/readiness</code>다. readiness가 5초마다, liveness가 10초마다, 파드가 둘이면 프로브만으로 시간당 2,000줄이 넘는다.</p>
+  <p>기준은 <strong>그 줄을 나중에 읽을 일이 있는가</strong>다. 프로브 성공 로그는 읽지 않는다 — 프로브 실패는 이미 이벤트와 메트릭에 남는다(M15). 마찬가지로 "요청을 받았다"와 "요청을 처리했다"를 둘 다 찍을 이유가 없고, 정상 응답의 본문은 더더욱 없다.</p>
+
+  <h3>보존 기간</h3>
+  <p>3단계에서 <code>retention_period: 72h</code>로 잡았다. 책 3.8은 운영에서 30~45일을 권하는데, 근거는 <strong>장애 조사 주기</strong>다 — 월요일에 지난주 금요일 사건을 조사할 수 있어야 하고, 반복되는 문제라면 몇 주 전과 비교할 수 있어야 한다.</p>
+  <p>다만 모든 로그를 같은 기간 보관할 이유는 없다. 감사 로그는 규정상 더 길게, 디버그 로그는 며칠이면 충분하다. 로키는 스트림 단위로 보존 기간을 다르게 줄 수 있으므로, 라벨 설계가 여기서도 값을 한다.</p>
+
+  <h3>로그 레벨을 런타임에 바꿀 수 있게</h3>
+  <p>평상시 <code>info</code>로 두고 문제가 생겼을 때만 <code>debug</code>로 올리는 것이 이상적이지만, 그러려면 <strong>재배포 없이 레벨을 바꿀 수 있어야</strong> 한다. M13에서 <code>journal-api</code>에 <code>LOG_LEVEL</code>을 컨피그맵으로 주입한 것이 그 준비였고, 스프링 부트는 액추에이터의 <code>/actuator/loggers</code>로 런타임 변경을 지원한다(우리 설정은 그 엔드포인트를 열지 않았다 — M19 3단계의 <code>include: health,info,prometheus</code>).</p>
+  <p>재배포로 레벨을 바꾸면 <strong>파드가 새로 뜨면서 문제 상황이 사라진다.</strong> 재현이 어려운 버그일수록 이 차이가 크다.</p>
+
+  <h3>메트릭과 로그를 잇는 것</h3>
+  <p>11단계에서 두 시스템의 숫자가 달랐다. 실무에서 필요한 것은 숫자를 맞추는 것이 아니라 <strong>같은 사건으로 이동하는 것</strong>이다 — 그래프에서 5xx가 튄 지점을 클릭하면 그 시각의 로그로 넘어가는 흐름이다.</p>
+  <p>그라파나는 데이터소스 사이 링크로 이것을 지원하고, 더 나아가면 <dfn class="term">트레이스 <span class="en">trace</span></dfn>가 있다. 요청 하나에 ID를 붙여 메트릭·로그·트레이스가 같은 ID를 갖게 하면 세 층을 오갈 수 있다. 이 과정에서는 다루지 않지만, 6단계에서 로그에 <code>pod</code> 필드를 넣어 둔 것이 가장 단순한 형태의 연결이다 — 메트릭에서 특정 파드가 느린 것을 보고 그 파드의 로그로 좁힐 수 있다.</p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="num">22.9</span>체크포인트와 정리</h2>
+
+  <div class="check">
+    <span class="lbl">다음 파트로 넘어가기 전 확인</span>
+    <ul>
+      <li><code>kubectl -n logging get po --no-headers | grep -c Running</code> → <code>4</code> (loki 1 + gateway 1 + alloy 2)</li>
+      <li><code>helm -n logging list -o json | python3 -c "import json,sys;print(sorted(r['chart'] for r in json.load(sys.stdin)))"</code> → <code>alloy-1.12.1</code>과 <code>loki-7.3.0</code></li>
+      <li>부하를 조금 준 뒤 <strong>새로 만들어진 스트림에 <code>path</code> 라벨이 없는지</strong> 확인 → <code>path 라벨 가진 스트림: 0</code>
+        <br><code>curl -sG http://localhost:3100/loki/api/v1/series --data-urlencode 'match[]={app="journal-api"}' --data-urlencode "start=$(( $(date +%s) - 120 ))000000000" --data-urlencode "end=$(date +%s)000000000"</code>
+        <br><code>/loki/api/v1/labels</code>는 시간 범위를 줘도 <strong>보존 기간 안의 모든 라벨</strong>을 돌려주므로 실험 중 만든 <code>path</code>가 72시간 동안 계속 보인다. 되돌렸는지는 <strong>스트림</strong>으로 확인해야 한다</li>
+      <li>질의 <code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))</code> → <code>journal-api</code>와 <code>order-api</code> 두 줄, 값이 0보다 크다</li>
+      <li>질의 <code>sum by (status) (count_over_time({namespace="journal", app="journal-api"} | json | __error__="" [5m]))</code> → <code>status=200</code>이 나온다</li>
+      <li><code>kubectl -n apps logs deploy/order-api --tail=20 | grep -c 'GET /'</code> → <code>1</code> 이상 (액세스 로그가 켜졌다)</li>
+      <li><code>kubectl -n apps get deploy order-api -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="SERVER_TOMCAT_ACCESSLOG_ROTATE")].value}'</code> → <code>false</code></li>
+      <li>그라파나 → <strong>Connections → Data sources</strong>에 <code>Loki</code>가 있고 <code>uid</code>가 <code>loki</code></li>
+      <li>그라파나 → <strong>Dashboards → 스터디 → 스터디 — 서비스 RED</strong> 맨 아래 로그 패널에 줄이 보인다</li>
+      <li><code>kubectl get ns m22</code> → <code>NotFound</code></li>
+      <li>(이해 확인) 파드를 지우기 전과 후에 <code>kubectl logs</code>의 결과가 어떻게 달라졌는지 한 문장으로 적어 본다</li>
+      <li>(이해 확인) 같은 <code>path</code>를 라벨로 두는 것과 로그 본문에 두는 것의 차이를 적어 본다</li>
+    </ul>
+  </div>
+
+  <div class="deliver">
+    <span class="lbl">이 모듈이 남기는 파일</span>
+    <ul>
+      <li><code>course/labs/monitoring/loki-values.yaml</code> · <code>alloy-values.yaml</code> — 로그 스택 설치 값</li>
+      <li><code>course/labs/monitoring/kps-values.yaml</code> — Loki 데이터소스 추가</li>
+      <li><code>course/labs/monitoring/dashboards/study-red.json</code> — 로그 패널 복원(8패널)</li>
+      <li><code>course/labs/apps/journal-api/src/server.ts</code> — 구조화 요청 로그</li>
+      <li><code>course/labs/k8s/apps/10-order-api.yaml</code> — 톰캣 액세스 로그를 stdout으로</li>
+      <li>클러스터: <code>logging</code> 네임스페이스에 Loki와 Alloy. 두 앱의 로그가 72시간 보관된다</li>
+    </ul>
+  </div>
+
+  <h3>정리</h3>
+<pre><code># 실험 네임스페이스와 부하 도구
+kubectl delete ns m22 --ignore-not-found
+kubectl -n journal delete pod curlbox --ignore-not-found
+
+# port-forward 정리
+pkill -f 'port-forward.*3100' 2&gt;/dev/null
+pkill -f 'port-forward.*3000' 2&gt;/dev/null
+pkill -f 'port-forward.*909'  2&gt;/dev/null
+
+# Alloy 설정이 실험 상태로 남아 있지 않은지 확인한다
+kubectl -n logging get cm alloy -o jsonpath='{.data.config\.alloy}' | grep -c 'loki.process' </code></pre>
+  <span class="out-lbl">출력</span>
+  <div class="out"><code>0</code></div>
+  <p><code>0</code>이면 실험을 되돌린 것이다. <code>1</code> 이상이면 <code>alloy-values.yaml</code>에서 <code>loki.process "explode"</code> 블록을 지우고 <code>helm upgrade</code>를 다시 한다.</p>
+  <p>되돌린 뒤에도 <code>/loki/api/v1/labels</code>에는 <code>path</code>가 한동안 남는다 — <strong>보존 기간(72시간) 안의 옛 스트림이 아직 인덱스에 있기 때문</strong>이고 고장이 아니다. 새 스트림에 붙지 않는 것이 확인의 기준이다.</p>
+  <p>로그 스택은 <strong>지우지 않는다.</strong> Part 5 이후의 모듈들이 이 위에서 이어지고, 특히 M36 카오스 실험에서 <strong>"파드를 죽였을 때 무슨 로그가 남는가"</strong>가 판정 근거가 된다. 노트북 메모리가 부족하면 <code>kubectl -n logging scale sts loki --replicas=0</code>으로 잠시 내려 두고 나중에 되돌린다 — PVC에 데이터가 남아 있으므로 잃지 않는다(M18).</p>
+</section>
+
+<div class="navlinks">
+  <a href="m21-k8s-dashboard-alerting.html">← M21 대시보드와 알림</a>
+  <a href="m23-k8s-rbac-authz.html">M23 RBAC과 인가 →</a>
+</div>
+
+<footer>
+  <h3>다음 모듈 — Part 5 보안과 정책으로</h3>
+  <p>Part 4를 마치면 클러스터에서 무슨 일이 일어나는지 볼 수 있다. 그런데 지금까지 이 클러스터에서 <strong>우리는 무엇이든 할 수 있었다</strong> — 어느 네임스페이스든 지우고, 노드 설정을 고치고, 시크릿을 평문으로 읽었다. 실제 클러스터에서 그런 권한을 가진 사람은 극소수다.</p>
+  <p>M23에서 RBAC을 다룬다. 개발자용 서비스어카운트를 만들고, 네임스페이스 하나로 권한을 한정한 kubeconfig를 만들어, <strong>권한 밖의 명령이 실제로 거부되는 것</strong>을 확인한다. 그리고 검색하면 나오는 낡은 방법 하나를 정정한다 — 1.24부터 서비스어카운트 토큰 시크릿이 자동 생성되지 않으므로 <code>secrets[0].name</code>으로 토큰을 찾는 명령은 동작하지 않는다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <ul>
+    <li>쿠버네티스 로깅 아키텍처: https://kubernetes.io/docs/concepts/cluster-administration/logging/</li>
+    <li>Loki 문서: https://grafana.com/docs/loki/latest/</li>
+    <li>LogQL 레퍼런스: https://grafana.com/docs/loki/latest/query/</li>
+    <li>Loki 라벨 설계: https://grafana.com/docs/loki/latest/get-started/labels/</li>
+    <li>Grafana Alloy: https://grafana.com/docs/alloy/latest/</li>
+    <li>Promtail 수명 종료와 Alloy 이전: https://grafana.com/docs/loki/latest/send-data/promtail/</li>
+    <li>스프링 부트 톰캣 액세스 로그: https://docs.spring.io/spring-boot/reference/web/servlet.html</li>
+    <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 3.8 로그 수집 대상 · 3.9 도구 선택 · 3.10 로키 스택</li>
+  </ul>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Loki 3.6.12 (차트 7.3.0) · Alloy v1.19.2 (차트 1.12.1) · k6 v2.2.0</p>
+</footer>
+
+</div>
+</body>
+</html>

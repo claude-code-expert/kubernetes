@@ -1,0 +1,85 @@
+# M30 — 블루/그린을 쿠버네티스 기본 기능만으로.
+#
+# 디플로이먼트 두 개를 동시에 띄우고, 서비스의 셀렉터를 바꿔 트래픽을 옮긴다.
+# 전환은 순간적이고 되돌리는 것도 순간적이다. 대신 **두 배의 자원**을 상시로 쓴다.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: bg-blue, namespace: m30}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: bg, color: blue}
+  template:
+    metadata:
+      labels: {app: bg, color: blue}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: APP_VERSION, value: "blue"}
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 20m, memory: 48Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: bg-green, namespace: m30}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: bg, color: green}
+  template:
+    metadata:
+      labels: {app: bg, color: green}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: journal-api:v2
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: APP_VERSION, value: "green"}
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 20m, memory: 48Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2
+---
+# 실제 트래픽이 가는 곳. color 를 바꾸는 것이 전환이다.
+apiVersion: v1
+kind: Service
+metadata: {name: bg, namespace: m30}
+spec:
+  selector: {app: bg, color: blue}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+# 전환 전에 green 을 확인하기 위한 별도 입구 (preview).
+apiVersion: v1
+kind: Service
+metadata: {name: bg-preview, namespace: m30}
+spec:
+  selector: {app: bg, color: green}
+  ports: [{name: http, port: 8080, targetPort: http}]

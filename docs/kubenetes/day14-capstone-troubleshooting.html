@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D14 · 종합 — 빈 클러스터에서 전체를 다시 세우고, 일부러 부수고, 고친다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 폰트: IBM Plex Sans KR + IBM Plex Mono — D1~D13과 동일. */
+:root{
+  --ink:#1a1a1a; --ink-2:#4a4a4a; --ink-3:#767676;
+  --line:#d9d9d9; --line-2:#ececec; --paper:#fff; --paper-2:#f7f7f7;
+  --accent:#1d4ed8;
+  --pod:#15803d; --net:#6d28d9; --node:#1d4ed8; --seq:#c2410c;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 120ms}
+a:hover{border-bottom-color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:.92em;background:var(--paper-2);border:1px solid var(--line-2);border-radius:3px;padding:0 .3em}
+pre{font-family:var(--mono);font-size:.85rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow:auto;margin:10px 0 14px;white-space:pre}
+pre code{background:none;border:0;padding:0;font-size:1em}
+pre .c{color:var(--ink-3)}
+pre .p{color:var(--accent);user-select:none}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);padding:36px 0 26px}
+.kicker{font-size:.8rem;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px}
+.kicker a{color:var(--ink-3)}
+h1{font-size:1.9rem;font-weight:700;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.lede{font-size:1.02rem;color:var(--ink-2);max-width:720px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:20px;font-size:.86rem;color:var(--ink-2)}
+.meta b{color:var(--ink);font-weight:600}
+nav.toc{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:5}
+nav.toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
+nav.toc li a{display:inline-block;padding:10px 0;font-size:.86rem;color:var(--ink-2);border-bottom:2px solid transparent}
+nav.toc li a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+section{padding:40px 0 10px;border-bottom:1px solid var(--line-2)}
+h2{font-size:1.4rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--ink-3);margin-right:10px}
+h2 + p.sub{margin:0 0 20px;color:var(--ink-2)}
+h3{font-size:1.08rem;font-weight:600;margin:30px 0 8px}
+h4{font-size:.92rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0 18px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td code{white-space:nowrap}
+dfn{font-style:normal;border-bottom:1px dotted var(--ink-2);cursor:help}
+.note{border:1px solid var(--line);border-radius:4px;padding:12px 16px;margin:14px 0;font-size:.9rem}
+.note.warn{border-color:var(--seq)}
+.note h5{margin:0 0 4px;font-size:.78rem;font-weight:600;color:var(--ink-2);letter-spacing:.03em}
+.note p:last-child{margin-bottom:0}
+.step{border-top:1px solid var(--line);padding:18px 0 6px;margin-top:8px}
+.step h3{margin:0 0 6px;display:flex;align-items:baseline;gap:10px}
+.step h3 .sn{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--paper);background:var(--seq);border-radius:3px;padding:1px 7px}
+.step .why{color:var(--ink-2);font-size:.92rem;margin-bottom:8px}
+.expect{font-size:.84rem;color:var(--ink-2);margin:-6px 0 12px}
+.expect b{font-weight:600;color:var(--ink)}
+.check{border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin:14px 0}
+.check ol{margin:6px 0 0}
+figure{margin:18px 0 6px}
+figcaption{font-size:.82rem;color:var(--ink-3);margin-top:8px}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+details{border:1px solid var(--line);border-radius:4px;padding:8px 14px;margin:8px 0}
+summary{cursor:pointer;font-weight:600;font-size:.92rem}
+footer{padding:32px 0 60px;font-size:.84rem;color:var(--ink-2)}
+footer ul{padding-left:18px}
+.prevnext{display:flex;justify-content:space-between;font-size:.9rem;margin-top:18px}
+@media (max-width:720px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="kicker"><a href="00-index.html">쿠버네티스 14일</a> · 4단계 보안과 자동화 · Day 14</p>
+  <h1>종합 — 빈 클러스터에서 전체를 다시 세우고, 일부러 부수고, 고친다</h1>
+  <p class="lede">13일 동안 만든 것을 문서 없이 한 번에 올린다. 그다음 진행자가 장애를 넣는다. 원인을 찾는 순서가 몸에 배었는지가 이 교재의 최종 목표다. 노드 하나를 비우는 점검 작업으로 PDB와 로컬 스토리지의 제약을 겪고, 장애 다섯 개를 각각 5분 안에 특정한다. 마지막 30분은 책의 남은 장들이 오늘 만든 클러스터의 어디에 이어지는지 지도를 그린다.</p>
+  <div class="meta">
+    <span>소요 <b>재구축 30분 · drain 15분 · 장애 주입 40분 · 지도와 회고 35분</b></span>
+    <span>전제 <b>D13 완료 · gitops 저장소 push됨 · order-api v1~v7, gateway v1~v2 이미지 보유</b></span>
+    <span>역할 <b>진행자 1명(장애 주입), 참가자(진단)</b></span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#goal">학습 목표</a></li>
+  <li><a href="#theory">이론</a></li>
+  <li><a href="#rebuild">재구축</a></li>
+  <li><a href="#drain">drain</a></li>
+  <li><a href="#faults">장애 주입</a></li>
+  <li><a href="#map">책 지도</a></li>
+  <li><a href="#checkpoint">체크포인트 D</a></li>
+  <li><a href="#retro">회고</a></li>
+  <li><a href="#refs">참고</a></li>
+</ul></div></nav>
+
+<!-- ════════════════ 학습 목표 ════════════════ -->
+<section id="goal"><div class="wrap">
+  <h2>오늘 끝나면 할 수 있는 것</h2>
+  <ol>
+    <li>클러스터를 지우고 3노드로 다시 만든 뒤 30분 안에 앱·DB·Gateway·모니터링·GitOps를 전부 올린다.</li>
+    <li>노드를 <code>drain</code>할 때 PDB가 어떻게 막고, 로컬 스토리지의 파드가 왜 옮겨지지 못하는지 설명한다.</li>
+    <li>증상을 보고 첫 명령을 고른다. 장애 5개 중 4개 이상을 각 5분 안에 특정한다.</li>
+    <li>모니터링 화면에서 장애 시각을 역추적해 알림·대시보드·로그가 같은 이야기를 하는지 확인한다.</li>
+    <li>책의 남은 장이 이 클러스터의 어느 부분과 이어지는지 말하고, 다음 학습 경로를 정한다.</li>
+  </ol>
+</div></section>
+
+<!-- ════════════════ 이론 ════════════════ -->
+<section id="theory"><div class="wrap">
+  <h2><span class="n">1</span>이론 · 진단은 순서다</h2>
+
+  <h3>1.1 여섯 층, 한 방향</h3>
+  <p>13일 동안 만난 고장은 전부 여섯 층 중 하나에 있었다. 진단은 아래층에서 위층으로 <b>한 방향</b>으로 간다. 건너뛰면 엉뚱한 곳을 판다.</p>
+
+  <figure>
+  <svg viewBox="0 0 900 330" width="100%" role="img" aria-label="증상에서 원인 층으로 내려가는 진단 순서">
+    <!-- symptom -->
+    <rect x="20" y="20" width="860" height="44" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+    <text x="34" y="40" font-size="12" font-weight="600" fill="#c2410c">증상</text>
+    <text x="34" y="56" font-size="11" fill="#4a4a4a">curl localhost/orders 가 실패한다 · 대시보드 오류율이 뛴다 · 알림이 울린다 · 파드가 Running이 아니다</text>
+    <!-- layers -->
+    <g font-size="11">
+      <rect x="20" y="84" width="160" height="136" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+      <text x="30" y="104" font-size="12" font-weight="600" fill="#1d4ed8">① 오브젝트</text>
+      <text x="30" y="124" class="mono" fill="#4a4a4a">kubectl get</text>
+      <text x="30" y="146" fill="#4a4a4a">있나. 몇 개인가.</text>
+      <text x="30" y="162" fill="#4a4a4a">STATUS · READY ·</text>
+      <text x="30" y="178" fill="#4a4a4a">RESTARTS · AGE</text>
+      <text x="30" y="204" fill="#767676">D2 · D3</text>
+      <rect x="196" y="84" width="160" height="136" rx="3" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+      <text x="206" y="104" font-size="12" font-weight="600" fill="#1d4ed8">② 이벤트</text>
+      <text x="206" y="124" class="mono" fill="#4a4a4a">describe · get events</text>
+      <text x="206" y="146" fill="#4a4a4a">스케줄러·kubelet·</text>
+      <text x="206" y="162" fill="#4a4a4a">컨트롤러가 남긴 말.</text>
+      <text x="206" y="178" fill="#4a4a4a">From 열로 주체 판별</text>
+      <text x="206" y="204" fill="#767676">D3 · D8</text>
+      <rect x="372" y="84" width="160" height="136" rx="3" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+      <text x="382" y="104" font-size="12" font-weight="600" fill="#15803d">③ 프로세스</text>
+      <text x="382" y="124" class="mono" fill="#4a4a4a">logs (--previous)</text>
+      <text x="382" y="146" fill="#4a4a4a">앱이 뭐라고 하나.</text>
+      <text x="382" y="162" fill="#4a4a4a">exit code · OOM ·</text>
+      <text x="382" y="178" fill="#4a4a4a">예외 스택</text>
+      <text x="382" y="204" fill="#767676">D3 · D8 · D11</text>
+      <rect x="548" y="84" width="160" height="136" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="1.5"/>
+      <text x="558" y="104" font-size="12" font-weight="600" fill="#6d28d9">④ 연결</text>
+      <text x="558" y="124" class="mono" fill="#4a4a4a">endpointslices ·</text>
+      <text x="558" y="140" class="mono" fill="#4a4a4a">httproute status</text>
+      <text x="558" y="162" fill="#4a4a4a">셀렉터·포트·DNS·</text>
+      <text x="558" y="178" fill="#4a4a4a">backendRef · 라벨</text>
+      <text x="558" y="204" fill="#767676">D5 · D6 · D11</text>
+      <rect x="724" y="84" width="156" height="136" rx="3" fill="#fff" stroke="#767676" stroke-width="1.5"/>
+      <text x="734" y="104" font-size="12" font-weight="600" fill="#4a4a4a">⑤ 권한·정책</text>
+      <text x="734" y="124" class="mono" fill="#4a4a4a">auth can-i · 403</text>
+      <text x="734" y="146" fill="#4a4a4a">Forbidden ·</text>
+      <text x="734" y="162" fill="#4a4a4a">violates PodSecurity ·</text>
+      <text x="734" y="178" fill="#4a4a4a">denied request</text>
+      <text x="734" y="204" fill="#767676">D12</text>
+    </g>
+    <line x1="180" y1="199" x2="196" y2="199" stroke="#767676" stroke-width="1.2"/><polygon points="191,195 197,199 191,203" fill="#767676"/>
+    <line x1="356" y1="199" x2="372" y2="199" stroke="#767676" stroke-width="1.2"/><polygon points="367,195 373,199 367,203" fill="#767676"/>
+    <line x1="532" y1="199" x2="548" y2="199" stroke="#767676" stroke-width="1.2"/><polygon points="543,195 549,199 543,203" fill="#767676"/>
+    <line x1="708" y1="199" x2="724" y2="199" stroke="#767676" stroke-width="1.2"/><polygon points="719,195 725,199 719,203" fill="#767676"/>
+    <text x="30" y="252" font-size="11" fill="#767676">⑥ 언제부터: Grafana에서 시각을 잡고 (D10·D11)</text>
+    <text x="30" y="270" font-size="11" fill="#767676">그 시각의 이벤트·로그·커밋(git log, D13)을 대조한다. 시각이 있으면 ①~⑤가 반으로 줄어든다.</text>
+    <text x="30" y="302" font-size="11" fill="#c2410c">규칙: 한 층에서 답이 안 나오면 다음 층으로. 층을 건너뛰지 않는다. 로그부터 열면 스케줄링 실패를 놓친다.</text>
+  </svg>
+  <figcaption>도판 1. 왼쪽에서 오른쪽으로. 각 층 아래에 그 층을 배운 일차를 적었다.</figcaption>
+  </figure>
+
+  <h3>1.2 증상별 첫 명령</h3>
+  <table>
+    <thead><tr><th style="width:190px">증상</th><th style="width:300px">첫 명령</th><th>흔한 원인 (배운 곳)</th></tr></thead>
+    <tbody>
+      <tr><td><code>Pending</code></td><td><code>describe pod</code> → Events의 <code>FailedScheduling</code></td><td>리소스 부족, 테인트, PVC 미바인딩, 노드 어피니티 (D8·D9)</td></tr>
+      <tr><td><code>ImagePullBackOff</code></td><td><code>describe pod</code> → 이미지 이름·태그, pull 시크릿</td><td>오타, 없는 태그, 레지스트리 인증 (D3·D4)</td></tr>
+      <tr><td><code>CrashLoopBackOff</code></td><td><code>logs --previous</code>, <code>describe</code>의 Last State</td><td>설정 누락, DB 접속 실패, 급한 liveness (D3·D8·D9)</td></tr>
+      <tr><td><code>OOMKilled</code> / exit 137</td><td><code>describe</code> Last State → limits</td><td>메모리 limit 부족, JVM 힙 비율 (D8)</td></tr>
+      <tr><td>Running인데 요청 실패</td><td><code>get endpointslices</code>, <code>describe svc</code></td><td>셀렉터 오타, 포트 불일치, readiness 실패 (D5·D8)</td></tr>
+      <tr><td>404 / 500 / 503 (Gateway 뒤)</td><td><code>get httproute -o yaml</code>의 status</td><td>404 경로 없음 · 500 backendRef 없음 · 503 파드 미준비 (D6)</td></tr>
+      <tr><td>이름이 안 풀림</td><td><code>nslookup</code>, <code>/etc/resolv.conf</code></td><td>다른 네임스페이스, CoreDNS 장애 (D5)</td></tr>
+      <tr><td><code>Forbidden</code></td><td><code>auth can-i --as</code>, 메시지의 User·리소스·네임스페이스</td><td>바인딩 누락·범위 오류 (D12)</td></tr>
+      <tr><td>apply가 거부됨</td><td>메시지: <code>violates PodSecurity</code> / <code>denied request</code> / <code>field is immutable</code></td><td>PSA, VAP, 셀렉터 변경 (D4·D12)</td></tr>
+      <tr><td>Targets에 안 뜸</td><td>ServiceMonitor 라벨 → 서비스 라벨 → 포트 이름</td><td>세 층 매칭 (D11)</td></tr>
+      <tr><td>Argo CD OutOfSync / Degraded</td><td>UI의 diff, <code>get application -o yaml</code>의 conditions</td><td>렌더 오류, 리소스 충돌, 저장소 접근 (D13)</td></tr>
+      <tr><td>PVC <code>Terminating</code></td><td><code>-o jsonpath='{.metadata.finalizers}'</code></td><td>사용 중인 파드 (D9)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.3 노드를 비운다: cordon · drain · PDB</h3>
+  <p><code>kubectl cordon</code>은 노드를 <code>SchedulingDisabled</code>로 만들어 새 파드가 오지 못하게 한다. <code>drain</code>은 cordon 뒤 그 노드의 파드를 축출(evict)한다. 축출은 삭제와 달리 PDB(D8)를 확인한다. 허용 중단 수가 0이면 그 파드는 축출되지 않고 drain이 기다린다. 데몬셋 파드는 <code>--ignore-daemonsets</code>로 건너뛰고, emptyDir을 가진 파드는 <code>--delete-emptydir-data</code>로 동의해야 한다. 로컬 디스크 PVC를 가진 파드(D9의 postgres)는 축출되더라도 PV의 nodeAffinity 때문에 다른 노드에 갈 수 없어 Pending이 된다. 이것이 로컬 스토리지의 대가다. 작업이 끝나면 <code>uncordon</code>.</p>
+</div></section>
+
+<!-- ════════════════ 재구축 ════════════════ -->
+<section id="rebuild"><div class="wrap">
+  <h2><span class="n">2</span>재구축 · 빈 클러스터에서 30분</h2>
+  <p class="sub">클러스터를 지우고 새로 만든다. 그다음은 스크립트 하나다. 스크립트의 각 줄이 어느 일차인지 안다면 문서는 필요 없다.</p>
+
+  <h3>2.1 클러스터 초기화</h3>
+  <ol>
+    <li>Docker Desktop → Kubernetes → <b>Stop</b>(컨테이너 제거) → <b>Create cluster</b>: kind · v1.36.x · 노드 3 · 시스템 컨테이너 표시.</li>
+    <li><code>kubectl config use-context docker-desktop &amp;&amp; kubectl get nodes</code>로 3노드 Ready 확인. kubeconfig의 dev-kim 흔적이 남아 있으면 무시한다.</li>
+  </ol>
+
+  <h3>2.2 rebuild.sh</h3>
+<pre><code><span class="p">$</span> cd ~/k8s-study/gitops
+<span class="p">$</span> cat &gt; rebuild.sh &lt;&lt;'EOF'
+#!/usr/bin/env bash
+# 빈 Docker Desktop kind 클러스터에 14일치 전체를 올린다. 각 단계 옆에 배운 일차를 적었다.
+set -euo pipefail
+cd "$(dirname "$0")"
+t0=$(date +%s); step() { printf '\n[%4ds] %s\n' $(( $(date +%s) - t0 )) "$*"; }
+
+step "D3  네임스페이스 (PSA 라벨 포함, D12)";     kubectl apply -f platform/00-namespace.yaml
+kubectl config set-context --current --namespace=study
+step "D7  시크릿 (Git 밖)";                          kubectl apply -f secrets-local/
+step "D9  PostgreSQL";                               kubectl apply -f platform/12-postgres.yaml
+step "D6  Envoy Gateway";                            helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version v1.9.1 -n envoy-gateway-system --create-namespace --wait --timeout 5m
+kubectl apply -f platform/40-gateway-api.yaml
+step "D10 metrics-server";                           helm upgrade --install metrics-server metrics-server/metrics-server -n kube-system --set 'args={--kubelet-insecure-tls}' --wait
+step "D10 kube-prometheus-stack";                    helm upgrade --install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace --version 88.3.0 -f ../day10/kps-values.yaml --wait --timeout 8m
+kubectl apply -f platform/51-grafana-red-dashboard.yaml
+step "D11 Loki + Alloy";                             helm upgrade --install loki grafana-community/loki -n monitoring -f ../day11/loki-values.yaml --wait --timeout 5m
+helm upgrade --install alloy grafana/alloy -n monitoring -f ../day11/alloy-values.yaml --wait
+step "D3  Headlamp";                                 helm upgrade --install headlamp headlamp/headlamp -n kube-system --wait
+step "D13 Argo CD";                                  kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl -n argocd rollout status deployment/argocd-server --timeout=5m
+step "D13 Application → 나머지는 Git에서";           kubectl apply -f platform/argocd-app-study.yaml
+kubectl -n argocd wait application/study-app --for=jsonpath='{.status.sync.status}'=Synced --timeout=5m
+kubectl rollout status deployment/order-api -n study --timeout=5m
+step "검증";                                          kubectl get gateway -n study; curl -s -o /dev/null -w 'localhost/orders → %{http_code}\n' localhost/orders
+step "완료"
+EOF
+<span class="p">$</span> chmod +x rebuild.sh
+<span class="p">$</span> helm repo list | cut -f1 | tr '\n' ' '; echo
+<span class="c">headlamp metrics-server prometheus-community grafana-community grafana</span>
+<span class="p">$</span> time ./rebuild.sh
+<span class="c">[   0s] D3  네임스페이스 (PSA 라벨 포함, D12)
+[   2s] D7  시크릿 (Git 밖)
+[   3s] D9  PostgreSQL
+[  10s] D6  Envoy Gateway
+[  95s] D10 metrics-server
+[ 130s] D10 kube-prometheus-stack
+[ 410s] D11 Loki + Alloy
+[ 520s] D3  Headlamp
+[ 560s] D13 Argo CD
+[ 700s] D13 Application → 나머지는 Git에서
+[ 860s] 검증
+NAME          CLASS   ADDRESS     PROGRAMMED   AGE
+web-gateway   eg      localhost   True         4m
+localhost/orders → 200
+[ 865s] 완료
+real    14m25s</span></code></pre>
+  <p class="expect"><b>읽을 것</b> — 15분 안팎. 목표 30분의 절반이다. 이미지는 호스트 스토어에 있어 pull이 빠르고, 시간의 대부분은 차트 대기(<code>--wait</code>)다. Argo CD가 올라온 뒤 앱은 Git에서 왔다. 이 스크립트에서 손으로 하는 것은 <code>secrets-local/</code> 한 줄이고, 그것이 D13에서 말한 남은 숙제다. 주문 데이터는 비어 있다. 새 PVC이기 때문이다. 백업이 없으면 데이터는 돌아오지 않는다.</p>
+<pre><code><span class="p">$</span> for i in monitor keyboard mouse; do curl -s -X POST -H 'Content-Type: application/json' -d "{\"item\":\"$i\"}" localhost/orders &gt;/dev/null; done
+<span class="p">$</span> curl -s localhost/orders | grep -o '"orders":\[.*\]'
+<span class="c">"orders":[{"id":1,"item":"monitor"},{"id":2,"item":"keyboard"},{"id":3,"item":"mouse"}]</span>
+<span class="p">$</span> git add rebuild.sh &amp;&amp; git commit -qm "rebuild script" &amp;&amp; git push -q</code></pre>
+</div></section>
+
+<!-- ════════════════ drain ════════════════ -->
+<section id="drain"><div class="wrap">
+  <h2><span class="n">3</span>노드 점검 · drain과 PDB</h2>
+  <p class="sub">D10에서 남긴 문제부터. PDB <code>minAvailable: 3</code>인데 HPA 최소가 2라 허용 중단이 0이다. 고치지 않으면 drain이 영원히 기다린다.</p>
+<pre><code><span class="p">$</span> kubectl get pdb -n study
+<span class="c">NAME        MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+order-api   3               N/A               0                     20m</span>
+<span class="p">$</span> sed -i.bak 's/  minAvailable: 3/  maxUnavailable: 1/' charts/study-app/templates/23-order-api-pdb.yaml &amp;&amp; rm charts/study-app/templates/23-order-api-pdb.yaml.bak
+<span class="p">$</span> git commit -qam "pdb: maxUnavailable 1 (HPA min 2와 양립)" &amp;&amp; git push -q
+<span class="p">$</span> sleep 180 &amp;&amp; kubectl get pdb -n study
+<span class="c">NAME        MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+order-api   N/A             1                 1                     23m</span>
+<span class="p">$</span> kubectl get pods -n study -o wide | awk '{print $1, $7}' | column -t
+<span class="c">NAME                        NODE
+gateway-…                   desktop-worker
+gateway-…                   desktop-worker2
+order-api-…                 desktop-worker
+order-api-…                 desktop-worker2
+order-api-canary-…          desktop-worker
+postgres-0                  desktop-worker2</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 고치는 방법이 <code>kubectl edit</code>가 아니라 커밋이다. 3분 뒤 Argo CD가 반영했다(급하면 UI에서 Sync). postgres가 어느 노드에 있는지 적어 둔다. 그 노드를 비울 것이다.</p>
+<pre><code><span class="c"># 터미널 A: 트래픽을 흘린다</span>
+<span class="p">$</span> while true; do curl -s -m 1 -o /dev/null -w '%{http_code} ' localhost/orders; sleep 0.5; done
+<span class="c"># 터미널 B: postgres가 있는 노드를 비운다 (예: desktop-worker2)</span>
+<span class="p">$</span> NODE=$(kubectl get pod postgres-0 -n study -o jsonpath='{.spec.nodeName}'); echo $NODE
+<span class="p">$</span> kubectl drain $NODE --ignore-daemonsets --delete-emptydir-data --timeout=120s
+<span class="c">node/desktop-worker2 cordoned
+evicting pod study/order-api-…
+evicting pod study/gateway-…
+evicting pod study/postgres-0
+evicting pod monitoring/prometheus-kps-kube-prometheus-stack-prometheus-0
+…
+pod/order-api-… evicted
+pod/gateway-… evicted
+pod/postgres-0 evicted
+node/desktop-worker2 drained</span>
+<span class="p">$</span> kubectl get nodes
+<span class="c">NAME                    STATUS                     ROLES           AGE   VERSION
+desktop-control-plane   Ready                      control-plane   50m   v1.36.4
+desktop-worker          Ready                      &lt;none&gt;          50m   v1.36.4
+desktop-worker2         Ready,SchedulingDisabled   &lt;none&gt;          50m   v1.36.4</span>
+<span class="p">$</span> kubectl get pods -n study -o wide | grep -E 'postgres|order-api-[a-z0-9]+-'
+<span class="c">order-api-…            1/1     Running   0     40s   10.244.1.30   desktop-worker
+order-api-…            1/1     Running   0     50s   10.244.1.31   desktop-worker
+postgres-0             0/1     Pending   0     45s   &lt;none&gt;        &lt;none&gt;</span>
+<span class="p">$</span> kubectl describe pod postgres-0 -n study | grep -m1 FailedScheduling
+<span class="c">  Warning  FailedScheduling  …  0/3 nodes are available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane: }, 1 node(s) had volume node affinity conflict, 1 node(s) were unschedulable. …</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 터미널 A: order-api 파드가 하나씩 옮겨 가는 동안 200이 이어진다. PDB가 한 번에 하나만 축출하게 했고 D8의 preStop·readiness가 빈틈을 막았다. 그런데 <code>postgres-0</code>은 Pending이다. 사유 세 줄: 컨트롤 플레인은 테인트, worker2는 비워졌고(unschedulable), worker는 <b>volume node affinity conflict</b>. PVC가 worker2의 디스크에 묶여 있다. 터미널 A에는 이때부터 500이 찍힌다. 로컬 스토리지 DB의 한계를 drain 한 번이 보여 줬다. 클라우드 디스크였다면 worker에서 다시 붙었을 것이다.</p>
+<pre><code><span class="p">$</span> kubectl uncordon $NODE
+<span class="c">node/desktop-worker2 uncordoned</span>
+<span class="p">$</span> sleep 20 &amp;&amp; kubectl get pod postgres-0 -n study -o wide | awk '{print $1,$3,$7}'
+<span class="c">postgres-0 Running desktop-worker2</span>
+<span class="p">$</span> curl -s localhost/orders | grep -o '"orders":\[.*\]' | cut -c1-50
+<span class="c">"orders":[{"id":1,"item":"monitor"},{"id":2,"item"</span></code></pre>
+    <p class="expect"><b>읽을 것</b> — 노드를 되돌리자 postgres가 원래 노드로 돌아가 데이터도 그대로다. 점검 작업 전 체크리스트: PDB 허용 중단이 0인 것이 있나, 로컬 PV를 쓰는 파드가 그 노드에 있나, 그 파드의 다운타임을 감당할 수 있나. 터미널 A는 <kbd>Ctrl-C</kbd>.</p>
+</div></section>
+
+<!-- ════════════════ 장애 주입 ════════════════ -->
+<section id="faults"><div class="wrap">
+  <h2><span class="n">4</span>장애 주입 · 5종, 각 5분</h2>
+  <p class="sub">진행자가 하나씩 넣는다. 참가자는 증상부터 시작해 1.1절의 순서로 내려가며 원인 문장을 말한다("서비스 셀렉터가 order-apx로 바뀌어 엔드포인트가 비었다"). 고치는 것은 진행자가 한다. 진행자용 스크립트는 접어 두었다.</p>
+
+  <div class="note warn">
+    <h5>진행자: 먼저 Argo CD 자동 동기화를 끈다</h5>
+    <p>selfHeal이 켜져 있으면 주입한 장애가 수십 초 안에 되돌아간다. 라운드 시작 전에 <code>kubectl -n argocd patch application study-app --type merge -p '{"spec":{"syncPolicy":null}}'</code>, 끝나면 <code>kubectl apply -f platform/argocd-app-study.yaml</code>로 복구. 이 사실 자체가 마지막 질문거리다("왜 장애가 저절로 안 고쳐졌나").</p>
+  </div>
+
+  <details><summary>진행자용 inject.sh (참가자는 열지 않는다)</summary>
+<pre><code><span class="p">$</span> cat &gt; ~/k8s-study/gitops/inject.sh &lt;&lt;'EOF'
+#!/usr/bin/env bash
+# 사용: ./inject.sh &lt;1-5&gt; [fix]
+set -euo pipefail
+n=$1; mode=${2:-break}
+case "$n:$mode" in
+  1:break) kubectl -n study set image deployment/order-api app=order-api:v9 ;;
+  1:fix)   kubectl -n study set image deployment/order-api app=order-api:v6 ;;
+  2:break) kubectl -n study patch svc order-api -p '{"spec":{"selector":{"app":"order-apx"}}}' ;;
+  2:fix)   kubectl -n study patch svc order-api -p '{"spec":{"selector":{"app":"order-api"}}}' ;;
+  3:break) kubectl -n study patch secret postgres-secret -p '{"stringData":{"POSTGRES_PASSWORD":"wrong-pw"}}'
+           kubectl -n study delete pod -l app=order-api --wait=false ;;
+  3:fix)   kubectl -n study patch secret postgres-secret -p '{"stringData":{"POSTGRES_PASSWORD":"orders-pw-2026"}}'
+           kubectl -n study delete pod -l app=order-api --wait=false ;;
+  4:break) kubectl -n study set resources deployment/order-api --limits=memory=96Mi ;;
+  4:fix)   kubectl -n study set resources deployment/order-api --limits=memory=512Mi ;;
+  5:break) kubectl delete clusterrolebinding kps-kube-prometheus-stack-prometheus ;;
+  5:fix)   helm upgrade kps prometheus-community/kube-prometheus-stack -n monitoring --version 88.3.0 -f ~/k8s-study/day10/kps-values.yaml --reuse-values &gt;/dev/null ;;
+  *) echo "usage: $0 &lt;1-5&gt; [fix]"; exit 1 ;;
+esac
+echo "fault $n $mode done"
+EOF
+<span class="p">$</span> chmod +x ~/k8s-study/gitops/inject.sh</code></pre>
+  </details>
+
+  <h3>라운드 1</h3>
+  <p><b>증상:</b> 대시보드는 멀쩡한데 Argo CD가 Degraded. <code>kubectl get pods</code>에 order-api 파드 하나가 <code>ImagePullBackOff</code>. <code>localhost/orders</code>는 200.</p>
+  <details><summary>기대 진단</summary><p>① get: 새 레플리카셋 파드 1개 ImagePull, 옛 파드는 Running. ② describe: <code>order-api:v9</code> not found. 결론: 없는 태그로 이미지가 바뀌었고 디플로이먼트가 옛 파드를 지키고 있다(D4 8단계). Git에는 v6이므로 selfHeal이 켜져 있었다면 되돌아왔을 것. 첫 명령은 <code>describe</code>, 3분 안에 끝나야 한다.</p></details>
+
+  <h3>라운드 2</h3>
+  <p><b>증상:</b> <code>localhost/orders</code>가 500. 파드는 전부 Running. 대시보드 요청률이 0으로 떨어짐.</p>
+  <details><summary>기대 진단</summary><p>① get: 이상 없음. ② events: 없음. ③ logs: 조용함(요청이 안 온다). ④ 연결: <code>get httproute</code> status는 정상, <code>get endpointslices -l kubernetes.io/service-name=order-api</code>가 비어 있음 → <code>describe svc order-api</code>의 Selector가 <code>app=order-apx</code>. 500인 이유: Envoy가 라우트는 찾았는데 보낼 엔드포인트가 없다(D6 4단계). 로그부터 열었다면 시간을 버린다.</p></details>
+
+  <h3>라운드 3</h3>
+  <p><b>증상:</b> order-api 파드가 <code>CrashLoopBackOff</code>. 알림 <code>OrderApiDown</code> 후보. postgres는 Running.</p>
+  <details><summary>기대 진단</summary><p>③ <code>logs --previous</code>: <code>FATAL: password authentication failed for user "orders"</code>. 시크릿의 비밀번호가 바뀌었고 재시작된 파드가 새 값을 읽었다. 이미 떠 있던 파드는 옛 값을 쓰고 있었을 것이다(D7의 환경 변수 반영 시점). 확인: <code>get secret postgres-secret -o jsonpath | base64 -d</code>. 진행자 질문: "postgres 자체는 왜 멀쩡한가" — postgres는 시작 시 비밀번호를 읽어 DB에 저장했고 시크릿 변경과 무관하다.</p></details>
+
+  <h3>라운드 4</h3>
+  <p><b>증상:</b> order-api 파드가 재시작을 반복. 로그가 비어 있다. Grafana Pod 대시보드에서 메모리가 톱니 모양.</p>
+  <details><summary>기대 진단</summary><p>② describe의 Last State: <code>OOMKilled</code>, exit 137, limits memory 96Mi. 로그가 없는 이유는 SIGKILL(D8 4단계). <code>get deploy -o jsonpath</code>로 limits가 512에서 96으로 바뀐 것을 확인. Git과 diff하면 한 줄. Argo CD UI의 diff 탭이 가장 빠르다.</p></details>
+
+  <h3>라운드 5</h3>
+  <p><b>증상:</b> 앱은 정상. Grafana의 모든 패널이 몇 분 전부터 끊김. 알림도 없음.</p>
+  <details><summary>기대 진단</summary><p>Prometheus Targets가 전부 down. <code>kubectl -n monitoring logs prometheus-kps-…-0 -c prometheus</code>에 <code>403 Forbidden</code>·<code>cannot list resource "pods"</code>. ⑤ 권한: Prometheus의 ServiceAccount가 쓰는 ClusterRoleBinding이 없다. <code>kubectl get clusterrolebinding | grep kps</code>. "알림도 없음"이 함정이다. 모니터링 자체가 죽으면 알림도 죽는다. 그래서 Prometheus의 <code>up</code>을 밖에서 보는 메타 모니터링이 있다.</p></details>
+
+  <h3>라운드 뒤: 시각 대조</h3>
+<pre><code><span class="p">$</span> q() { curl -s "localhost:9090/api/v1/query" --data-urlencode "query=$1" | python3 -c 'import sys,json; r=json.load(sys.stdin)["data"]["result"]; [print(x["metric"], x["value"][1]) for x in r[:6]]'; }
+<span class="p">$</span> q 'sum by (pod) (kube_pod_container_status_restarts_total{namespace="study"} &gt; 0)'
+<span class="p">$</span> q 'count(up == 0)'
+<span class="p">$</span> q 'changes(kube_deployment_spec_replicas{namespace="study"}[1h])'</code></pre>
+  <p>Grafana Explore에서 지난 1시간 범위로 Error ratio, restarts, <code>up</code> 세 쿼리를 한 화면에 놓고, 라운드 1~5의 시각에 어느 선이 먼저 움직였는지 짚는다. D10 6단계의 기준선 다섯 숫자와 비교한다. 라운드 2는 오류율이, 3·4는 재시작이, 5는 <code>up</code>이 먼저 움직였다. 1은 아무 지표도 안 움직였다. 디플로이먼트가 옛 파드를 지켰기 때문이며, 그것을 잡는 것은 <code>kube_deployment_status_replicas_unavailable</code> 같은 상태 지표다.</p>
+</div></section>
+
+<!-- ════════════════ 책 지도 ════════════════ -->
+<section id="map"><div class="wrap">
+  <h2><span class="n">5</span>책의 나머지 장은 어디에 이어지나</h2>
+  <p class="sub">14일 동안 책 21개 장 중 12개를 실습했다. 남은 장을 오늘의 클러스터에 붙여 읽는다.</p>
+  <table>
+    <thead><tr><th style="width:60px">장</th><th style="width:220px">제목</th><th>오늘의 클러스터에서 출발점</th><th style="width:200px">2026 기준 도구</th></tr></thead>
+    <tbody>
+      <tr><td>7</td><td>글로벌 애플리케이션 분산과 스테이징</td><td>D13의 <code>values-dev / values-prod</code>가 시작점. 같은 차트를 리전마다 다른 값으로. 7.3의 글로벌 트래픽은 D6 Gateway 앞에 DNS·애니캐스트 계층을 두는 것</td><td>Argo CD ApplicationSet</td></tr>
+      <tr><td>9.6</td><td>서비스 메시</td><td>D5의 서비스 간 호출에 mTLS·재시도·트래픽 관측을 덧붙이는 층. D6의 Gateway API가 메시의 동서 트래픽 표준(GAMMA)으로도 확장된다</td><td>Istio Ambient(사이드카 없음), Linkerd, Cilium</td></tr>
+      <tr><td>12</td><td>멀티클러스터 관리</td><td>D13의 Argo CD가 <code>destination.server</code>를 바꾸면 다른 클러스터에 같은 차트를 적용한다. 클러스터가 곧 배포 대상 하나</td><td>Argo CD 멀티 클러스터, Cluster API</td></tr>
+      <tr><td>13</td><td>외부 서비스와 쿠버네티스 통합</td><td>D5의 <code>ExternalName</code>과 셀렉터 없는 서비스 + 수동 EndpointSlice로 클러스터 밖 DB를 이름으로 부른다. D9의 postgres를 관리형 DB로 바꾸는 경로</td><td>External Secrets Operator, Gateway API TLSRoute</td></tr>
+      <tr><td>14</td><td>머신러닝 실행하기</td><td>D8의 리소스 요청이 GPU로 확장된다. GPU는 <code>resources.limits</code>가 아니라 <code>ResourceClaim</code>으로 요청한다(DRA GA). D9의 PVC가 모델·데이터셋 볼륨이 된다</td><td>DRA, Kubeflow, KServe</td></tr>
+      <tr><td>15</td><td>고수준 애플리케이션 패턴</td><td>D10의 Prometheus Operator가 예시다. ServiceMonitor라는 CRD를 읽어 설정을 만든다. "우리 팀의 앱 배포"를 CRD 하나로 추상화하는 것</td><td>CRD + 컨트롤러, Crossplane, Backstage</td></tr>
+      <tr><td>19</td><td>보안</td><td>D12의 세 관문 + 노드·이미지·코드 층. 이미지 서명 검증은 D12의 VAP로는 못 하고 Kyverno(verifyImages)나 Sigstore 정책 컨트롤러가 필요</td><td>Sigstore cosign, Trivy, Falco</td></tr>
+      <tr><td>20</td><td>카오스 테스팅, 로드 테스팅, 실험</td><td>오늘 4절이 손으로 한 카오스, D10 5단계가 손으로 한 로드 테스트. 이것을 실험 가설(SLO)과 함께 자동화</td><td>Chaos Mesh, LitmusChaos, k6</td></tr>
+      <tr><td>21</td><td>오퍼레이터 구현</td><td>D9 1.5절의 "DB 오퍼레이터"를 직접 짓는 장. D2의 조정 루프를 내 CRD에 대해 쓰는 것. 15장의 다음 단계</td><td>Kubebuilder, controller-runtime, Operator SDK</td></tr>
+    </tbody>
+  </table>
+
+  <h3>다음 경로</h3>
+  <table>
+    <thead><tr><th style="width:200px">방향</th><th>이 교재와의 대응</th><th>먼저 볼 것</th></tr></thead>
+    <tbody>
+      <tr><td>CKAD (개발자)</td><td>D3~D9·D12 범위와 거의 겹친다. 시험은 시간 제한 안에서 <code>kubectl</code>을 빠르게 치는 것</td><td>kubernetes.io 문서를 시험 중 열 수 있으므로 문서 구조 익히기</td></tr>
+      <tr><td>CKA (관리자)</td><td>D2·D5·D8·D12·D14 + 이 교재가 뺀 것(kubeadm 설치, etcd 백업, 업그레이드, 인증서)</td><td>kind CLI로 kubeadm 노드 안을 직접 만지기</td></tr>
+      <tr><td>관리형 클러스터 (EKS·GKE·AKS)</td><td>Docker Desktop과 달라지는 것: LoadBalancer는 진짜 클라우드 LB, StorageClass는 네트워크 디스크(drain 문제 해소), 노드 자동 확장, IAM 연동 인증, 관리형 Prometheus</td><td>D5·D9·D12의 "이 환경에서" 표를 클라우드 기준으로 다시 쓰기</td></tr>
+      <tr><td>플랫폼 엔지니어링</td><td>D13 GitOps + 15장 + 21장. 팀이 쓰는 차트·정책·대시보드를 표준으로 만드는 일</td><td>Argo CD ApplicationSet, Kyverno, Backstage</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<!-- ════════════════ 체크포인트 D ════════════════ -->
+<section id="checkpoint"><div class="wrap">
+  <h2><span class="n">6</span>체크포인트 D · 교재의 마지막 관문</h2>
+  <div class="check">
+    <ol>
+      <li>빈 클러스터에서 gateway·order-api·DB·Gateway API·모니터링 스택이 30분 안에 올라오고 <code>localhost/orders</code>가 200이다.</li>
+      <li>노드를 drain할 때 트래픽 손실 없이 앱 파드가 이동하고, postgres가 Pending이 되는 이유를 <code>FailedScheduling</code> 메시지로 설명한다.</li>
+      <li>주입된 장애 5개 중 4개 이상의 원인을 각 5분 안에 말한다. 각 라운드에서 첫 명령이 무엇이었는지 적는다.</li>
+      <li>라운드 1에서 아무 지표도 안 움직인 이유와, 그것을 잡을 지표 이름을 말한다.</li>
+      <li>책의 남은 장 중 하나를 골라 오늘의 클러스터 어디에 붙는지 세 문장으로 말한다.</li>
+    </ol>
+  </div>
+</div></section>
+
+<!-- ════════════════ 회고 ════════════════ -->
+<section id="retro"><div class="wrap">
+  <h2><span class="n">7</span>회고 · 가장 자주 친 명령 20개</h2>
+<pre><code><span class="p">$</span> history | awk '{$1=""; print}' | grep -E '^ ?(kubectl|helm|docker|curl)' | awk '{print $1, $2}' | sort | uniq -c | sort -rn | head -20
+<span class="c">    214 kubectl get
+    131 kubectl apply
+     88 curl -s
+     67 kubectl describe
+     54 kubectl exec
+     49 kubectl logs
+     41 kubectl rollout
+     38 kubectl delete
+     31 helm upgrade
+     29 docker build
+     ...</span></code></pre>
+  <p>이 목록을 프로젝트의 <a href="k8s-commands.html">명령어 레퍼런스</a>와 대조한다. 레퍼런스에 없는데 자주 친 것은 추가하고, 레퍼런스에 있는데 한 번도 안 친 것은 왜인지 적는다. <code>get</code>·<code>apply</code>·<code>describe</code>·<code>logs</code> 넷이 절반이다. 진단 순서 ①②③이 그대로 손에 남았다는 뜻이다.</p>
+  <p>마지막으로 세 가지를 적어 남긴다. 14일 중 가장 오래 막혔던 곳과 그 원인이 여섯 층 중 어디였는지. 이 교재가 빼놓은 것 중 우리 팀에 먼저 필요한 것. 그리고 다음 스터디의 첫 주제.</p>
+
+  <div class="note">
+    <h5>정리하지 않는다</h5>
+    <p>클러스터는 그대로 둔다. <code>~/k8s-study/gitops</code>가 Git에 있으니 언제든 <code>rebuild.sh</code>로 돌아온다. 그것이 14일의 결론이다. 클러스터는 지워도 되고, 저장소는 지우면 안 된다.</p>
+  </div>
+</div></section>
+
+<footer id="refs"><div class="wrap">
+  <h2 style="font-size:1.1rem">참고 (2026-08-30 접근 확인)</h2>
+  <ul>
+    <li>애플리케이션 디버깅 — <a href="https://kubernetes.io/ko/docs/tasks/debug/debug-application/">kubernetes.io/ko/docs/tasks/debug/debug-application/</a> · 클러스터 디버깅 — <a href="https://kubernetes.io/ko/docs/tasks/debug/debug-cluster/">kubernetes.io/ko/docs/tasks/debug/debug-cluster/</a></li>
+    <li>노드 안전하게 드레인하기 — <a href="https://kubernetes.io/ko/docs/tasks/administer-cluster/safely-drain-node/">kubernetes.io/ko/docs/tasks/administer-cluster/safely-drain-node/</a> · 중단(Disruptions) — <a href="https://kubernetes.io/ko/docs/concepts/workloads/pods/disruptions/">kubernetes.io/ko/docs/concepts/workloads/pods/disruptions/</a></li>
+    <li>Argo CD 자동 동기화·selfHeal — <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/">argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/</a></li>
+    <li>DRA(동적 리소스 할당) — <a href="https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/">kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/</a> · Istio Ambient — <a href="https://istio.io/latest/docs/ambient/">istio.io/latest/docs/ambient/</a> · Gateway API GAMMA — <a href="https://gateway-api.sigs.k8s.io/mesh/">gateway-api.sigs.k8s.io/mesh/</a></li>
+    <li>Kubebuilder — <a href="https://book.kubebuilder.io/">book.kubebuilder.io</a> · Chaos Mesh — <a href="https://chaos-mesh.org/">chaos-mesh.org</a> · CKA/CKAD — <a href="https://www.cncf.io/training/certification/">cncf.io/training/certification/</a></li>
+    <li>브렌던 번스 외, 『쿠버네티스 창시자에게 배우는 모범 사례』 2판 — 7·9.6·12·13·14·15·19·20·21장</li>
+    <li>프로젝트 자료 — <a href="k8s-glossary.html">용어 사전</a> · <a href="k8s-commands.html">명령어 레퍼런스</a></li>
+  </ul>
+  <div class="prevnext"><a href="day13-helm-kustomize-gitops.html">← D13 Helm·Kustomize·GitOps</a><a href="00-index.html">목차로 →</a></div>
+</div></footer>
+</body>
+</html>

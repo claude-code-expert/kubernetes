@@ -1,0 +1,55 @@
+# course/labs/apps/compose.yaml
+# 책 1장 저널 서비스의 3티어 구성을 한 파일로. M14에서 같은 구성을 쿠버네티스로 옮긴다.
+name: journal
+
+services:
+  redis:
+    image: redis:8.2-alpine
+    command: ["redis-server", "--save", "60", "1"]
+    volumes:
+      - journal-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks: [journal-net]
+
+  api:
+    build:
+      context: ./journal-api
+    image: journal-api:v1
+    develop:
+      watch:                          # docker compose watch — src 가 바뀌면 다시 빌드해 교체한다
+        - action: rebuild
+          path: ./journal-api/src
+    environment:
+      REDIS_URL: redis://redis:6379
+      APP_VERSION: v1
+    depends_on:
+      redis:
+        condition: service_healthy   # 레디스가 healthy 가 된 뒤에야 시작한다
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/readyz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks: [journal-net]
+
+  web:
+    image: nginx:1.29-alpine
+    ports:
+      - "8090:80"
+    volumes:
+      - ./static-site:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [journal-net]
+
+volumes:
+  journal-data:
+
+networks:
+  journal-net:

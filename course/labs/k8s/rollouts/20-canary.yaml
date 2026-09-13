@@ -1,0 +1,108 @@
+# M30 — 카나리. 트래픽을 조금씩 옮기면서 **메트릭으로** 계속할지 정한다.
+#
+# 메시나 인그레스 연동이 없으면 Argo Rollouts 는 **레플리카 수**로 비율을 만든다.
+# setWeight: 20 이면 카나리 파드가 전체의 20% 가 되게 개수를 맞춘다.
+# 정확한 20% 는 아니지만 (반올림), 판정에 필요한 만큼의 트래픽은 흐른다.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata: {name: canary, namespace: m30}
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: {app: canary}
+  strategy:
+    canary:
+      # 분석이 실패하면 여기서 멈추고 되돌린다.
+      analysis:
+        templates:
+          - templateName: success-rate
+        startingStep: 2          # 20% 단계부터 분석을 시작한다
+        args:
+          - name: canary-hash
+            valueFrom:
+              podTemplateHashValue: Latest
+      steps:
+        - setWeight: 20
+        - pause: {duration: 60s}
+        - setWeight: 60
+        - pause: {duration: 60s}
+        - setWeight: 100
+  template:
+    metadata:
+      labels: {app: canary}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: {type: RuntimeDefault}
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: journal-api:v2
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: APP_VERSION, value: "v2"}
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 20m, memory: 48Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: canary
+  namespace: m30
+  labels: {app: canary}
+spec:
+  selector: {app: canary}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+# M20 의 3단 라벨 사슬. release: kps 가 없으면 프로메테우스가 이 오브젝트를 고르지 않는다.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: canary
+  namespace: m30
+  labels: {release: kps}
+spec:
+  selector:
+    matchLabels: {app: canary}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 10s
+---
+# 판정 기준을 사람이 아니라 PromQL 로 쓴다.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata: {name: success-rate, namespace: m30}
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: success-rate
+      interval: 20s
+      count: 3                 # 20초 간격으로 3회 본다
+      # 3회 중 1회까지는 봐준다. 순간적인 흔들림으로 되돌리지 않기 위해서다.
+      failureLimit: 1
+      successCondition: "result[0] >= 0.95"
+      provider:
+        prometheus:
+          address: http://kps-kube-prometheus-stack-prometheus.monitoring.svc:9090
+          # 카나리 파드만 본다. rollouts-pod-template-hash 가 새 버전의 파드에만 붙는다.
+          query: |
+            sum(rate(http_server_requests_seconds_count{
+              namespace="m30",
+              pod=~"canary-{{args.canary-hash}}-.*",
+              status!~"5.."}[45s]))
+            /
+            sum(rate(http_server_requests_seconds_count{
+              namespace="m30",
+              pod=~"canary-{{args.canary-hash}}-.*"}[45s]))

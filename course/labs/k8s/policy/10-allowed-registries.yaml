@@ -1,0 +1,58 @@
+# M26 — 허용 레지스트리 목록. 목록은 정책이 아니라 컨피그맵에 둔다(paramKind).
+# 목록이 바뀔 때 정책을 다시 배포하지 않아도 된다.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: policy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: allowed-registries
+  namespace: policy
+data:
+  registries: "docker.io,ghcr.io,registry.k8s.io,quay.io"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: allowed-registries
+spec:
+  failurePolicy: Fail
+  paramKind: {apiVersion: v1, kind: ConfigMap}
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["deployments", "statefulsets", "daemonsets"]
+  variables:
+    - name: allowed
+      expression: "params.data.registries.split(',')"
+    - name: images
+      expression: "object.spec.template.spec.containers.map(c, c.image)"
+  validations:
+    # 두 번째 항목은 docker.io 의 짧은 이름(nginx, curlimages/curl)을 위한 것이다.
+    # 첫 구간에 점이 없으면 레지스트리 호스트가 생략된 것이고, 그때의 기본값이 docker.io 다.
+    - expression: >-
+        variables.images.all(i,
+          variables.allowed.exists(r, i.startsWith(r + '/'))
+          || (!i.split('/')[0].contains('.') && 'docker.io' in variables.allowed))
+      messageExpression: >-
+        "허용되지 않은 레지스트리다. 허용 목록: " + params.data.registries
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: allowed-registries-binding
+spec:
+  policyName: allowed-registries
+  paramRef:
+    name: allowed-registries
+    namespace: policy
+    parameterNotFoundAction: Deny
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        policy: enforced

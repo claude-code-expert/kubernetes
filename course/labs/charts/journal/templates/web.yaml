@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "journal.fullname" . }}-web
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+data:
+  # .Files.Get 은 차트 디렉터리의 파일을 그대로 읽는다.
+  # kustomize 의 configMapGenerator 에 대응하는 기능이다.
+  index.html: |
+{{ .Files.Get "files/index.html" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "journal.fullname" . }}-web
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      {{- include "journal.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "journal.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+      annotations:
+        # 자기 자신을 include 하면 무한 재귀가 된다. 파일 내용에서 직접 해시를 만든다.
+        checksum/web: {{ .Files.Get "files/index.html" | sha256sum }}
+    spec:
+      {{- if .Values.podSecurity.enabled }}
+      # nginx-unprivileged 이미지는 101 번 사용자로 돈다 (M24).
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - name: nginx
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          ports:
+            - name: http
+              # 비루트 이미지는 1024 미만 포트를 열지 못한다. 80 이 아니라 8080 이다.
+              containerPort: 8080
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          {{- if .Values.podSecurity.enabled }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          {{- end }}
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+      volumes:
+        - name: content
+          configMap:
+            name: {{ include "journal.fullname" . }}-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "journal.fullname" . }}-web
+  labels:
+    {{- include "journal.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "journal.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

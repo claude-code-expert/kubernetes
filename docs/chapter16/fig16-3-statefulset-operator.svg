@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow163" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 13px; font-weight: 600; fill: #111111; }
+    .t-sub { font-size: 10.5px; fill: #555555; }
+    .t-h { font-size: 13px; font-weight: 700; fill: #333333; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+    .line { stroke: #444444; stroke-width: 1.2; fill: none; }
+  </style>
+
+  <!-- 비교 표 형태 -->
+  <text class="t-h" x="20" y="28">Deployment (레플리카셋)</text>
+  <text class="t-h" x="480" y="28">StatefulSet</text>
+
+  <rect class="box" x="20" y="42" width="400" height="70" rx="4"/>
+  <text class="t-title" x="220" y="66" text-anchor="middle">파드 이름이 매번 무작위</text>
+  <text class="t-sub" x="220" y="86" text-anchor="middle">frontend-7f8c9-x2k1p</text>
+
+  <rect class="box-accent" x="480" y="42" width="400" height="70" rx="4"/>
+  <text class="t-title" x="680" y="66" text-anchor="middle">파드 이름이 고정 · 순번</text>
+  <text class="t-sub" x="680" y="86" text-anchor="middle">redis-0, redis-1, redis-2</text>
+
+  <rect class="box" x="20" y="122" width="400" height="70" rx="4"/>
+  <text class="t-title" x="220" y="146" text-anchor="middle">생성·삭제 순서 무관</text>
+  <text class="t-sub" x="220" y="166" text-anchor="middle">동시에 다 떠도 상관없음</text>
+
+  <rect class="box-accent" x="480" y="122" width="400" height="70" rx="4"/>
+  <text class="t-title" x="680" y="146" text-anchor="middle">생성·삭제가 순서대로</text>
+  <text class="t-sub" x="680" y="166" text-anchor="middle">0번이 Ready여야 1번이 시작</text>
+
+  <rect class="box" x="20" y="202" width="400" height="70" rx="4"/>
+  <text class="t-title" x="220" y="226" text-anchor="middle">볼륨을 공유하거나 없음</text>
+  <text class="t-sub" x="220" y="246" text-anchor="middle">파드가 죽으면 사실상 무의미한 상태</text>
+
+  <rect class="box-accent" x="480" y="202" width="400" height="70" rx="4"/>
+  <text class="t-title" x="680" y="226" text-anchor="middle">파드마다 전용 PVC</text>
+  <text class="t-sub" x="680" y="246" text-anchor="middle">volumeClaimTemplates로 자동 생성</text>
+
+  <!-- 오퍼레이터 레이어 -->
+  <line class="line" x1="680" y1="272" x2="680" y2="300" marker-end="url(#arrow163)"/>
+
+  <rect class="box" x="480" y="304" width="400" height="96" rx="6"/>
+  <text class="t-title" x="680" y="328" text-anchor="middle">오퍼레이터가 그 위에 얹는 것</text>
+  <text class="t-sub" x="680" y="350" text-anchor="middle">백업, 페일오버, 리더 등록, 새 레플리카</text>
+  <text class="t-sub" x="680" y="366" text-anchor="middle">등록, 업그레이드 — 스테이트풀셋은</text>
+  <text class="t-sub" x="680" y="382" text-anchor="middle">전혀 모르는 도메인 지식을 캡슐화</text>
+
+  <text class="t-cap" x="220" y="340" text-anchor="middle">무상태 워크로드에 최적화된</text>
+  <text class="t-cap" x="220" y="360" text-anchor="middle">레플리카셋의 정반대 특성이다.</text>
+</svg>

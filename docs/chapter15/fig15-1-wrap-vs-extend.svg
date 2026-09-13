@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #c8c8c8; stroke-width: 1; }
+    .box-accent { fill: #ffffff; stroke: #2456c4; stroke-width: 1.5; }
+    .t-title { font-size: 14px; font-weight: 700; fill: #111111; }
+    .t-sub { font-size: 11px; fill: #555555; }
+    .t-eg { font-size: 11px; font-weight: 600; fill: #2456c4; }
+    .t-cap { font-size: 12.5px; fill: #444444; }
+  </style>
+
+  <!-- Wrap -->
+  <rect class="box-accent" x="40" y="30" width="380" height="220" rx="6"/>
+  <text class="t-title" x="230" y="60" text-anchor="middle">① 래핑(Wrap) — 완전히 감춘다</text>
+  <text class="t-sub" x="230" y="88" text-anchor="middle">유저는 자신이 쿠버네티스 위에</text>
+  <text class="t-sub" x="230" y="104" text-anchor="middle">있다는 사실조차 모른다</text>
+  <text class="t-sub" x="230" y="130" text-anchor="middle">쿠버네티스는 순수한</text>
+  <text class="t-sub" x="230" y="146" text-anchor="middle">구현 상세(implementation detail)</text>
+  <text class="t-eg" x="230" y="178" text-anchor="middle">적합한 예: 머신러닝 파이프라인</text>
+  <text class="t-sub" x="230" y="198" text-anchor="middle">데이터 과학자는 분산 시스템이 아니라</text>
+  <text class="t-sub" x="230" y="214" text-anchor="middle">자기 전문 분야에만 집중해야 한다</text>
+  <text class="t-sub" x="230" y="236" text-anchor="middle">사용 편의성 &gt; 탈출구</text>
+
+  <!-- Extend -->
+  <rect class="box-accent" x="480" y="30" width="380" height="220" rx="6"/>
+  <text class="t-title" x="670" y="60" text-anchor="middle">② 확장(Extend) — API를 넓힌다</text>
+  <text class="t-sub" x="670" y="88" text-anchor="middle">CRD로 새 리소스를 추가하되</text>
+  <text class="t-sub" x="670" y="104" text-anchor="middle">기존 쿠버네티스 오브젝트와 공존</text>
+  <text class="t-sub" x="670" y="130" text-anchor="middle">쿠버네티스 네이티브 툴 생태계</text>
+  <text class="t-sub" x="670" y="146" text-anchor="middle">(모니터링·CD 등)를 그대로 재사용</text>
+  <text class="t-eg" x="670" y="178" text-anchor="middle">적합한 예: 범용 개발자 플랫폼</text>
+  <text class="t-sub" x="670" y="198" text-anchor="middle">애플리케이션 개발은 범위가 너무 넓어</text>
+  <text class="t-sub" x="670" y="214" text-anchor="middle">모든 요건을 완전히 감쌀 수 없다</text>
+  <text class="t-sub" x="670" y="236" text-anchor="middle">쿠버네티스 경험자 채용도 쉬움</text>
+
+  <!-- 판단 기준 -->
+  <rect class="box" x="40" y="270" width="820" height="80" rx="6"/>
+  <text class="t-title" x="60" y="296" font-size="13">판단 기준 — 유저가 "유리를 깨고 탈출"할 필요가 있는가?</text>
+  <text class="t-sub" x="60" y="318">필요 없다는 확신이 들면 ①(완전 격리), 사용 범위가 넓거나 예측 못 한 요구가 늘 생기면 ②(확장 가능하게).</text>
+  <text class="t-sub" x="60" y="336">둘은 배타적이지 않다 — 대부분의 성숙한 플랫폼은 두 전략을 영역별로 섞어 쓴다.</text>
+</svg>
