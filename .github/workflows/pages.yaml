@@ -7,6 +7,7 @@
 #   /          랜딩 (.github/pages-index.html)
 #   /course/   38편 과정
 #   /study/    관측성 11장
+#   /utils/    실습 도구 가이드
 #
 # 이 배치는 저장소의 디렉터리 구조와 같다. 그래서 문서 안의 상대 링크
 # (study 에서 ../course/cheatsheet-kubectl.html 같은 것)가 로컬에서 열 때와
@@ -19,6 +20,7 @@ on:
     paths:
       - 'course/**'
       - 'study/**'
+      - 'utils/**'
       - '.github/pages-index.html'
       - '.github/workflows/pages.yaml'
   workflow_dispatch:
@@ -51,6 +53,7 @@ jobs:
           cp .github/pages-index.html _site/index.html
           cp -r course _site/course
           cp -r study  _site/study
+          cp -r utils  _site/utils
           echo "--- 조립 결과 ---"
           find _site -maxdepth 2 -type d | sort
           echo "파일 $(find _site -type f | wc -l) 개"

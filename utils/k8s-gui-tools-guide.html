@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠버네티스 실습 도구 — k9s · Headlamp · Freelens</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f5f6f7; --ink:#15181d; --muted:#585f6b;
+  --line:#d8dbe0; --line2:#eceef0; --ac:#1a4fa0; --warn:#8f4408;
+  --pull:#6a4a9c; --push:#b4621a; --ok:#2e7d4f;
+  --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:18px; line-height:1.78; letter-spacing:-.005em;
+}
+
+/* 폭 — 고정하지 않는다. 브라우저 너비의 90%, 최대 1280px */
+.wrap{width:min(90%,1280px); margin:0 auto; padding:0 0 96px}
+
+/* ── 상단바: 목차로 돌아가기 ───────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 0; margin-bottom:28px;
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(180%) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar a{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:15.5px; color:var(--ac); text-decoration:none; font-weight:600;
+}
+.topbar a:hover{text-decoration:underline}
+.topbar .where{font-family:var(--mono); font-size:13.5px; color:var(--muted); letter-spacing:.08em}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header{padding:8px 0 28px; border-bottom:2px solid var(--ink); margin-bottom:36px}
+.docnum{font-family:var(--mono); font-size:14px; letter-spacing:.16em; color:var(--ac); margin-bottom:10px}
+h1{font-size:40px; line-height:1.24; letter-spacing:-.02em; font-weight:700; margin:0 0 14px}
+.lede{font-size:20px; color:var(--muted); margin:0}
+
+/* ── 제목 위계 ────────────────────────────────────────── */
+h2{font-size:32px; line-height:1.32; font-weight:700; letter-spacing:-.02em; margin:52px 0 16px; padding-top:8px}
+h2 .n{font-family:var(--mono); font-size:21px; color:var(--ac); margin-right:12px; letter-spacing:.04em}
+h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; margin:34px 0 12px}
+h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
+h4 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
+dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+
+/* ── 설정 파일 인용 ───────────────────────────────────── */
+.srcbox{margin:18px 0}
+.srcbox .fp{display:inline-block; font-family:var(--mono); font-size:14px; color:var(--muted);
+  background:var(--soft); border:1px solid var(--line); border-bottom:none;
+  border-radius:6px 6px 0 0; padding:6px 12px; position:relative; top:1px}
+.srcbox pre{margin-top:0; border-top-left-radius:0}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px; padding-left:22px}
+li{margin:0 0 6px}
+a{color:var(--ac)}
+strong{font-weight:700}
+
+/* ── 안내 · 팁 · 경고 ─────────────────────────────────── */
+blockquote{
+  margin:20px 0; padding:16px 20px;
+  border-left:4px solid var(--ac); background:var(--soft); border-radius:0 6px 6px 0;
+}
+blockquote > :last-child{margin-bottom:0}
+blockquote .label{
+  display:block; font-size:14.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--ac); margin-bottom:6px;
+}
+blockquote.warn{border-left-color:var(--warn); background:#fdf8f4}
+blockquote.warn .label{color:var(--warn)}
+blockquote.ok{border-left-color:var(--ok); background:#f4faf6}
+blockquote.ok .label{color:var(--ok)}
+
+/* ── 코드 ─────────────────────────────────────────────── */
+pre{
+  margin:14px 0; padding:16px 18px; overflow-x:auto;
+  background:var(--soft); border:1px solid var(--line); border-radius:6px;
+}
+pre code{font-family:var(--mono); font-size:15.5px; line-height:1.7; background:none; padding:0}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); border:1px solid var(--line2); border-radius:3px; padding:1px 5px}
+pre code.hljs{padding:0; background:none}
+.cap{font-family:var(--mono); font-size:14px; color:var(--muted); margin:18px 0 -6px; letter-spacing:.04em}
+.out{background:#fff; border:1px dashed #bdbdbd}
+
+/* ── 표 ───────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; margin:16px 0}
+table{border-collapse:collapse; width:100%; font-size:16.5px}
+th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+th{background:var(--soft); font-weight:700; white-space:nowrap}
+td code{font-size:.9em}
+
+/* ── 도판 ─────────────────────────────────────────────── */
+figure{margin:26px 0 30px}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:6px; background:#fff}
+figcaption{font-size:16.5px; color:var(--muted); margin-top:12px; line-height:1.7}
+figcaption b{color:var(--ink)}
+.steps{margin:14px 0 0; padding:0; list-style:none; counter-reset:none}
+.steps li{
+  display:grid; grid-template-columns:36px 1fr; gap:14px;
+  margin:0 0 18px; font-size:17px; line-height:1.72;
+}
+.steps .b{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:50%; margin-top:2px;
+  background:var(--ac); color:#fff; font-family:var(--mono); font-size:15px; font-weight:700;
+}
+.steps code{font-size:15px}
+.steps .chk{display:block; color:var(--muted); font-size:16px; margin-top:5px}
+
+/* ── 학습 목표 ────────────────────────────────────────── */
+.goals{border:1px solid var(--line); border-radius:8px; padding:20px 24px; background:#fff; margin:22px 0}
+.goals h3{margin:0 0 14px; font-size:23px}
+.goals ol{margin:0; padding-left:22px}
+.goals li{margin-bottom:8px}
+
+/* ── 하단 참고 영역 ───────────────────────────────────── */
+.appendix{margin-top:72px; padding-top:32px; border-top:2px solid var(--ink)}
+.appendix h2{font-size:28px; margin:0 0 18px}
+.appendix h3{font-size:22px; margin:30px 0 12px}
+.appendix{font-size:17px}
+.src ul{list-style:none; padding-left:0}
+.src li{margin-bottom:8px; font-size:16px; word-break:break-all}
+
+/* ── 이전 / 다음 ──────────────────────────────────────── */
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:48px; padding-top:24px; border-top:1px solid var(--line)}
+.pager a{
+  flex:1 1 0; text-decoration:none; border:1px solid var(--line); border-radius:8px;
+  padding:14px 18px; color:var(--ink); background:#fff;
+}
+.pager a:hover{border-color:var(--ac); background:var(--soft)}
+.pager .dir{display:block; font-family:var(--mono); font-size:13px; letter-spacing:.1em; color:var(--muted); margin-bottom:4px}
+.pager .t{font-weight:700; font-size:17px}
+.pager .next{text-align:right}
+.pager .spacer{flex:1 1 0}
+
+@media (max-width:760px){
+  body{font-size:16.5px}
+  h1{font-size:30px} h2{font-size:25px} h3{font-size:22px}
+  .wrap{width:92%}
+  .pager{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="../course/index.html">← 과정 목차</a>
+  <span class="where">TOOLS · GUI &amp; TUI</span>
+</div>
+
+<header>
+  <div class="docnum">운영 도구 가이드</div>
+  <h1>쿠버네티스 실습 도구</h1>
+  <p class="lede"><code>kubectl</code> 로 되는 일을 더 빨리 하거나, 눈으로 봐야 알 수 있는 것을 보기 위한 도구 셋. 터미널의 <strong>k9s</strong>, 브라우저의 <strong>Headlamp</strong>, 데스크톱의 <strong>Freelens</strong> 를 설치하고 같은 클러스터를 세 방식으로 본다.</p>
+</header>
+
+<h2><span class="n">01</span>왜 도구를 따로 쓰나</h2>
+
+<p><code>kubectl</code> 로 못 하는 일은 없다. 그런데 장애를 쫓을 때 하는 일은 대개 이런 모양이다 — 파드 목록을 보고, 하나를 골라 로그를 보고, 다시 목록으로 돌아와 다른 파드의 이벤트를 보고, 컨테이너에 들어가 본다. <code>kubectl</code> 로 하면 <strong>명령 네 줄과 파드 이름 복사·붙여넣기</strong>가 매번 필요하다.</p>
+
+<p>세 도구가 각각 그 반복을 다르게 줄인다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>도구</th><th>형태</th><th>가장 잘하는 것</th><th>못 하는 것</th></tr>
+  <tr><td><strong>k9s</strong></td><td>터미널 (TUI)</td><td>키 몇 번으로 목록 → 로그 → 셸. SSH 로 들어간 서버에서도 된다</td><td>그래프·토폴로지 같은 그림</td></tr>
+  <tr><td><strong>Headlamp</strong></td><td>브라우저 · 데스크톱</td><td>클러스터 안에 띄워 <strong>팀이 같은 화면</strong>을 본다. RBAC 을 그대로 따른다</td><td>터미널 작업 흐름과 섞기</td></tr>
+  <tr><td><strong>Freelens</strong></td><td>데스크톱 앱</td><td>여러 클러스터를 탭으로 오가며 보기. 내장 터미널</td><td>클러스터 안에서 공유하기</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">셋 다 kubectl 을 대체하지 않는다</span>
+  <p>이 문서의 도구는 전부 <strong>같은 쿠버네티스 API 를 호출</strong>한다. 화면이 보여 주는 것은 <code>kubectl get</code> 이 보여 주는 것과 같은 데이터이고, 권한도 <code>kubectl</code> 과 같은 자격으로 판정된다. <strong>도구가 보여 주지 않는 것은 대개 권한이 없어서다.</strong></p>
+</blockquote>
+
+
+<h2><span class="n">02</span>알아야 할 개념</h2>
+
+<h3>도구는 두 자리 중 하나에 선다</h3>
+
+<p>k9s 와 Freelens, 그리고 Headlamp 의 데스크톱판은 <strong>내 노트북에서</strong> 돈다. <code>~/.kube/config</code> 를 읽어 내 자격으로 API 서버를 호출한다. 내가 볼 수 있는 것만 보인다.</p>
+
+<p>Headlamp 는 <strong>클러스터 안에</strong> 띄울 수도 있다. 그러면 브라우저만 있으면 누구나 접속할 수 있고, <em>누구로 접속했는지</em>는 붙여 넣은 서비스 계정 토큰이 정한다. 팀이 같은 주소를 보는 대신, <strong>토큰이 곧 권한</strong>이라는 점을 관리해야 한다.</p>
+
+<h3>CPU·메모리 숫자는 별도 구성요소가 준다</h3>
+
+<p>세 도구 모두 파드의 CPU·메모리를 보여 주려 한다. 그런데 그 숫자는 쿠버네티스 API 가 기본으로 주는 것이 아니라 <dfn class="term">metrics-server</dfn> 가 제공한다. 설치돼 있지 않으면 <strong>그 열만 비어 보이거나 대시가 뜬다</strong> — 도구 문제가 아니다.</p>
+
+<h3>읽기 전용으로 여는 습관</h3>
+
+<p>세 도구 다 <strong>지우기·편집이 몇 키 안에 있다</strong>. k9s 는 <code>ctrl-d</code> 가 삭제고, GUI 는 버튼 하나다. 강의·데모·운영 클러스터를 남에게 보여 줄 때는 읽기 전용 모드로 여는 편이 안전하다.</p>
+
+<h3>용어 정리</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
+  <tr><td>TUI</td><td>Text-based User Interface</td><td>터미널 안에서 도는 화면 기반 인터페이스. k9s 가 이것이다</td></tr>
+  <tr><td>kubeconfig</td><td>kubeconfig</td><td>클러스터 주소·자격·컨텍스트를 담은 파일. 기본 위치 <code>~/.kube/config</code></td></tr>
+  <tr><td>컨텍스트</td><td>Context</td><td>“어느 클러스터에 어느 사용자로”의 조합. 도구의 클러스터 전환이 이것을 바꾼다</td></tr>
+  <tr><td>RBAC</td><td>Role-Based Access Control</td><td>역할로 권한을 주는 방식. 도구의 버튼이 보이고 안 보이고를 정한다</td></tr>
+  <tr><td>서비스 계정</td><td>Service Account</td><td>사람이 아닌 주체의 계정. in-cluster Headlamp 접속에 이 토큰을 쓴다</td></tr>
+  <tr><td>metrics-server</td><td>Metrics Server</td><td>CPU·메모리 <em>현재값</em>을 제공하는 구성요소. 없으면 사용량 열이 빈다</td></tr>
+  <tr><td>포트 포워드</td><td>Port Forward</td><td>클러스터 안 서비스를 내 PC 포트로 잠시 끌어오는 것</td></tr>
+  <tr><td>XDG 경로</td><td>XDG Base Directory</td><td>설정 파일을 두는 표준 위치. k9s 설정이 여기 있다</td></tr>
+  <tr><td>cask</td><td>Homebrew Cask</td><td>맥에서 GUI 앱을 설치하는 Homebrew 확장</td></tr>
+  <tr><td>Gatekeeper 격리</td><td>Quarantine</td><td>맥이 인터넷에서 받은 앱에 붙이는 표식. 서명 없는 앱 실행 경고의 원인</td></tr>
+</table>
+</div>
+
+<div class="goals">
+  <h3>이 문서를 마치면 할 수 있는 것</h3>
+  <ol>
+    <li>세 도구를 맥에 설치하고, 같은 클러스터를 세 방식으로 열 수 있다.</li>
+    <li>k9s 에서 목록 → 로그 → 셸까지 <strong>손을 키보드에서 떼지 않고</strong> 이동할 수 있다.</li>
+    <li>Headlamp 를 클러스터 안에 띄우고 서비스 계정 토큰으로 접속할 수 있다.</li>
+    <li>사용량 열이 비었을 때 도구가 아니라 metrics-server 를 의심할 수 있다.</li>
+    <li>남에게 화면을 보여 줄 때 읽기 전용으로 여는 방법을 안다.</li>
+  </ol>
+</div>
+
+
+<h2><span class="n">03</span>세 도구가 서 있는 자리</h2>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440" role="img" aria-label="k9s와 Freelens와 Headlamp 데스크톱은 노트북에서 kubeconfig로 API 서버를 호출하고 in-cluster Headlamp는 클러스터 안에서 서비스 계정으로 호출한다">
+  <rect width="1000" height="440" fill="#ffffff"/>
+  <text x="24" y="40" font-size="16.5" font-weight="700" fill="#15181d">같은 API 를 부르는데, 자격이 어디서 오는지가 다르다</text>
+
+  <defs>
+    <marker id="t1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#1a4fa0"/>
+    </marker>
+    <marker id="t2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6a4a9c"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="62" width="452" height="300" rx="6" fill="#ffffff" stroke="#585f6b" stroke-width="1.5"/>
+  <text x="42" y="90" font-size="13.5" font-weight="700" fill="#15181d">내 노트북</text>
+
+  <rect x="42" y="106" width="206" height="66" rx="5" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.3"/>
+  <text x="58" y="132" font-size="13.5" font-weight="700" fill="#15181d">k9s</text>
+  <text x="58" y="156" font-size="12" fill="#585f6b">터미널 안에서 돈다</text>
+
+  <rect x="262" y="106" width="196" height="66" rx="5" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.3"/>
+  <text x="278" y="132" font-size="13.5" font-weight="700" fill="#15181d">Freelens</text>
+  <text x="278" y="156" font-size="12" fill="#585f6b">데스크톱 앱</text>
+
+  <rect x="42" y="186" width="416" height="60" rx="5" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.3"/>
+  <text x="58" y="212" font-size="13.5" font-weight="700" fill="#15181d">Headlamp — 데스크톱판</text>
+  <text x="58" y="234" font-size="12" fill="#585f6b">같은 앱을 브라우저 대신 앱으로 쓰는 선택지</text>
+
+  <text x="42" y="280" font-size="12" font-family="monospace" fill="#1a4fa0">~/.kube/config</text>
+  <text x="42" y="302" font-size="12.5" fill="#585f6b">내 자격으로 호출한다 — 내가 볼 수 있는 것만 보인다</text>
+
+  <rect x="42" y="316" width="416" height="34" rx="5" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.4"/>
+  <text x="58" y="338" font-size="12.5" fill="#1f4d8f">브라우저</text>
+
+  <rect x="516" y="62" width="460" height="300" rx="6" fill="none" stroke="#9aa1ad" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="534" y="52" font-size="12.5" font-family="monospace" fill="#585f6b">쿠버네티스 클러스터</text>
+
+  <rect x="700" y="106" width="256" height="72" rx="6" fill="#ffffff" stroke="#1f4d8f" stroke-width="1.8"/>
+  <text x="828" y="136" font-size="14" font-weight="700" fill="#1f4d8f" text-anchor="middle">API 서버</text>
+  <text x="828" y="160" font-size="12" fill="#585f6b" text-anchor="middle">모든 판정은 여기서 난다</text>
+
+  <rect x="536" y="226" width="256" height="96" rx="6" fill="#ffffff" stroke="#6a4a9c" stroke-width="1.8"/>
+  <text x="554" y="254" font-size="13.5" font-weight="700" fill="#6a4a9c">Headlamp — in-cluster</text>
+  <text x="554" y="278" font-size="12" fill="#585f6b">파드로 떠서 웹을 제공한다</text>
+  <text x="554" y="302" font-size="12" font-family="monospace" fill="#6a4a9c">서비스 계정 토큰</text>
+
+  <line x1="480" y1="140" x2="694" y2="140" stroke="#1a4fa0" stroke-width="2" marker-end="url(#t1)"/>
+  <text x="587" y="128" font-size="11.5" font-family="monospace" fill="#1a4fa0" text-anchor="middle">kubeconfig</text>
+
+  <line x1="480" y1="330" x2="530" y2="300" stroke="#6a4a9c" stroke-width="2" marker-end="url(#t2)"/>
+  <line x1="794" y1="262" x2="826" y2="184" stroke="#6a4a9c" stroke-width="2" marker-end="url(#t2)"/>
+
+  <text x="24" y="398" font-size="13" fill="#15181d">왼쪽 셋은 내 권한으로 본다. 오른쪽은 붙여 넣은 토큰의 권한으로 본다</text>
+  <text x="24" y="424" font-size="12.5" fill="#8f4408">그래서 “화면에 안 보인다”의 첫 의심은 도구가 아니라 권한이다</text>
+</svg>
+<figcaption>
+  <b>그림 1.</b> 세 도구 다 같은 API 서버를 호출한다. 차이는 <strong>자격이 어디서 오는가</strong>다 —
+  노트북에서 도는 것은 <code>~/.kube/config</code>, 클러스터 안에서 도는 것은 서비스 계정 토큰이다.
+</figcaption>
+</figure>
+
+<ul class="steps">
+  <li><span class="b">1</span><span>
+    <strong>지금 어느 클러스터를 보고 있나.</strong> 도구를 열기 전에 이것부터 맞춘다.
+    <span class="chk">확인 <code>kubectl config current-context</code></span>
+  </span></li>
+  <li><span class="b">2</span><span>
+    <strong>내 권한이 어디까지인가.</strong> 도구의 버튼이 보이고 안 보이고가 여기서 갈린다.
+    <span class="chk">확인 <code>kubectl auth can-i --list -n default | head</code></span>
+  </span></li>
+  <li><span class="b" style="background:#2e7d4f">3</span><span>
+    <strong>사용량 숫자가 나올 환경인가.</strong> 없으면 CPU·메모리 열이 빈다.
+    <span class="chk">확인 <code>kubectl top nodes</code> → 숫자가 나오면 metrics-server 가 있다</span>
+  </span></li>
+</ul>
+
+
+<h2><span class="n">04</span>공통 준비 — 관찰 대상 만들기</h2>
+
+<p class="cap">목적: 세 도구에서 <em>같은 것</em>을 보기 위해 파드 3개짜리 디플로이먼트를 하나 올린다.</p>
+
+<pre><code class="language-bash">kubectl create namespace tools-demo
+kubectl -n tools-demo create deployment web --image=nginx:1.29-alpine --replicas=3
+kubectl -n tools-demo expose deployment web --port=80</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">namespace/tools-demo created
+deployment.apps/web created
+service/web exposed</code></pre>
+
+<pre><code class="language-bash">kubectl -n tools-demo get deploy,svc,pods</code></pre>
+
+<p class="cap">--- 출력 (파드 접미사와 IP 는 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/web   3/3     3            3           12s
+
+NAME          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+service/web   ClusterIP   10.96.210.92   &lt;none&gt;        80/TCP    12s
+
+NAME                   READY   STATUS    RESTARTS   AGE
+web-587bcb4dcb-77xvn   1/1     Running   0          12s
+web-587bcb4dcb-ssqzq   1/1     Running   0          12s
+web-587bcb4dcb-x8jgh   1/1     Running   0          12s</code></pre>
+
+<blockquote class="ok">
+  <span class="label">판정</span>
+  <p><code>READY 3/3</code> 이면 준비 끝이다. 이 셋을 세 도구에서 각각 열어 보고, 마지막에 <strong>스케일을 바꾸면서 세 화면이 동시에 움직이는 것</strong>을 본다(09절).</p>
+</blockquote>
+
+<p class="cap">이 문서의 실행 결과는 kind v0.33.0 · Kubernetes v1.37.0 · macOS 에서 얻었다 (확인 2026-09-16). 정리 명령은 11절에 있다.</p>
+
+
+<h2><span class="n">05</span>k9s — 터미널 안의 클러스터</h2>
+
+<h3>설치와 버전 확인</h3>
+
+<pre><code class="language-bash">brew install derailed/k9s/k9s
+k9s version</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">Version:    0.51.0
+Commit:     558caafe7ba067467de46b320cc22ef11fef9c34
+Date:       n/a</code></pre>
+
+<blockquote>
+  <span class="label">설정 파일이 어디 있는지부터 본다</span>
+  <p>k9s 는 XDG 규칙을 따라 OS 마다 다른 곳에 설정을 둔다. 맥은 <code>~/Library/Application Support/k9s</code> 다. 직접 찾지 말고 물어보면 된다.</p>
+</blockquote>
+
+<pre><code class="language-bash">k9s info</code></pre>
+
+<p class="cap">--- 출력 (일부) ---</p>
+
+<pre class="out"><code class="language-text">Config:            /Users/&lt;사용자&gt;/Library/Application Support/k9s/config.yaml
+Custom Views:      .../k9s/views.yaml
+Plugins:           .../k9s/plugins.yaml
+Hotkeys:           .../k9s/hotkeys.yaml
+Aliases:           .../k9s/aliases.yaml
+Skins:             .../k9s/skins
+Logs:              .../k9s/k9s.log
+ScreenDumps:       .../k9s/screen-dumps</code></pre>
+
+<blockquote class="ok">
+  <span class="label">처음 실행 전이면 config.yaml 이 없다</span>
+  <p>같은 명령이 <code>ERROR Unable to reads k9s config file</code> 를 함께 찍는데 <strong>정상</strong>이다. 파일은 k9s 를 한 번 띄우면 생긴다. 경로 목록은 그것과 무관하게 출력된다.</p>
+</blockquote>
+
+<h3>조작 — 세 가지 모드만 알면 된다</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>모드</th><th>들어가는 키</th><th>하는 일</th></tr>
+  <tr><td><strong>명령</strong></td><td><code>:</code></td><td>리소스 종류로 이동. <code>:pod</code> · <code>:deploy</code> · <code>:ns</code> · <code>:ctx</code></td></tr>
+  <tr><td><strong>필터</strong></td><td><code>/</code></td><td>현재 목록에서 이름으로 거른다. <code>/!web</code> 은 반대로 제외, <code>/-f web</code> 는 퍼지 검색</td></tr>
+  <tr><td><strong>보기</strong></td><td>(그냥 누름)</td><td>커서가 놓인 대상에 대한 동작. 아래 표</td></tr>
+</table>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>키</th><th>동작</th><th><code>kubectl</code> 로 하면</th></tr>
+  <tr><td><code>d</code></td><td>describe</td><td><code>kubectl describe pod &lt;이름&gt;</code></td></tr>
+  <tr><td><code>y</code></td><td>YAML 보기</td><td><code>kubectl get pod &lt;이름&gt; -o yaml</code></td></tr>
+  <tr><td><code>l</code></td><td>로그</td><td><code>kubectl logs &lt;이름&gt; -f</code></td></tr>
+  <tr><td><code>s</code></td><td>컨테이너 셸</td><td><code>kubectl exec -it &lt;이름&gt; -- sh</code></td></tr>
+  <tr><td><code>e</code></td><td>편집</td><td><code>kubectl edit</code> (<code>KUBE_EDITOR</code> 를 따른다)</td></tr>
+  <tr><td><code>ctrl-d</code></td><td><strong>삭제</strong></td><td><code>kubectl delete</code> — 확인 창이 뜨지만 손이 빠르면 위험하다</td></tr>
+  <tr><td><code>esc</code></td><td>이전 화면</td><td>—</td></tr>
+  <tr><td><code>?</code></td><td>단축키 도움말</td><td>—</td></tr>
+  <tr><td><code>ctrl-a</code></td><td>이 클러스터가 아는 리소스 별칭 전부</td><td><code>kubectl api-resources</code></td></tr>
+</table>
+</div>
+
+<h3>5분 워크스루</h3>
+
+<pre><code class="language-bash"># 네임스페이스를 지정해 바로 연다
+k9s -n tools-demo</code></pre>
+
+<ol class="tight">
+  <li><code>:pod</code> ⏎ — 파드 목록. 04절에서 만든 <code>web-...</code> 세 줄이 보인다</li>
+  <li><code>/web</code> ⏎ — 이름으로 거른다. 다른 네임스페이스 것이 섞여 있어도 걸러진다</li>
+  <li>커서를 하나에 두고 <code>l</code> — 로그. <code>esc</code> 로 돌아온다</li>
+  <li><code>d</code> — describe. 아래쪽 <code>Events</code> 가 장애 조사의 출발점이다</li>
+  <li><code>s</code> — 컨테이너 셸. <code>exit</code> 로 빠져나온다</li>
+  <li><code>:deploy</code> ⏎ 로 디플로이먼트 화면으로 옮긴 뒤, <code>web</code> 에 커서를 두고 <code>ctrl-l</code>(스케일)로 레플리카를 바꿔 본다</li>
+  <li><code>:ctx</code> ⏎ — 컨텍스트 목록. 클러스터를 바꿔 끼울 때 쓴다</li>
+  <li><code>:q</code> ⏎ — 종료</li>
+</ol>
+
+<blockquote class="ok">
+  <span class="label">이게 k9s 의 요지다</span>
+  <p>1번부터 5번까지 <strong>파드 이름을 한 번도 타이핑하지 않았다.</strong> 같은 일을 <code>kubectl</code> 로 하면 매번 목록을 보고 이름을 복사해야 한다.</p>
+</blockquote>
+
+<h3>남에게 보여 줄 때 — 읽기 전용</h3>
+
+<pre><code class="language-bash"># 모든 변경 명령을 끈 채로 연다
+k9s --readonly -n tools-demo
+
+# 화면을 넓게 쓰려면 (로고·헤더·경로 표시 끄기)
+k9s --readonly --logoless --headless --crumbsless</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>플래그</th><th>하는 일</th></tr>
+  <tr><td><code>--readonly</code></td><td>삭제·편집 등 변경 동작을 전부 막는다. 설정보다 우선한다</td></tr>
+  <tr><td><code>--context &lt;이름&gt;</code></td><td>지정한 컨텍스트로 시작</td></tr>
+  <tr><td><code>-n &lt;네임스페이스&gt;</code></td><td>해당 네임스페이스로 시작</td></tr>
+  <tr><td><code>--logoless</code> · <code>--headless</code> · <code>--crumbsless</code></td><td>화면 요소를 줄여 목록을 넓게 쓴다</td></tr>
+  <tr><td><code>--write</code></td><td>설정이 읽기 전용이어도 이번 실행만 쓰기 허용</td></tr>
+</table>
+</div>
+
+<blockquote class="warn">
+  <span class="label">터미널 색이 깨진다면</span>
+  <p>256색을 쓰지 않는 터미널에서는 화면이 흑백으로 보이거나 깨진다. 공식 문서가 안내하는 설정은 이것이다.</p>
+  <pre><code class="language-bash">export TERM=xterm-256color
+export KUBE_EDITOR=vim      # e 키가 쓸 편집기</code></pre>
+</blockquote>
+
+<h3>알아 두면 좋은 특수 화면</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>명령</th><th>보여 주는 것</th></tr>
+  <tr><td><code>:pulses</code> (<code>:pu</code>)</td><td>클러스터 전체 상태를 한 화면에. 무엇이 비정상인지 먼저 훑을 때</td></tr>
+  <tr><td><code>:xray deploy tools-demo</code></td><td>디플로이먼트 → 레플리카셋 → 파드의 <strong>상하 관계</strong>를 트리로</td></tr>
+  <tr><td><code>:popeye</code> (<code>:pop</code>)</td><td>설정 점검 결과. 리소스 미설정·프로브 누락 같은 것을 잡아 준다</td></tr>
+</table>
+</div>
+
+<p><code>:xray</code> 는 “이 파드가 어느 레플리카셋 소속인가”를 눈으로 확인할 때 특히 빠르다 — 롤아웃 중에 구버전 파드가 남아 있는 상황이 트리로 바로 보인다.</p>
+
+
+<h2><span class="n">06</span>Headlamp — 브라우저에서 함께 보기</h2>
+
+<p>Headlamp 는 CNCF 샌드박스 프로젝트이며 저장소는 <code>kubernetes-sigs/headlamp</code> 다. 데스크톱 앱으로도, 클러스터 안 웹으로도 쓸 수 있다. 팀이 같은 화면을 봐야 한다면 <strong>in-cluster</strong> 가 목적에 맞는다.</p>
+
+<h3>데스크톱 앱으로 쓰기</h3>
+
+<pre><code class="language-bash">brew install --cask headlamp
+# 나중에 올릴 때
+brew upgrade headlamp</code></pre>
+
+<p>설치하면 <code>/Applications</code> 에 앱이 생기고, 실행하면 <code>~/.kube/config</code> 의 컨텍스트가 목록으로 뜬다. 클러스터를 고르면 바로 연결된다 — 토큰을 따로 넣지 않는다.</p>
+
+<blockquote class="warn">
+  <span class="label">옛 문서의 --no-quarantine 는 쓰지 않는다</span>
+  <p>예전 안내에 있던 <code>brew install --cask --no-quarantine headlamp</code> 는 <strong>지금은 에러가 난다</strong>. Homebrew 가 그 스위치를 막았고, 공식 문서도 접두사 없는 형태로 바뀌었다. 서명되지 않은 앱 경고가 뜨면 시스템 설정에서 한 번 허용하는 쪽으로 처리한다.</p>
+</blockquote>
+
+<h3>클러스터 안에 띄우기 (Helm)</h3>
+
+<pre><code class="language-bash">helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+helm repo update headlamp
+helm search repo headlamp/headlamp --versions | head -3</code></pre>
+
+<p class="cap">--- 출력 (버전은 확인일 기준) ---</p>
+
+<pre class="out"><code class="language-text">NAME             	CHART VERSION	APP VERSION	DESCRIPTION
+headlamp/headlamp	0.45.0       	0.45.0     	Headlamp is an easy-to-use and extensible Kuber...
+headlamp/headlamp	0.44.0       	0.44.0     	Headlamp is an easy-to-use and extensible Kuber...</code></pre>
+
+<pre><code class="language-bash">helm install headlamp headlamp/headlamp \
+  --namespace kube-system \
+  --version 0.45.0 \
+  --wait --timeout 5m
+
+kubectl -n kube-system get pods,svc | grep headlamp</code></pre>
+
+<p class="cap">--- 출력 (파드 접미사와 IP 는 환경마다 다르다) ---</p>
+
+<pre class="out"><code class="language-text">pod/headlamp-6fd8cf44d5-dbkj4     1/1     Running   0     10d
+service/headlamp   ClusterIP   10.96.196.194   &lt;none&gt;   80/TCP   10d</code></pre>
+
+<blockquote>
+  <span class="label">매니페스트로 설치하는 길도 있다</span>
+  <p>헬름을 쓰지 않는다면 공식 매니페스트 한 줄로도 된다. 값 조정이 필요 없을 때 쓴다.</p>
+  <pre><code class="language-bash">kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/headlamp/main/kubernetes-headlamp.yaml</code></pre>
+</blockquote>
+
+<h3>접속과 토큰</h3>
+
+<p class="cap">목적: 서비스를 내 PC 로 잠시 끌어오고, <strong>누구로 접속할지</strong>를 토큰으로 정한다.</p>
+
+<pre><code class="language-bash">kubectl -n kube-system port-forward svc/headlamp 8110:80
+
+# 다른 터미널에서 — 떠 있는지부터 확인
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8110/</code></pre>
+
+<p class="cap">--- 출력 ---</p>
+
+<pre class="out"><code class="language-text">200</code></pre>
+
+<p>브라우저로 <code>http://localhost:8110</code> 을 열면 토큰을 묻는다. 서비스 계정을 만들고 권한을 준 뒤 토큰을 발급한다.</p>
+
+<pre><code class="language-bash">kubectl -n kube-system create serviceaccount headlamp-admin
+
+kubectl create clusterrolebinding headlamp-admin \
+  --serviceaccount=kube-system:headlamp-admin \
+  --clusterrole=cluster-admin
+
+# 1.24+ 는 토큰을 이렇게 즉석 발급한다 (기본 만료 1시간)
+kubectl create token headlamp-admin -n kube-system</code></pre>
+
+<blockquote class="warn">
+  <span class="label">cluster-admin 은 실습 편의다</span>
+  <p>위 바인딩은 <strong>클러스터의 모든 것</strong>을 할 수 있는 권한이다. 실습에서는 화면을 빨리 띄우려고 쓰지만, 팀에 열어 줄 때는 필요한 만큼만 주는 Role 을 따로 만든다. Headlamp 는 <strong>RBAC 을 그대로 따라서</strong> 권한이 없는 동작은 버튼 자체를 감춘다 — 읽기 전용 계정을 만들면 화면이 곧 읽기 전용이 된다.</p>
+  <p>발급된 토큰은 그대로 붙여 넣는 자격 증명이다. <strong>화면 공유·채팅·문서에 남기지 않는다.</strong> 만료되면 같은 명령으로 다시 받는다.</p>
+</blockquote>
+
+<h3>화면에서 볼 것</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>위치</th><th>보여 주는 것</th><th>대응하는 kubectl</th></tr>
+  <tr><td>Cluster 개요</td><td>노드·파드 수, 이벤트 요약</td><td><code>kubectl get nodes,pods -A</code></td></tr>
+  <tr><td>Workloads</td><td>Deployment·ReplicaSet·Pod 를 묶어서</td><td><code>kubectl get deploy,rs,pods</code></td></tr>
+  <tr><td>파드 상세 → Logs / Terminal</td><td>로그 스트림과 컨테이너 셸</td><td><code>kubectl logs -f</code> · <code>kubectl exec -it</code></td></tr>
+  <tr><td>Events</td><td>시간순 이벤트. <strong>스케줄 실패의 이유가 여기 있다</strong></td><td><code>kubectl get events --sort-by=.lastTimestamp</code></td></tr>
+  <tr><td>Plugins</td><td>기능 확장. 목록에서 켜고 끈다</td><td>—</td></tr>
+  <tr><td>클러스터 전환기</td><td>여러 클러스터를 오간다</td><td><code>kubectl config use-context</code></td></tr>
+</table>
+</div>
+
+<h3>5분 워크스루</h3>
+
+<ol class="tight">
+  <li>좌측에서 네임스페이스를 <code>tools-demo</code> 로 좁힌다</li>
+  <li><strong>Workloads → Pods</strong> — 04절의 파드 3개</li>
+  <li>파드 하나 → <strong>Logs</strong> 탭. 스트리밍이 붙는다</li>
+  <li>같은 화면의 <strong>Terminal</strong> 탭 — 컨테이너 셸</li>
+  <li><strong>Events</strong> — 방금 생성된 이력이 시간순으로</li>
+  <li><strong>Deployments → web</strong> 에서 레플리카를 3 → 1 로 바꾼다. 파드 목록이 즉시 줄어든다</li>
+</ol>
+
+
+<h2><span class="n">07</span>Freelens — 데스크톱 IDE</h2>
+
+<p>Freelens 는 Lens 의 오픈소스 판(OpenLens)을 이어받은 포크이고 MIT 라이선스다. 여러 클러스터를 탭처럼 두고 오가는 작업에 강하다.</p>
+
+<h3>설치</h3>
+
+<pre><code class="language-bash">brew install --cask freelens</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>OS</th><th>설치</th><th>요구 사항</th></tr>
+  <tr><td>macOS</td><td><code>brew install --cask freelens</code> · 또는 PKG/DMG (arm64 · amd64)</td><td>macOS 12 이상</td></tr>
+  <tr><td>Windows</td><td><code>winget install Freelensapp.Freelens</code> · <code>scoop install freelens</code></td><td>Windows 10 이상</td></tr>
+  <tr><td>Linux</td><td><code>snap install freelens --classic</code> · Flatpak · AppImage · APT · AUR</td><td>glibc 2.34 이상</td></tr>
+</table>
+</div>
+
+<h3>클러스터 연결과 화면</h3>
+
+<p>실행하면 <code>~/.kube/config</code> 의 컨텍스트를 읽어 카탈로그에 띄운다. 클러스터를 고르면 좌측에 트리가 열린다 — Workloads · Config · Network · Storage · Access Control · Custom Resources 순이다.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>메뉴</th><th>안에 있는 것</th></tr>
+  <tr><td>Workloads</td><td>Pods · Deployments · ReplicaSets · DaemonSets · Jobs · CronJobs</td></tr>
+  <tr><td>Config</td><td>ConfigMaps · Secrets · Resource Quotas · HPA</td></tr>
+  <tr><td>Network</td><td>Services · Endpoints · Ingresses · Network Policies</td></tr>
+  <tr><td>Storage</td><td>PVC · PV · StorageClass</td></tr>
+  <tr><td>Access Control</td><td>ServiceAccounts · Roles · RoleBindings</td></tr>
+  <tr><td>Custom Resources</td><td>CRD 로 추가된 리소스 — ServiceMonitor 같은 것이 여기 나온다</td></tr>
+</table>
+</div>
+
+<blockquote class="ok">
+  <span class="label">내장 터미널이 편하다</span>
+  <p>하단 터미널은 <strong>선택한 클러스터의 컨텍스트가 이미 맞춰진 셸</strong>이다. 컨텍스트를 잘못 잡고 명령을 치는 사고를 줄여 준다. 파드 화면의 셸 버튼은 컨테이너 안으로 바로 들어간다.</p>
+</blockquote>
+
+<blockquote class="warn">
+  <span class="label">사용량 그래프가 비어 있다면</span>
+  <p>Freelens 의 CPU·메모리 그래프는 <strong>metrics-server 또는 프로메테우스</strong>에서 값을 가져온다. 둘 다 없으면 그래프 자리가 빈 채로 남는다. 클러스터 설정에서 메트릭 출처를 지정할 수 있고, 프로메테우스를 이미 쓰고 있다면(관측성 04장) 그쪽을 가리키면 된다.</p>
+  <pre><code class="language-bash"># 먼저 클러스터에 값이 있는지부터 확인한다
+kubectl top nodes
+kubectl top pods -n tools-demo</code></pre>
+</blockquote>
+
+
+<h2><span class="n">08</span>셋을 동시에 놓고 보기</h2>
+
+<p class="cap">목적: 같은 변경이 세 화면에서 어떻게 보이는지 대조한다. 도구의 성격 차이가 여기서 드러난다.</p>
+
+<p>화면을 셋으로 나눈다 — 왼쪽에 k9s 터미널, 가운데 브라우저의 Headlamp, 오른쪽에 Freelens. 셋 다 <code>tools-demo</code> 네임스페이스를 보게 맞춘다. 그리고 <strong>네 번째 터미널</strong>에서 변경을 넣는다.</p>
+
+<pre><code class="language-bash"># 1) 늘린다
+kubectl -n tools-demo scale deployment web --replicas=6
+
+# 2) 줄인다
+kubectl -n tools-demo scale deployment web --replicas=2
+
+# 3) 하나를 죽인다 — 이름을 골라서
+kubectl -n tools-demo get pods
+kubectl -n tools-demo delete pod &lt;고른 이름&gt;
+
+# 4) 일부러 못 뜨게 만든다
+kubectl -n tools-demo set image deployment/web nginx=nginx:9.9.9-nope
+</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>단계</th><th>k9s</th><th>Headlamp</th><th>Freelens</th></tr>
+  <tr><td>1·2 스케일</td><td>목록 줄 수가 즉시 바뀐다. <code>:deploy</code> 에서 <code>ctrl-l</code> 로 직접 조절도 된다</td><td>Deployments 화면 숫자와 Pods 목록이 함께 바뀐다</td><td>좌측 트리의 개수 배지가 바뀐다</td></tr>
+  <tr><td>3 파드 삭제</td><td><code>Terminating</code> → 새 파드 <code>ContainerCreating</code> 이 스쳐 지나간다</td><td>Events 에 삭제·생성이 시간순으로 쌓인다</td><td>이벤트 패널에 같은 내용</td></tr>
+  <tr><td>4 없는 이미지</td><td>STATUS 가 <code>ImagePullBackOff</code>. <code>d</code> 로 Events 확인</td><td>파드 상세의 Events 에 <code>Failed to pull image</code></td><td>상세 화면 Events 탭에 동일</td></tr>
+</table>
+</div>
+
+<blockquote class="ok">
+  <span class="label">여기서 보이는 성격 차이</span>
+  <p><strong>k9s 는 지금 상태</strong>를 가장 빠르게 보여 준다 — 목록이 곧바로 갱신된다. <strong>GUI 둘은 이력</strong>이 강하다 — Events 가 시간순으로 남아 “언제부터 이랬나”를 읽기 쉽다. 장애 조사에서 둘 다 필요한 이유다.</p>
+</blockquote>
+
+<p>4번은 되돌린다.</p>
+
+<pre><code class="language-bash">kubectl -n tools-demo set image deployment/web nginx=nginx:1.29-alpine
+kubectl -n tools-demo rollout status deployment/web</code></pre>
+
+
+<h2><span class="n">09</span>언제 무엇을 쓰나</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>상황</th><th>고르는 도구</th><th>이유</th></tr>
+  <tr><td>SSH 로 들어간 서버에서 조사</td><td><strong>k9s</strong></td><td>브라우저도 X11 도 필요 없다</td></tr>
+  <tr><td>로그 → 셸 → 다른 파드로 빠르게 이동</td><td><strong>k9s</strong></td><td>키 몇 번. 이름 복사가 없다</td></tr>
+  <tr><td>팀이 같은 화면을 봐야 함</td><td><strong>Headlamp (in-cluster)</strong></td><td>주소 하나를 공유한다. 권한은 토큰으로 나눈다</td></tr>
+  <tr><td>쿠버네티스를 처음 보는 사람에게 설명</td><td><strong>Headlamp</strong> · <strong>Freelens</strong></td><td>리소스 관계가 화면에 구조로 보인다</td></tr>
+  <tr><td>클러스터 여러 개를 오가며 작업</td><td><strong>Freelens</strong></td><td>카탈로그에서 바로 전환. 내장 터미널의 컨텍스트가 따라온다</td></tr>
+  <tr><td>CRD 가 많은 클러스터 둘러보기</td><td><strong>Freelens</strong> · <strong>Headlamp</strong></td><td>Custom Resources 메뉴에서 목록으로 본다</td></tr>
+  <tr><td>화면을 녹화·공유해야 함</td><td><strong>k9s --readonly</strong></td><td>실수로 지울 여지를 없앤다</td></tr>
+</table>
+</div>
+
+<blockquote>
+  <span class="label">하나만 고른다면</span>
+  <p>터미널에 익숙하면 <strong>k9s</strong> 하나로 대부분이 끝난다. 팀과 공유가 목적이면 <strong>Headlamp</strong> 를 클러스터에 띄우는 쪽이 값을 한다. Freelens 는 <strong>클러스터가 여러 개일 때</strong> 차이가 난다 — 하나뿐이면 앞의 둘과 크게 다르지 않다.</p>
+</blockquote>
+
+
+<h2><span class="n">10</span>자주 겪는 문제</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>증상</th><th>원인과 조치</th></tr>
+  <tr><td>CPU·메모리 열이 비어 있거나 <code>-</code></td><td>metrics-server 가 없다. <code>kubectl top nodes</code> 로 먼저 확인한다 — 도구 문제가 아니다</td></tr>
+  <tr><td>목록이 비어 있고 에러도 없다</td><td>네임스페이스가 좁혀져 있거나 <strong>권한이 없다</strong>. <code>kubectl auth can-i list pods -n &lt;ns&gt;</code></td></tr>
+  <tr><td>도구가 엉뚱한 클러스터를 본다</td><td><code>kubectl config current-context</code> 확인. k9s 는 <code>:ctx</code>, GUI 는 전환기에서 바꾼다</td></tr>
+  <tr><td>k9s 화면이 흑백·깨짐</td><td><code>export TERM=xterm-256color</code></td></tr>
+  <tr><td>k9s 에서 <code>e</code> 가 안 먹는다</td><td><code>KUBE_EDITOR</code> 미설정. <code>export KUBE_EDITOR=vim</code></td></tr>
+  <tr><td>맥에서 앱이 “확인되지 않은 개발자” 로 막힘</td><td>서명 문제다. <code>--no-quarantine</code> 는 이제 안 되므로 시스템 설정에서 한 번 허용한다</td></tr>
+  <tr><td>Headlamp 접속 후 아무 리소스도 안 보임</td><td>토큰의 권한이 좁다. 계정에 맞는 Role 을 주거나 클러스터 설정에서 접근 가능한 네임스페이스를 지정한다</td></tr>
+  <tr><td>토큰이 곧 만료된다</td><td><code>kubectl create token</code> 의 기본 만료는 1시간이다. 필요하면 <code>--duration</code> 으로 늘리되 짧게 유지하는 편이 안전하다</td></tr>
+  <tr><td>포트포워드가 자꾸 끊긴다</td><td>파드가 재시작하면 끊긴다. 상시로 열어야 하면 Ingress·Gateway 뒤에 둔다</td></tr>
+</table>
+</div>
+
+
+<h2><span class="n">11</span>정리</h2>
+
+<pre><code class="language-bash"># 실습용 네임스페이스 삭제 — 안의 것이 함께 사라진다
+kubectl delete namespace tools-demo
+
+# in-cluster Headlamp 를 내릴 때
+helm -n kube-system uninstall headlamp
+kubectl delete clusterrolebinding headlamp-admin
+kubectl -n kube-system delete serviceaccount headlamp-admin</code></pre>
+
+<p class="cap">도구 자체는 남겨 둬도 자원을 쓰지 않는다. k9s 와 데스크톱 앱은 클러스터에 아무것도 설치하지 않는다.</p>
+
+
+<div class="appendix">
+
+<h2>부록 A. 설치 명령 한눈에</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>도구</th><th>macOS</th><th>확인</th></tr>
+  <tr><td>k9s</td><td><code>brew install derailed/k9s/k9s</code></td><td><code>k9s version</code> → <code>Version: 0.51.0</code></td></tr>
+  <tr><td>Headlamp (데스크톱)</td><td><code>brew install --cask headlamp</code></td><td><code>brew info --cask headlamp</code> → <code>0.45.0</code></td></tr>
+  <tr><td>Headlamp (클러스터)</td><td><code>helm install headlamp headlamp/headlamp -n kube-system</code></td><td><code>curl -s -o /dev/null -w '%{http_code}' localhost:8110/</code> → <code>200</code></td></tr>
+  <tr><td>Freelens</td><td><code>brew install --cask freelens</code></td><td><code>brew info --cask freelens</code> → <code>1.10.3</code></td></tr>
+</table>
+</div>
+
+<h2>부록 B. k9s 단축키 요약</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>키</th><th>동작</th><th>키</th><th>동작</th></tr>
+  <tr><td><code>:</code></td><td>명령 모드</td><td><code>l</code></td><td>로그</td></tr>
+  <tr><td><code>/</code></td><td>필터</td><td><code>s</code></td><td>셸</td></tr>
+  <tr><td><code>esc</code></td><td>뒤로</td><td><code>e</code></td><td>편집</td></tr>
+  <tr><td><code>?</code></td><td>도움말</td><td><code>ctrl-d</code></td><td>삭제</td></tr>
+  <tr><td><code>d</code></td><td>describe</td><td><code>ctrl-a</code></td><td>리소스 별칭 전부</td></tr>
+  <tr><td><code>y</code></td><td>YAML</td><td><code>:q</code></td><td>종료</td></tr>
+</table>
+</div>
+
+<h2>부록 C. 참고 출처</h2>
+
+<div class="src">
+<ul>
+  <li>k9s 공식 사이트 · 설치 — https://k9scli.io/topics/install/</li>
+  <li>k9s 저장소 (단축키 · 설정 경로 · 플래그) — https://github.com/derailed/k9s</li>
+  <li>Headlamp 공식 문서 — https://headlamp.dev/docs/latest/installation/</li>
+  <li>Headlamp macOS 설치 — https://headlamp.dev/docs/latest/installation/desktop/mac-installation/</li>
+  <li>Headlamp in-cluster 설치 — https://headlamp.dev/docs/latest/installation/in-cluster/</li>
+  <li>Headlamp 저장소 (kubernetes-sigs) — https://github.com/kubernetes-sigs/headlamp</li>
+  <li>Headlamp — macOS 안내에서 --no-quarantine 제거 (이슈 #4932) — https://github.com/kubernetes-sigs/headlamp/issues/4932</li>
+  <li>Freelens 공식 사이트 — https://freelensapp.github.io/</li>
+  <li>Freelens 저장소 · 설치 (README) — https://github.com/freelensapp/freelens</li>
+  <li>서비스 계정 토큰 발급 — https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/</li>
+  <li>리소스 메트릭 파이프라인 (metrics-server) — https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/</li>
+</ul>
+</div>
+
+<p class="cap">확인일 2026-09-16 · kind v0.33.0 · Kubernetes v1.37.0 · macOS. 버전 숫자는 실습 당일 재확인한다.</p>
+
+</div>
+
+<div class="pager">
+  <a href="../course/index.html">
+    <span class="dir">← 과정</span>
+    <span class="t">도커 &amp; 쿠버네티스 38편</span>
+  </a>
+  <a class="next" href="../study/index.html">
+    <span class="dir">관측성 →</span>
+    <span class="t">쿠버네티스 관측성 실습 11장</span>
+  </a>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>
