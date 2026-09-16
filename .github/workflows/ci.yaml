@@ -117,10 +117,23 @@ jobs:
       - uses: azure/setup-helm@v4
         with:
           version: v4.2.4
+
+      # 차트의 api.image.repository 에는 레지스트리 접두사가 없다(journal-api).
+      # GHCR 로 올린 이미지를 그대로 쓰려면 인증이 필요하므로,
+      # 03장에서 가르치는 방식 그대로 kind 노드에 직접 적재한다.
+      - name: 이미지 빌드와 kind 적재
+        run: |
+          docker build -t journal-api:ci \
+            --build-arg APP_VERSION=ci \
+            "${APP_DIR}"
+          kind load docker-image journal-api:ci --name ci
+          docker exec ci-control-plane crictl images | grep journal-api
+
       - run: |
           helm install ci course/labs/charts/journal \
             -n ci --create-namespace \
             -f course/labs/charts/journal/values-dev.yaml \
+            --set api.image.tag=ci \
             --wait --timeout 300s
       - run: helm test ci -n ci --logs
       # 정책 검사 — M26 에서 만든 스크립트를 그대로 부른다
