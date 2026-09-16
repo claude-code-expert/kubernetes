@@ -91,7 +91,7 @@ jobs:
       # ── 취약점 스캔 — 임계값은 CRITICAL 로 시작한다 ──────────────────
       # HIGH 까지 내리면 베이스 이미지만으로 빌드가 계속 깨진다 (M27 8절의 숫자).
       # 베이스를 정리한 뒤 임계값을 내리는 순서로 간다.
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
           severity: CRITICAL
