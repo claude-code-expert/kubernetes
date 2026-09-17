@@ -149,16 +149,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 253  254  255 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 18 / 38 · PART 3 운영 기초</div>
-  <h1>스토리지와 스테이트풀 애플리케이션</h1>
-  <p class="ch-desc">M15부터 M17까지 다룬 것은 전부 <strong>죽여도 되는</strong> 워크로드였다. 파드를 지우고 옮기고 늘렸다 줄여도 잃을 것이 없었다. <code>journal</code> 네임스페이스에서 그동안 한 번도 건드리지 않은 <code>redis-0</code>은 그렇지 않다. M16에서 노드를 비울 때 레디스만 제외했던 이유를 이 모듈에서 확인한다.</p>
+   224 
+  <p class="ch-desc">M15부터 M17까지 다룬 것은 전부 <strong>죽여도 되는</strong> 워크로드였다. 파드를 지우고 옮기고 늘렸다 줄여도 잃을 것이 없었다.  31  네임스페이스에서 그동안 한 번도 건드리지 않은  32 은 그렇지 않다. M16에서 노드를 비울 때 레디스만 제외했던 이유를 이 모듈에서 확인한다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">80분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0 · local-path-provisioner) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0 · local-path-provisioner) · 버전 숫자는 실습 당일  33 으로 다시 확인한다
   </div>
 </header>
 
@@ -175,27 +175,27 @@
 
 <div class="tldr">
   <h2>핵심 3줄</h2>
-  <p>1. PVC를 만들어 두고 파드를 붙이기 전까지 PV가 생기지 않는 것을 확인하고, 파드가 뜬 뒤 PV가 어느 노드에 못 박히는지 읽는다.</p>
+  <p>1. <dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>를 만들어 두고 파드를 붙이기 전까지 <dfn class="term">PV <span class="en">(PersistentVolume · 실제로 할당된 저장 공간)</span></dfn>가 생기지 않는 것을 확인하고, 파드가 뜬 뒤 PV가 어느 노드에 못 박히는지 읽는다.</p>
   <p>2. 스테이트풀셋의 세 가지 성질 — 고정 이름, 파드별 PVC, 순서 보장 — 을 레디스를 3개로 늘렸다 줄이며 각각 확인한다.</p>
   <p>3. kind의 기본 스토리지가 볼륨 확장을 어떻게 거부하는지 세 단계로 재현하고, 되돌릴 수도 없다는 것까지 본다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">18.1</span>왜 레디스만 다르게 다뤘나</a>
-  <a href="#s2"><span class="num">18.2</span>이론 — 세 오브젝트와 스테이트풀셋</a>
-  <a href="#s3"><span class="num">18.3</span>따라하기 ① 볼륨은 언제 생기는가</a>
-  <a href="#s4"><span class="num">18.4</span>따라하기 ② 데이터는 파드보다 오래 산다</a>
-  <a href="#s5"><span class="num">18.5</span>따라하기 ③ 스테이트풀셋의 세 가지 성질</a>
-  <a href="#s6"><span class="num">18.6</span>따라하기 ④ 지울 때 무슨 일이 일어나나</a>
-  <a href="#s7"><span class="num">18.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">18.8</span>운영 관점 — 어디까지 직접 하고 어디부터 맡길 것인가</a>
-  <a href="#s9"><span class="num">18.9</span>체크포인트와 정리</a>
+   258 
+   259 
+   260 
+   261 
+   262 
+   263 
+   264 
+   265 
+   266 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">18.1</span>왜 레디스만 다르게 다뤘나</h2>
   <p class="lead">M16 13단계에서 노드를 비울 때 이렇게 썼다 — <code>kubectl drain study-worker --pod-selector app=journal-api</code>. 셀렉터로 대상을 좁힌 것은 <strong>레디스를 옮기면 안 되기 때문</strong>이었고, 그때는 "M18에서 다룬다"고 미뤄 뒀다.</p>
-  <p>M17까지의 워크로드는 옮겨도 잃을 것이 없었다. <code>journal-api</code> 파드는 상태를 메모리에도 디스크에도 남기지 않는다. 그래서 아무 노드에서나 뜨고, HPA가 늘렸다 줄여도 되고, 롤아웃으로 통째로 교체해도 된다. M15~M17이 성립한 전제가 그것이다.</p>
+  <p>M17까지의 워크로드는 옮겨도 잃을 것이 없었다. <code>journal-api</code> 파드는 상태를 메모리에도 디스크에도 남기지 않는다. 그래서 아무 노드에서나 뜨고, <dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn>가 늘렸다 줄여도 되고, 롤아웃으로 통째로 교체해도 된다. M15~M17이 성립한 전제가 그것이다.</p>
   <p>레디스는 다르다. <code>--appendonly yes</code>로 쓰기를 파일에 남기고, 그 파일은 특정 노드의 디스크에 있다. 파드를 다른 노드로 옮기면 <strong>데이터에 닿지 못한다.</strong> 옮기는 것이 위험한 게 아니라 애초에 <strong>스케줄러가 거부한다</strong> — 18.7에서 그 거부 메시지를 직접 본다.</p>
   <p>그리고 파드 이름도 다르다. <code>journal-api-599bf98c7-jgs98</code>처럼 매번 바뀌는 이름 대신 <code>redis-0</code>이라는 고정된 이름을 쓰고, 매니페스트의 <code>REDIS_URL</code>은 <code>redis-0.redis</code>라는 주소를 박아 두고 있다. 이 이름이 왜 보장되는지, 파드가 다시 만들어져도 왜 같은 데이터를 보는지가 이 모듈의 내용이다.</p>
 </section>
@@ -209,7 +209,7 @@
     <tr><td><dfn class="term">StorageClass <span class="en">SC</span></dfn></td><td>클러스터 운영자</td><td>누가 만들고(프로비저너), 언제 만들고, PVC를 지울 때 어떻게 할지</td></tr>
     <tr><td><dfn class="term">PersistentVolume <span class="en">PV</span></dfn></td><td>아무도 직접 쓰지 않는다</td><td>실제로 만들어진 저장 공간. 컨트롤러가 만들고 PVC에 묶는다</td></tr>
   </table>
-  <p>PVC는 요청서, SC는 발급 규정, PV는 발급된 실물이다. 개발자는 "1Gi가 필요하다"만 적고 그것이 어느 디스크의 무엇으로 채워지는지는 모른다 — 이것이 <dfn class="term">동적 프로비저닝 <span class="en">dynamic provisioning</span></dfn>이고, 클라우드에서든 노트북에서든 같은 매니페스트가 돌아가는 이유다.</p>
+  <p>PVC는 요청서, <dfn class="term">SC <span class="en">(StorageClass · 볼륨을 어떤 방식으로 만들지 정한 것)</span></dfn>는 발급 규정, PV는 발급된 실물이다. 개발자는 "1Gi가 필요하다"만 적고 그것이 어느 디스크의 무엇으로 채워지는지는 모른다 — 이것이 <dfn class="term">동적 프로비저닝 <span class="en">dynamic provisioning</span></dfn>이고, 클라우드에서든 노트북에서든 같은 매니페스트가 돌아가는 이유다.</p>
 
   <figure>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
@@ -221,23 +221,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
-        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
       <text class="t-h" x="40" y="46">누가 무엇을 만드는가 — 파드가 붙기 전에는 볼륨이 없다</text>
@@ -312,7 +296,7 @@
     <tr><td>생성·삭제</td><td>동시에. 순서를 보장하지 않는다</td><td><code>0 → 1 → 2</code> 순서로, 앞의 것이 Ready가 된 뒤에</td></tr>
   </table>
   <p>세 성질이 따로 노는 것이 아니라 하나의 목적을 위해 붙어 있다. <strong>파드에 신원을 주는 것</strong>이다. 이름이 고정되어야 다른 파드가 <code>redis-0.redis</code>로 부를 수 있고, 볼륨이 파드에 붙어 있어야 그 이름이 같은 데이터를 뜻하며, 순서가 보장되어야 클러스터를 구성하는 소프트웨어(첫 노드가 리더가 되고 나머지가 붙는 식)가 동작한다.</p>
-  <p>고정된 이름을 만들어 주는 것은 <dfn class="term">헤드리스 서비스 <span class="en">headless service</span></dfn>다. <code>clusterIP: None</code>인 서비스로, 가상 IP를 만드는 대신 <strong>DNS에 파드 IP를 직접 등록</strong>한다. M11에서 본 일반 서비스가 "하나의 주소 뒤에 여럿을 숨기는" 것이라면 헤드리스는 반대로 "여럿을 각각 이름으로 부를 수 있게" 한다.</p>
+  <p>고정된 이름을 만들어 주는 것은 <dfn class="term">헤드리스 서비스 <span class="en">headless service</span></dfn>다. <code>clusterIP: None</code>인 서비스로, 가상 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>를 만드는 대신 <strong><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn>에 파드 IP를 직접 등록</strong>한다. M11에서 본 일반 서비스가 "하나의 주소 뒤에 여럿을 숨기는" 것이라면 헤드리스는 반대로 "여럿을 각각 이름으로 부를 수 있게" 한다.</p>
 </section>
 
 <section id="s3">
@@ -327,7 +311,7 @@
 standard   rancher.io/local-path   Delete    WaitForFirstConsumer   &lt;none&gt;</code></div>
     <table>
       <tr><th>열</th><th>뜻</th></tr>
-      <tr><td><code>PROVISIONER</code></td><td>누가 볼륨을 만드나. kind는 노드 디스크의 디렉터리를 쓰는 local-path다. 클라우드라면 <code>ebs.csi.aws.com</code> 같은 CSI 드라이버가 온다</td></tr>
+      <tr><td><code>PROVISIONER</code></td><td>누가 볼륨을 만드나. kind는 노드 디스크의 디렉터리를 쓰는 local-path다. 클라우드라면 <code>ebs.csi.aws.com</code> 같은 <dfn class="term">CSI <span class="en">(Container Storage Interface · 스토리지를 붙이는 플러그인 규약)</span></dfn> 드라이버가 온다</td></tr>
       <tr><td><code>RECLAIM</code></td><td>PVC를 지웠을 때 PV를 어떻게 할까. <code>Delete</code>면 같이 지운다</td></tr>
       <tr><td><code>BINDING</code></td><td><code>WaitForFirstConsumer</code>면 파드가 붙을 때까지 PV를 만들지 않는다</td></tr>
       <tr><td><code>EXPAND</code></td><td>볼륨 확장 허용 여부. <code>&lt;none&gt;</code>은 허용하지 않는다는 뜻이다 — 18.7 실패 ②의 출발점이다</td></tr>
@@ -621,7 +605,7 @@ kubectl -n m18 describe pod wrongnode | tail -3</code></pre>
     <p><code>1 node(s) didn't match PersistentVolume's node affinity</code> — M16에서 모은 실패 문구 목록에 하나가 더 붙는다. 세 노드가 각각 다른 이유로 탈락했다: <code>study-worker</code>는 볼륨은 맞지만 <code>nodeSelector</code>가 안 맞고, <code>study-worker2</code>는 셀렉터는 맞지만 <strong>볼륨이 저쪽에 있고</strong>, 컨트롤 플레인은 테인트다.</p>
     <p><code>drain</code>은 파드를 다른 노드에 다시 만드는 일이다. 노드 로컬 볼륨을 쓰는 파드에는 그 "다른 노드"가 존재하지 않으므로, 비우려 해도 새 파드가 <code>Pending</code>에 머물고 서비스가 멈춘다. M16에서 레디스를 뺀 것이 그래서다.</p>
     <span class="lbl">고친다 — 고칠 수 없다, 설계를 바꾼다</span>
-    <p>이 실패는 명령으로 고칠 수 있는 종류가 아니다. 선택지는 셋이다. 노드를 넘나들 수 있는 스토리지(네트워크 블록 스토리지, NFS)를 쓰거나, 애플리케이션 수준에서 복제해 노드 하나를 잃어도 되게 만들거나, 그 노드는 비우지 않기로 하고 유지보수 계획에서 제외하는 것이다. 노트북 클러스터에서는 세 번째가 현실적이고, 그래서 M16이 <code>--pod-selector</code>를 썼다.</p>
+    <p>이 실패는 명령으로 고칠 수 있는 종류가 아니다. 선택지는 셋이다. 노드를 넘나들 수 있는 스토리지(네트워크 블록 스토리지, <dfn class="term">NFS <span class="en">(Network File System · 네트워크로 공유하는 파일 시스템)</span></dfn>)를 쓰거나, 애플리케이션 수준에서 복제해 노드 하나를 잃어도 되게 만들거나, 그 노드는 비우지 않기로 하고 유지보수 계획에서 제외하는 것이다. 노트북 클러스터에서는 세 번째가 현실적이고, 그래서 M16이 <code>--pod-selector</code>를 썼다.</p>
 <pre><code>kubectl -n m18 delete pod wrongnode</code></pre>
   </div>
 
@@ -666,7 +650,7 @@ solo   2Gi   1Gi      Bound
 <pre><code>kubectl patch sc standard --type=json -p '[{"op":"remove","path":"/allowVolumeExpansion"}]'</code></pre>
     <div class="note-2026">
       <span class="lbl">이 실패는 kind 환경의 성질이다</span>
-      클라우드의 CSI 드라이버(AWS EBS, GCP PD, Azure Disk)는 대부분 온라인 확장을 지원하므로 같은 명령이 실제로 동작한다. 이 실습의 교훈은 "쿠버네티스에서 볼륨 확장이 안 된다"가 아니라 <strong>"스토리지 기능은 쿠버네티스가 아니라 그 아래 드라이버가 정한다"</strong>는 것이다. 매니페스트가 같아도 스토리지클래스가 다르면 결과가 다르다.
+      클라우드의 CSI 드라이버(<dfn class="term">AWS <span class="en">(Amazon Web Services · 아마존 클라우드)</span></dfn> EBS, <dfn class="term">GCP <span class="en">(Google Cloud Platform · 구글 클라우드)</span></dfn> PD, Azure Disk)는 대부분 온라인 확장을 지원하므로 같은 명령이 실제로 동작한다. 이 실습의 교훈은 "쿠버네티스에서 볼륨 확장이 안 된다"가 아니라 <strong>"스토리지 기능은 쿠버네티스가 아니라 그 아래 드라이버가 정한다"</strong>는 것이다. 매니페스트가 같아도 스토리지클래스가 다르면 결과가 다르다.
     </div>
   </div>
 </section>
@@ -715,7 +699,7 @@ solo   2Gi   1Gi      Bound
     <ul>
       <li><strong>새로 만든 파일이 없다.</strong> 이 모듈은 M14가 쓴 <code>20-redis.yaml</code>을 읽고 그 안의 <code>volumeClaimTemplates</code>·<code>serviceName</code>·헤드리스 서비스가 각각 무엇을 하는지 확인하는 과정이다</li>
       <li>클러스터: <code>journal</code> 네임스페이스가 M17 종료 시점과 같은 상태 — <code>redis-0</code> 하나, PVC 하나</li>
-      <li>Part 3(M15~M18)의 산출물은 <code>labs/k8s/journal/</code>의 매니페스트 일습이다. <code>kubectl apply -k</code> 한 줄로 프로브·리소스·분산·PDB·HPA가 갖춰진 상태가 재현된다</li>
+      <li>Part 3(M15~M18)의 산출물은 <code>labs/k8s/journal/</code>의 매니페스트 일습이다. <code>kubectl apply -k</code> 한 줄로 프로브·리소스·분산·<dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>·HPA가 갖춰진 상태가 재현된다</li>
       <li><code>labs/charts/journal/</code>은 M15~M17 변경분을 여전히 반영하지 않았다. M28이 따라잡는다</li>
     </ul>
   </div>
@@ -751,10 +735,10 @@ data-redis-0   Bound    pvc-0fddef41-d1ca-48c4-ae6c-d836e6f6895e   1Gi        RW
 </div>
 
 <footer>
-  <h3>다음 모듈 — Part 4 관측으로</h3>
-  <p>Part 3에서 정한 숫자들은 전부 근거가 얇다. <code>requests.cpu: 50m</code>은 <code>kubectl top</code>이 보여준 순간값에서 왔고, <code>preStop: sleep 10</code>은 실패가 0이 되는 값을 손으로 찾은 것이며, HPA의 목표 50%는 그냥 정한 값이다. <code>kubectl top</code>은 <strong>최근값만 들고 있고 기록을 남기지 않기</strong> 때문에 이보다 나은 근거를 만들 수 없다.</p>
-  <p>M19에서 프로메테우스 스택을 세워 그 기록을 남기기 시작한다. 그리고 실습 대상 애플리케이션이 하나 늘어난다 — <code>docs/kubernetes-monitoring</code>의 Spring Boot <code>order-api</code>가 두 번째 앱으로 들어온다. 언어가 다른 두 앱이 한 클러스터에 있고 메트릭을 노출하는 방식이 서로 다르다는 것 자체가 관측 파트의 교재다. 먼저 <code>kubectl top</code>이 어떻게 동작하는지(metrics-server)와 프로메테우스가 무엇을 다르게 하는지부터 구분한다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   250 
+  <p>Part 3에서 정한 숫자들은 전부 근거가 얇다.  209 은  210 이 보여준 순간값에서 왔고,  211 은 실패가 0이 되는 값을 손으로 찾은 것이며, HPA의 목표 50%는 그냥 정한 값이다.  212 은 <strong>최근값만 들고 있고 기록을 남기지 않기</strong> 때문에 이보다 나은 근거를 만들 수 없다.</p>
+  <p>M19에서 프로메테우스 스택을 세워 그 기록을 남기기 시작한다. 그리고 실습 대상 애플리케이션이 하나 늘어난다 —  213 의 Spring Boot  214 가 두 번째 앱으로 들어온다. 언어가 다른 두 앱이 한 클러스터에 있고 메트릭을 노출하는 방식이 서로 다르다는 것 자체가 관측 파트의 교재다. 먼저  215 이 어떻게 동작하는지(metrics-server)와 프로메테우스가 무엇을 다르게 하는지부터 구분한다.</p>
+   251 
   <ul>
     <li>퍼시스턴트 볼륨: https://kubernetes.io/docs/concepts/storage/persistent-volumes/</li>
     <li>스토리지클래스: https://kubernetes.io/docs/concepts/storage/storage-classes/</li>

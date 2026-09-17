@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>컨테이너화와 배포</h1>
+   212 
   <p class="lede">02장에서 만든 두 앱을 이미지로 굽고 kind 클러스터에 올린다. 레지스트리는 쓰지 않는다. 여기서 정하는 라벨과 포트 이름이 06장 스크레이프의 조건이 된다.</p>
 </header>
 
@@ -168,7 +169,7 @@ figcaption b{color:var(--ink)}
 
 <p>02장의 앱은 맥에서 돌았다. 클러스터에는 아직 아무것도 없다. 그리고 로컬에서 도는 것과 클러스터에서 도는 것 사이에는 <strong>세 가지 새로운 문제</strong>가 있다.</p>
 
-<p>첫째, <strong>이미지가 노드에 없다.</strong> 쿠버네티스는 이미지를 레지스트리에서 받아 온다고 가정하는데, 방금 빌드한 이미지는 어느 레지스트리에도 없다. 둘째, <strong>언제 트래픽을 보내도 되는지</strong>를 쿠버네티스가 알아야 한다. JVM 앱은 기동이 느려서 이것을 잘못 설정하면 파드가 재시작을 반복한다. 셋째, <strong>어느 노드에 둘 것인가</strong>를 정해야 한다. 01장에서 라벨을 붙여 둔 이유가 여기서 나온다.</p>
+<p>첫째, <strong>이미지가 노드에 없다.</strong> 쿠버네티스는 이미지를 레지스트리에서 받아 온다고 가정하는데, 방금 빌드한 이미지는 어느 레지스트리에도 없다. 둘째, <strong>언제 트래픽을 보내도 되는지</strong>를 쿠버네티스가 알아야 한다. <dfn class="term">JVM <span class="en">(Java Virtual Machine · 자바 가상 머신)</span></dfn> 앱은 기동이 느려서 이것을 잘못 설정하면 파드가 재시작을 반복한다. 셋째, <strong>어느 노드에 둘 것인가</strong>를 정해야 한다. 01장에서 라벨을 붙여 둔 이유가 여기서 나온다.</p>
 
 <p>그리고 하나 더 — 여기서 정하는 <strong>서비스의 라벨과 포트 이름</strong>이 06장 <code>ServiceMonitor</code> 의 선택 조건이 된다. 매니페스트를 그냥 복사하지 말고 라벨이 어디에 걸리는지만큼은 눈으로 따라간다.</p>
 
@@ -205,7 +206,7 @@ figcaption b{color:var(--ink)}
 
 <h3>자원 요청과 제한</h3>
 
-<p><dfn class="term">requests</dfn> 는 스케줄러가 “이 파드를 놓을 자리가 있는가”를 계산할 때 쓰는 값이고, <dfn class="term">limits</dfn> 는 실제 사용 상한이다. 이 실습은 <strong>메모리만 제한하고 CPU 는 제한하지 않는다</strong>. 이유는 08절 매니페스트에서 설명한다.</p>
+<p><dfn class="term">requests</dfn> 는 스케줄러가 “이 파드를 놓을 자리가 있는가”를 계산할 때 쓰는 값이고, <dfn class="term">limits</dfn> 는 실제 사용 상한이다. 이 실습은 <strong>메모리만 제한하고 <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> 는 제한하지 않는다</strong>. 이유는 08절 매니페스트에서 설명한다.</p>
 
 <h3>용어 정리</h3>
 
@@ -213,13 +214,13 @@ figcaption b{color:var(--ink)}
 <table>
   <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
   <tr><td>containerd</td><td>container daemon</td><td>노드 안에서 컨테이너를 실제로 돌리는 런타임. kind 노드는 이것을 쓴다</td></tr>
-  <tr><td>crictl</td><td>CRI Control</td><td>컨테이너 런타임을 직접 조회하는 도구. 노드 안의 이미지 목록을 본다</td></tr>
-  <tr><td>빌드팩</td><td>Cloud Native Buildpacks</td><td>Dockerfile 없이 소스에서 OCI 이미지를 만드는 표준 도구</td></tr>
+  <tr><td>crictl</td><td><dfn class="term">CRI <span class="en">(Container Runtime Interface · kubelet 이 런타임을 부르는 규약)</span></dfn> Control</td><td>컨테이너 런타임을 직접 조회하는 도구. 노드 안의 이미지 목록을 본다</td></tr>
+  <tr><td>빌드팩</td><td>Cloud Native Buildpacks</td><td>Dockerfile 없이 소스에서 <dfn class="term">OCI <span class="en">(Open Container Initiative · 컨테이너 이미지·런타임 표준)</span></dfn> 이미지를 만드는 표준 도구</td></tr>
   <tr><td>OCI 이미지</td><td>Open Container Initiative Image</td><td>컨테이너 이미지의 표준 형식. 도커 이미지도 이 형식이다</td></tr>
   <tr><td>다이제스트</td><td>Digest (SHA-256)</td><td>이미지 내용의 해시. 태그와 달리 옮겨 달 수 없다</td></tr>
   <tr><td>imagePullPolicy</td><td>Image Pull Policy</td><td>이미지를 언제 받아올지. <code>IfNotPresent</code> 는 노드에 있으면 그대로 쓴다</td></tr>
   <tr><td>디플로이먼트</td><td>Deployment</td><td>파드를 몇 개 유지할지와 교체 방식을 정의하는 리소스</td></tr>
-  <tr><td>서비스</td><td>Service</td><td>파드 묶음에 고정된 이름과 IP 를 주는 리소스. 클러스터 안 DNS 이름이 된다</td></tr>
+  <tr><td>서비스</td><td>Service</td><td>파드 묶음에 고정된 이름과 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn> 를 주는 리소스. 클러스터 안 <dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 이름이 된다</td></tr>
   <tr><td>노드셀렉터</td><td>nodeSelector</td><td>파드를 특정 라벨을 가진 노드에만 배치하는 조건</td></tr>
   <tr><td>테인트</td><td>Taint</td><td>노드가 “아무나 오지 마라”고 거는 표식. 컨트롤 플레인에 기본으로 걸려 있다</td></tr>
   <tr><td>엔드포인트슬라이스</td><td>EndpointSlice</td><td>서비스가 실제로 어느 파드 IP 로 보내는지의 목록. 비어 있으면 502 다</td></tr>
@@ -476,7 +477,7 @@ ls k8s/</code></pre>
 
 <h2><span class="n">05</span>이미지 빌드 — 빌드팩</h2>
 
-<p class="cap">목적: Dockerfile 없이 이미지를 만든다. 빌드팩이 JRE 선택 · 계층 분리 · 메모리 계산까지 한다.</p>
+<p class="cap">목적: Dockerfile 없이 이미지를 만든다. 빌드팩이 <dfn class="term">JRE <span class="en">(Java Runtime Environment · 자바 실행 환경)</span></dfn> 선택 · 계층 분리 · 메모리 계산까지 한다.</p>
 
 <div class="srcbox">
   <span class="fp">study/labs/apps/order-api/build.gradle — 파일 끝에 추가</span>
@@ -553,7 +554,7 @@ docker build -t obs/order-api:0.0.1 .</code></pre>
 <table>
   <tr><th>줄</th><th>왜 그렇게 쓰나</th></tr>
   <tr><td><code>COPY --from=builder .../dependencies/</code> 를 네 번</td><td>의존성 · 로더 · 스냅숏 · 애플리케이션 순으로 나눠 넣는다. 코드만 고치면 <strong>마지막 계층만</strong> 다시 만들어져 빌드가 빨라진다</td></tr>
-  <tr><td><code>useradd -u 1000</code> + <code>USER 1000</code></td><td>숫자 UID 로 지정한다. 이름으로 지정하면 kubelet 이 <code>runAsNonRoot</code> 를 검증하지 못해 파드가 뜨지 않는다</td></tr>
+  <tr><td><code>useradd -u 1000</code> + <code>USER 1000</code></td><td>숫자 <dfn class="term">UID <span class="en">(User Identifier · 사용자를 가리키는 숫자 식별자)</span></dfn> 로 지정한다. 이름으로 지정하면 kubelet 이 <code>runAsNonRoot</code> 를 검증하지 못해 파드가 뜨지 않는다</td></tr>
   <tr><td><code>MaxRAMPercentage=70.0</code></td><td>JVM 이 컨테이너 메모리 제한의 70% 까지만 힙으로 쓰게 한다</td></tr>
 </table>
 </div>
@@ -731,7 +732,7 @@ spec:
 
 <blockquote class="warn">
   <span class="label">CPU limit 을 두지 않은 것은 의도된 선택이다</span>
-  <p>CPU 제한을 걸면 쿠버네티스는 CFS 쿼터로 스로틀링을 건다. 그러면 응답 시간 그래프에 애플리케이션과 무관한 톱니가 생기고, 06~07장에서 “이 지연이 코드 때문인가 스로틀링 때문인가”를 구분할 수 없게 된다. 메모리는 제한한다 — 압축 불가능한 자원이라 제한이 없으면 노드 전체가 위험해진다. 다만 이 판단은 <strong>실습 환경 기준</strong>이다. 공용 클러스터라면 CPU 제한이 필요하다.</p>
+  <p>CPU 제한을 걸면 쿠버네티스는 <dfn class="term">CFS <span class="en">(Completely Fair Scheduler · 리눅스의 CPU 스케줄러. 제한을 넘으면 스로틀링한다)</span></dfn> 쿼터로 스로틀링을 건다. 그러면 응답 시간 그래프에 애플리케이션과 무관한 톱니가 생기고, 06~07장에서 “이 지연이 코드 때문인가 스로틀링 때문인가”를 구분할 수 없게 된다. 메모리는 제한한다 — 압축 불가능한 자원이라 제한이 없으면 노드 전체가 위험해진다. 다만 이 판단은 <strong>실습 환경 기준</strong>이다. 공용 클러스터라면 CPU 제한이 필요하다.</p>
 </blockquote>
 
 <blockquote>

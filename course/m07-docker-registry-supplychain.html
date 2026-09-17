@@ -151,12 +151,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 199  200  201 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 07 / 38 · PART 1 도커</div>
-  <h1>레지스트리와 이미지 공급망</h1>
+   178 
   <p class="ch-desc">지금까지 만든 이미지는 이 노트북에만 있다. 클러스터 노드가 그것을 받으려면 레지스트리가 필요하다. 올리는 방법과 함께, 올라간 이미지에 무엇이 딸려 들어갔는지 — 취약점 13건이 어디서 왔고 어떻게 2건으로 만드는지 확인한다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">60분</span><span class="tag">registry:3.1.1</span><span class="tag">Trivy 0.74.0</span><span class="tag">kind v0.33.0</span>
@@ -182,13 +182,13 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">7.1</span>왜 레지스트리가 필요한가</a>
-  <a href="#s2"><span class="num">7.2</span>이론 — 이미지 공급망</a>
-  <a href="#s3"><span class="num">7.3</span>따라하기 ① 로컬 레지스트리</a>
-  <a href="#s4"><span class="num">7.4</span>따라하기 ② 취약점 스캔과 개선</a>
-  <a href="#s5"><span class="num">7.5</span>따라하기 ③ 클러스터에 올린다</a>
-  <a href="#s6"><span class="num">7.6</span>일부러 실패시키기</a>
-  <a href="#s7"><span class="num">7.7</span>Part 1 정리 — 체크포인트와 정리</a>
+   204 
+   205 
+   206 
+   207 
+   208 
+   209 
+   210 
 </nav>
 
 <section id="s1">
@@ -200,17 +200,17 @@
 
 <section id="s2">
   <h2 class="sec"><span class="num">7.2</span>이론 — 이미지 공급망</h2>
-  <p>책 1.3.1은 이미지 관리 모범 사례를 말하면서 이미지 빌드가 <dfn class="term">공급망 공격 <span class="en">(Supply-chain Attack)</span></dfn>에 취약하다고 지적한다. 내 코드가 안전해도 이미지 안에는 내가 쓰지 않은 것들이 잔뜩 들어 있기 때문이다. M04에서 만든 246MB 이미지 안에서 저널 API 소스는 3KB도 안 된다. 나머지는 전부 남이 만든 것이다.</p>
+  <p>책 1.3.1은 이미지 관리 모범 사례를 말하면서 이미지 빌드가 <dfn class="term">공급망 공격 <span class="en">(Supply-chain Attack)</span></dfn>에 취약하다고 지적한다. 내 코드가 안전해도 이미지 안에는 내가 쓰지 않은 것들이 잔뜩 들어 있기 때문이다. M04에서 만든 246MB 이미지 안에서 저널 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 소스는 3KB도 안 된다. 나머지는 전부 남이 만든 것이다.</p>
   <table>
     <tr><th>층</th><th>들어오는 것</th><th>내가 통제하는 방법</th></tr>
-    <tr><td>베이스 이미지</td><td>OS 패키지 수십 개, 때로는 언어 런타임과 그 도구</td><td>더 작은 베이스 선택, 정기적 재빌드</td></tr>
+    <tr><td>베이스 이미지</td><td><dfn class="term">OS <span class="en">(Operating System · 운영체제)</span></dfn> 패키지 수십 개, 때로는 언어 런타임과 그 도구</td><td>더 작은 베이스 선택, 정기적 재빌드</td></tr>
     <tr><td>의존성</td><td>직접 쓰는 라이브러리 + 그것들이 끌어오는 전이 의존성</td><td>락 파일 고정, 스캔, 정기 업데이트</td></tr>
     <tr><td>빌드 과정</td><td>빌드 중 받아오는 스크립트, 캐시</td><td>재현 가능한 빌드, <code>npm ci</code> 류의 고정 설치</td></tr>
     <tr><td>내 코드</td><td>애플리케이션</td><td>코드 리뷰, 테스트</td></tr>
   </table>
-  <p>이 층들이 공격 경로가 되는 방식은 두 가지다. 하나는 <strong>이미 들어 있는 취약점</strong> — 베이스 이미지의 OS 패키지나 전이 의존성에 알려진 CVE가 있고, 그 이미지가 그대로 배포된다. 다른 하나는 <strong>바꿔치기</strong> — 빌드가 참조하는 태그가 다른 내용을 가리키게 되거나, 레지스트리와 노드 사이에서 이미지가 다른 것으로 대체된다. M03에서 배운 태그와 다이제스트의 구분이 여기서 실전 의미를 갖는다. 태그는 움직이고 다이제스트는 내용에 묶여 있으므로, "스캔한 이미지"와 "배포된 이미지"가 같은 것임을 보장하는 유일한 방법은 다이제스트다.</p>
-  <p>책 19.4(코드 보안)는 대응을 두 지점에 둔다. <strong>빌드 시점</strong>에 스캔해 기준을 넘는 이미지를 CI에서 막고, <strong>배포 시점</strong>에 클러스터가 검증된 이미지만 받아들이게 한다. 앞의 것이 이 모듈이고 뒤의 것이 M26이다. 두 지점 사이에 시간이 흐른다는 점이 중요하다 — 스캔을 통과한 이미지도 다음 주에 새 CVE가 공개되면 취약한 이미지가 된다. 그래서 스캔은 한 번이 아니라 레지스트리에 있는 이미지를 주기적으로 다시 돌리는 일이 된다.</p>
-  <p>확인 방법은 세 가지가 있고, 답하는 질문이 다르다. <strong>취약점 스캔</strong>은 "이미지에 든 패키지 중 알려진 CVE가 있는 것은 무엇인가"에 답한다. 이 모듈에서 Trivy로 한다. <strong>SBOM</strong>(Software Bill of Materials)은 "이미지에 무엇이 들었는가"의 목록 자체다. 나중에 새 CVE가 공개됐을 때 "우리 이미지 중 그 패키지가 든 것은 어느 것인가"를 이미지를 다시 스캔하지 않고 목록 검색으로 답할 수 있다 — 이미지가 수백 개일 때 스캔과 목록 검색의 비용 차이가 이 도구의 존재 이유다. <strong>서명</strong>은 "이 이미지를 우리가 빌드했는가"에 답한다. 빌드 파이프라인이 다이제스트에 서명하고, 클러스터의 어드미션 단계가 서명 없는 이미지를 거절한다. 스캔은 내용을 보고, SBOM은 내용을 기록하고, 서명은 출처를 증명한다. 셋 중 하나로 나머지를 대신할 수 없다.</p>
+  <p>이 층들이 공격 경로가 되는 방식은 두 가지다. 하나는 <strong>이미 들어 있는 취약점</strong> — 베이스 이미지의 OS 패키지나 전이 의존성에 알려진 <dfn class="term">CVE <span class="en">(Common Vulnerabilities and Exposures · 공개된 보안 취약점에 붙는 고유 식별자)</span></dfn>가 있고, 그 이미지가 그대로 배포된다. 다른 하나는 <strong>바꿔치기</strong> — 빌드가 참조하는 태그가 다른 내용을 가리키게 되거나, 레지스트리와 노드 사이에서 이미지가 다른 것으로 대체된다. M03에서 배운 태그와 다이제스트의 구분이 여기서 실전 의미를 갖는다. 태그는 움직이고 다이제스트는 내용에 묶여 있으므로, "스캔한 이미지"와 "배포된 이미지"가 같은 것임을 보장하는 유일한 방법은 다이제스트다.</p>
+  <p>책 19.4(코드 보안)는 대응을 두 지점에 둔다. <strong>빌드 시점</strong>에 스캔해 기준을 넘는 이미지를 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서 막고, <strong>배포 시점</strong>에 클러스터가 검증된 이미지만 받아들이게 한다. 앞의 것이 이 모듈이고 뒤의 것이 M26이다. 두 지점 사이에 시간이 흐른다는 점이 중요하다 — 스캔을 통과한 이미지도 다음 주에 새 CVE가 공개되면 취약한 이미지가 된다. 그래서 스캔은 한 번이 아니라 레지스트리에 있는 이미지를 주기적으로 다시 돌리는 일이 된다.</p>
+  <p>확인 방법은 세 가지가 있고, 답하는 질문이 다르다. <strong>취약점 스캔</strong>은 "이미지에 든 패키지 중 알려진 CVE가 있는 것은 무엇인가"에 답한다. 이 모듈에서 Trivy로 한다. <strong><dfn class="term">SBOM <span class="en">(Software Bill of Materials · 이미지에 든 구성요소 목록)</span></dfn></strong>(Software Bill of Materials)은 "이미지에 무엇이 들었는가"의 목록 자체다. 나중에 새 CVE가 공개됐을 때 "우리 이미지 중 그 패키지가 든 것은 어느 것인가"를 이미지를 다시 스캔하지 않고 목록 검색으로 답할 수 있다 — 이미지가 수백 개일 때 스캔과 목록 검색의 비용 차이가 이 도구의 존재 이유다. <strong>서명</strong>은 "이 이미지를 우리가 빌드했는가"에 답한다. 빌드 파이프라인이 다이제스트에 서명하고, 클러스터의 어드미션 단계가 서명 없는 이미지를 거절한다. 스캔은 내용을 보고, SBOM은 내용을 기록하고, 서명은 출처를 증명한다. 셋 중 하나로 나머지를 대신할 수 없다.</p>
   <p>이 과정의 배치는 이렇다. 여기서는 스캔을 실습하고 SBOM과 서명은 개념만 본다. M29(CI)에서 SBOM 생성과 이미지 서명을 파이프라인에 넣고, M26(어드미션 컨트롤)에서 서명되지 않은 이미지를 막는 정책을 만든다 — 그 정책이 여기서 예고한 서명 검증의 집행 지점이다.</p>
 </section>
 
@@ -226,13 +226,13 @@ sleep 2
 docker exec registry registry --version
 curl -s localhost:5001/v2/_catalog</code></pre>
     <ul class="tight">
-      <li><code>registry:3.1.1</code> — CNCF Distribution 프로젝트의 공식 레지스트리 구현. 검색 결과에 많이 보이는 <code>registry:2</code>는 이전 메이저 라인이다. 메이저만 적은 <code>registry:3</code>은 내일 다른 이미지를 가리킬 수 있으므로 패치 버전까지 박는다 (3.1.1 — 2026-09-05 확인, 실습 당일 재확인)</li>
+      <li><code>registry:3.1.1</code> — <dfn class="term">CNCF <span class="en">(Cloud Native Computing Foundation · 쿠버네티스·프로메테우스를 관리하는 재단)</span></dfn> Distribution 프로젝트의 공식 레지스트리 구현. 검색 결과에 많이 보이는 <code>registry:2</code>는 이전 메이저 라인이다. 메이저만 적은 <code>registry:3</code>은 내일 다른 이미지를 가리킬 수 있으므로 패치 버전까지 박는다 (3.1.1 — 2026-09-05 확인, 실습 당일 재확인)</li>
       <li>호스트 포트는 5001을 쓴다. 맥에서 5000은 시스템 서비스가 점유하는 경우가 많다(M02의 포트 충돌)</li>
     </ul>
     <span class="out-lbl">실행 결과</span>
     <div class="out"><code>registry github.com/distribution/distribution/v3 3.1.1
 {"repositories":[]}</code></div>
-    <div class="verdict"><span class="lbl">판정</span>버전 줄에 <code>3.1.1</code>이 찍히고, 빈 목록이 JSON으로 돌아오면 레지스트리 API가 살아 있다.</div>
+    <div class="verdict"><span class="lbl">판정</span>버전 줄에 <code>3.1.1</code>이 찍히고, 빈 목록이 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn>으로 돌아오면 레지스트리 API가 살아 있다.</div>
   </div>
 
   <div class="step">
@@ -250,7 +250,7 @@ docker push localhost:5001/journal-api:v1</code></pre>
 b05773cc67e1: Layer already exists
 ...
 v1: digest: sha256:6d8310e7b3c2c19e5dd95e748e963ccfaabd5fde53268d63070745a0f6997ea3 size: 856</code></div>
-    <p>레이어 단위로 올라갔다(M03에서 본 그 레이어들이다). 위 출력은 같은 레지스트리에 이전 빌드를 한 번 올린 뒤의 것이라 베이스 이미지 레이어들이 <code>Layer already exists</code>다 — 빈 레지스트리에 처음 올리면 전부 <code>Pushed</code>로 나온다. 마지막 줄의 <code>digest:</code>가 이 이미지의 내용 주소이며, 이 값은 빌드마다 다르다. <strong>배포 매니페스트(쿠버네티스에 "무엇을 어떻게 띄울지" 선언하는 YAML, M08부터 쓴다)에 박을 값이 이것</strong>이다.</p>
+    <p>레이어 단위로 올라갔다(M03에서 본 그 레이어들이다). 위 출력은 같은 레지스트리에 이전 빌드를 한 번 올린 뒤의 것이라 베이스 이미지 레이어들이 <code>Layer already exists</code>다 — 빈 레지스트리에 처음 올리면 전부 <code>Pushed</code>로 나온다. 마지막 줄의 <code>digest:</code>가 이 이미지의 내용 주소이며, 이 값은 빌드마다 다르다. <strong>배포 매니페스트(쿠버네티스에 "무엇을 어떻게 띄울지" 선언하는 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>, M08부터 쓴다)에 박을 값이 이것</strong>이다.</p>
 <pre><code>curl -s localhost:5001/v2/_catalog
 curl -s localhost:5001/v2/journal-api/tags/list</code></pre>
     <span class="out-lbl">실행 결과</span>
@@ -434,7 +434,7 @@ journal-test   1/1     Running   0          6s    10.244.2.2   study-worker2
 
 {"level":"info","msg":"no REDIS_URL, using in-memory store"}
 {"level":"info","msg":"listening","port":8080,"version":"v1"}</code></div>
-    <div class="verdict"><span class="lbl">판정</span><code>Running</code>, <code>READY 1/1</code>. 로그가 <code>kubectl logs</code>로 그대로 나온다 — M02에서 표준 출력으로 로그를 보낸 결과다. 레디스가 없으니 메모리 모드로 떴다. 파드 IP와 노드는 환경마다 다르다.</div>
+    <div class="verdict"><span class="lbl">판정</span><code>Running</code>, <code>READY 1/1</code>. 로그가 <code>kubectl logs</code>로 그대로 나온다 — M02에서 표준 출력으로 로그를 보낸 결과다. 레디스가 없으니 메모리 모드로 떴다. 파드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>와 노드는 환경마다 다르다.</div>
     <p>M04에서 빌드한 이미지가 M01의 클러스터에서 돌고 있다. Part 1이 Part 2로 이어지는 지점이다.</p>
 <pre><code>kubectl delete pod journal-test --now</code></pre>
   </div>
@@ -475,8 +475,8 @@ Events:
   </div>
 
   <div class="fail">
-    <span class="lbl">실패 ② — HTTP 레지스트리에 localhost 가 아닌 주소로 푸시한다</span>
-    <p>로컬 레지스트리는 TLS 없이 떴다. <code>localhost:5001</code>은 도커가 예외로 허용하지만, 같은 레지스트리를 맥의 네트워크 주소로 부르면 다른 머신에서 접근하는 것과 같은 취급을 받는다.</p>
+    <span class="lbl">실패 ② — <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 레지스트리에 localhost 가 아닌 주소로 푸시한다</span>
+    <p>로컬 레지스트리는 <dfn class="term">TLS <span class="en">(Transport Layer Security · 전송 구간 암호화)</span></dfn> 없이 떴다. <code>localhost:5001</code>은 도커가 예외로 허용하지만, 같은 레지스트리를 맥의 네트워크 주소로 부르면 다른 머신에서 접근하는 것과 같은 취급을 받는다.</p>
 <pre><code>IP=$(ipconfig getifaddr en0)          # 맥의 네트워크 주소. 리눅스는 hostname -I | awk '{print $1}'
 docker tag journal-api:v1 $IP:5001/journal-api:v1
 docker push $IP:5001/journal-api:v1
@@ -484,7 +484,7 @@ docker rmi $IP:5001/journal-api:v1    # 실험용 태그 정리</code></pre>
     <span class="out-lbl">실행 결과 (Waiting 줄 생략. 주소는 필자 환경의 값이라 &lt;IP&gt;로 바꿔 적었다)</span>
     <div class="out"><code>failed to do request: Head "https://&lt;IP&gt;:5001/v2/journal-api/blobs/sha256:3d098bfa22b2…": http: server gave HTTP response to HTTPS client
 Untagged: &lt;IP&gt;:5001/journal-api:v1</code></div>
-    <p><code>Head "https://…"</code> — 도커가 HTTPS로 말을 걸었고, 레지스트리는 HTTP로 답했다. 도커는 <code>localhost</code>와 <code>127.0.0.0/8</code>을 제외한 모든 레지스트리에 HTTPS를 요구한다. 해결책이 둘인데 방향이 정반대다. 실습에서는 데몬 설정에 <code>insecure-registries</code>로 예외를 준다 — 편하지만 통신이 평문이다. 실무에서는 인증서를 붙인다 — 사내 CA로 발급하고 노드에 신뢰 인증서를 배포한다.</p>
+    <p><code>Head "https://…"</code> — 도커가 <dfn class="term">HTTPS <span class="en">(HTTP Secure · TLS 로 암호화한 HTTP)</span></dfn>로 말을 걸었고, 레지스트리는 HTTP로 답했다. 도커는 <code>localhost</code>와 <code>127.0.0.0/8</code>을 제외한 모든 레지스트리에 HTTPS를 요구한다. 해결책이 둘인데 방향이 정반대다. 실습에서는 데몬 설정에 <code>insecure-registries</code>로 예외를 준다 — 편하지만 통신이 평문이다. 실무에서는 인증서를 붙인다 — 사내 <dfn class="term">CA <span class="en">(Certificate Authority · 인증서를 발급하고 보증하는 주체)</span></dfn>로 발급하고 노드에 신뢰 인증서를 배포한다.</p>
     <p>이 과정은 <code>localhost</code>만 쓰므로 예외 설정이 필요 없다. 다만 사내에서 "일단 <code>insecure-registries</code>로 열어두자"가 그대로 굳는 경우가 많다는 것은 알아둔다 — 이미지가 평문으로 오간다는 뜻이고, 중간에서 바꿔치기할 수 있다는 뜻이다. 7.2절에서 말한 두 번째 공격 경로가 이것이며, M26에서 서명되지 않은 이미지를 막는 정책이 필요한 이유 중 하나다.</p>
   </div>
 </section>
@@ -494,10 +494,10 @@ Untagged: &lt;IP&gt;:5001/journal-api:v1</code></div>
   <p>도커 파트가 끝났다. 여섯 모듈에서 만든 것을 한 번에 본다.</p>
   <table>
     <tr><th>모듈</th><th>배운 것</th><th>Part 2에서 어떻게 이어지나</th></tr>
-    <tr><td>M02</td><td>컨테이너는 격리된 프로세스. PID 1, cgroup, 종료 코드 137</td><td>파드 안 컨테이너, 리소스 limits와 OOMKilled 진단(M16), 종료 신호와 프로브(M15)</td></tr>
+    <tr><td>M02</td><td>컨테이너는 격리된 프로세스. <dfn class="term">PID <span class="en">(Process Identifier · 프로세스 번호)</span></dfn> 1, cgroup, 종료 코드 137</td><td>파드 안 컨테이너, 리소스 limits와 OOMKilled 진단(M16), 종료 신호와 프로브(M15)</td></tr>
     <tr><td>M03</td><td>레이어, 태그 vs 다이제스트</td><td>매니페스트의 이미지 지정, latest 금지 정책(M26)</td></tr>
     <tr><td>M04</td><td>멀티스테이지, 빌드 캐시, 넌루트 실행, <code>--build-arg</code>로 v1 · v2</td><td>롤아웃(M10), CI 빌드(M29), 파드 시큐리티(M24)</td></tr>
-    <tr><td>M05</td><td>볼륨, 사용자 정의 네트워크와 이름 해석</td><td>PV/PVC(M18), Service와 CoreDNS(M11)</td></tr>
+    <tr><td>M05</td><td>볼륨, 사용자 정의 네트워크와 이름 해석</td><td><dfn class="term">PV <span class="en">(PersistentVolume · 실제로 할당된 저장 공간)</span></dfn>/PVC(M18), Service와 CoreDNS(M11)</td></tr>
     <tr><td>M06</td><td>선언형 구성, 헬스체크와 기동 순서, compose watch</td><td>매니페스트(M08~), 프로브(M15), 저널 앱 이전(M14)</td></tr>
     <tr><td>M07</td><td>레지스트리, 취약점 스캔, 노드로의 이미지 전달</td><td>이미지 풀 정책, 스캔 게이트 · SBOM · 서명(M29), 서명 검증 정책(M26)</td></tr>
   </table>
@@ -545,14 +545,14 @@ kubectl get pods
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>Part 2가 시작된다. M08은 M01에서 만든 클러스터로 돌아가 컨트롤 플레인이 실제로 무엇을 하는지 보고, 첫 배포는 <code>nginx:1.29-alpine</code>으로 한다 — 저널 API를 꺼내기 전에 클러스터의 부품을 먼저 익히기 위해서다. 오늘 노드에 올린 <code>journal-api:v1</code>은 M09에서 파드 정의에 처음 쓰이고, <code>v2</code>는 M10 롤아웃에서 v1을 대체한다. 파드를 일부러 죽여 되살아나는 것을 관찰하는 M08의 실습은 Compose에는 없던 능력이다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   196 
+  <p>Part 2가 시작된다. M08은 M01에서 만든 클러스터로 돌아가 컨트롤 플레인이 실제로 무엇을 하는지 보고, 첫 배포는  169 으로 한다 — 저널 API를 꺼내기 전에 클러스터의 부품을 먼저 익히기 위해서다. 오늘 노드에 올린  170 은 M09에서 파드 정의에 처음 쓰이고,  171 는 M10 롤아웃에서 v1을 대체한다. 파드를 일부러 죽여 되살아나는 것을 관찰하는 M08의 실습은 Compose에는 없던 능력이다.</p>
+   197 
   <ul>
     <li>Distribution 레지스트리: https://distribution.github.io/distribution/</li>
     <li>레지스트리 HTTP API v2: https://distribution.github.io/distribution/spec/api/</li>
     <li>도커 데몬의 insecure-registries: https://docs.docker.com/reference/cli/dockerd/#insecure-registries</li>
-    <li>Trivy 문서: https://trivy.dev/latest/docs/ (이미지 스캔, <code>--exit-code</code>, <code>--ignore-unfixed</code>)</li>
+    <li>Trivy 문서: https://trivy.dev/latest/docs/ (이미지 스캔,  172 ,  173 )</li>
     <li>kind — 로컬 이미지 사용: https://kind.sigs.k8s.io/docs/user/quick-start/#loading-an-image-into-your-cluster</li>
     <li>쿠버네티스 이미지 풀 정책: https://kubernetes.io/docs/concepts/containers/images/</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 1.3.1 이미지 관리 모범 사례, 5.3 파이프라인의 테스트 실패 원칙, 5.5 컨테이너 이미지 태깅, 19.4 코드 보안</li>

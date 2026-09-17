@@ -148,13 +148,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 221  222  223 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 29 / 38 · PART 6 배포 자동화</div>
-  <h1>CI — 빌드·테스트·이미지</h1>
-  <p class="ch-desc">M28까지 만든 검사는 <strong>전부 손으로 쳐야</strong> 돌아간다. 이미지도 손으로 빌드해서 <code>kind load</code>로 넣었다. 이 모듈에서 커밋 하나가 <strong>타입 검사 → 테스트 → 이미지 → 스캔 → 어드미션 → 실제 기동</strong>을 지나가게 만든다. 그리고 두 관문이 실제로 파이프라인을 세우는 것을 본다 — 깨진 테스트 하나가 이미지를 만들지 못하게 하고, 베이스 이미지의 CVE 하나가 배포를 막는다.</p>
+   184 
+  <p class="ch-desc">M28까지 만든 검사는 <strong>전부 손으로 쳐야</strong> 돌아간다. 이미지도 손으로 빌드해서  28 로 넣었다. 이 모듈에서 커밋 하나가 <strong>타입 검사 → 테스트 → 이미지 → 스캔 → 어드미션 → 실제 기동</strong>을 지나가게 만든다. 그리고 두 관문이 실제로 파이프라인을 세우는 것을 본다 — 깨진 테스트 하나가 이미지를 만들지 못하게 하고, 베이스 이미지의 CVE 하나가 배포를 막는다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Node 24 · Docker 29.x</span>
     <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · trivy 0.69.0) · 버전 숫자는 실습 당일 다시 확인한다
@@ -176,19 +176,19 @@
   <h2>핵심 3줄</h2>
   <p>1. 테스트할 수 있는 형태로 코드를 나누고, 그 테스트를 <strong>Dockerfile 안에서</strong> 돌려 이미지 생성의 관문으로 만든다.</p>
   <p>2. 테스트를 깨뜨려 <strong>이미지 태그가 만들어지지 않는 것</strong>을 확인하고, 스캔 임계값에 걸려 파이프라인이 멈추는 것을 본 뒤 베이스 이미지를 올려 통과시킨다.</p>
-  <p>3. 같은 태그로 다시 빌드해도 <strong>클러스터가 알아채지 못하는 것</strong>을 재현하고, 커밋 SHA를 태그로 쓰는 이유를 확인한다.</p>
+  <p>3. 같은 태그로 다시 빌드해도 <strong>클러스터가 알아채지 못하는 것</strong>을 재현하고, 커밋 <dfn class="term">SHA <span class="en">(Secure Hash Algorithm · 내용을 고정 길이 값으로 요약하는 해시)</span></dfn>를 태그로 쓰는 이유를 확인한다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">29.1</span>지금은 사람이 순서를 기억한다</a>
-  <a href="#s2"><span class="num">29.2</span>이론 — 관문의 순서와 각자 잡는 것</a>
-  <a href="#s3"><span class="num">29.3</span>따라하기 ① 테스트할 수 있게 나눈다</a>
-  <a href="#s4"><span class="num">29.4</span>따라하기 ② 테스트를 이미지의 관문으로</a>
-  <a href="#s5"><span class="num">29.5</span>따라하기 ③ 로컬 파이프라인</a>
-  <a href="#s6"><span class="num">29.6</span>따라하기 ④ 워크플로로 옮긴다</a>
-  <a href="#s7"><span class="num">29.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">29.8</span>운영 관점 — 무엇을 언제 막을 것인가</a>
-  <a href="#s9"><span class="num">29.9</span>체크포인트와 정리</a>
+   227 
+   228 
+   229 
+   230 
+   231 
+   232 
+   233 
+   234 
+   235 
 </nav>
 
 <section id="s1">
@@ -217,22 +217,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
       <text class="t-h" x="40" y="46">싼 검사가 앞에, 정확한 검사가 뒤에</text>
@@ -299,7 +284,7 @@
   <p>M28의 두 실패가 이 그림을 정당화한다. <code>nameSuffix</code>가 환경 변수를 안 고친 것도, 패치가 <code>env</code> 순서를 바꾼 것도 <strong>렌더링과 어드미션을 멀쩡히 통과했다.</strong> 오직 실제로 띄워 보는 단계에서만 잡힌다. 그 단계가 가장 비싸지만, 없으면 그만큼이 운영에서 터진다.</p>
 
   <h3>관문은 우회할 수 없어야 한다</h3>
-  <p>CI 서버에서 <code>npm test</code>를 돌리는 것과 <strong>Dockerfile 안에서</strong> 돌리는 것은 보장의 성질이 다르다. 앞의 것은 그 파이프라인을 지날 때만 유효하고, 뒤의 것은 <strong>누가 어디서 <code>docker build</code>를 하든</strong> 유효하다. 개발자가 급해서 로컬에서 빌드해 밀어 넣는 상황이 실제로 일어나므로, 이 차이가 중요하다.</p>
+  <p><dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn> 서버에서 <code>npm test</code>를 돌리는 것과 <strong>Dockerfile 안에서</strong> 돌리는 것은 보장의 성질이 다르다. 앞의 것은 그 파이프라인을 지날 때만 유효하고, 뒤의 것은 <strong>누가 어디서 <code>docker build</code>를 하든</strong> 유효하다. 개발자가 급해서 로컬에서 빌드해 밀어 넣는 상황이 실제로 일어나므로, 이 차이가 중요하다.</p>
   <p>대가는 중복이다. 워크플로의 <code>check</code> 잡에서 한 번, 이미지 빌드에서 또 한 번 테스트가 돈다. 앞의 것은 <strong>빨리 알기 위해</strong>, 뒤의 것은 <strong>확실히 하기 위해</strong> 있다. 목적이 다르므로 중복이 아니다.</p>
 
   <h3>태그는 포인터다</h3>
@@ -313,8 +298,8 @@
   <div class="step">
     <h4>1단계 — 무엇을 테스트할지 고른다</h4>
     <p class="purpose"><span class="lbl">목적</span>테스트가 없는 코드에 테스트를 붙일 때 <strong>어디부터</strong>인지를 정한다.</p>
-    <p><code>server.ts</code>에서 테스트할 값이 있는 곳은 <strong>순수 함수</strong> 둘이다. <code>normalizeUri</code>는 M19에서 카디널리티 폭발을 막으려고 만든 것이고, <code>outcomeOf</code>는 M20의 PromQL이 쓰는 라벨을 만든다. <strong>이 둘이 틀리면 대시보드와 알림이 조용히 잘못된 값을 그린다</strong> — 앱은 200을 잘 돌려주므로 아무도 모른다.</p>
-    <p>HTTP 핸들러를 테스트하지 않는 이유도 분명히 해 둔다. 핸들러는 레디스에 의존하므로 목을 만들어야 하고, 그 목이 실제 레디스와 다르게 동작하면 <strong>테스트는 통과하는데 운영에서 깨진다.</strong> 그 층은 M28의 <code>helm test</code>가 진짜 레디스를 상대로 검사한다. <strong>단위 테스트는 순수 로직에, 통합 테스트는 진짜 의존성에.</strong></p>
+    <p><code>server.ts</code>에서 테스트할 값이 있는 곳은 <strong>순수 함수</strong> 둘이다. <code>normalizeUri</code>는 M19에서 카디널리티 폭발을 막으려고 만든 것이고, <code>outcomeOf</code>는 M20의 <dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn>이 쓰는 라벨을 만든다. <strong>이 둘이 틀리면 대시보드와 알림이 조용히 잘못된 값을 그린다</strong> — 앱은 200을 잘 돌려주므로 아무도 모른다.</p>
+    <p><dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 핸들러를 테스트하지 않는 이유도 분명히 해 둔다. 핸들러는 레디스에 의존하므로 목을 만들어야 하고, 그 목이 실제 레디스와 다르게 동작하면 <strong>테스트는 통과하는데 운영에서 깨진다.</strong> 그 층은 M28의 <code>helm test</code>가 진짜 레디스를 상대로 검사한다. <strong>단위 테스트는 순수 로직에, 통합 테스트는 진짜 의존성에.</strong></p>
   </div>
 
   <div class="step">
@@ -548,7 +533,7 @@ chmod +x course/labs/scripts/ci.sh</code></pre>
 <pre><code>      - uses: sigstore/cosign-installer@v3
       - run: cosign sign --yes ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}</code></pre>
     <p>키가 없는 것에 주의한다. <code>id-token: write</code> 권한으로 받은 짧은 수명의 토큰으로 서명하고, 서명 기록은 공개 투명성 로그에 남는다. <strong>보관할 개인 키가 없다는 것</strong>이 이 방식의 요점이다 — 키 유출과 키 교체 문제가 사라진다.</p>
-    <p>검증하는 쪽은 클러스터의 어드미션인데, M26에서 확인했듯 CEL로는 레지스트리를 조회할 수 없어 전용 컨트롤러가 필요하다. 이 교재는 <strong>서명을 만드는 데까지</strong>만 한다.</p>
+    <p>검증하는 쪽은 클러스터의 어드미션인데, M26에서 확인했듯 <dfn class="term">CEL <span class="en">(Common Expression Language · 정책 조건을 적는 표현식 언어)</span></dfn>로는 레지스트리를 조회할 수 없어 전용 컨트롤러가 필요하다. 이 교재는 <strong>서명을 만드는 데까지</strong>만 한다.</p>
 <pre><code>  e2e:
     needs: image
     steps:
@@ -636,7 +621,7 @@ uid=1000(node) gid=1000(node) groups=1000(node)
 {"status":"ok","version":"20260906002910","pod":"smoke"}</code></div>
     <div class="verdict"><span class="lbl">판정</span>uid가 여전히 <code>1000</code>이다 — M24에서 <code>USER 1000</code>으로 고쳤던 것이 새 베이스에서도 유효하다. 베이스 이미지를 올릴 때 <strong>사용자 번호가 바뀌는 것</strong>이 흔한 사고인데(M19의 <code>order-api</code>에서 실제로 겪었다), 여기서는 무사했다.</div>
     <div class="note-2026">
-      <p><code>wget http://localhost:8080</code>은 <code>can't connect to remote host</code>로 실패하고 <code>127.0.0.1</code>은 성공한다. Node가 <code>localhost</code>를 <code>::1</code>로 먼저 풀고 Express는 IPv4에 붙어 있기 때문이다. 컨테이너 안에서 자기 자신을 부를 때는 <strong><code>127.0.0.1</code>을 쓰는 편이 안전하다.</strong> 프로브가 <code>httpGet</code>을 쓰는 한 이 문제는 없다 — kubelet이 파드 IP로 부른다.</p>
+      <p><code>wget http://localhost:8080</code>은 <code>can't connect to remote host</code>로 실패하고 <code>127.0.0.1</code>은 성공한다. Node가 <code>localhost</code>를 <code>::1</code>로 먼저 풀고 Express는 IPv4에 붙어 있기 때문이다. 컨테이너 안에서 자기 자신을 부를 때는 <strong><code>127.0.0.1</code>을 쓰는 편이 안전하다.</strong> 프로브가 <code>httpGet</code>을 쓰는 한 이 문제는 없다 — kubelet이 파드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>로 부른다.</p>
     </div>
   </div>
 
@@ -695,7 +680,7 @@ journal-api-59546f4fbc-nlrjn   1/1   Running   0   72m</code></div>
       <li><code>grep -c ':latest' .github/workflows/ci.yaml</code> → <code>0</code> (<code>ubuntu-latest</code>는 러너 이름이라 걸리면 안 된다 — 콜론까지 붙여 센다)</li>
       <li><code>grep -c 'GITHUB_SHA::7' .github/workflows/ci.yaml</code> → <code>1</code></li>
       <li><code>grep -c 'exit-code' .github/workflows/ci.yaml</code> → <code>1</code> (스캔이 관문인지)</li>
-      <li><code>python3 -c "import re;print(len([l for l in open('.github/workflows/ci.yaml') if '\t' in l]))"</code> → <code>0</code> (YAML에 탭 금지)</li>
+      <li><code>python3 -c "import re;print(len([l for l in open('.github/workflows/ci.yaml') if '\t' in l]))"</code> → <code>0</code> (<dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>에 탭 금지)</li>
       <li><code>ls course/labs/apps/journal-api/src/</code> → <code>labels.test.ts labels.ts server.ts</code></li>
       <li>(이해 확인) <code>COPY --from=test</code> 줄을 지우면 무슨 일이 일어나는지 적는다</li>
       <li>(이해 확인) 스캔 임계값을 <code>HIGH</code>로 내리면 안 되는 이유를 M27의 숫자를 들어 적는다</li>
@@ -731,10 +716,10 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>파이프라인이 이미지를 만들어 놨는데 <strong>클러스터에 내보내는 방법</strong>은 아직 하나뿐이다 — M10에서 본 롤링 업데이트. 새 버전이 나쁘면 <code>maxSurge</code>·<code>maxUnavailable</code>이 정한 속도로 <strong>전체 트래픽이 그쪽으로 옮겨 간다.</strong></p>
+   218 
+  <p>파이프라인이 이미지를 만들어 놨는데 <strong>클러스터에 내보내는 방법</strong>은 아직 하나뿐이다 — M10에서 본 롤링 업데이트. 새 버전이 나쁘면  180 · 181 이 정한 속도로 <strong>전체 트래픽이 그쪽으로 옮겨 간다.</strong></p>
   <p>M30에서 그 사이에 판단할 지점을 만든다. 새 버전에 트래픽 일부만 보내고, M20에서 만든 메트릭으로 <strong>에러율과 지연을 비교해</strong> 계속할지 되돌릴지 정한다. 판정 기준을 사람이 아니라 PromQL로 쓰는 것이 이 모듈의 핵심이다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+   219 
   <ul>
     <li>Node.js 테스트 러너: https://nodejs.org/api/test.html</li>
     <li>멀티스테이지 빌드: https://docs.docker.com/build/building/multi-stage/</li>

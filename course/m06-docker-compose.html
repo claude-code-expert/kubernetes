@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 267  268  269 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 06 / 38 · PART 1 도커</div>
-  <h1>Compose로 다중 서비스</h1>
+   249 
   <p class="ch-desc">M05에서 컨테이너 두 개를 띄우는 데 네 개의 명령과 여러 옵션이 필요했다. 옵션 하나를 빠뜨리면 조용히 다른 시스템이 된다. 이 모듈에서 그것을 파일 하나에 선언하고, 그 파일이 쿠버네티스 매니페스트와 무엇이 같고 다른지 본다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">60분</span><span class="tag">Docker Compose v5.1.0</span>
-    <br>2026-09-05 검증 · journal-api:v1 · redis:8.2-alpine · nginx:1.29-alpine · Compose 버전은 실습 당일 <code>docker compose version</code>으로 다시 확인한다 (2026-09-05 확인값 <code>Docker Compose version v5.1.0</code>)
+    <br>2026-09-05 검증 · journal-api:v1 · redis:8.2-alpine · nginx:1.29-alpine · Compose 버전은 실습 당일  24 으로 다시 확인한다 (2026-09-05 확인값  25 )
   </div>
 </header>
 
@@ -181,18 +181,18 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">6.1</span>왜 파일로 옮기는가</a>
-  <a href="#s2"><span class="num">6.2</span>compose.yaml 읽기</a>
-  <a href="#s3"><span class="num">6.3</span>따라하기 ① 3서비스 기동</a>
-  <a href="#s4"><span class="num">6.4</span>따라하기 ② 스케일 · 로그 · 개발 루프</a>
-  <a href="#s5"><span class="num">6.5</span>일부러 실패시키기</a>
-  <a href="#s6"><span class="num">6.6</span>운영 관점 — Compose와 쿠버네티스</a>
-  <a href="#s7"><span class="num">6.7</span>체크포인트와 정리</a>
+   272 
+   273 
+   274 
+   275 
+   276 
+   277 
+   278 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">6.1</span>왜 파일로 옮기는가</h2>
-  <p class="lead">M05의 마지막 상태를 다시 만들려면 이렇게 쳐야 한다 — 볼륨 생성, 네트워크 생성, 레디스 실행(볼륨·네트워크 지정), API 실행(네트워크·환경변수·포트 지정). 네 명령에 옵션이 여덟 개다.</p>
+  <p class="lead">M05의 마지막 상태를 다시 만들려면 이렇게 쳐야 한다 — 볼륨 생성, 네트워크 생성, 레디스 실행(볼륨·네트워크 지정), <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 실행(네트워크·환경변수·포트 지정). 네 명령에 옵션이 여덟 개다.</p>
   <p>문제는 재현이다. 내일 다시 칠 때 <code>--save 60 1</code>을 빠뜨리면 레디스가 디스크에 저장하지 않고, 팀원이 <code>-e REDIS_URL</code>의 포트를 틀리면 그 사람 노트북에서만 안 된다. M05의 실패 ①이 정확히 이것이었다 — <code>--network</code> 하나가 빠졌는데 에러 없이 다른 시스템이 됐다. <strong>명령의 이력은 남지 않지만 파일은 남는다.</strong> 그래서 구성은 파일에 적고 그 파일을 버전 관리한다.</p>
   <p>책 1.2절이 같은 이야기를 쿠버네티스에서 한다 — 선언형 방식이 명령형보다 나은 이유는 "클러스터가 어떻게 그 상태가 됐는지" 이해하고 되살릴 수 있기 때문이다. Compose는 그 발상의 한 대짜리 버전이다.</p>
 </section>
@@ -256,7 +256,7 @@ networks:
   <p>맨 위의 <code>name: journal</code>이 <dfn class="term">프로젝트 <span class="en">(Project)</span></dfn> 이름이다. Compose는 한 파일이 만드는 컨테이너 · 네트워크 · 볼륨을 이 이름으로 묶고, 만드는 리소스 이름 앞에 접두사로 붙인다. 생략하면 디렉터리 이름(<code>apps</code>)이 쓰인다 — 6.5절 실패 ③이 이 접두사 때문에 생긴다.</p>
   <table>
     <tr><th>키</th><th>의미</th><th>M05의 무엇에 해당하나</th></tr>
-    <tr><td><code>services</code></td><td>컨테이너 하나씩. 키가 곧 <strong>DNS 이름</strong>이 된다</td><td><code>docker run --name</code></td></tr>
+    <tr><td><code>services</code></td><td>컨테이너 하나씩. 키가 곧 <strong><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 이름</strong>이 된다</td><td><code>docker run --name</code></td></tr>
     <tr><td><code>image</code> / <code>build</code></td><td>쓸 이미지, 또는 빌드할 경로. 둘 다 있으면 빌드한 결과에 그 태그를 붙인다</td><td><code>docker build -t</code> + <code>docker run</code></td></tr>
     <tr><td><code>develop.watch</code></td><td>지정한 경로가 바뀌면 다시 빌드하고 컨테이너를 교체한다 (6.4절)</td><td>M05에는 없던 것</td></tr>
     <tr><td><code>volumes</code> (서비스)</td><td>이름이면 볼륨, <code>./</code>로 시작하면 바인드 마운트</td><td><code>-v</code></td></tr>
@@ -279,7 +279,7 @@ networks:
     proxy_set_header Host $host;
   }
 }</code></pre>
-  <p><code>proxy_pass http://api:8080</code> — IP가 아니라 서비스 이름이다. M05에서 확인한 내장 DNS가 이것을 풀어준다.</p>
+  <p><code>proxy_pass http://api:8080</code> — <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>가 아니라 서비스 이름이다. M05에서 확인한 내장 DNS가 이것을 풀어준다.</p>
   <p>정적 파일 서버가 내보낼 페이지는 한 장이다. <code>course/labs/apps/static-site/index.html</code>:</p>
 <pre><code>&lt;!doctype html&gt;
 &lt;meta charset="utf-8"&gt;
@@ -294,7 +294,7 @@ networks:
 
   <div class="step">
     <h4>1단계. 파일을 검증한다</h4>
-    <p class="purpose"><span class="lbl">목적</span>기동 전에 병합·해석 결과를 확인한다. YAML 들여쓰기 실수를 여기서 잡는다.</p>
+    <p class="purpose"><span class="lbl">목적</span>기동 전에 병합·해석 결과를 확인한다. <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn> 들여쓰기 실수를 여기서 잡는다.</p>
 <pre><code>cd course/labs/apps
 docker compose config | head -28</code></pre>
     <span class="out-lbl">실행 결과 (앞부분)</span>
@@ -470,7 +470,7 @@ service(s) ["api"] successfully built
     <p>실험이 끝났으면 두 번째 터미널에서 소스를 되돌린다. 되돌리는 것도 변경이므로 watch가 한 번 더 빌드해 원래 이미지로 교체한다 — 그것까지 확인한 뒤 첫 번째 터미널에서 <code>Ctrl+C</code>로 watch를 끝낸다. 컨테이너는 계속 돈다.</p>
 <pre><code>mv /tmp/server.ts.bak journal-api/src/server.ts
 tail -n 1 journal-api/src/server.ts          # });  이면 원래대로다</code></pre>
-    <p><code>action: rebuild</code>는 이미지를 다시 빌드하는 방식이고, 인터프리터 언어라면 <code>action: sync</code>로 파일만 컨테이너 안에 복사해 더 빨리 반영할 수 있다. 이 애플리케이션은 타입스크립트 컴파일이 필요해 <code>rebuild</code>를 쓴다. 쿠버네티스에는 이런 개발 루프가 내장돼 있지 않다 — Skaffold · Tilt 같은 별도 도구가 그 자리를 채우며, 이 과정에서는 M29의 CI가 빌드를 대신한다.</p>
+    <p><code>action: rebuild</code>는 이미지를 다시 빌드하는 방식이고, 인터프리터 언어라면 <code>action: sync</code>로 파일만 컨테이너 안에 복사해 더 빨리 반영할 수 있다. 이 애플리케이션은 타입스크립트 컴파일이 필요해 <code>rebuild</code>를 쓴다. 쿠버네티스에는 이런 개발 루프가 내장돼 있지 않다 — Skaffold · Tilt 같은 별도 도구가 그 자리를 채우며, 이 과정에서는 M29의 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>가 빌드를 대신한다.</p>
   </div>
 </section>
 
@@ -608,7 +608,7 @@ a56f9b2d7c85   journal-net           bridge    local
     <span class="lbl">다음 모듈로 넘어가기 전 확인</span>
     <ul>
       <li><code>docker compose ps --format 'table {{.Name}}\t{{.Service}}\t{{.Status}}'</code> → 세 줄. <code>api</code>와 <code>redis</code>의 <code>STATUS</code>에 <code>(healthy)</code>, <code>web</code>은 <code>Up</code></li>
-      <li><code>curl -s -o /dev/null -w '%{http_code}\n' localhost:8090/</code> → <code>200</code>, <code>curl -s localhost:8090/api/entries</code> → <code>{"entries":[…]}</code> 형태의 JSON</li>
+      <li><code>curl -s -o /dev/null -w '%{http_code}\n' localhost:8090/</code> → <code>200</code>, <code>curl -s localhost:8090/api/entries</code> → <code>{"entries":[…]}</code> 형태의 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn></li>
       <li><code>docker compose config | grep -c service_healthy</code> → <code>2</code> (api→redis, web→api 두 조건이 원래대로 있다)</li>
       <li><code>docker compose config | grep -A3 'develop:'</code> → <code>watch:</code> · <code>action: rebuild</code> · <code>path: …/journal-api/src</code></li>
       <li><code>docker compose up -d --scale api=3 &amp;&amp; docker compose ps --format '{{.Service}}' | grep -c api</code> → <code>3</code> (확인 뒤 <code>docker compose up -d --scale api=1</code>)</li>
@@ -640,9 +640,9 @@ docker images journal-api</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>지금까지 만든 이미지는 이 노트북에만 있다. 다른 머신이 — 그리고 M01에서 만든 kind 클러스터의 노드가 — 이 이미지를 받으려면 레지스트리가 필요하다. M07에서 레지스트리에 올리고, 그 과정에서 이미지에 무엇이 딸려 들어가는지(취약점·비밀·서명) 확인한다. Part 1의 마지막이다. 이 모듈의 <code>compose.yaml</code>은 M07이 아니라 M14에서 다시 꺼낸다 — 세 서비스를 쿠버네티스 매니페스트로 옮길 때의 원본이고, <code>nginx.conf</code>의 경로 규칙은 M12 인그레스에서 같은 모양으로 다시 쓴다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   264 
+  <p>지금까지 만든 이미지는 이 노트북에만 있다. 다른 머신이 — 그리고 M01에서 만든 kind 클러스터의 노드가 — 이 이미지를 받으려면 레지스트리가 필요하다. M07에서 레지스트리에 올리고, 그 과정에서 이미지에 무엇이 딸려 들어가는지(취약점·비밀·서명) 확인한다. Part 1의 마지막이다. 이 모듈의  243 은 M07이 아니라 M14에서 다시 꺼낸다 — 세 서비스를 쿠버네티스 매니페스트로 옮길 때의 원본이고,  244 의 경로 규칙은 M12 인그레스에서 같은 모양으로 다시 쓴다.</p>
+   265 
   <ul>
     <li>Compose 파일 스펙: https://docs.docker.com/reference/compose-file/</li>
     <li>services 상위 요소: https://docs.docker.com/reference/compose-file/services/</li>

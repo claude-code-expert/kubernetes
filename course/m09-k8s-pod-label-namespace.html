@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 203  204  205 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 09 / 38 · PART 2 쿠버네티스 코어</div>
-  <h1>파드 · 레이블 · 네임스페이스</h1>
+   182 
   <p class="ch-desc">파드는 컨테이너 하나가 아니라 <strong>같은 운명을 공유하는 컨테이너 묶음</strong>이다. 왜 그런 단위가 필요한지 두 컨테이너를 한 파드에 넣어 확인하고, 레이블 오타 하나로 아무것도 못 찾는 상황을 만든다.</p>
   <div class="meta">
     <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 · journal-api:v1 (M04 · M07 산출물) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 · journal-api:v1 (M04 · M07 산출물) · 버전 숫자는 실습 당일  21 으로 다시 확인한다
   </div>
 </header>
 
@@ -181,13 +181,13 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">9.1</span>왜 파드라는 단위가 있나</a>
-  <a href="#s2"><span class="num">9.2</span>이론 — 파드 안에서 공유되는 것</a>
-  <a href="#s3"><span class="num">9.3</span>따라하기 ① 두 컨테이너 한 파드</a>
-  <a href="#s4"><span class="num">9.4</span>따라하기 ② 레이블과 셀렉터</a>
-  <a href="#s5"><span class="num">9.5</span>따라하기 ③ 네임스페이스</a>
-  <a href="#s6"><span class="num">9.6</span>일부러 실패시키기</a>
-  <a href="#s7"><span class="num">9.7</span>체크포인트와 정리</a>
+   208 
+   209 
+   210 
+   211 
+   212 
+   213 
+   214 
 </nav>
 
 <section id="s1">
@@ -201,7 +201,7 @@
   <h2 class="sec"><span class="num">9.2</span>이론 — 파드 안에서 공유되는 것</h2>
   <table>
     <tr><th>공유되는 것</th><th>결과</th><th>M02에서 본 것</th></tr>
-    <tr><td>네트워크 네임스페이스</td><td>같은 IP를 쓴다. 서로를 <code>localhost</code>로 부른다. 포트는 파드 안에서 유일해야 한다</td><td>네임스페이스가 시야를 가른다</td></tr>
+    <tr><td>네트워크 네임스페이스</td><td>같은 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>를 쓴다. 서로를 <code>localhost</code>로 부른다. 포트는 파드 안에서 유일해야 한다</td><td>네임스페이스가 시야를 가른다</td></tr>
     <tr><td>볼륨</td><td>같은 볼륨을 각자 마운트해 파일을 주고받는다</td><td><code>-v</code>로 붙이던 볼륨</td></tr>
     <tr><td>수명</td><td>같은 노드에 배치되고, 파드가 지워지면 함께 지워진다</td><td>—</td></tr>
     <tr><td>공유되지 않는 것</td><td>파일시스템(볼륨 제외), 프로세스 목록(기본 설정), 리소스 제한(컨테이너별)</td><td>—</td></tr>
@@ -219,24 +219,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .dash { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; stroke-dasharray:4 3; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
-        .wline { stroke:#a1442a; stroke-width:1.5; fill:none; }
-        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="360" rx="6"/>
       <text class="t-h" x="40" y="46">파드는 경계다 — 무엇이 공유되고 무엇이 갈리는가</text>
@@ -284,7 +267,7 @@
   <h3>컨테이너 세 종류</h3>
   <p>파드 안 컨테이너는 역할에 따라 세 가지로 나뉜다. <strong>일반 컨테이너</strong>는 <code>containers:</code>에 나열하는 것으로, 전부 동시에 시작되며 순서를 지정할 수 없다. 이 실습의 <code>api</code>와 <code>sidecar</code>가 여기 속한다.</p>
   <p><dfn class="term">init 컨테이너 <span class="en">(Init Container)</span></dfn>는 <code>initContainers:</code>에 적는다. 하나씩 <strong>순서대로</strong> 실행되고, 전부 성공적으로 끝나야 일반 컨테이너가 시작된다. 설정 파일 생성, 스키마 마이그레이션, 의존 서비스 대기처럼 "본체보다 먼저 끝나야 하는 일"에 쓴다.</p>
-  <p><dfn class="term">사이드카 <span class="en">(Sidecar)</span></dfn>는 본체를 보조하는 컨테이너다. 로그 수집기나 프록시처럼 본체보다 먼저 떠서 본체보다 나중에 죽어야 하는 것이 대상인데, 일반 컨테이너로는 그 순서를 보장할 수 없다. 그래서 <code>initContainers</code>에 <code>restartPolicy: Always</code>를 준 컨테이너를 사이드카로 취급하는 기능이 들어왔다 — 1.29에서 베타(기본 활성)로 들어오고 <strong>1.33에서 GA</strong>가 됐다. 검색하면 "1.28 알파" "1.29 정식" 같은 표현이 섞여 나오는데, 지금 기준은 1.33 GA다.</p>
+  <p><dfn class="term">사이드카 <span class="en">(Sidecar)</span></dfn>는 본체를 보조하는 컨테이너다. 로그 수집기나 프록시처럼 본체보다 먼저 떠서 본체보다 나중에 죽어야 하는 것이 대상인데, 일반 컨테이너로는 그 순서를 보장할 수 없다. 그래서 <code>initContainers</code>에 <code>restartPolicy: Always</code>를 준 컨테이너를 사이드카로 취급하는 기능이 들어왔다 — 1.29에서 베타(기본 활성)로 들어오고 <strong>1.33에서 <dfn class="term">GA <span class="en">(General Availability · 정식 기능으로 승격된 상태)</span></dfn></strong>가 됐다. 검색하면 "1.28 알파" "1.29 정식" 같은 표현이 섞여 나오는데, 지금 기준은 1.33 GA다.</p>
   <div class="note-2026">
     <span class="lbl">사이드카를 일반 컨테이너로 두면 생기는 문제</span>
     잡(Job)에서 애플리케이션이 끝나도 사이드카가 계속 돌아 파드가 완료되지 않는다. 또 시작 순서를 보장할 수 없어 애플리케이션이 프록시보다 먼저 떠서 초기 요청을 놓친다. 네이티브 사이드카(1.29 베타 · 1.33 GA)가 들어온 이유가 이 두 가지다. 이 실습에서는 구조를 보는 것이 목적이라 일반 컨테이너로 두고, 차이는 M25 서비스 메시에서 다시 본다.
@@ -297,7 +280,7 @@
 
   <div class="step">
     <h4>1단계. 매니페스트를 읽는다</h4>
-    <p class="purpose"><span class="lbl">목적</span>YAML을 직접 쓴다. M08의 명령형에서 선언형으로 넘어가는 지점이다.</p>
+    <p class="purpose"><span class="lbl">목적</span><dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>을 직접 쓴다. M08의 명령형에서 선언형으로 넘어가는 지점이다.</p>
 <pre><code># course/labs/k8s/m09-pod-sidecar.yaml
 apiVersion: v1
 kind: Pod
@@ -393,7 +376,7 @@ kubectl exec journal-with-sidecar -c api -- cat /shared/init.txt</code></pre>
 {"status":"ok","version":"v1","pod":"journal-with-sidecar"}
 
 ready at 08:20:46</code></div>
-    <div class="verdict"><span class="lbl">판정</span>사이드카가 <code>localhost:8080</code>으로 API의 응답을 받았고, api 컨테이너가 init 컨테이너의 파일을 읽었다. 서로 다른 이미지, 다른 파일시스템인데도 그렇다. 시각은 환경마다 다르다.</div>
+    <div class="verdict"><span class="lbl">판정</span>사이드카가 <code>localhost:8080</code>으로 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>의 응답을 받았고, api 컨테이너가 init 컨테이너의 파일을 읽었다. 서로 다른 이미지, 다른 파일시스템인데도 그렇다. 시각은 환경마다 다르다.</div>
     <p>응답의 <code>pod</code> 필드는 M04·M05에서 도커로 직접 돌릴 때는 <code>"local"</code>이었다. 앱이 환경변수 <code>HOSTNAME</code>을 읽어 돌려주는데, 쿠버네티스는 컨테이너의 <code>HOSTNAME</code>을 <strong>파드 이름</strong>으로 설정한다. 어느 파드가 응답했는지 보는 이 장치를 M11에서 로드밸런싱 확인에 쓴다. 값은 파드 이름이므로 환경마다 다르다.</p>
     <p>여기서 제약 하나가 따라온다. 두 컨테이너가 같은 IP를 쓰므로 <strong>같은 포트를 둘 다 열 수는 없다</strong>. 파드 안에서 포트는 유일해야 한다.</p>
   </div>
@@ -493,11 +476,11 @@ kubectl config view --minify | grep namespace</code></pre>
     <p>네임스페이스가 이름 구분만 하는 것이 아니라는 점이 중요하다. 앞으로 붙는 것들이 전부 여기 걸린다.</p>
     <table>
       <tr><th>네임스페이스에 걸리는 것</th><th>다루는 모듈</th></tr>
-      <tr><td>RBAC 권한 (Role · RoleBinding)</td><td>M23</td></tr>
+      <tr><td><dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn> 권한 (Role · RoleBinding)</td><td>M23</td></tr>
       <tr><td>리소스 쿼터 · 리밋레인지</td><td>M16</td></tr>
       <tr><td>파드 시큐리티 수준 (레이블로 지정)</td><td>M24</td></tr>
       <tr><td>네트워크 정책의 기본 범위</td><td>M25</td></tr>
-      <tr><td>DNS 이름 (<code>&lt;서비스&gt;.&lt;네임스페이스&gt;.svc.cluster.local</code>)</td><td>M11</td></tr>
+      <tr><td><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 이름 (<code>&lt;서비스&gt;.&lt;네임스페이스&gt;.svc.cluster.local</code>)</td><td>M11</td></tr>
     </table>
     <p>책 2.3절이 개발 클러스터를 여러 사람이 나눠 쓰는 방법으로 네임스페이스를 제시하는 이유가 이것이다 — 이름 충돌을 막는 것보다, <strong>권한과 자원을 나누는 경계</strong>로서의 역할이 크다.</p>
   </div>
@@ -568,7 +551,7 @@ kubectl get pods -n journal-dev</code></pre>
 Error from server (NotFound): namespaces "journal-dev" not found
 No resources found in journal-dev namespace.</code></div>
     <p>마지막 줄에 주의한다. 없는 네임스페이스를 <code>-n</code>으로 지정해도 에러가 아니라 <code>No resources found</code>다 — 레이블 오타(실패 ①)와 같은 부류의 "조용한 0개"다. 삭제가 몇 초 걸리면 첫 <code>get ns</code>에 <code>Terminating</code>이 보일 수도 있다.</p>
-    <p>확인 질문이 없다. 네임스페이스 안의 모든 오브젝트 — 파드, 서비스, 컨피그맵, <strong>PVC까지</strong> — 가 함께 삭제된다. PVC가 지워지면 스토리지클래스의 reclaim 정책에 따라 실제 데이터도 지워질 수 있다(M18).</p>
+    <p>확인 질문이 없다. 네임스페이스 안의 모든 오브젝트 — 파드, 서비스, 컨피그맵, <strong><dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>까지</strong> — 가 함께 삭제된다. PVC가 지워지면 스토리지클래스의 reclaim 정책에 따라 실제 데이터도 지워질 수 있다(M18).</p>
     <p>삭제가 <code>Terminating</code>에서 멈추는 경우도 흔하다. 파이널라이저가 걸린 리소스가 남아 있기 때문인데, 원인 리소스를 찾아 정리하는 것이 정석이다. 파이널라이저를 강제로 지우는 방법이 검색하면 나오지만, 정리되지 않은 외부 자원(클라우드 로드밸런서, 디스크)이 고아로 남으므로 마지막 수단으로만 쓴다.</p>
   </div>
 </section>
@@ -610,9 +593,9 @@ deployment.apps "web" deleted from default namespace</code></div>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   200 
   <p>파드를 직접 만들었더니 자가 복구가 없었다(M08 실패 ①). M10에서 디플로이먼트로 되돌아가, 이번에는 <strong>버전을 바꾸는</strong> 실습을 한다 — 롤링 업데이트가 진행되는 것을 실시간으로 보고, 존재하지 않는 이미지로 업데이트해 멈추게 만든 뒤 되돌린다.</p>
-  <h3>참고 (2026-09-03 접근 확인)</h3>
+   201 
   <ul>
     <li>파드: https://kubernetes.io/docs/concepts/workloads/pods/</li>
     <li>사이드카 컨테이너: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/</li>

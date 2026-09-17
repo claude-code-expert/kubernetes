@@ -148,12 +148,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 181  182  183 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 35 / 38 · PART 7 확장</div>
-  <h1>플랫폼 패턴과 ML 워크로드</h1>
+   148 
   <p class="ch-desc">여기까지 다룬 워크로드는 전부 <strong>계속 도는 것</strong>이었다 — 디플로이먼트와 스테이트풀셋. 데이터 처리와 모델 훈련은 <strong>시작해서 끝나는 일</strong>이고, 다른 도구와 다른 실패 처리를 쓴다. 이 모듈에서 인덱스 잡으로 분산 훈련의 형태를 만들고, <strong>재시도해도 소용없는 실패</strong>를 구분해 파드 4개를 1개로 줄인다. 그리고 M33의 CRD를 포함한 <strong>확장 지점 지도</strong>를 정리해, 다음에 무엇을 만들지 고르는 기준을 만든다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
@@ -175,26 +175,26 @@
   <h2>핵심 3줄</h2>
   <p>1. 인덱스 잡으로 6개 샤드를 2개씩 나눠 돌리고, <code>JOB_COMPLETION_INDEX</code>로 파드마다 다른 일을 시킨다.</p>
   <p>2. 같은 실패에 <code>podFailurePolicy</code>가 있고 없고에 따라 <strong>파드 1개와 4개</strong>가 되는 것을 측정한다.</p>
-  <p>3. GPU를 요청하는 잡을 올려 <strong>드라이버가 없을 때의 스케줄 실패</strong>를 확인하고, 확장 지점 여섯 곳을 API 개수로 정리한다.</p>
+  <p>3. <dfn class="term">GPU <span class="en">(Graphics Processing Unit · 그래픽·연산 가속 장치)</span></dfn>를 요청하는 잡을 올려 <strong>드라이버가 없을 때의 스케줄 실패</strong>를 확인하고, 확장 지점 여섯 곳을 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 개수로 정리한다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">35.1</span>끝나는 일은 다르게 다룬다</a>
-  <a href="#s2"><span class="num">35.2</span>이론 — 배치의 두 축과 확장 지점</a>
-  <a href="#s3"><span class="num">35.3</span>따라하기 ① 인덱스 잡</a>
-  <a href="#s4"><span class="num">35.4</span>따라하기 ② 실패를 구분한다</a>
-  <a href="#s5"><span class="num">35.5</span>따라하기 ③ 주기 실행</a>
-  <a href="#s6"><span class="num">35.6</span>따라하기 ④ 특수 하드웨어와 DRA</a>
-  <a href="#s7"><span class="num">35.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">35.8</span>운영 관점 — 확장 지점 고르기</a>
-  <a href="#s9"><span class="num">35.9</span>체크포인트와 정리</a>
+   187 
+   188 
+   189 
+   190 
+   191 
+   192 
+   193 
+   194 
+   195 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">35.1</span>끝나는 일은 다르게 다룬다</h2>
   <p class="lead">M10에서 디플로이먼트를 다룰 때 <code>Job</code>과 <code>CronJob</code>은 이름만 보고 넘어갔다. 이 교재의 실습 대상이 계속 도는 웹 서비스였기 때문인데, 실제 클러스터에서 도는 것의 상당 부분은 <strong>시작해서 끝나는 일</strong>이다 — 야간 집계, 데이터 마이그레이션, 리포트 생성, 모델 훈련.</p>
   <p>이런 일에는 지금까지 쓴 도구가 맞지 않는다. <strong>레디니스 프로브가 의미 없다</strong>(트래픽을 받지 않는다). <strong>롤링 업데이트도 의미 없다</strong>(교체가 아니라 실행이다). <strong>재시작 정책이 반대다</strong> — 디플로이먼트의 파드는 죽으면 무조건 다시 뜨는 것이 맞지만, 배치 작업은 <strong>다시 해도 소용없는 실패</strong>가 있다.</p>
-  <p>ML 워크로드가 이 문제를 가장 선명하게 보여 준다. 훈련 한 번이 몇 시간 걸리고, GPU를 요구하고, 중간에 실패하면 <strong>비싼 자원을 그만큼 낭비</strong>한다. 그래서 배치 잡의 설정 하나하나가 돈으로 환산되고, "일단 재시도" 같은 기본값이 통하지 않는다.</p>
+  <p><dfn class="term">ML <span class="en">(Machine Learning · 기계 학습)</span></dfn> 워크로드가 이 문제를 가장 선명하게 보여 준다. 훈련 한 번이 몇 시간 걸리고, GPU를 요구하고, 중간에 실패하면 <strong>비싼 자원을 그만큼 낭비</strong>한다. 그래서 배치 잡의 설정 하나하나가 돈으로 환산되고, "일단 재시도" 같은 기본값이 통하지 않는다.</p>
   <p>이 모듈은 두 가지를 한다. 배치 워크로드의 <strong>도구를 실측으로 익히고</strong>, 지금까지 만든 확장 방법들 — CRD(M33), 어드미션 정책(M26), CSI(M18) — 을 <strong>하나의 지도로 정리</strong>한다. Part 7의 마무리이자, Part 8에서 클러스터 전체를 흔들기 전의 정리다.</p>
 </section>
 
@@ -214,21 +214,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">확장 지점 — 무엇을 바꾸고 싶은가로 고른다</text>
@@ -297,15 +283,15 @@
   <table>
     <thead><tr><th>바꾸고 싶은 것</th><th>도구</th><th>모듈</th></tr></thead>
     <tbody>
-      <tr><td>새 리소스 종류</td><td>CRD + 컨트롤러</td><td>M33</td></tr>
-      <tr><td>기존 리소스의 검사·수정</td><td>어드미션 정책(VAP/MAP) 또는 웹훅</td><td>M26</td></tr>
+      <tr><td>새 리소스 종류</td><td><dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn> + 컨트롤러</td><td>M33</td></tr>
+      <tr><td>기존 리소스의 검사·수정</td><td>어드미션 정책(<dfn class="term">VAP <span class="en">(ValidatingAdmissionPolicy · CEL 로 쓴 어드미션 정책)</span></dfn>/MAP) 또는 웹훅</td><td>M26</td></tr>
       <tr><td>특수 장치 요청</td><td>DRA (<code>resource.k8s.io</code>)</td><td>이 모듈</td></tr>
-      <tr><td>스토리지 종류</td><td>CSI 드라이버</td><td>M18</td></tr>
+      <tr><td>스토리지 종류</td><td><dfn class="term">CSI <span class="en">(Container Storage Interface · 스토리지를 붙이는 플러그인 규약)</span></dfn> 드라이버</td><td>M18</td></tr>
       <tr><td>배치 순서·우선순위</td><td>PriorityClass, 스케줄러 플러그인</td><td>M16</td></tr>
       <tr><td>컨테이너 런타임</td><td>RuntimeClass</td><td>—</td></tr>
     </tbody>
   </table>
-  <p>책이 말하는 <strong>감싸기 vs 확장</strong>의 구분이 여기서 실질적이다. <strong>감싸기</strong>는 기존 리소스를 조합해 더 쉽게 쓰게 만드는 것이고(헬름 차트, 내부 CLI), <strong>확장</strong>은 API 자체를 늘리는 것이다. 감싸기는 싸고 확장은 비싸므로, <strong>감싸기로 되는지 먼저 확인하는 것</strong>이 순서다.</p>
+  <p>책이 말하는 <strong>감싸기 vs 확장</strong>의 구분이 여기서 실질적이다. <strong>감싸기</strong>는 기존 리소스를 조합해 더 쉽게 쓰게 만드는 것이고(헬름 차트, 내부 <dfn class="term">CLI <span class="en">(Command Line Interface · 명령줄 인터페이스)</span></dfn>), <strong>확장</strong>은 API 자체를 늘리는 것이다. 감싸기는 싸고 확장은 비싸므로, <strong>감싸기로 되는지 먼저 확인하는 것</strong>이 순서다.</p>
 </section>
 
 <section id="s3">
@@ -553,7 +539,7 @@ kubectl -n m35 describe po -l job-name=train-gpu | sed -n '/Events:/,$p' | tail 
 
   Warning  FailedScheduling  20s  default-scheduler  0/3 nodes are available: request gpu: device class gpu.example.com does not exist. preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.</code></div>
     <div class="verdict"><span class="lbl">판정</span>메시지가 정확하다 — <code>device class gpu.example.com does not exist</code>. M16에서 본 <code>Insufficient cpu</code>와 형태가 같고, <strong>스케줄러가 이유를 이벤트로 남기는 규칙</strong>이 확장 자원에도 그대로 적용된다. <code>Pending</code>에서 멈춘 파드를 만나면 <strong>언제나 <code>describe</code>의 이벤트부터</strong> 본다.</div>
-    <p>선언의 구조도 짚어 둔다. <strong>청구(<code>ResourceClaim</code>)와 사용(<code>resources.claims</code>)이 분리</strong>돼 있다. 파드가 청구를 만들고, 컨테이너가 그중 어느 것을 쓸지 말한다 — <strong>여러 컨테이너가 같은 GPU를 공유</strong>하는 경우를 표현하기 위해서다. M18의 PVC와 <code>volumeMounts</code>가 나뉘어 있던 것과 같은 구조다.</p>
+    <p>선언의 구조도 짚어 둔다. <strong>청구(<code>ResourceClaim</code>)와 사용(<code>resources.claims</code>)이 분리</strong>돼 있다. 파드가 청구를 만들고, 컨테이너가 그중 어느 것을 쓸지 말한다 — <strong>여러 컨테이너가 같은 GPU를 공유</strong>하는 경우를 표현하기 위해서다. M18의 <dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>와 <code>volumeMounts</code>가 나뉘어 있던 것과 같은 구조다.</p>
   </div>
 </section>
 
@@ -600,7 +586,7 @@ too-long-nkkk2   1/1   Terminating   0   30s</code></div>
 
   <h3>감싸기로 되는지 먼저 본다</h3>
   <p>새 기능을 요구받았을 때 순서가 있다. <strong>기존 리소스의 조합으로 되는가</strong> → <strong>템플릿이나 스크립트로 감싸면 되는가</strong> → <strong>정책으로 강제하면 되는가</strong>(M26) → <strong>새 리소스 종류가 필요한가</strong>(M33).</p>
-  <p>앞의 것일수록 싸다. 헬름 차트는 운영할 프로세스가 없고, 어드미션 정책은 CEL 몇 줄이며, CRD는 <strong>컨트롤러를 상시 운영</strong>해야 한다. 이 순서를 건너뛰고 CRD부터 만드는 것이 플랫폼 팀의 흔한 실수다.</p>
+  <p>앞의 것일수록 싸다. 헬름 차트는 운영할 프로세스가 없고, 어드미션 정책은 <dfn class="term">CEL <span class="en">(Common Expression Language · 정책 조건을 적는 표현식 언어)</span></dfn> 몇 줄이며, CRD는 <strong>컨트롤러를 상시 운영</strong>해야 한다. 이 순서를 건너뛰고 CRD부터 만드는 것이 플랫폼 팀의 흔한 실수다.</p>
   <p>CRD가 맞는 신호는 M33에서 정리한 대로 셋이다 — <strong>지속적인 조정</strong>, <strong>상태 노출</strong>, <strong>새로운 도메인 개념</strong>. 셋 다 없으면 감싸기로 충분하다.</p>
 
   <h3>ML 워크로드에서 실제로 필요한 것</h3>
@@ -670,10 +656,10 @@ kubectl get po -A --no-headers | grep -vc 'Running\|Completed'</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   178 
   <p>Part 1부터 여기까지 <strong>만드는 것</strong>을 했다. 프로브를 걸고, 리소스를 정하고, 정책을 붙이고, 배포 절차를 만들었다. 그것들이 <strong>실제로 동작하는지</strong>는 대부분 정상 상황에서만 확인했다 — 파드를 하나 지워 보고, 롤아웃을 한 번 되돌려 봤을 뿐이다.</p>
   <p>M36에서 클러스터를 <strong>계획적으로 망가뜨린다.</strong> 파드를 무작위로 죽이고, 네트워크에 지연을 넣고, CPU를 고갈시킨다. 그리고 그때 <strong>M21에서 만든 알림이 실제로 울리는지</strong>, M15의 종료 창이 정말 요청을 지키는지를 확인한다. 가설을 먼저 쓰고 실험으로 검증하는 것이 이 파트의 방식이다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+   179 
   <ul>
     <li>Job: https://kubernetes.io/docs/concepts/workloads/controllers/job/</li>
     <li>인덱스 잡: https://kubernetes.io/docs/tasks/job/indexed-parallel-processing-static/</li>

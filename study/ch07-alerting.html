@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>대시보드와 알림</h1>
+   137 
   <p class="lede">06장에서 쓴 질의를 패널과 알림 규칙으로 옮긴다. 기술은 어렵지 않다. 어려운 것은 <strong>무엇을 넣지 않을지 정하는 일</strong>이다.</p>
 </header>
 
@@ -179,7 +180,7 @@ figcaption b{color:var(--ink)}
 
 <p class="cap">책 3.11</p>
 
-<p>정보가 많으면 모니터링이 잘 되는 것 같지만 반대다. <strong>한 화면은 하나의 질문에 답해야 한다.</strong> 이 실습의 RED 대시보드는 “지금 서비스가 정상인가”에만 답한다. JVM 힙이나 GC 는 이 화면이 아니라 별도의 심층 대시보드에 둔다 — “응답이 느리다”를 확인한 <em>다음에</em> 보는 지표이기 때문이다.</p>
+<p>정보가 많으면 모니터링이 잘 되는 것 같지만 반대다. <strong>한 화면은 하나의 질문에 답해야 한다.</strong> 이 실습의 <dfn class="term">RED <span class="en">(Rate, Errors, Duration · 애플리케이션을 보는 세 지표)</span></dfn> 대시보드는 “지금 서비스가 정상인가”에만 답한다. <dfn class="term">JVM <span class="en">(Java Virtual Machine · 자바 가상 머신)</span></dfn> 힙이나 <dfn class="term">GC <span class="en">(Garbage Collection · 쓰지 않는 메모리를 회수하는 동작)</span></dfn> 는 이 화면이 아니라 별도의 심층 대시보드에 둔다 — “응답이 느리다”를 확인한 <em>다음에</em> 보는 지표이기 때문이다.</p>
 
 <h3>임계를 넘은 순간과 알림이 오는 순간 사이</h3>
 
@@ -232,7 +233,7 @@ figcaption b{color:var(--ink)}
     <li>알림이 <code>inactive → pending → firing</code> 으로 바뀌는 것을 직접 관찰할 수 있다.</li>
     <li>“왜 알림이 3분 뒤에 왔나”를 네 구간으로 분해해 설명할 수 있다.</li>
     <li><code>amtool</code> 로 알림을 터뜨리지 않고 라우팅을 검증할 수 있다.</li>
-    <li>규칙의 PromQL 문법 오류가 <strong>적용 시점에</strong> 걸린다는 것을 확인할 수 있다.</li>
+    <li>규칙의 <dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn> 문법 오류가 <strong>적용 시점에</strong> 걸린다는 것을 확인할 수 있다.</li>
   </ol>
 </div>
 
@@ -339,7 +340,7 @@ figcaption b{color:var(--ink)}
 
 <div class="tablewrap">
 <table>
-  <tr><th>JSON 의 부분</th><th>그림의 무엇을 만드나</th><th>빠지면</th></tr>
+  <tr><th><dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 의 부분</th><th>그림의 무엇을 만드나</th><th>빠지면</th></tr>
   <tr><td><code>type: "datasource"</code> 변수</td><td>상단 세 번째 드롭다운</td><td>쿼리 변수가 값을 못 채운다 — 아래 설명</td></tr>
   <tr><td><code>label_values(...)</code></td><td>드롭다운의 <em>선택지</em></td><td>드롭다운이 비어 있다</td></tr>
   <tr><td><code>multi: true</code> · <code>includeAll: true</code></td><td>여러 개 선택과 <code>All</code></td><td>한 번에 하나만 볼 수 있다</td></tr>
@@ -450,7 +451,7 @@ figcaption b{color:var(--ink)}
 <div class="tablewrap">
 <table>
   <tr><th>필드</th><th>그림의 어느 부분</th><th>바꾸면</th></tr>
-  <tr><td><code>interval: 30s</code></td><td>윗줄 판정이 갱신되는 주기</td><td>짧게 하면 CPU 를 더 쓰고, 길면 발화가 늦어진다</td></tr>
+  <tr><td><code>interval: 30s</code></td><td>윗줄 판정이 갱신되는 주기</td><td>짧게 하면 <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> 를 더 쓰고, 길면 발화가 늦어진다</td></tr>
   <tr><td><code>expr</code></td><td>참/거짓 자체</td><td>임계값을 낮추면 <code>pending</code> 구간이 자주 생긴다</td></tr>
   <tr><td><code>for: 2m</code></td><td><code>pending</code> 의 길이</td><td>0 이면 왼쪽의 짧은 “참”에도 즉시 발화한다</td></tr>
   <tr><td><code>labels.severity</code></td><td>—</td><td>08절 라우팅에서 어느 수신자로 갈지 정한다</td></tr>
@@ -810,7 +811,7 @@ expected "," or ")"</code></pre>
 
 <blockquote class="ok">
   <span class="label">읽는 법</span>
-  <p>메시지에 좌표가 두 개 나온다. 앞의 <code>5:11</code> 은 <strong>YAML 파일 안의 위치</strong>, 뒤의 <code>1:12</code> 는 <strong>그 표현식 문자열 안의 위치</strong>다. 그리고 <code>group "bad", rule 1, "BadExpr"</code> 로 어느 규칙인지 콕 집어 준다. 규칙이 수십 개인 파일에서 이 정보가 없으면 눈으로 찾아야 한다.</p>
+  <p>메시지에 좌표가 두 개 나온다. 앞의 <code>5:11</code> 은 <strong><dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn> 파일 안의 위치</strong>, 뒤의 <code>1:12</code> 는 <strong>그 표현식 문자열 안의 위치</strong>다. 그리고 <code>group "bad", rule 1, "BadExpr"</code> 로 어느 규칙인지 콕 집어 준다. 규칙이 수십 개인 파일에서 이 정보가 없으면 눈으로 찾아야 한다.</p>
   <p>중요한 것은 <strong>저장되기 전에 막혔다</strong>는 점이다. 차트가 설치한 어드미션 웹훅이 <code>kubectl apply</code> 시점에 PromQL 을 파싱해 본다. 06장의 라벨 실수와는 성격이 정반대다.</p>
 </blockquote>
 
@@ -853,7 +854,7 @@ expected "," or ")"</code></pre>
 <div class="tablewrap">
 <table>
   <tr><th>기준</th><th>Alertmanager (이 실습)</th><th>Grafana Alerting</th></tr>
-  <tr><td>정의 방식</td><td><code>PrometheusRule</code> — 코드로 관리하기 자연스럽다</td><td>UI 중심. 프로비저닝도 되지만 형식이 다르다</td></tr>
+  <tr><td>정의 방식</td><td><code>PrometheusRule</code> — 코드로 관리하기 자연스럽다</td><td><dfn class="term">UI <span class="en">(User Interface · 사용자 인터페이스)</span></dfn> 중심. 프로비저닝도 되지만 형식이 다르다</td></tr>
   <tr><td>데이터소스</td><td>프로메테우스 전용</td><td>여러 데이터소스를 한 규칙에서 조합 가능</td></tr>
   <tr><td>알림 억제</td><td><code>inhibit_rules</code> 로 정교하게</td><td>상대적으로 단순하다</td></tr>
   <tr><td>적합한 상황</td><td>쿠버네티스 중심, GitOps 운영</td><td>로그·트레이스까지 섞어 판단해야 할 때</td></tr>

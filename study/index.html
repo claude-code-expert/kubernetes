@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,20 +161,20 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>쿠버네티스 관측성 실습</h1>
+   26 
   <p class="lede">노트북 한 대에 kind 클러스터를 세우고 스프링 앱 두 개를 배포한 뒤, 프로메테우스·그라파나·로키로 관측하고 마지막에 <em>일부러 고장을 내서</em> 그 관측 체계를 판정한다.</p>
 </header>
 
 <h2><span class="n">01</span>무엇을 만드는가</h2>
 
-<p>메트릭이 “무언가 이상하다”를 알려주고, 로그가 “무슨 일이 있었나”를 알려주고, 알림이 사람을 부른다. 그 셋이 한 화면에 모인 상태를 <strong>노트북 한 대 안에서</strong> 만든다. 클라우드 계정도 별도 VM 도 필요 없다.</p>
+<p>메트릭이 “무언가 이상하다”를 알려주고, 로그가 “무슨 일이 있었나”를 알려주고, 알림이 사람을 부른다. 그 셋이 한 화면에 모인 상태를 <strong>노트북 한 대 안에서</strong> 만든다. 클라우드 계정도 별도 <dfn class="term">VM <span class="en">(Virtual Machine · 가상 머신)</span></dfn> 도 필요 없다.</p>
 
 <p>그리고 마지막 장에서 <strong>일부러 고장을 낸다.</strong> 만들어 둔 알림이 실제로 우는지, 대시보드가 그것을 보여 주는지 판정하지 않으면 관측 체계가 동작한다고 말할 수 없기 때문이다.</p>
 
 <div class="tablewrap">
 <table>
   <tr><th>이 과정이 다루는 것</th><th>다루지 않는 것</th></tr>
-  <tr><td>메트릭 수집과 PromQL, 대시보드, 알림, 로그 수집, 카오스 실험</td><td>분산 추적, 장기 저장, 멀티 클러스터 — 10장 부록 D 에 이어지는 주제로 적어 뒀다</td></tr>
+  <tr><td>메트릭 수집과 <dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn>, 대시보드, 알림, 로그 수집, 카오스 실험</td><td>분산 추적, 장기 저장, 멀티 클러스터 — 10장 부록 D 에 이어지는 주제로 적어 뒀다</td></tr>
   <tr><td>쿠버네티스 위에서의 관측</td><td>쿠버네티스 자체의 입문 — 그쪽은 <a href="../course/index.html">38편 과정</a>이다</td></tr>
 </table>
 </div>
@@ -226,7 +227,7 @@ figcaption b{color:var(--ink)}
   <tr><th>장</th><th>제목과 내용</th><th>이 장이 남기는 것</th></tr>
   <tr><td><a href="ch00-setup-versions.html">00</a></td><td><strong>실습 환경 준비와 버전 고정</strong><br>도구 설치·버전 고정·사전 점검. 코드는 한 줄도 쓰지 않는다</td><td>도구 5종 · 헬름 저장소</td></tr>
   <tr><td><a href="ch01-kind-cluster.html">01</a></td><td><strong>kind 클러스터 구축</strong><br>설정 스무 줄이 04장의 타깃 상태를 미리 정한다</td><td><code>kind-cluster.yaml</code> · 노드 3개</td></tr>
-  <tr><td><a href="ch02-instrumented-app.html">02</a></td><td><strong>계측 가능한 애플리케이션</strong><br>USE·RED 를 고르고 도메인 지표 4종을 심는다</td><td>order-api · gateway 소스</td></tr>
+  <tr><td><a href="ch02-instrumented-app.html">02</a></td><td><strong>계측 가능한 애플리케이션</strong><br><dfn class="term">USE <span class="en">(Utilization, Saturation, Errors · 인프라를 보는 세 지표)</span></dfn>·<dfn class="term">RED <span class="en">(Rate, Errors, Duration · 애플리케이션을 보는 세 지표)</span></dfn> 를 고르고 도메인 지표 4종을 심는다</td><td>order-api · gateway 소스</td></tr>
   <tr><td><a href="ch03-containerize-deploy.html">03</a></td><td><strong>컨테이너화와 배포</strong><br>이미지를 노드에 적재하고 프로브 3종을 건다</td><td>매니페스트 3종 · 파드 3개</td></tr>
   <tr><td><a href="ch04-prometheus-stack.html">04</a></td><td><strong>프로메테우스 스택 설치</strong><br>메트릭 네 출처를 질의해서 구분한다</td><td><code>kps-values.yaml</code> · 타깃 전부 UP</td></tr>
   <tr><td><a href="ch05-grafana-dashboards.html">05</a></td><td><strong>그라파나와 대시보드</strong><br>대시보드를 코드로 만든다. 라벨을 빼면 조용히 사라진다</td><td><code>obs-overview.json</code></td></tr>
@@ -240,7 +241,7 @@ figcaption b{color:var(--ink)}
 
 <blockquote>
   <span class="label">다른 운영체제를 쓴다면</span>
-  <p>본문의 설치와 실행 결과는 <strong>macOS 기준</strong>이다. 우분투와 WSL2 에서 도구를 갖추는 절차는 <a href="appendix-install.html">부록 · 우분투와 윈도우에서 도구 설치</a>에 따로 모았다. 설치가 끝나면 00장으로 돌아온다.</p>
+  <p>본문의 설치와 실행 결과는 <strong>macOS 기준</strong>이다. 우분투와 <dfn class="term">WSL2 <span class="en">(Windows Subsystem for Linux 2 · 윈도우에서 리눅스를 돌리는 계층)</span></dfn> 에서 도구를 갖추는 절차는 <a href="appendix-install.html">부록 · 우분투와 윈도우에서 도구 설치</a>에 따로 모았다. 설치가 끝나면 00장으로 돌아온다.</p>
 </blockquote>
 
 
@@ -269,7 +270,7 @@ figcaption b{color:var(--ink)}
 
 <blockquote>
   <span class="label">실행 결과는 지어내지 않는다</span>
-  <p>문서에 실린 출력은 전부 <strong>실제로 실행해 얻은 것</strong>이다. 값이 환경마다 다른 부분(IP · 파드 접미사 · 타임스탬프)은 그대로 두고 각주를 달았다. 확인하지 못한 출력은 싣지 않고 “이런 형태의 출력이 나온다”고 서술했다.</p>
+  <p>문서에 실린 출력은 전부 <strong>실제로 실행해 얻은 것</strong>이다. 값이 환경마다 다른 부분(<dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn> · 파드 접미사 · 타임스탬프)은 그대로 두고 각주를 달았다. 확인하지 못한 출력은 싣지 않고 “이런 형태의 출력이 나온다”고 서술했다.</p>
 </blockquote>
 
 
@@ -315,10 +316,10 @@ figcaption b{color:var(--ink)}
 <table>
   <tr><th>구성요소</th><th>버전</th><th>함정</th></tr>
   <tr><td>Kubernetes / kind</td><td>1.36.x / v0.32.0</td><td>kubeadm 설정은 <code>v1beta4</code> — 맵이 아니라 목록이다</td></tr>
-  <tr><td>kube-prometheus-stack</td><td>차트 88.x</td><td>Operator v0.91 계열. <strong>CRD 는 helm upgrade 로 갱신되지 않는다</strong></td></tr>
+  <tr><td>kube-prometheus-stack</td><td>차트 88.x</td><td>Operator v0.91 계열. <strong><dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn> 는 helm upgrade 로 갱신되지 않는다</strong></td></tr>
   <tr><td>Prometheus / Grafana</td><td>3.x / 13.x</td><td>데이터소스는 이름이 아니라 <code>uid</code> 로 참조</td></tr>
   <tr><td>Loki</td><td>3.7.x</td><td>차트 저장소는 <code>grafana</code> 가 아니라 <strong><code>grafana-community</code></strong></td></tr>
-  <tr><td>로그 수집기</td><td>Grafana Alloy</td><td><strong>Promtail 은 2026-03-02 EOL.</strong> 검색 결과에 아직 나오지만 쓰지 않는다</td></tr>
+  <tr><td>로그 수집기</td><td>Grafana Alloy</td><td><strong>Promtail 은 2026-03-02 <dfn class="term">EOL <span class="en">(End Of Life · 지원이 끝나 더는 고쳐지지 않는 상태)</span></dfn>.</strong> 검색 결과에 아직 나오지만 쓰지 않는다</td></tr>
   <tr><td>Chaos Mesh</td><td>v2.8.2</td><td>kind 에서는 <code>chaosDaemon.runtime=containerd</code> 가 없으면 실험이 조용히 아무 일도 하지 않는다</td></tr>
   <tr><td>Spring Boot / Cloud</td><td>4.1.0 / 2025.1.x</td><td>게이트웨이 프로퍼티는 <code>spring.cloud.gateway.server.webflux.*</code>. 릴리스 트레인이 어긋나도 <strong>빌드는 성공한다</strong></td></tr>
 </table>
@@ -331,7 +332,7 @@ figcaption b{color:var(--ink)}
 
 <blockquote>
   <span class="label">하드웨어</span>
-  <p>Docker Desktop 에 <strong>CPU 4코어 · 메모리 10 GiB 이상</strong>을 할당한다. 10 GiB 미만이면 04장 설치에서 반드시 막힌다. 메모리가 12 GiB 미만이면 01장에서 워커를 하나로 줄이는 선택지가 있다 — 그 경우 라벨 두 개를 같은 노드에 붙인다.</p>
+  <p>Docker Desktop 에 <strong><dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> 4코어 · 메모리 10 <dfn class="term">GiB <span class="en">(Gibibyte · 2의 30제곱 바이트. 쿠버네티스가 쓰는 단위)</span></dfn> 이상</strong>을 할당한다. 10 GiB 미만이면 04장 설치에서 반드시 막힌다. 메모리가 12 GiB 미만이면 01장에서 워커를 하나로 줄이는 선택지가 있다 — 그 경우 라벨 두 개를 같은 노드에 붙인다.</p>
 </blockquote>
 
 

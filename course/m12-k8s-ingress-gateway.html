@@ -151,13 +151,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 252  253  254 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 12 / 38 · PART 2 쿠버네티스 코어</div>
-  <h1>인그레스와 Gateway API</h1>
-  <p class="ch-desc">M06의 <code>nginx.conf</code>가 하던 경로 라우팅을 클러스터 리소스로 옮긴다. 그리고 같은 라우팅을 Gateway API v1.6으로 다시 쓴다 — 왜 표준이 하나 더 생겼는지는 두 매니페스트를 나란히 놓으면 보인다.</p>
+   227 
+  <p class="ch-desc">M06의  26 가 하던 경로 라우팅을 클러스터 리소스로 옮긴다. 그리고 같은 라우팅을 Gateway API v1.6으로 다시 쓴다 — 왜 표준이 하나 더 생겼는지는 두 매니페스트를 나란히 놓으면 보인다.</p>
   <div class="meta">
     <span class="tag">초반→중반</span><span class="tag">75분</span><span class="tag">ingress-nginx 4.15.1</span><span class="tag">Gateway API v1.6.1</span><span class="tag">NGINX Gateway Fabric 2.7.0</span>
     <br>2026-09-05 검증 · Kubernetes 1.37.0 · Helm 4.2.4 · 버전은 실습 당일 다시 확인한다
@@ -176,26 +176,26 @@
 <div class="tldr">
   <h2>핵심 3줄</h2>
   <p>1. 인그레스 컨트롤러를 Helm으로 설치하고, <code>journal.local</code> 하나로 들어온 요청을 <code>/api</code>와 <code>/</code>에서 다른 서비스로 갈라 보낸다.</p>
-  <p>2. <code>describe ingress</code>의 <code>Backends</code>와 HTTP 404/200으로 "컨트롤러까지는 왔는가, 규칙이 잡혔는가"를 갈라 진단한다.</p>
-  <p>3. 같은 라우팅을 Gateway API의 Gateway · HTTPRoute로 다시 쓰고, <code>ResolvedRefs</code> 조건으로 잘못된 참조를 요청을 보내기 전에 잡아낸다.</p>
+  <p>2. <code>describe ingress</code>의 <code>Backends</code>와 <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 404/200으로 "컨트롤러까지는 왔는가, 규칙이 잡혔는가"를 갈라 진단한다.</p>
+  <p>3. 같은 라우팅을 Gateway <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>의 Gateway · HTTPRoute로 다시 쓰고, <code>ResolvedRefs</code> 조건으로 잘못된 참조를 요청을 보내기 전에 잡아낸다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">12.1</span>왜 서비스만으로는 부족한가</a>
-  <a href="#s2"><span class="num">12.2</span>이론 — 인그레스: 규칙과 컨트롤러</a>
-  <a href="#s3"><span class="num">12.3</span>따라하기 ① 라우팅 대상과 컨트롤러 설치</a>
-  <a href="#s4"><span class="num">12.4</span>따라하기 ② 경로 기반 라우팅</a>
-  <a href="#s5"><span class="num">12.5</span>이론 — 인그레스에서 Gateway API로</a>
-  <a href="#s6"><span class="num">12.6</span>따라하기 ③ 같은 라우팅을 Gateway API로</a>
-  <a href="#s7"><span class="num">12.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">12.8</span>체크포인트와 정리</a>
+   256 
+   257 
+   258 
+   259 
+   260 
+   261 
+   262 
+   263 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">12.1</span>왜 서비스만으로는 부족한가</h2>
   <p class="lead">M11에서 확인한 것 — ClusterIP는 클러스터 안에서만 보이고, NodePort는 포트 번호를 사람이 관리해야 하며, LoadBalancer는 서비스마다 로드밸런서를 하나씩 만든다.</p>
-  <p>그런데 실제 웹 서비스에 필요한 것은 이런 것들이다. <code>journal.example.com</code>이라는 <strong>하나의 주소</strong>로 들어와서, <code>/api</code>는 API 서비스로 <code>/</code>는 정적 파일 서버로 가고, TLS는 진입점에서 종료되고, 호스트 이름에 따라 다른 팀의 서비스로 분기한다. 이것은 전부 <strong>HTTP를 이해해야</strong> 할 수 있는 일 — L7 계층이다.</p>
-  <p>서비스는 L4(TCP/UDP)에서 동작하므로 HTTP 경로를 모른다. 그래서 L7 진입점이 따로 필요하고, 그것이 인그레스와 Gateway API다.</p>
+  <p>그런데 실제 웹 서비스에 필요한 것은 이런 것들이다. <code>journal.example.com</code>이라는 <strong>하나의 주소</strong>로 들어와서, <code>/api</code>는 API 서비스로 <code>/</code>는 정적 파일 서버로 가고, <dfn class="term">TLS <span class="en">(Transport Layer Security · 전송 구간 암호화)</span></dfn>는 진입점에서 종료되고, 호스트 이름에 따라 다른 팀의 서비스로 분기한다. 이것은 전부 <strong>HTTP를 이해해야</strong> 할 수 있는 일 — L7 계층이다.</p>
+  <p>서비스는 L4(<dfn class="term">TCP <span class="en">(Transmission Control Protocol · 연결을 맺고 순서를 보장하는 전송 규약)</span></dfn>/<dfn class="term">UDP <span class="en">(User Datagram Protocol · 연결 없이 보내는 전송 규약)</span></dfn>)에서 동작하므로 HTTP 경로를 모른다. 그래서 L7 진입점이 따로 필요하고, 그것이 인그레스와 Gateway API다.</p>
 </section>
 
 <section id="s2">
@@ -216,24 +216,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .dash { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; stroke-dasharray:4 3; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
-        .wline { stroke:#a1442a; stroke-width:1.5; fill:none; }
-        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="380" rx="6"/>
       <text class="t-h" x="40" y="46">밖에서 안으로 — 규칙을 적는 것과 트래픽을 받는 것은 다르다</text>
@@ -443,7 +426,7 @@ spec:
 <pre><code>kubectl apply -f course/labs/k8s/m12-ingress.yaml
 kubectl get ingress
 kubectl describe ingress journal | sed -n '/Rules:/,/Annotations/p'</code></pre>
-    <span class="out-lbl">실행 결과 — 파드 IP 는 환경마다 다르다</span>
+    <span class="out-lbl">실행 결과 — 파드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn> 는 환경마다 다르다</span>
     <div class="out"><code>ingress.networking.k8s.io/journal created
 NAME      CLASS   HOSTS           ADDRESS   PORTS   AGE
 journal   nginx   journal.local             80      8s
@@ -464,7 +447,7 @@ Annotations:     &lt;none&gt;</code></div>
 <pre><code>curl -s -H 'Host: journal.local' http://localhost:18080/ | head -4
 curl -s -H 'Host: journal.local' http://localhost:18080/api/entries</code></pre>
     <ul class="tight">
-      <li><code>-H 'Host: journal.local'</code> — 인그레스 규칙이 호스트 이름으로 매칭하므로 필요하다. DNS를 건드리지 않고 테스트하는 방법이다. 브라우저로 보려면 <code>/etc/hosts</code>에 <code>127.0.0.1 journal.local</code>을 추가한다</li>
+      <li><code>-H 'Host: journal.local'</code> — 인그레스 규칙이 호스트 이름으로 매칭하므로 필요하다. <dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn>를 건드리지 않고 테스트하는 방법이다. 브라우저로 보려면 <code>/etc/hosts</code>에 <code>127.0.0.1 journal.local</code>을 추가한다</li>
       <li><code>localhost:18080</code> — 맥 18080 → 컨트롤 플레인 노드 80 → 인그레스 컨트롤러</li>
     </ul>
     <span class="out-lbl">실행 결과</span>
@@ -473,7 +456,7 @@ curl -s -H 'Host: journal.local' http://localhost:18080/api/entries</code></pre>
 &lt;head&gt;
 &lt;title&gt;Welcome to nginx!&lt;/title&gt;
 {"entries":[]}</code></div>
-    <div class="verdict"><span class="lbl">판정</span><code>/</code>는 정적 서버의 nginx 기본 페이지, <code>/api/entries</code>는 저널 API의 JSON. 하나의 진입점이 두 서비스로 나눠 보냈다. 인그레스를 만든 직후라면 컨트롤러가 설정을 다시 읽는 몇 초 동안 404가 나올 수 있다 — 한 번 더 시도한다.</div>
+    <div class="verdict"><span class="lbl">판정</span><code>/</code>는 정적 서버의 nginx 기본 페이지, <code>/api/entries</code>는 저널 API의 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn>. 하나의 진입점이 두 서비스로 나눠 보냈다. 인그레스를 만든 직후라면 컨트롤러가 설정을 다시 읽는 몇 초 동안 404가 나올 수 있다 — 한 번 더 시도한다.</div>
     <p>경로 매칭 규칙 하나를 짚는다. 위 매니페스트에서 <code>/api</code>가 <code>/</code>보다 먼저 쓰여 있지만, 순서가 매칭을 정하는 것은 아니다. 인그레스는 <strong>더 긴 경로가 우선</strong>한다. <code>pathType</code>은 세 가지 — <code>Prefix</code>(경로 세그먼트 단위 접두사), <code>Exact</code>(정확히 일치), <code>ImplementationSpecific</code>(컨트롤러가 정한다. 이식성이 없으므로 피한다).</p>
   </div>
 
@@ -495,7 +478,7 @@ HTTP 404</code></div>
   <p>인그레스는 오래 쓰였지만 두 가지 한계가 분명했다(책 9.3.6).</p>
   <p><strong>첫째, 표준이 표현하지 못하는 것이 너무 많았다.</strong> 헤더 기반 라우팅, 트래픽 분할(카나리), 재시도, 타임아웃, 리다이렉트 — 전부 표준 스펙에 없어서 각 컨트롤러의 어노테이션으로 갔다. <code>nginx.ingress.kubernetes.io/canary-weight: "10"</code> 같은 것을 쓰는 순간 그 매니페스트는 다른 컨트롤러로 옮길 수 없다. 12.3의 은퇴 공지가 뼈아픈 이유가 여기 있다 — 어노테이션에 의존한 인그레스는 컨트롤러를 바꾸면 전부 다시 써야 한다.</p>
   <p><strong>둘째, 역할이 뒤섞였다.</strong> 인그레스 하나에 TLS 인증서(인프라 팀 관심사)와 경로 라우팅(개발 팀 관심사)이 함께 들어 있어, 개발자가 라우팅을 바꾸려면 인프라 설정이 든 파일을 건드려야 했다.</p>
-  <p><dfn class="term">Gateway API</dfn>는 인그레스의 후속으로 만들어진 쿠버네티스 SIG-Network의 L4·L7 라우팅 표준이다. 코어 API가 아니라 CRD로 배포되며, 이 둘을 리소스 분리로 해결한다.</p>
+  <p><dfn class="term">Gateway API</dfn>는 인그레스의 후속으로 만들어진 쿠버네티스 SIG-Network의 L4·L7 라우팅 표준이다. 코어 API가 아니라 <dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn>로 배포되며, 이 둘을 리소스 분리로 해결한다.</p>
   <table>
     <tr><th>리소스</th><th>정의하는 것</th><th>보통 누가 소유하나</th></tr>
     <tr><td><code>GatewayClass</code></td><td>어떤 구현체(컨트롤러)를 쓸지</td><td>클러스터 운영자. 설치할 때 한 번</td></tr>
@@ -504,7 +487,7 @@ HTTP 404</code></div>
   </table>
   <div class="note-2026">
     <span class="lbl">2026-09 기준 현황</span>
-    Gateway API <strong>v1.6</strong>에서 TCPRoute와 UDPRoute가 Standard 채널로 승격돼 L4 라우팅까지 GA가 됐다. 실험 기능은 <code>gateway.networking.x-k8s.io</code>라는 별도 API 그룹으로 분리돼, 안정 기능과 실험 기능이 이름만으로 구분된다. 인그레스 API는 없어지지 않지만 <strong>유지보수 모드로 새 기능이 추가되지 않는다</strong> — 신규 설계는 Gateway API로 하고, 기존 인그레스는 컨트롤러가 유지되는 동안만 그대로 두는 것이 현실적인 선택이다.
+    Gateway API <strong>v1.6</strong>에서 TCPRoute와 UDPRoute가 Standard 채널로 승격돼 L4 라우팅까지 <dfn class="term">GA <span class="en">(General Availability · 정식 기능으로 승격된 상태)</span></dfn>가 됐다. 실험 기능은 <code>gateway.networking.x-k8s.io</code>라는 별도 API 그룹으로 분리돼, 안정 기능과 실험 기능이 이름만으로 구분된다. 인그레스 API는 없어지지 않지만 <strong>유지보수 모드로 새 기능이 추가되지 않는다</strong> — 신규 설계는 Gateway API로 하고, 기존 인그레스는 컨트롤러가 유지되는 동안만 그대로 두는 것이 현실적인 선택이다.
     <span class="src">출처: kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/</span>
   </div>
 </section>
@@ -539,7 +522,7 @@ helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --version 2.7.0
 
 kubectl get gatewayclass</code></pre>
     <ul class="tight">
-      <li><code>oci://</code> — 차트를 <code>helm repo add</code> 없이 OCI 레지스트리에서 직접 당겨온다. M07의 컨테이너 레지스트리와 같은 프로토콜이다</li>
+      <li><code>oci://</code> — 차트를 <code>helm repo add</code> 없이 <dfn class="term">OCI <span class="en">(Open Container Initiative · 컨테이너 이미지·런타임 표준)</span></dfn> 레지스트리에서 직접 당겨온다. M07의 컨테이너 레지스트리와 같은 프로토콜이다</li>
       <li><code>--version 2.7.0</code> — 3단계와 같은 이유. 이 줄이 없으면 실습 당일의 최신이 설치된다. 이 문서를 검증한 2026-09-05에는 최신도 2.7.0이었다</li>
       <li><code>nginx.service.type=NodePort</code> — Gateway마다 생기는 데이터 플레인(nginx) 서비스의 타입. kind에는 LoadBalancer가 없다</li>
     </ul>
@@ -803,7 +786,7 @@ Accepted=True Accepted: The Route is accepted
 ResolvedRefs=False BackendNotFound: spec.rules[0].backendRefs[0].name: Not found: "journal-apo"
 HTTP 500</code></div>
     <div class="verdict"><span class="lbl">판정</span><code>ResolvedRefs=False</code>, <code>Reason: BackendNotFound</code>, 그리고 메시지에 <strong>어느 규칙의 어느 참조가</strong> 틀렸는지 경로(<code>spec.rules[0].backendRefs[0].name</code>)와 값이 적혀 있다. 요청을 보내면 500이 오지만, 보내지 않았어도 이미 상태에서 알 수 있었다.</div>
-    <p><code>Accepted</code>는 여전히 <code>True</code>다 — 라우트가 게이트웨이에 붙는 것과 백엔드가 존재하는 것은 다른 조건이고, 둘을 따로 알려 준다. 이 덕에 CI에서 매니페스트를 적용한 뒤 <code>ResolvedRefs</code>가 <code>True</code>인지 검사하는 자동화가 가능해진다(M29).</p>
+    <p><code>Accepted</code>는 여전히 <code>True</code>다 — 라우트가 게이트웨이에 붙는 것과 백엔드가 존재하는 것은 다른 조건이고, 둘을 따로 알려 준다. 이 덕에 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서 매니페스트를 적용한 뒤 <code>ResolvedRefs</code>가 <code>True</code>인지 검사하는 자동화가 가능해진다(M29).</p>
 <pre><code>kubectl patch httproute journal-route --type json \
   -p '[{"op":"replace","path":"/spec/rules/0/backendRefs/0/name","value":"journal-api"}]'
 sleep 5
@@ -852,9 +835,9 @@ ResolvedRefs=True ResolvedRefs: All references are resolved</code></div>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>밖에서 들어오는 길은 정리됐지만, 앱이 안에서 읽는 값은 아직 정리되지 않았다. <code>journal-api</code>의 설정은 M10 매니페스트에 <code>APP_VERSION: "v1"</code> 한 줄로 박혀 있고, M14에서 붙일 레디스 주소와 비밀번호를 그 자리에 적을 수는 없다 — 깃에 올라간다. M13은 설정을 이미지와 매니페스트 밖으로 빼는 두 그릇, 컨피그맵과 시크릿을 다룬다. 같은 값을 환경 변수와 볼륨으로 각각 주입해 갱신이 한쪽에만 반영되는 것을 70초 기다려 확인하고, 시크릿을 <code>base64 -d</code> 한 줄로 열어 <strong>암호화가 아니라 인코딩</strong>임을 확인한다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   249 
+  <p>밖에서 들어오는 길은 정리됐지만, 앱이 안에서 읽는 값은 아직 정리되지 않았다.  218 의 설정은 M10 매니페스트에  219  한 줄로 박혀 있고, M14에서 붙일 레디스 주소와 비밀번호를 그 자리에 적을 수는 없다 — 깃에 올라간다. M13은 설정을 이미지와 매니페스트 밖으로 빼는 두 그릇, 컨피그맵과 시크릿을 다룬다. 같은 값을 환경 변수와 볼륨으로 각각 주입해 갱신이 한쪽에만 반영되는 것을 70초 기다려 확인하고, 시크릿을  220  한 줄로 열어 <strong>암호화가 아니라 인코딩</strong>임을 확인한다.</p>
+   250 
   <ul>
     <li>인그레스: https://kubernetes.io/docs/concepts/services-networking/ingress/</li>
     <li>인그레스 컨트롤러 목록: https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/</li>

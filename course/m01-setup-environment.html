@@ -151,12 +151,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg on" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 238  239  240 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 01 / 38 · PART 0 실습 환경</div>
-  <h1>환경 구축과 버전 고정</h1>
+   215 
   <p class="ch-desc">앞으로 37개 모듈에서 칠 명령이 전부 이 클러스터 위에서 돈다. 만드는 데 20초, 부수는 데 5초. 이 모듈이 끝나면 언제든 처음 상태로 돌아갈 수 있게 된다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">50분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">kind v0.33.0</span>
@@ -177,31 +177,31 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">1.1</span>왜 로컬 클러스터인가</a>
-  <a href="#s2"><span class="num">1.2</span>이론 — 무엇이 어디서 도는가</a>
-  <a href="#s3"><span class="num">1.3</span>설치</a>
-  <a href="#s4"><span class="num">1.4</span>클러스터 설정 파일</a>
-  <a href="#s5"><span class="num">1.5</span>따라하기 — 클러스터 생성과 확인</a>
-  <a href="#s6"><span class="num">1.6</span>일부러 실패시키기</a>
-  <a href="#s7"><span class="num">1.7</span>사전 점검 스크립트</a>
-  <a href="#s8"><span class="num">1.8</span>체크포인트</a>
-  <a href="#s9"><span class="num">1.9</span>정리와 재생성</a>
+   241 
+   242 
+   243 
+   244 
+   245 
+   246 
+   247 
+   248 
+   249 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">1.1</span>왜 로컬 클러스터인가</h2>
   <p class="lead">쿠버네티스를 배우는 가장 흔한 실패는 클라우드 계정부터 만드는 것이다. 관리형 클러스터는 켜두면 돈이 나가고, 그래서 실습이 끝나면 지우고, 다음 주에 다시 만들면서 30분을 쓴다. 부수는 것이 아까운 환경에서는 <strong>일부러 망가뜨리는 실습</strong>을 할 수 없다.</p>
   <p>이 과정은 반대로 간다. 클러스터를 20초에 만들고 5초에 지운다. 노드를 <code>drain</code>으로 비우고, 파드를 죽이고, 네트워크 정책으로 통신을 끊고, 나중에는 카오스 도구로 일부러 장애를 주입한다. 되돌리는 방법이 "다시 만든다"이기 때문에 무엇이든 해볼 수 있다.</p>
-  <p>대신 로컬 클러스터가 못 하는 것도 분명히 해둔다. 클라우드 로드밸런서(<code>type: LoadBalancer</code>의 실제 외부 IP), 여러 가용 영역, 노드 오토스케일링, 클라우드 IAM 연동은 흉내만 낸다. 해당 모듈에서 "여기까지가 로컬, 여기부터는 클라우드"를 매번 표시한다.</p>
+  <p>대신 로컬 클러스터가 못 하는 것도 분명히 해둔다. 클라우드 로드밸런서(<code>type: LoadBalancer</code>의 실제 외부 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>), 여러 가용 영역, 노드 오토스케일링, 클라우드 <dfn class="term">IAM <span class="en">(Identity and Access Management · 클라우드의 신원·권한 관리)</span></dfn> 연동은 흉내만 낸다. 해당 모듈에서 "여기까지가 로컬, 여기부터는 클라우드"를 매번 표시한다.</p>
   <h3>도구 선택 — 결정 두 개</h3>
-  <p>첫째, 컨테이너를 실제로 실행할 런타임. 맥과 윈도우는 리눅스 컨테이너를 직접 못 돌리므로 어느 선택지든 내부적으로 경량 리눅스 VM을 띄운다.</p>
+  <p>첫째, 컨테이너를 실제로 실행할 런타임. 맥과 윈도우는 리눅스 컨테이너를 직접 못 돌리므로 어느 선택지든 내부적으로 경량 리눅스 <dfn class="term">VM <span class="en">(Virtual Machine · 가상 머신)</span></dfn>을 띄운다.</p>
   <table>
     <tr><th>런타임</th><th>고르는 이유</th></tr>
-    <tr><td>Docker Desktop</td><td>공식 제품, 크로스 플랫폼, GUI 대시보드. 회사 표준이 이미 이것이면 그대로 쓴다. 직원 250인 이상 또는 연매출 1천만 달러 이상 기업은 유료 구독이 필요하다</td></tr>
-    <tr><td>OrbStack (맥)</td><td>시작이 몇 초, 유휴 상태 메모리·배터리 소모가 낮다. <code>docker</code> CLI 완전 호환이라 이 과정의 명령이 그대로 동작한다. 개인 사용 무료</td></tr>
+    <tr><td>Docker Desktop</td><td>공식 제품, 크로스 플랫폼, <dfn class="term">GUI <span class="en">(Graphical User Interface · 그래픽 사용자 인터페이스)</span></dfn> 대시보드. 회사 표준이 이미 이것이면 그대로 쓴다. 직원 250인 이상 또는 연매출 1천만 달러 이상 기업은 유료 구독이 필요하다</td></tr>
+    <tr><td>OrbStack (맥)</td><td>시작이 몇 초, 유휴 상태 메모리·배터리 소모가 낮다. <code>docker</code> <dfn class="term">CLI <span class="en">(Command Line Interface · 명령줄 인터페이스)</span></dfn> 완전 호환이라 이 과정의 명령이 그대로 동작한다. 개인 사용 무료</td></tr>
     <tr><td>Colima</td><td>GUI 없이 CLI만, 전부 오픈소스여야 할 때</td></tr>
   </table>
-  <p>둘째, 그 위에 클러스터를 만들 도구. 이 과정은 <dfn class="term">kind <span class="en">(Kubernetes IN Docker)</span></dfn>로 통일한다. 도커 컨테이너 하나를 쿠버네티스 노드 하나로 쓰는 공식 SIG 도구다. 노드를 여러 개 만드는 것이 설정 파일 몇 줄이고, 이 과정의 M16(스케줄링)·M18(스토리지)·M25(네트워크 정책)은 노드가 2개 이상이어야 실습이 성립한다. 런타임에 내장된 단일 노드 쿠버네티스나 minikube로도 앞쪽 모듈은 되지만, 중간에 도구를 바꾸면 명령과 출력이 달라진다.</p>
+  <p>둘째, 그 위에 클러스터를 만들 도구. 이 과정은 <dfn class="term">kind <span class="en">(Kubernetes IN Docker)</span></dfn>로 통일한다. 도커 컨테이너 하나를 쿠버네티스 노드 하나로 쓰는 공식 <dfn class="term">SIG <span class="en">(Special Interest Group · 쿠버네티스의 주제별 개발 조직)</span></dfn> 도구다. 노드를 여러 개 만드는 것이 설정 파일 몇 줄이고, 이 과정의 M16(스케줄링)·M18(스토리지)·M25(네트워크 정책)은 노드가 2개 이상이어야 실습이 성립한다. 런타임에 내장된 단일 노드 쿠버네티스나 minikube로도 앞쪽 모듈은 되지만, 중간에 도구를 바꾸면 명령과 출력이 달라진다.</p>
 </section>
 
 <section id="s2">
@@ -215,18 +215,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .vm { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-      </style>
+       1 
       <rect class="outer" x="20" y="20" width="860" height="360" rx="6"/>
       <text class="t-h" x="40" y="46">macOS — 노트북 한 대</text>
       <rect class="accent" x="46" y="150" width="146" height="76" rx="4"/>
@@ -281,7 +270,7 @@
   <p>노드 쪽은 둘이다. <code>kubelet</code>은 apiserver에서 "이 노드에 이 파드를 띄워라"를 받아 컨테이너 런타임(containerd)에 지시하고 상태를 보고한다. <code>kube-proxy</code>는 서비스 IP로 온 트래픽을 실제 파드로 넘기는 규칙을 관리한다(M11의 주제).</p>
   <div class="note-2026">
     <span class="lbl">kind의 특이점</span>
-    kind에서는 컨트롤 플레인 컴포넌트도 <strong>파드로 뜬다</strong>(스태틱 파드). 그래서 <code>kubectl get pods -n kube-system</code>에 <code>etcd-study-control-plane</code> 같은 이름이 보인다. 관리형 클러스터(EKS · GKE · AKS)에서는 컨트롤 플레인이 클라우드 사업자 쪽에 숨어 있어 이 목록에 나타나지 않는다 — 로컬에서만 볼 수 있는 학습 기회다.
+    kind에서는 컨트롤 플레인 컴포넌트도 <strong>파드로 뜬다</strong>(스태틱 파드). 그래서 <code>kubectl get pods -n kube-system</code>에 <code>etcd-study-control-plane</code> 같은 이름이 보인다. 관리형 클러스터(<dfn class="term">EKS <span class="en">(Elastic Kubernetes Service · AWS 의 관리형 쿠버네티스)</span></dfn> · <dfn class="term">GKE <span class="en">(Google Kubernetes Engine · GCP 의 관리형 쿠버네티스)</span></dfn> · <dfn class="term">AKS <span class="en">(Azure Kubernetes Service · 애저의 관리형 쿠버네티스)</span></dfn>)에서는 컨트롤 플레인이 클라우드 사업자 쪽에 숨어 있어 이 목록에 나타나지 않는다 — 로컬에서만 볼 수 있는 학습 기회다.
   </div>
 </section>
 
@@ -302,7 +291,7 @@ brew install kind helm kubernetes-cli k6
 brew install openjdk@21
 echo 'export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"' &gt;&gt; ~/.zshrc
 source ~/.zshrc</code></pre>
-  <p>뒤의 둘은 이 모듈에서 쓰지 않는다. <code>k6</code>는 M17 오토스케일링과 M37 부하 실험에서 요청을 쏘는 도구이고, JDK 21은 M19부터 실습 대상이 되는 Spring Boot 앱(<code>order-api</code>)을 빌드하는 데 필요하다. 지금 깔아두는 이유는 그 모듈들의 첫 10분을 설치로 쓰지 않기 위해서다. 클러스터 위에 설치해야 하는 metrics-server는 클러스터를 만든 뒤 1.5절 7단계에서 올린다.</p>
+  <p>뒤의 둘은 이 모듈에서 쓰지 않는다. <code>k6</code>는 M17 오토스케일링과 M37 부하 실험에서 요청을 쏘는 도구이고, <dfn class="term">JDK <span class="en">(Java Development Kit · 자바 개발 도구 모음)</span></dfn> 21은 M19부터 실습 대상이 되는 Spring Boot 앱(<code>order-api</code>)을 빌드하는 데 필요하다. 지금 깔아두는 이유는 그 모듈들의 첫 10분을 설치로 쓰지 않기 위해서다. 클러스터 위에 설치해야 하는 metrics-server는 클러스터를 만든 뒤 1.5절 7단계에서 올린다.</p>
   <p>설치가 끝나면 런타임 앱을 한 번 실행해 둔다. 데몬이 떠 있어야 kind가 노드 컨테이너를 만든다. 그다음 버전을 확인한다.</p>
 <pre><code>docker version --format 'Server {{.Server.Version}}'
 kind version
@@ -323,7 +312,7 @@ OpenJDK 64-Bit Server VM Homebrew (build 21.0.12.1, mixed mode, sharing)</code><
   <div class="verdict"><span class="lbl">판정</span>여섯 명령이 모두 버전을 출력하면 통과. <code>docker version</code>에서 Server 줄이 안 나오면 런타임 앱이 아직 뜨지 않은 것이다. <code>java -version</code>이 <code>Unable to locate a Java Runtime</code>이면 PATH 줄이 적용되지 않은 것이므로 새 터미널을 열거나 <code>source ~/.zshrc</code>를 다시 한다. 첫 줄이 <code>openjdk version "21.</code>로 시작해야 한다 — 17이나 26이 나오면 다른 JDK가 PATH 앞에 있다.</div>
 
   <h3>런타임 메모리를 먼저 올려둔다</h3>
-  <p>Part 4에서 프로메테우스 스택을 설치하면 파드가 20개 넘게 뜬다. 기본값(보통 2~4GiB)으로는 그때 가서 <code>Pending</code>과 <code>OOMKilled</code>를 만난다. 지금 올려두는 편이 낫다. Docker Desktop은 Settings → Resources, OrbStack은 Settings → System에서 <strong>메모리 8GiB · CPU 4코어 · 디스크 40GiB 이상</strong>으로 맞춘다.</p>
+  <p>Part 4에서 프로메테우스 스택을 설치하면 파드가 20개 넘게 뜬다. 기본값(보통 2~4GiB)으로는 그때 가서 <code>Pending</code>과 <code>OOMKilled</code>를 만난다. 지금 올려두는 편이 낫다. Docker Desktop은 Settings → Resources, OrbStack은 Settings → System에서 <strong>메모리 8GiB · <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> 4코어 · 디스크 40GiB 이상</strong>으로 맞춘다.</p>
   <div class="note-2026">
     <span class="lbl">노트북 사양이 빠듯하면</span>
     메모리를 6GiB 미만밖에 못 주는 환경이라면 워커 노드를 1개로 줄인다(설정 파일에서 <code>- role: worker</code> 한 줄 삭제). M16 스케줄링 실습의 노드 분산 부분만 관찰 대상이 줄고, 나머지 모듈은 그대로 진행된다.
@@ -398,7 +387,7 @@ kubectl cluster-info --context kind-study</code></div>
 
   <div class="step">
     <h4>2단계. 노드가 셋 다 Ready인지 확인한다</h4>
-    <p class="purpose"><span class="lbl">목적</span>노드가 클러스터에 합류하고 CNI가 준비됐는지 본다.</p>
+    <p class="purpose"><span class="lbl">목적</span>노드가 클러스터에 합류하고 <dfn class="term">CNI <span class="en">(Container Network Interface · 파드에 네트워크를 붙이는 플러그인 규약)</span></dfn>가 준비됐는지 본다.</p>
 <pre><code>kubectl get nodes -o wide</code></pre>
     <span class="out-lbl">실행 결과 — 생성 직후 (약 20초 시점)</span>
     <div class="out"><code>NAME                  STATUS     ROLES           AGE   VERSION   INTERNAL-IP   OS-IMAGE                       CONTAINER-RUNTIME
@@ -446,7 +435,7 @@ kube-proxy-xm7rg                              1/1     Running   0          25s  
 kube-proxy-xscw4                              1/1     Running   0          21s   172.20.0.3   study-worker2
 kube-proxy-znlmz                              1/1     Running   0          21s   172.20.0.2   study-worker
 kube-scheduler-study-control-plane            1/1     Running   0          33s   172.20.0.4   study-control-plane</code></div>
-    <p>읽는 법이 있다. <code>etcd</code> · <code>kube-apiserver</code> · <code>kube-controller-manager</code> · <code>kube-scheduler</code>는 컨트롤 플레인 노드에만 하나씩 있다. 반면 <code>kube-proxy</code>와 <code>kindnet</code>(kind의 CNI 플러그인)은 <strong>노드마다 하나씩</strong> — 노드 3개니까 3개다. 노드마다 하나를 보장하는 컨트롤러가 <dfn class="term">데몬셋 <span class="en">(DaemonSet)</span></dfn>이다. <code>kindnet</code>과 <code>kube-proxy</code>가 왜 데몬셋으로 도는지는 M09의 워크로드 컨트롤러 지도(Deployment · StatefulSet · DaemonSet · Job)가 이 장면을 그대로 이어받아 설명한다. <code>coredns</code>는 클러스터 안 DNS로, 이름이 IP로 바뀌는 모든 통신이 여기를 거친다(M11).</p>
+    <p>읽는 법이 있다. <code>etcd</code> · <code>kube-apiserver</code> · <code>kube-controller-manager</code> · <code>kube-scheduler</code>는 컨트롤 플레인 노드에만 하나씩 있다. 반면 <code>kube-proxy</code>와 <code>kindnet</code>(kind의 CNI 플러그인)은 <strong>노드마다 하나씩</strong> — 노드 3개니까 3개다. 노드마다 하나를 보장하는 컨트롤러가 <dfn class="term">데몬셋 <span class="en">(DaemonSet)</span></dfn>이다. <code>kindnet</code>과 <code>kube-proxy</code>가 왜 데몬셋으로 도는지는 M09의 워크로드 컨트롤러 지도(Deployment · StatefulSet · DaemonSet · Job)가 이 장면을 그대로 이어받아 설명한다. <code>coredns</code>는 클러스터 안 <dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn>로, 이름이 IP로 바뀌는 모든 통신이 여기를 거친다(M11).</p>
     <div class="verdict"><span class="lbl">판정</span>모든 파드가 <code>Running</code>이고 <code>READY</code>가 <code>1/1</code>. <code>kube-proxy</code>와 <code>kindnet</code>이 각각 3개면 노드 3개가 모두 정상 합류한 것이다.</div>
   </div>
 
@@ -455,7 +444,7 @@ kube-scheduler-study-control-plane            1/1     Running   0          33s  
     <p class="purpose"><span class="lbl">목적</span><code>get nodes</code>가 되는 것과 apiserver가 완전히 건강한 것은 다르다. 내장 진단 엔드포인트를 쓰는 법을 익힌다.</p>
 <pre><code>kubectl get --raw='/readyz?verbose' | tail -5</code></pre>
     <ul class="tight">
-      <li><code>--raw</code> — kubectl이 해석하지 않고 apiserver의 HTTP 응답을 그대로 보여준다. 오브젝트가 아닌 진단 엔드포인트를 볼 때 쓴다</li>
+      <li><code>--raw</code> — kubectl이 해석하지 않고 apiserver의 <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 응답을 그대로 보여준다. 오브젝트가 아닌 진단 엔드포인트를 볼 때 쓴다</li>
       <li><code>?verbose</code> — 항목별 결과를 모두 출력한다. 빼면 <code>ok</code> 한 줄만 나온다</li>
     </ul>
     <span class="out-lbl">실행 결과 (마지막 5줄)</span>
@@ -478,7 +467,7 @@ readyz check passed</code></div>
   </div>
 
   <div class="step">
-    <h4>7단계. metrics-server를 설치해 <code>kubectl top</code>이 수치를 돌려주게 한다</h4>
+    <h4>7단계. metrics-server를 설치해  110 이 수치를 돌려주게 한다</h4>
     <p class="purpose"><span class="lbl">목적</span>노드와 파드의 CPU · 메모리 사용량을 읽는 <code>kubectl top</code>은 <dfn class="term">metrics-server</dfn>가 있어야 동작하는데 kind에는 기본으로 들어 있지 않다. M16 <code>kubectl top</code>과 M17 HPA(오토스케일러가 이 수치로 계산한다)의 전제라서 지금 깔아둔다.</p>
 <pre><code>kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml
 kubectl -n kube-system rollout status deploy/metrics-server --timeout=45s</code></pre>
@@ -504,12 +493,12 @@ error: Metrics API not available
 E0905 08:13:50.412499       1 scraper.go:149] "Failed to scrape node" err="Get \"https://172.20.0.3:10250/metrics/resource\":
   tls: failed to verify certificate: x509: cannot validate certificate for 172.20.0.3 because it doesn't contain any IP SANs" node="study-worker2"
 I0905 08:13:51.372949       1 server.go:192] "Failed probe" probe="metric-storage-ready" err="no metrics to serve"</code></div>
-    <p>metrics-server는 각 노드의 kubelet(<code>:10250</code>)에서 수치를 긁어오는데, kind 노드의 kubelet 인증서에는 IP 주소가 SAN으로 들어 있지 않다. 그래서 TLS 검증이 실패하고 긁어올 것이 없으니 준비 프로브도 계속 실패한다. 해결은 kubelet 인증서 검증을 끄는 인자 하나를 컨테이너 <code>args</code>에 덧붙이는 것이다.</p>
+    <p>metrics-server는 각 노드의 kubelet(<code>:10250</code>)에서 수치를 긁어오는데, kind 노드의 kubelet 인증서에는 IP 주소가 <dfn class="term">SAN <span class="en">(Subject Alternative Name · 인증서가 보증하는 이름·주소 목록)</span></dfn>으로 들어 있지 않다. 그래서 <dfn class="term">TLS <span class="en">(Transport Layer Security · 전송 구간 암호화)</span></dfn> 검증이 실패하고 긁어올 것이 없으니 준비 프로브도 계속 실패한다. 해결은 kubelet 인증서 검증을 끄는 인자 하나를 컨테이너 <code>args</code>에 덧붙이는 것이다.</p>
 <pre><code>kubectl -n kube-system patch deploy metrics-server --type=json \
   -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
 kubectl -n kube-system rollout status deploy/metrics-server --timeout=90s</code></pre>
     <ul class="tight">
-      <li><code>patch --type=json</code> — 오브젝트의 한 필드만 고친다. <code>args/-</code>의 <code>-</code>는 "배열 끝에 추가"라는 JSON Patch 표기다. 파일을 내려받아 고쳐 다시 <code>apply</code>해도 결과는 같다</li>
+      <li><code>patch --type=json</code> — 오브젝트의 한 필드만 고친다. <code>args/-</code>의 <code>-</code>는 "배열 끝에 추가"라는 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> Patch 표기다. 파일을 내려받아 고쳐 다시 <code>apply</code>해도 결과는 같다</li>
     </ul>
     <span class="out-lbl">실행 결과</span>
     <div class="out"><code>deployment.apps/metrics-server patched
@@ -525,7 +514,7 @@ study-worker2         129m         0%       553Mi           7%</code></div>
     <div class="verdict"><span class="lbl">판정</span>노드 3줄에 CPU · 메모리 수치가 채워진다. 30초를 더 기다려도 <code>Metrics API not available</code>이면 <code>kubectl -n kube-system get deploy metrics-server -o jsonpath='{.spec.template.spec.containers[0].args}'</code>로 <code>--kubelet-insecure-tls</code>가 들어갔는지 본다.</div>
     <div class="note-2026">
       <span class="lbl">--kubelet-insecure-tls는 로컬용이다</span>
-      이 인자는 kubelet 인증서를 검증하지 않겠다는 뜻이다. kind처럼 노트북 안에서 닫힌 클러스터에서는 상관없지만, 운영 클러스터에서는 kubelet 서빙 인증서를 클러스터 CA로 발급받게 하고 이 인자 없이 띄운다. 관리형 클러스터(EKS · GKE · AKS)는 metrics-server가 이미 들어 있거나 애드온으로 제공되므로 이 단계 자체가 없다.
+      이 인자는 kubelet 인증서를 검증하지 않겠다는 뜻이다. kind처럼 노트북 안에서 닫힌 클러스터에서는 상관없지만, 운영 클러스터에서는 kubelet 서빙 인증서를 클러스터 <dfn class="term">CA <span class="en">(Certificate Authority · 인증서를 발급하고 보증하는 주체)</span></dfn>로 발급받게 하고 이 인자 없이 띄운다. 관리형 클러스터(EKS · GKE · AKS)는 metrics-server가 이미 들어 있거나 애드온으로 제공되므로 이 단계 자체가 없다.
     </div>
   </div>
 </section>
@@ -547,15 +536,15 @@ ERROR: failed to create cluster: command "docker run --name study-control-plane 
 Command Output: docker: Error response from daemon: ports are not available:
 exposing port TCP 0.0.0.0:443 -&gt; 127.0.0.1:0: listen tcp4 0.0.0.0:443:
 bind: address already in use</code></div>
-    <p>읽는 순서는 <strong>맨 아래부터</strong>다. 마지막 줄 <code>bind: address already in use</code>가 진짜 원인이고, 그 위의 <code>failed to create cluster</code>는 결과일 뿐이다. 맥에서는 443을 다른 개발 도구나 VPN 클라이언트가 이미 잡고 있는 경우가 흔하다. 눈여겨볼 것이 하나 더 있다 — kind는 실패하자 만들다 만 노드 3개를 <strong>스스로 지웠다</strong>(<code>Deleted nodes</code>). 반쯤 만들어진 클러스터가 남지 않으므로 원인만 고치고 같은 명령을 다시 치면 된다.</p>
+    <p>읽는 순서는 <strong>맨 아래부터</strong>다. 마지막 줄 <code>bind: address already in use</code>가 진짜 원인이고, 그 위의 <code>failed to create cluster</code>는 결과일 뿐이다. 맥에서는 443을 다른 개발 도구나 <dfn class="term">VPN <span class="en">(Virtual Private Network · 가상 사설망)</span></dfn> 클라이언트가 이미 잡고 있는 경우가 흔하다. 눈여겨볼 것이 하나 더 있다 — kind는 실패하자 만들다 만 노드 3개를 <strong>스스로 지웠다</strong>(<code>Deleted nodes</code>). 반쯤 만들어진 클러스터가 남지 않으므로 원인만 고치고 같은 명령을 다시 치면 된다.</p>
     <p>누가 그 포트를 쓰는지 먼저 본다.</p>
 <pre><code>sudo lsof -nP -iTCP:443 -sTCP:LISTEN</code></pre>
     <ul class="tight">
       <li><code>-nP</code> — 호스트명 · 포트명을 숫자 그대로 보여준다(역방향 조회로 느려지는 것을 막는다)</li>
-      <li><code>-iTCP:443 -sTCP:LISTEN</code> — TCP 443에서 <em>대기(LISTEN)</em> 중인 소켓만. 붙어 있는 클라이언트 연결은 걸러낸다</li>
+      <li><code>-iTCP:443 -sTCP:LISTEN</code> — <dfn class="term">TCP <span class="en">(Transmission Control Protocol · 연결을 맺고 순서를 보장하는 전송 규약)</span></dfn> 443에서 <em>대기(LISTEN)</em> 중인 소켓만. 붙어 있는 클라이언트 연결은 걸러낸다</li>
       <li><code>sudo</code> — 다른 사용자(root 포함)가 띄운 프로세스까지 보려면 필요하다. 내 프로세스만 볼 때는 빼도 된다</li>
     </ul>
-    <span class="out-lbl">실행 결과 — 이 문서를 만든 환경에서는 80도 다른 도커 컨테이너가 잡고 있어 그쪽으로 확인한 예다 (PID · DEVICE 값은 환경마다 다르다)</span>
+    <span class="out-lbl">실행 결과 — 이 문서를 만든 환경에서는 80도 다른 도커 컨테이너가 잡고 있어 그쪽으로 확인한 예다 (<dfn class="term">PID <span class="en">(Process Identifier · 프로세스 번호)</span></dfn> · DEVICE 값은 환경마다 다르다)</span>
     <div class="out"><code>COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
 com.docke 82374 mini   89u  IPv6 0x203bbccd81169dc4      0t0  TCP *:80 (LISTEN)</code></div>
     <p><code>COMMAND</code> 열이 범인이다. <code>com.docke</code>는 <code>com.docker.backend</code>가 잘린 것으로, 다른 도커 컨테이너가 <code>-p 80:…</code>으로 그 포트를 이미 내보내고 있다는 뜻이다. VPN 클라이언트나 로컬 개발 서버라면 그 이름이 여기 찍힌다. 아무 줄도 안 나오면 <code>sudo</code>를 빼고 쳤을 가능성이 크다.</p>
@@ -575,7 +564,7 @@ Kustomize Version: v5.7.1
 Server Version: v1.37.0
 Warning: version difference between client (1.34) and server (1.37) exceeds
 the supported minor version skew of +/-1</code></div>
-    <p>쿠버네티스는 클라이언트와 서버의 마이너 버전 차이를 <strong>±1까지만</strong> 보장한다. 여기서는 3이나 벌어졌다. 당장은 대부분의 명령이 동작하지만, 새 API에서 필드가 통째로 누락되거나 <code>kubectl explain</code>이 낡은 스키마를 보여주는 식으로 조용히 어긋난다. 학습 중에 이런 종류의 오차가 섞이면 원인을 찾는 데 시간을 다 쓴다.</p>
+    <p>쿠버네티스는 클라이언트와 서버의 마이너 버전 차이를 <strong>±1까지만</strong> 보장한다. 여기서는 3이나 벌어졌다. 당장은 대부분의 명령이 동작하지만, 새 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>에서 필드가 통째로 누락되거나 <code>kubectl explain</code>이 낡은 스키마를 보여주는 식으로 조용히 어긋난다. 학습 중에 이런 종류의 오차가 섞이면 원인을 찾는 데 시간을 다 쓴다.</p>
 <pre><code># 어느 kubectl이 잡히는지 확인
 which -a kubectl
 
@@ -621,7 +610,7 @@ Server Version: v1.37.0</code></div>
   [ OK ] 런타임 메모리 7GiB
 
 통과 13 · 실패 0</code></div>
-  <div class="verdict"><span class="lbl">판정</span>마지막 줄이 <code>통과 13 · 실패 0</code>. 하나라도 <code>[FAIL]</code>이면 그 줄에 적힌 해결 명령을 실행한다. 스크립트는 실패가 있으면 종료 코드 1로 끝나므로 나중에 CI에서도 쓸 수 있다(M29).</div>
+  <div class="verdict"><span class="lbl">판정</span>마지막 줄이 <code>통과 13 · 실패 0</code>. 하나라도 <code>[FAIL]</code>이면 그 줄에 적힌 해결 명령을 실행한다. 스크립트는 실패가 있으면 종료 코드 1로 끝나므로 나중에 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서도 쓸 수 있다(M29).</div>
   <p>메모리 항목이 <code>[FAIL]</code>로 나와도 M18까지는 진행된다. Part 4 관측 스택 설치 전까지만 해결하면 된다. JDK 21 항목이 <code>[FAIL]</code>이면 1.3절의 PATH 줄이 현재 셸에 적용되지 않은 경우가 대부분이다.</p>
 </section>
 
@@ -668,7 +657,7 @@ docker ps -a --filter "label=io.x-k8s.kind.cluster=study"</code></pre>
 Deleted nodes: ["study-control-plane" "study-worker" "study-worker2"]
 No kind clusters found.</code></div>
   <p>노드 컨테이너가 지워지므로 <code>docker ps -a</code>에도 아무것도 남지 않는다. 다만 노드 이미지(약 1GiB)는 캐시에 남아 다음 생성이 훨씬 빠르다. 이미지까지 지우려면 <code>docker rmi kindest/node:v1.37.0</code>.</p>
-  <p>클러스터 안에만 저장한 데이터(PVC 내용, 설치한 헬름 릴리스, 만든 오브젝트, 1.5절 7단계의 metrics-server)는 함께 사라진다. 실습 중 만든 YAML은 <code>course/labs/</code>에 파일로 남아 있으므로 다시 <code>apply</code>하면 된다. 이것이 <strong>선언형으로 관리하는 이유</strong>다 — 클러스터는 언제든 버릴 수 있고, 진실은 파일에 있다(M08에서 다시 다룬다).</p>
+  <p>클러스터 안에만 저장한 데이터(<dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn> 내용, 설치한 헬름 릴리스, 만든 오브젝트, 1.5절 7단계의 metrics-server)는 함께 사라진다. 실습 중 만든 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>은 <code>course/labs/</code>에 파일로 남아 있으므로 다시 <code>apply</code>하면 된다. 이것이 <strong>선언형으로 관리하는 이유</strong>다 — 클러스터는 언제든 버릴 수 있고, 진실은 파일에 있다(M08에서 다시 다룬다).</p>
   <div class="note-2026">
     <span class="lbl">부하 · 백그라운드 작업 주의</span>
     뒤쪽 모듈에서 부하 생성 루프를 띄운 채로 클러스터를 지우면 셸에 루프만 남아 계속 에러를 뱉는다. 해당 모듈마다 종료 방법을 함께 적어 두었으니 정리 순서는 <strong>부하 종료 → 클러스터 삭제</strong>다.
@@ -681,9 +670,9 @@ No kind clusters found.</code></div>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   235 
   <p>클러스터는 생겼지만 아직 배포할 것이 없다. M02부터 M07까지는 쿠버네티스를 잠시 두고 도커로 내려간다 — 컨테이너가 무엇인지 손으로 확인하고, 배포할 이미지를 직접 만든다. 여기서 만든 이미지가 M07에서 이 클러스터로 올라간다.</p>
-  <h3>참고 (2026-09-03 접근 확인)</h3>
+   236 
   <ul>
     <li>kind 공식 문서 · 릴리스: https://kind.sigs.k8s.io/docs/user/quick-start/ · https://github.com/kubernetes-sigs/kind/releases</li>
     <li>Kubernetes 컴포넌트 개요: https://kubernetes.io/docs/concepts/overview/components/</li>

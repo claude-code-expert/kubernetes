@@ -148,13 +148,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 205  206  207 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 31 / 38 · PART 6 배포 자동화</div>
-  <h1>GitOps</h1>
-  <p class="ch-desc">M29의 파이프라인은 이미지까지 만들고 멈췄고, M30에서는 <code>kubectl patch</code>를 손으로 쳤다. 지금 클러스터의 상태가 <strong>저장소의 어느 커밋에 해당하는지 아무도 답할 수 없다.</strong> 이 모듈에서 저장소를 상태의 정본으로 만든다. 클러스터 안의 컨트롤러가 저장소를 지켜보다가 차이를 없애고, 사람이 <code>kubectl</code>로 바꾼 것을 <strong>5초 만에 되돌려 놓는다.</strong> 그 되돌림을 직접 겪는 것이 이 모듈의 핵심이다.</p>
+   166 
+  <p class="ch-desc">M29의 파이프라인은 이미지까지 만들고 멈췄고, M30에서는  25 를 손으로 쳤다. 지금 클러스터의 상태가 <strong>저장소의 어느 커밋에 해당하는지 아무도 답할 수 없다.</strong> 이 모듈에서 저장소를 상태의 정본으로 만든다. 클러스터 안의 컨트롤러가 저장소를 지켜보다가 차이를 없애고, 사람이  26 로 바꾼 것을 <strong>5초 만에 되돌려 놓는다.</strong> 그 되돌림을 직접 겪는 것이 이 모듈의 핵심이다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">110분</span><span class="tag">Argo CD v3.5.2</span>
     <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · SOPS 3.13.3 · age 1.3.2) · 버전은 실습 당일 다시 확인한다
@@ -166,7 +166,7 @@
   <ul>
     <li><a href="m28-k8s-helm-kustomize.html">M28</a> 완료 — <code>k8s/journal/</code>이 kustomize base로 정리돼 있다</li>
     <li><a href="m30-k8s-deploy-strategies.html">M30</a>에서 <code>--server-side</code>를 왜 쓰는지 봤다. 이 모듈의 설치도 같은 이유로 필요하다</li>
-    <li>로컬에 <code>git</code>이 있다. SOPS 절에서는 <code>sops</code>·<code>age</code>도 쓴다 (<code>brew install sops age</code>)</li>
+    <li>로컬에 <code>git</code>이 있다. <dfn class="term">SOPS <span class="en">(Secrets OPerationS · 시크릿을 암호화해 깃에 커밋 가능하게 만드는 도구)</span></dfn> 절에서는 <code>sops</code>·<code>age</code>도 쓴다 (<code>brew install sops age</code>)</li>
     <li>새로 만들 파일: <code>course/labs/k8s/gitops/</code> · <code>course/labs/apps/gitserver/Dockerfile</code> · <code>course/labs/scripts/gitops-push.sh</code></li>
   </ul>
 </div>
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">31.1</span>지금 클러스터가 어느 커밋인지 모른다</a>
-  <a href="#s2"><span class="num">31.2</span>이론 — 풀 기반과 네 가지 원칙</a>
-  <a href="#s3"><span class="num">31.3</span>따라하기 ① 저장소와 컨트롤러</a>
-  <a href="#s4"><span class="num">31.4</span>따라하기 ② 커밋이 배포다</a>
-  <a href="#s5"><span class="num">31.5</span>따라하기 ③ 드리프트를 만들어 본다</a>
-  <a href="#s6"><span class="num">31.6</span>따라하기 ④ 시크릿을 커밋 가능하게</a>
-  <a href="#s7"><span class="num">31.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">31.8</span>운영 관점 — 저장소 구조와 긴급 상황</a>
-  <a href="#s9"><span class="num">31.9</span>체크포인트와 정리</a>
+   210 
+   211 
+   212 
+   213 
+   214 
+   215 
+   216 
+   217 
+   218 
 </nav>
 
 <section id="s1">
@@ -219,24 +219,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
-        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">자격 증명이 어디에 있는가로 갈린다</text>
@@ -305,9 +288,9 @@
   </figure>
 
   <h3>풀이 푸시와 다른 점</h3>
-  <p>M29에서 파이프라인을 이미지까지만 만들고 멈춘 이유를 여기서 설명한다. CI가 <code>kubectl apply</code>를 하려면 <strong>CI 러너가 클러스터 자격 증명을 갖고 있어야</strong> 한다. 그것은 M23의 관점에서 가장 큰 권한을 가장 넓게 노출된 곳에 두는 일이다 — CI 러너는 외부 네트워크에 있고, 서드파티 액션을 실행하고, 포크한 PR도 돌린다.</p>
+  <p>M29에서 파이프라인을 이미지까지만 만들고 멈춘 이유를 여기서 설명한다. <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>가 <code>kubectl apply</code>를 하려면 <strong>CI 러너가 클러스터 자격 증명을 갖고 있어야</strong> 한다. 그것은 M23의 관점에서 가장 큰 권한을 가장 넓게 노출된 곳에 두는 일이다 — CI 러너는 외부 네트워크에 있고, 서드파티 액션을 실행하고, 포크한 PR도 돌린다.</p>
   <p>풀 방식에서는 <strong>클러스터 안의 컨트롤러</strong>가 저장소를 읽는다. 저장소에는 읽기 권한만 주면 되고, 클러스터로 들어오는 인바운드 구멍이 필요 없다. 클러스터를 열 개로 늘려도 각 클러스터가 알아서 당겨가므로 CI 설정은 그대로다 — M32의 글로벌 롤아웃이 이 성질에 기댄다.</p>
-  <p>대가도 있다. <strong>배포가 언제 끝났는지 CI가 모른다.</strong> 파이프라인은 커밋에서 끝나고, 실제 반영은 나중에 클러스터에서 일어난다. 배포 완료를 기다려야 하는 워크플로(예: 배포 후 E2E 테스트)는 별도로 확인 단계를 붙여야 한다.</p>
+  <p>대가도 있다. <strong>배포가 언제 끝났는지 CI가 모른다.</strong> 파이프라인은 커밋에서 끝나고, 실제 반영은 나중에 클러스터에서 일어난다. 배포 완료를 기다려야 하는 워크플로(예: 배포 후 <dfn class="term">E2E <span class="en">(End-to-End · 실제와 같은 경로로 끝에서 끝까지 하는 검증)</span></dfn> 테스트)는 별도로 확인 단계를 붙여야 한다.</p>
 
   <h3>조정은 계속 돈다</h3>
   <p><dfn class="term">조정<span class="en">reconciliation</span></dfn>은 한 번 하고 끝나는 것이 아니라 <strong>주기적으로 도는 루프</strong>다. 저장소가 안 바뀌어도 컨트롤러는 계속 비교하고, 클러스터 쪽이 달라져 있으면 되돌린다. M08에서 배운 컨트롤 루프가 <strong>저장소까지 확장된</strong> 형태다.</p>
@@ -343,7 +326,7 @@ kubectl apply -f course/labs/k8s/gitops/00-gitserver.yaml</code></pre>
             - {name: GIT_CONFIG_COUNT,  value: "1"}
             - {name: GIT_CONFIG_KEY_0,  value: "safe.directory"}
             - {name: GIT_CONFIG_VALUE_0, value: "*"}</code></pre>
-    <p><code>git daemon</code>을 고른 이유가 있다. HTTP로 저장소를 내주려면 <code>git-http-backend</code>를 CGI로 돌려야 하는데, 그러려면 웹 서버 설정이 실습의 절반을 차지한다. <code>git://</code>는 인증이 없어서 <strong>운영에는 절대 쓰지 않지만</strong> 클러스터 내부 실습에는 충분하다.</p>
+    <p><code>git daemon</code>을 고른 이유가 있다. <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn>로 저장소를 내주려면 <code>git-http-backend</code>를 CGI로 돌려야 하는데, 그러려면 웹 서버 설정이 실습의 절반을 차지한다. <code>git://</code>는 인증이 없어서 <strong>운영에는 절대 쓰지 않지만</strong> 클러스터 내부 실습에는 충분하다.</p>
   </div>
 
   <div class="step">
@@ -374,7 +357,7 @@ EOF
 
 cd /tmp/gitops/app-repo &amp;&amp; git init -q -b main &amp;&amp; git add -A
 git commit -qm "저널 앱 초기 상태"</code></pre>
-    <p><code>00-namespace.yaml</code>과 <code>50-ingress.yaml</code>을 뺐다. 네임스페이스는 <strong>PSA 라벨을 붙여서 우리가 만들고</strong>, 인그레스는 <code>journal.local</code> 호스트가 기존 배포와 겹치기 때문이다. <strong>무엇을 GitOps에 넣고 무엇을 뺄지</strong>가 실제로는 이런 구체적인 이유로 정해진다.</p>
+    <p><code>00-namespace.yaml</code>과 <code>50-ingress.yaml</code>을 뺐다. 네임스페이스는 <strong><dfn class="term">PSA <span class="en">(Pod Security Admission · 파드 보안 표준을 네임스페이스 단위로 강제하는 것)</span></dfn> 라벨을 붙여서 우리가 만들고</strong>, 인그레스는 <code>journal.local</code> 호스트가 기존 배포와 겹치기 때문이다. <strong>무엇을 GitOps에 넣고 무엇을 뺄지</strong>가 실제로는 이런 구체적인 이유로 정해진다.</p>
   </div>
 
   <div class="step">
@@ -392,7 +375,7 @@ argocd-redis                       1/1   1   1
 argocd-repo-server                 1/1   1   1
 argocd-server                      1/1   1   1
 argocd-application-controller      1/1       (StatefulSet)</code></div>
-    <div class="verdict"><span class="lbl">판정</span><code>--server-side</code>가 여기서도 필요하다. M30에서 본 것과 같은 이유(CRD 주석 크기)이고, <strong>큰 프로젝트를 설치할 때의 기본값</strong>이라고 생각하는 편이 낫다.</div>
+    <div class="verdict"><span class="lbl">판정</span><code>--server-side</code>가 여기서도 필요하다. M30에서 본 것과 같은 이유(<dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn> 주석 크기)이고, <strong>큰 프로젝트를 설치할 때의 기본값</strong>이라고 생각하는 편이 낫다.</div>
     <p>설치가 네임스페이스에 <strong>NetworkPolicy 7개</strong>를 함께 넣는다. M25에서 손으로 만든 것을 이 프로젝트는 기본으로 배포한다 — 구성요소마다 필요한 통신만 열어 둔 형태이고, 좋은 예제이므로 <code>kubectl -n argocd get netpol -o yaml</code>로 한 번 읽어 볼 값이 있다.</p>
   </div>
 
@@ -490,8 +473,8 @@ bash course/labs/scripts/gitops-push.sh /tmp/gitops/app-repo</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>  01:07:19  PDB 수=1
   01:07:27  PDB 수=0</code></div>
-    <div class="verdict"><span class="lbl">판정</span>커밋에서 지운 것이 8초 뒤 클러스터에서도 사라졌다. <code>prune: false</code>였다면 PDB는 <strong>영원히 남는다</strong> — 저장소에는 없고 클러스터에는 있는 리소스가 쌓이고, 시간이 지나면 그것이 왜 있는지 아무도 모르게 된다.</div>
-    <p><code>prune</code>을 켜는 것이 무서운 이유도 분명하다. <strong>실수로 파일을 지운 커밋이 곧바로 클러스터의 삭제</strong>가 된다. 그래서 실무에서는 <code>prune</code>을 켜되 <strong>중요 리소스에 <code>Prune=false</code> 주석</strong>을 붙이거나(예: PVC), <code>prune</code> 결과를 사람이 승인하게 한다.</p>
+    <div class="verdict"><span class="lbl">판정</span>커밋에서 지운 것이 8초 뒤 클러스터에서도 사라졌다. <code>prune: false</code>였다면 <dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>는 <strong>영원히 남는다</strong> — 저장소에는 없고 클러스터에는 있는 리소스가 쌓이고, 시간이 지나면 그것이 왜 있는지 아무도 모르게 된다.</div>
+    <p><code>prune</code>을 켜는 것이 무서운 이유도 분명하다. <strong>실수로 파일을 지운 커밋이 곧바로 클러스터의 삭제</strong>가 된다. 그래서 실무에서는 <code>prune</code>을 켜되 <strong>중요 리소스에 <code>Prune=false</code> 주석</strong>을 붙이거나(예: <dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>), <code>prune</code> 결과를 사람이 승인하게 한다.</p>
   </div>
 </section>
 
@@ -532,7 +515,7 @@ done</code></pre>
     <div class="out"><code>service "web-static" deleted from gitops-journal namespace
   01:04:32  아직 없음
   01:04:37  서비스 되살아남</code></div>
-    <div class="verdict"><span class="lbl">판정</span>6초 만에 되살아났다. <strong>ClusterIP는 새로 할당된다</strong>는 점에 주의한다 — 같은 이름의 다른 서비스가 만들어진 것이고, 그 사이 그 IP를 캐시하고 있던 클라이언트는 잠깐 실패한다. "되돌아온다"가 "아무 일도 없었다"는 뜻은 아니다.</div>
+    <div class="verdict"><span class="lbl">판정</span>6초 만에 되살아났다. <strong>ClusterIP는 새로 할당된다</strong>는 점에 주의한다 — 같은 이름의 다른 서비스가 만들어진 것이고, 그 사이 그 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>를 캐시하고 있던 클라이언트는 잠깐 실패한다. "되돌아온다"가 "아무 일도 없었다"는 뜻은 아니다.</div>
   </div>
 
   <div class="step">
@@ -620,7 +603,7 @@ but none were.</code></div>
     <span class="out-lbl">출력 (Application의 status.conditions)</span>
     <div class="out"><code>Failed to load target state: failed to generate manifest for source 1 of 1: rpc error: code = Unknown desc = failed to list refs: unexpected EOF</code></div>
     <div class="verdict"><span class="lbl">판정</span>메시지가 원인을 가리키지 않는다 — <code>unexpected EOF</code>는 "파일이 없다"가 아니라 <strong>기대한 프로토콜 응답이 아니다</strong>라는 뜻이다. Argo CD의 깃 클라이언트는 smart 프로토콜(<code>git-upload-pack</code>과 대화하는 방식)만 말하고, <strong>정적 파일 나열은 프로토콜이 아니다.</strong></div>
-    <p>이 오류를 만났을 때 확인할 것은 하나다 — <strong>같은 URL로 <code>git ls-remote</code>가 되는가.</strong> 되지 않으면 저장소 서버 쪽 문제이고, 되는데 Argo CD만 안 되면 인증이나 네트워크 문제다.</p>
+    <p>이 오류를 만났을 때 확인할 것은 하나다 — <strong>같은 <dfn class="term">URL <span class="en">(Uniform Resource Locator · 자원의 위치를 가리키는 주소)</span></dfn>로 <code>git ls-remote</code>가 되는가.</strong> 되지 않으면 저장소 서버 쪽 문제이고, 되는데 Argo CD만 안 되면 인증이나 네트워크 문제다.</p>
 <pre><code>kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server -- \
   git ls-remote git://gitserver.gitops.svc/repo.git</code></pre>
   </div>
@@ -659,7 +642,7 @@ uid=1000(git) gid=1000(git) groups=1000(git)</code></div>
     <div class="out"><code>01:04:20  replicas=5
 01:04:25  replicas=2</code></div>
     <div class="verdict"><span class="lbl">판정</span>5초 뒤 원래대로다. <strong>대응한 사람은 대개 이것을 즉시 알아채지 못한다</strong> — 명령이 성공했고 오류가 없었기 때문이다. 몇 분 뒤 "왜 아직 느리지"로 돌아오고, 그때 <code>kubectl get</code>을 다시 쳐 보고서야 안다.</div>
-    <p>올바른 절차는 셋 중 하나다. <strong>커밋한다</strong>(가장 옳지만 새벽에 리뷰를 받아야 한다). <strong>자동 동기화를 끈다</strong>(<code>kubectl -n argocd patch app journal --type=json -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'</code>) — 끄고 나면 <strong>다시 켜는 것을 잊지 않도록</strong> 어딘가에 기록한다. 아니면 애초에 <strong>사람이 손댈 값을 저장소 밖에 둔다</strong>(HPA에 맡기는 것이 그 예다 — <code>journal-api</code>의 레플리카는 M17 이후 저장소에 없다).</p>
+    <p>올바른 절차는 셋 중 하나다. <strong>커밋한다</strong>(가장 옳지만 새벽에 리뷰를 받아야 한다). <strong>자동 동기화를 끈다</strong>(<code>kubectl -n argocd patch app journal --type=json -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'</code>) — 끄고 나면 <strong>다시 켜는 것을 잊지 않도록</strong> 어딘가에 기록한다. 아니면 애초에 <strong>사람이 손댈 값을 저장소 밖에 둔다</strong>(<dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn>에 맡기는 것이 그 예다 — <code>journal-api</code>의 레플리카는 M17 이후 저장소에 없다).</p>
     <p>세 번째가 설계로 푸는 방법이다. <strong>자주 손대야 하는 값이 있다면 그것은 매니페스트가 아니라 컨트롤러가 정해야 한다는 신호다.</strong></p>
   </div>
 </section>
@@ -675,14 +658,14 @@ uid=1000(git) gid=1000(git) groups=1000(git)</code></div>
 
   <h3>동기화 주기와 웹훅</h3>
   <p>Argo CD의 기본 폴링 주기는 3분이다. 배포가 3분씩 걸린다는 뜻이라 대개 웹훅을 붙인다 — 저장소가 푸시를 알리면 즉시 확인한다. 다만 <strong>웹훅은 최적화이지 정확성의 근거가 아니다.</strong> 웹훅이 실패해도 폴링이 결국 따라잡으므로, 웹훅 장애가 배포 누락으로 이어지지 않는다. 이것이 풀 기반의 성질이다.</p>
-  <p>반대로 <strong>selfHeal의 주기는 배포 주기가 아니다.</strong> 31.5에서 5초·6초·32초로 제각각이었던 이유는 이벤트로 감지한 것과 주기적 비교로 감지한 것이 섞였기 때문이다. 드리프트 복구 시간을 SLO로 약속하면 안 된다.</p>
+  <p>반대로 <strong>selfHeal의 주기는 배포 주기가 아니다.</strong> 31.5에서 5초·6초·32초로 제각각이었던 이유는 이벤트로 감지한 것과 주기적 비교로 감지한 것이 섞였기 때문이다. 드리프트 복구 시간을 <dfn class="term">SLO <span class="en">(Service Level Objective · 지키기로 정한 서비스 품질 목표)</span></dfn>로 약속하면 안 된다.</p>
 
   <h3>이 교재의 배치</h3>
   <p><code>journal</code> 네임스페이스의 원래 배포는 <strong>GitOps로 옮기지 않는다.</strong> 이 모듈의 실습은 <code>gitops-journal</code>에서 따로 했다. 이유는 실용적이다 — 남은 모듈에서 <code>kubectl</code>로 직접 실험할 일이 계속 있고(M36의 카오스 주입이 특히 그렇다), selfHeal이 그것을 계속 되돌리면 실습이 성립하지 않는다.</p>
   <p>이것은 <strong>교재의 사정이지 권고가 아니다.</strong> 실제 운영 클러스터에서 "손으로 실험할 일이 많아서 GitOps를 안 쓴다"는 이유는 성립하지 않는다 — 그 실험이 많다는 것 자체가 문제의 신호다.</p>
 
   <h3>GitOps가 답이 아닌 것</h3>
-  <p>GitOps는 <strong>선언할 수 있는 것</strong>에만 적용된다. M27에서 고친 컨트롤 플레인 매니페스트, 노드의 커널 파라미터, 클라우드 리소스는 이 루프 밖에 있다. 그것들을 같은 방식으로 다루려면 별도의 도구(클러스터 API, 테라폼과 그 오퍼레이터)가 필요하고, 도구가 늘어나면 <strong>"어느 도구가 이 리소스의 주인인가"</strong>라는 문제가 새로 생긴다.</p>
+  <p>GitOps는 <strong>선언할 수 있는 것</strong>에만 적용된다. M27에서 고친 컨트롤 플레인 매니페스트, 노드의 커널 파라미터, 클라우드 리소스는 이 루프 밖에 있다. 그것들을 같은 방식으로 다루려면 별도의 도구(클러스터 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>, 테라폼과 그 오퍼레이터)가 필요하고, 도구가 늘어나면 <strong>"어느 도구가 이 리소스의 주인인가"</strong>라는 문제가 새로 생긴다.</p>
   <p>M32에서 클러스터를 여럿으로 늘릴 때 이 질문이 다시 나온다. 그때는 <strong>클러스터 자체를 선언으로 만드는</strong> 방향을 본다.</p>
 </section>
 
@@ -741,10 +724,10 @@ kubectl -n argocd get deploy --no-headers | wc -l</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   202 
   <p>지금까지 클러스터는 하나였다. 저장소 하나가 클러스터 하나를 정의했고, 배포는 그 안에서 끝났다. 실제 서비스는 <strong>지역마다 클러스터가 따로</strong> 있고, 같은 변경을 여러 클러스터에 순서대로 내보내면서 <strong>중간에 멈출 수 있어야</strong> 한다.</p>
-  <p>M32에서 그 순서를 만든다. 한 클러스터에서 확인하고 다음으로 넘어가는 절차, 지역별 차이를 오버레이로 다루는 방법, 그리고 <strong>사고가 났을 때 되돌리는 순서</strong>를 다룬다. 이 모듈에서 만든 <code>Application</code>이 <code>ApplicationSet</code>으로 확장되는 지점이다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <p>M32에서 그 순서를 만든다. 한 클러스터에서 확인하고 다음으로 넘어가는 절차, 지역별 차이를 오버레이로 다루는 방법, 그리고 <strong>사고가 났을 때 되돌리는 순서</strong>를 다룬다. 이 모듈에서 만든  160 이  161 으로 확장되는 지점이다.</p>
+   203 
   <ul>
     <li>Argo CD: https://argo-cd.readthedocs.io/en/stable/</li>
     <li>동기화 옵션: https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/</li>
@@ -753,7 +736,7 @@ kubectl -n argocd get deploy --no-headers | wc -l</code></pre>
     <li>SOPS: https://github.com/getsops/sops</li>
     <li>age: https://github.com/FiloSottile/age</li>
     <li>External Secrets Operator: https://external-secrets.io/</li>
-    <li><code>git config</code> 환경 변수: https://git-scm.com/docs/git-config#ENVIRONMENT</li>
+    <li> 162  환경 변수: https://git-scm.com/docs/git-config#ENVIRONMENT</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 18.1~18.4 GitOps와 시크릿 관리</li>
   </ul>
   <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Argo CD v3.5.2 · SOPS 3.13.3 · age 1.3.2</p>

@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 309  310  311 </nav>
 </div>
 
 <header>
   <div class="ch-no">REFERENCE · 모듈이 아니다</div>
-  <h1>kubectl 치트시트</h1>
+   275 
   <p class="ch-desc">38개 모듈 본문에서 <strong>실제로 실행한 명령</strong>만 뽑아 용도별로 다시 묶었다. 실습 순서를 따르지 않으므로 처음부터 읽을 필요가 없다. 손이 멈췄을 때 해당 절만 펴 보는 용도다.</p>
   <div class="meta">
     <span class="tag">참고 자료</span><span class="tag">kubectl v1.37.0</span><span class="tag">Kubernetes 1.37</span>
-    <br>2026-09-09 작성 · 플래그는 <code>kubectl v1.37.0</code>의 <code>--help</code>로 확인 · 실습 당일 <code>kubectl version</code>으로 클라이언트 버전을 다시 확인한다
+    <br>2026-09-09 작성 · 플래그는  10 의  11 로 확인 · 실습 당일  12 으로 클라이언트 버전을 다시 확인한다
   </div>
 </header>
 
@@ -172,23 +172,23 @@
 </div>
 
 <nav class="toc">
-  <a href="#context"><span class="num">1</span>컨텍스트와 네임스페이스</a>
-  <a href="#get"><span class="num">2</span>조회 — get 과 출력 포맷</a>
-  <a href="#select"><span class="num">3</span>레이블 셀렉터와 필드 셀렉터</a>
-  <a href="#diag"><span class="num">4</span>진단 — describe · events · logs</a>
-  <a href="#into"><span class="num">5</span>컨테이너 안으로 — exec · cp · port-forward · debug</a>
-  <a href="#create"><span class="num">6</span>만들기 — 명령형과 선언형</a>
-  <a href="#modify"><span class="num">7</span>고치기 — set · patch · edit</a>
-  <a href="#rollout"><span class="num">8</span>워크로드 운영 — rollout · scale · wait</a>
-  <a href="#config"><span class="num">9</span>설정과 시크릿</a>
-  <a href="#node"><span class="num">10</span>노드 운영 — top · cordon · drain · taint</a>
-  <a href="#auth"><span class="num">11</span>권한 확인 — auth can-i</a>
-  <a href="#api"><span class="num">12</span>API 탐색 — api-resources · explain</a>
-  <a href="#delete"><span class="num">13</span>삭제와 정리</a>
-  <a href="#output"><span class="num">14</span>출력 가공 — jsonpath · custom-columns</a>
-  <a href="#confuse"><span class="num">15</span>헷갈리는 것 다섯</a>
-  <a href="#obsolete"><span class="num">16</span>지금 쓰면 안 되는 명령</a>
-  <a href="#shell"><span class="num">17</span>셸 설정</a>
+   312 
+   313 
+   314 
+   315 
+   316 
+   317 
+   318 
+   319 
+   320 
+   321 
+   322 
+   323 
+   324 
+   325 
+   326 
+   327 
+   328 
 </nav>
 
 <section id="context">
@@ -217,10 +217,10 @@
   <table>
     <tr><th>명령</th><th>하는 일</th></tr>
     <tr><td><code>kubectl get pods</code></td><td>기본 목록. <code>READY</code>·<code>STATUS</code>·<code>RESTARTS</code>·<code>AGE</code></td></tr>
-    <tr><td><code>kubectl get pods -o wide</code></td><td>파드 IP와 <strong>어느 노드에 떴는지</strong>가 붙는다. 스케줄링과 네트워크를 볼 때 기본값</td></tr>
+    <tr><td><code>kubectl get pods -o wide</code></td><td>파드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>와 <strong>어느 노드에 떴는지</strong>가 붙는다. 스케줄링과 네트워크를 볼 때 기본값</td></tr>
     <tr><td><code>kubectl get deploy,rs,pods</code></td><td>여러 종류를 한 번에. 디플로이먼트 → 레플리카셋 → 파드의 3층 구조가 한 화면에 보인다</td></tr>
     <tr><td><code>kubectl get pod &lt;이름&gt; -o yaml</code></td><td>서버가 채운 필드까지 전부. 내가 쓴 것과 <strong>기본값이 채운 것</strong>의 차이를 볼 때</td></tr>
-    <tr><td><code>kubectl get pod &lt;이름&gt; -o kyaml</code></td><td>1.37에 들어온 KYAML 출력. 들여쓰기가 모호한 YAML보다 붙여넣기 사고가 적다</td></tr>
+    <tr><td><code>kubectl get pod &lt;이름&gt; -o kyaml</code></td><td>1.37에 들어온 KYAML 출력. 들여쓰기가 모호한 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>보다 붙여넣기 사고가 적다</td></tr>
     <tr><td><code>kubectl get pods -w</code></td><td>변화를 계속 흘려 본다. 롤아웃·스케일 관찰용. <code>Ctrl+C</code>로 끝낸다</td></tr>
     <tr><td><code>kubectl get pods --sort-by=.status.startTime</code></td><td>가장 최근에 뜬 파드를 맨 아래로. 재시작 추적에 쓴다</td></tr>
     <tr><td><code>kubectl get pods --show-labels</code></td><td>레이블을 컬럼으로. 셀렉터가 안 맞을 때 첫 번째로 칠 명령</td></tr>
@@ -282,7 +282,7 @@
 
 <section id="into">
   <h2 class="sec"><span class="num">5</span>컨테이너 안으로 — exec · cp · port-forward · debug</h2>
-  <p class="lead">클러스터 안에서만 보이는 것이 있다. 서비스 이름의 DNS 해석, 네트워크 정책이 실제로 막는지, 마운트된 파일의 내용 — 전부 파드 안에서 확인해야 답이 나온다.</p>
+  <p class="lead">클러스터 안에서만 보이는 것이 있다. 서비스 이름의 <dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 해석, 네트워크 정책이 실제로 막는지, 마운트된 파일의 내용 — 전부 파드 안에서 확인해야 답이 나온다.</p>
 
   <table>
     <tr><th>명령</th><th>하는 일</th></tr>
@@ -318,7 +318,7 @@
     <tr><td><code>kubectl expose deploy web --port=80 --target-port=8080</code></td><td>서비스를 붙인다. 셀렉터는 디플로이먼트에서 자동으로 가져온다</td></tr>
     <tr><td><code>kubectl create ns journal</code></td><td>네임스페이스</td></tr>
     <tr><td><code>kubectl scale deploy/web --replicas=5</code></td><td>레플리카 수 변경</td></tr>
-    <tr><td><code>kubectl autoscale deploy/web --min=2 --max=10 --cpu-percent=50</code></td><td>HPA 생성</td></tr>
+    <tr><td><code>kubectl autoscale deploy/web --min=2 --max=10 --cpu-percent=50</code></td><td><dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn> 생성</td></tr>
   </table>
 
   <h3>선언형 — 파일이 정본이다</h3>
@@ -357,10 +357,10 @@ EOF</code></pre>
     <tr><td><code>kubectl set env deploy/web LOG_LEVEL=debug</code></td><td>환경변수 추가·변경</td><td>일시적인 디버깅</td></tr>
     <tr><td><code>kubectl set resources deploy/web --limits=cpu=200m</code></td><td>리소스 한계 변경</td><td>스로틀링 재현</td></tr>
     <tr><td><code>kubectl patch deploy web -p '{"spec":{"replicas":3}}'</code></td><td>전략적 병합 패치. 준 필드만 바꾼다</td><td>스크립트에서 한 필드만</td></tr>
-    <tr><td><code>kubectl patch deploy web --type=json -p '[{"op":"remove","path":"/spec/template/spec/nodeSelector"}]'</code></td><td>JSON 패치. <strong>삭제</strong>는 이쪽이어야 한다</td><td>필드를 없앨 때</td></tr>
+    <tr><td><code>kubectl patch deploy web --type=json -p '[{"op":"remove","path":"/spec/template/spec/nodeSelector"}]'</code></td><td><dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 패치. <strong>삭제</strong>는 이쪽이어야 한다</td><td>필드를 없앨 때</td></tr>
     <tr><td><code>kubectl edit deploy web</code></td><td>에디터로 연다. 저장하면 즉시 적용</td><td>급할 때만</td></tr>
     <tr><td><code>kubectl label pod web tier=front --overwrite</code></td><td>레이블 추가·덮어쓰기. <code>--overwrite</code> 없으면 기존 키에 실패한다</td><td>셀렉터 실험</td></tr>
-    <tr><td><code>kubectl label ns journal pod-security.kubernetes.io/enforce=restricted</code></td><td>네임스페이스 레이블. PSA는 이걸로 켠다</td><td>파드 보안 표준</td></tr>
+    <tr><td><code>kubectl label ns journal pod-security.kubernetes.io/enforce=restricted</code></td><td>네임스페이스 레이블. <dfn class="term">PSA <span class="en">(Pod Security Admission · 파드 보안 표준을 네임스페이스 단위로 강제하는 것)</span></dfn>는 이걸로 켠다</td><td>파드 보안 표준</td></tr>
     <tr><td><code>kubectl annotate deploy/web kubernetes.io/change-cause="v2 배포"</code></td><td>어노테이션. <code>rollout history</code>의 CHANGE-CAUSE에 나온다</td><td>배포 이력 남기기</td></tr>
   </table>
 
@@ -377,7 +377,7 @@ EOF</code></pre>
 
   <table>
     <tr><th>명령</th><th>하는 일</th></tr>
-    <tr><td><code>kubectl rollout status deploy/journal-api --timeout=120s</code></td><td>롤아웃이 끝날 때까지 블록. 실패하면 0이 아닌 종료 코드 — <strong>CI에서 쓸 수 있다</strong></td></tr>
+    <tr><td><code>kubectl rollout status deploy/journal-api --timeout=120s</code></td><td>롤아웃이 끝날 때까지 블록. 실패하면 0이 아닌 종료 코드 — <strong><dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서 쓸 수 있다</strong></td></tr>
     <tr><td><code>kubectl rollout history deploy/journal-api</code></td><td>리비전 목록</td></tr>
     <tr><td><code>kubectl rollout history deploy/journal-api --revision=2</code></td><td>그 리비전의 파드 템플릿</td></tr>
     <tr><td><code>kubectl rollout undo deploy/journal-api</code></td><td>직전 리비전으로 되돌린다</td></tr>
@@ -407,7 +407,7 @@ EOF</code></pre>
     <tr><td><code>kubectl create secret generic db --from-literal=password=s3cr3t</code></td><td>제네릭 시크릿</td></tr>
     <tr><td><code>kubectl create secret docker-registry ghcr --docker-server=ghcr.io --docker-username=&lt;유저&gt; --docker-password=&lt;토큰&gt;</code></td><td>프라이빗 레지스트리 인증</td></tr>
     <tr><td><code>kubectl get secret db -o jsonpath='{.data.password}' | base64 -d</code></td><td>값을 되읽는다. <strong>base64는 보호가 아니다</strong></td></tr>
-    <tr><td><code>kubectl create token &lt;서비스어카운트&gt; --duration=1h</code></td><td>수명 있는 SA 토큰 발급</td></tr>
+    <tr><td><code>kubectl create token &lt;서비스어카운트&gt; --duration=1h</code></td><td>수명 있는 <dfn class="term">SA <span class="en">(ServiceAccount · 파드가 API 서버에 자기를 밝히는 계정)</span></dfn> 토큰 발급</td></tr>
     <tr><td><code>kubectl create configmap app-config --from-file=./app.properties --dry-run=client -o yaml | kubectl apply -f -</code></td><td>기존 컨피그맵 <strong>갱신</strong>. <code>create</code>만으로는 이미 있으면 실패한다</td></tr>
   </table>
 
@@ -416,7 +416,7 @@ EOF</code></pre>
     검색하면 <code>kubectl get sa &lt;이름&gt; -o jsonpath='{.secrets[0].name}'</code>으로 토큰 시크릿을 찾는 방법이 나온다. <strong>1.24부터 서비스어카운트에 토큰 시크릿이 자동으로 만들어지지 않는다.</strong> 이 명령은 빈 값을 돌려주고, 그것을 "권한 문제"로 오해하면서 시간을 버린다. 지금은 <code>kubectl create token</code>으로 필요할 때 수명 있는 토큰을 받는다.
     <span class="src">근거: kubernetes.io/docs/concepts/security/service-accounts (2026-09-09 확인)</span>
   </div>
-  <p>같이 볼 모듈: <a href="m13-k8s-configmap-secret.html">M13</a> 설정을 이미지 밖으로 · <a href="m23-k8s-rbac-authz.html">M23</a> 서비스어카운트 · <a href="m31-k8s-gitops.html">M31</a> SOPS로 커밋 가능한 시크릿</p>
+  <p>같이 볼 모듈: <a href="m13-k8s-configmap-secret.html">M13</a> 설정을 이미지 밖으로 · <a href="m23-k8s-rbac-authz.html">M23</a> 서비스어카운트 · <a href="m31-k8s-gitops.html">M31</a> <dfn class="term">SOPS <span class="en">(Secrets OPerationS · 시크릿을 암호화해 깃에 커밋 가능하게 만드는 도구)</span></dfn>로 커밋 가능한 시크릿</p>
 </section>
 
 <section id="node">
@@ -425,7 +425,7 @@ EOF</code></pre>
 
   <table>
     <tr><th>명령</th><th>하는 일</th></tr>
-    <tr><td><code>kubectl top nodes</code></td><td>노드별 CPU·메모리 실사용. <strong>metrics-server가 있어야 한다</strong></td></tr>
+    <tr><td><code>kubectl top nodes</code></td><td>노드별 <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>·메모리 실사용. <strong>metrics-server가 있어야 한다</strong></td></tr>
     <tr><td><code>kubectl top pods --containers --sort-by=memory</code></td><td>컨테이너 단위로 쪼개 메모리 순 정렬</td></tr>
     <tr><td><code>kubectl describe node study-worker</code></td><td>할당량·테인트·조건. <code>Allocated resources</code> 블록이 요청 합계다</td></tr>
     <tr><td><code>kubectl cordon study-worker</code></td><td>새 파드를 받지 않게 표시. <strong>기존 파드는 그대로 둔다</strong></td></tr>
@@ -436,14 +436,14 @@ EOF</code></pre>
     <tr><td><code>kubectl label node study-worker disk=ssd</code></td><td>노드 레이블. <code>nodeSelector</code>·어피니티가 이걸 본다</td></tr>
   </table>
 
-  <p><code>top</code>이 <code>error: Metrics API not available</code>을 낸다면 클러스터에 metrics-server가 없는 것이다. kind에는 기본으로 들어 있지 않고, kubelet 인증서에 IP SAN이 없어 <code>--kubelet-insecure-tls</code> 없이는 파드가 Ready가 되지 않는다.</p>
-  <p><code>drain</code>이 진행되지 않고 멈춰 있다면 대개 PodDisruptionBudget이 막고 있는 것이다. 이는 고장이 아니라 <strong>PDB가 제 일을 하는 것</strong>이다 — 레플리카가 최소 개수뿐이면 축출할 수 없다.</p>
+  <p><code>top</code>이 <code>error: Metrics API not available</code>을 낸다면 클러스터에 metrics-server가 없는 것이다. kind에는 기본으로 들어 있지 않고, kubelet 인증서에 IP <dfn class="term">SAN <span class="en">(Subject Alternative Name · 인증서가 보증하는 이름·주소 목록)</span></dfn>이 없어 <code>--kubelet-insecure-tls</code> 없이는 파드가 Ready가 되지 않는다.</p>
+  <p><code>drain</code>이 진행되지 않고 멈춰 있다면 대개 PodDisruptionBudget이 막고 있는 것이다. 이는 고장이 아니라 <strong><dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>가 제 일을 하는 것</strong>이다 — 레플리카가 최소 개수뿐이면 축출할 수 없다.</p>
   <p>같이 볼 모듈: <a href="m16-k8s-resources-scheduling.html">M16</a> drain·taint·PDB · <a href="m01-setup-environment.html">M01</a> metrics-server 설치</p>
 </section>
 
 <section id="auth">
   <h2 class="sec"><span class="num">11</span>권한 확인 — auth can-i</h2>
-  <p class="lead">RBAC를 고칠 때 파드를 띄워 시험하지 않는다. <code>auth can-i</code>는 실제로 아무것도 하지 않고 <strong>API 서버의 인가 판정만</strong> 받아 온다. 특히 <code>--as</code>로 남의 신분을 빌려 물어볼 수 있어, 권한을 준 뒤 그 사람이 실제로 무엇을 할 수 있는지 즉시 확인된다.</p>
+  <p class="lead"><dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn>를 고칠 때 파드를 띄워 시험하지 않는다. <code>auth can-i</code>는 실제로 아무것도 하지 않고 <strong><dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 서버의 인가 판정만</strong> 받아 온다. 특히 <code>--as</code>로 남의 신분을 빌려 물어볼 수 있어, 권한을 준 뒤 그 사람이 실제로 무엇을 할 수 있는지 즉시 확인된다.</p>
 
   <table>
     <tr><th>명령</th><th>하는 일</th></tr>
@@ -472,11 +472,11 @@ EOF</code></pre>
     <tr><td><code>kubectl api-versions</code></td><td>사용 가능한 <code>apiVersion</code> 목록</td></tr>
     <tr><td><code>kubectl explain deployment.spec.strategy</code></td><td>필드 설명과 하위 필드</td></tr>
     <tr><td><code>kubectl explain pod.spec.containers --recursive</code></td><td>하위 전체를 트리로. 필드 이름만 훑을 때</td></tr>
-    <tr><td><code>kubectl explain journalsite.spec --api-version=study.example.com/v1</code></td><td>커스텀 리소스도 설명된다. CRD의 스키마를 읽어 온다</td></tr>
+    <tr><td><code>kubectl explain journalsite.spec --api-version=study.example.com/v1</code></td><td>커스텀 리소스도 설명된다. <dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn>의 스키마를 읽어 온다</td></tr>
     <tr><td><code>kubectl get --raw /readyz?verbose</code></td><td>API 서버 준비 상태를 항목별로</td></tr>
     <tr><td><code>kubectl get --raw /metrics | head</code></td><td>API 서버 자체 메트릭</td></tr>
   </table>
-  <p>같이 볼 모듈: <a href="m08-k8s-cluster-first-deploy.html">M08</a> explain 으로 필드 찾기 · <a href="m33-k8s-crd-operator.html">M33</a> CRD 스키마와 CEL 검증</p>
+  <p>같이 볼 모듈: <a href="m08-k8s-cluster-first-deploy.html">M08</a> explain 으로 필드 찾기 · <a href="m33-k8s-crd-operator.html">M33</a> CRD 스키마와 <dfn class="term">CEL <span class="en">(Common Expression Language · 정책 조건을 적는 표현식 언어)</span></dfn> 검증</p>
 </section>
 
 <section id="delete">
@@ -542,10 +542,10 @@ EOF</code></pre>
   <h3>파드를 지웠는데 다시 생긴다</h3>
   <p>디플로이먼트가 파드 수를 유지하고 있다. 지우려면 컨트롤러를 지워야 한다. 반대로 <strong>재시작이 목적이라면</strong> 파드를 지우는 것도 방법이지만, 의도를 드러내는 쪽은 <code>kubectl rollout restart</code>다.</p>
 
-  <h3><code>get all</code>은 전부가 아니다</h3>
-  <p><code>all</code>은 주요 워크로드와 서비스를 가리키는 별칭일 뿐이다. 컨피그맵·시크릿·PVC·인그레스·네트워크 정책·CRD는 <strong>여기에 안 나온다</strong>. 지웠다고 생각한 것이 남아 다음 실습을 방해하는 원인이 대개 이것이다. 실제로 무엇이 남았는지는 13절 마지막 명령으로 센다.</p>
+  <h3> 233 은 전부가 아니다</h3>
+  <p><code>all</code>은 주요 워크로드와 서비스를 가리키는 별칭일 뿐이다. 컨피그맵·시크릿·<dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>·인그레스·네트워크 정책·CRD는 <strong>여기에 안 나온다</strong>. 지웠다고 생각한 것이 남아 다음 실습을 방해하는 원인이 대개 이것이다. 실제로 무엇이 남았는지는 13절 마지막 명령으로 센다.</p>
 
-  <h3><code>-n</code> · <code>-A</code> · <code>--context</code></h3>
+  <h3> 235  ·  236  ·  237 </h3>
   <p><code>-n</code>은 네임스페이스, <code>-A</code>는 모든 네임스페이스, <code>--context</code>는 <strong>클러스터 자체</strong>가 바뀐다. 앞의 둘을 아무리 정확히 써도 컨텍스트가 틀렸으면 남의 클러스터를 보고 있는 것이다.</p>
 
   <h3>Pending 과 CrashLoopBackOff</h3>
@@ -592,7 +592,7 @@ complete -o default -F __start_kubectl k</code></pre>
     <tr><th>설정</th><th>효과</th></tr>
     <tr><td><code>export KUBE_EDITOR="code --wait"</code></td><td><code>kubectl edit</code>이 쓸 에디터</td></tr>
     <tr><td><code>export KUBECONFIG=~/.kube/config:~/.kube/edge.yaml</code></td><td>여러 kubeconfig를 <strong>콜론으로 병합</strong>. 컨텍스트가 합쳐져 보인다</td></tr>
-    <tr><td><code>kubectl --v=6 get pods</code></td><td>실제로 어떤 URL을 호출했는지. RBAC 거부의 원인을 찾을 때</td></tr>
+    <tr><td><code>kubectl --v=6 get pods</code></td><td>실제로 어떤 <dfn class="term">URL <span class="en">(Uniform Resource Locator · 자원의 위치를 가리키는 주소)</span></dfn>을 호출했는지. RBAC 거부의 원인을 찾을 때</td></tr>
     <tr><td><code>kubectl --v=8 get pods</code></td><td>요청·응답 본문까지. 시끄럽지만 API 동작을 배울 때 쓸모 있다</td></tr>
     <tr><td><code>kubectl get pods --request-timeout=5s</code></td><td>응답 없는 클러스터에서 매달리지 않는다</td></tr>
   </table>
@@ -601,7 +601,7 @@ complete -o default -F __start_kubectl k</code></pre>
 </section>
 
 <footer>
-  <h3>참고</h3>
+   307 
   <ul>
     <li>kubectl 공식 레퍼런스: https://kubernetes.io/docs/reference/kubectl/ (2026-09-09 확인)</li>
     <li>kubectl 치트시트(공식): https://kubernetes.io/docs/reference/kubectl/quick-reference/ (2026-09-09 확인)</li>
@@ -609,10 +609,10 @@ complete -o default -F __start_kubectl k</code></pre>
     <li>버전 스큐 정책: https://kubernetes.io/docs/setup/release/version-skew-policy/ (2026-09-09 확인)</li>
     <li>서비스어카운트와 토큰: https://kubernetes.io/docs/concepts/security/service-accounts/ (2026-09-09 확인)</li>
   </ul>
-  <p>이 문서의 명령은 <code>kubectl v1.37.0</code>의 <code>--help</code>로 플래그 존재를 확인했고, 사용 맥락은 이 과정 38개 모듈 본문에서 가져왔다. 실행 결과와 실패 사례는 각 절 끝에 링크된 모듈에 있다.</p>
+  <p>이 문서의 명령은  271 의  272 로 플래그 존재를 확인했고, 사용 맥락은 이 과정 38개 모듈 본문에서 가져왔다. 실행 결과와 실패 사례는 각 절 끝에 링크된 모듈에 있다.</p>
   <div class="navlinks">
-    <a href="index.html">← 과정 전체 로드맵</a>
-    <a href="m01-setup-environment.html">M01 환경 구축부터 시작 →</a>
+     367 
+     368 
   </div>
 </footer>
 </div>

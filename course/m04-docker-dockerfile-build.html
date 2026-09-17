@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 229  230  231 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 04 / 38 · PART 1 도커</div>
-  <h1>Dockerfile — 빌드와 최적화</h1>
+   209 
   <p class="ch-desc">같은 애플리케이션을 두 가지 Dockerfile로 빌드한다. 하나는 1.68GB, 하나는 246MB. 배포할 때 받는 양은 413MB와 59MB. 차이를 만든 것은 세 줄의 순서와 스테이지 분리다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">65분</span><span class="tag">Docker Engine 29.2.1</span><span class="tag">BuildKit</span>
-    <br>2026-09-05 검증 · node:22-alpine · 여기 적힌 버전 숫자는 실습 당일 <code>docker version</code>으로 다시 확인한다 · 이 모듈에서 만든 이미지를 M07에서 클러스터로 올린다
+    <br>2026-09-05 검증 · node:22-alpine · 여기 적힌 버전 숫자는 실습 당일  24 으로 다시 확인한다 · 이 모듈에서 만든 이미지를 M07에서 클러스터로 올린다
   </div>
 </header>
 
@@ -180,14 +180,14 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">4.1</span>왜 이미지 크기가 운영 문제인가</a>
-  <a href="#s2"><span class="num">4.2</span>실습 대상과 기준선 — 저널 API를 순진하게 빌드한다</a>
-  <a href="#s3"><span class="num">4.3</span>이론 — 빌드 캐시가 깨지는 지점</a>
-  <a href="#s4"><span class="num">4.4</span>따라하기 ① 멀티스테이지로 다시 쓴다</a>
-  <a href="#s5"><span class="num">4.5</span>따라하기 ② 캐시 동작 비교</a>
-  <a href="#s6"><span class="num">4.6</span>일부러 실패시키기</a>
-  <a href="#s7"><span class="num">4.7</span>운영 관점 — 멀티 아키텍처 빌드</a>
-  <a href="#s8"><span class="num">4.8</span>체크포인트와 정리</a>
+   233 
+   234 
+   235 
+   236 
+   237 
+   238 
+   239 
+   240 
 </nav>
 
 <section id="s1">
@@ -199,7 +199,7 @@
 
 <section id="s2">
   <h2 class="sec"><span class="num">4.2</span>실습 대상과 기준선 — 저널 API를 순진하게 빌드한다</h2>
-  <p>이 과정 전체에서 배포할 애플리케이션이다. 책 1장의 저널 서비스를 최소 형태로 옮긴 것으로, 엔트리를 추가·조회하는 REST API다. 레디스가 있으면 레디스에, 없으면 메모리에 저장한다 — M14에서 레디스와 함께 배포한다.</p>
+  <p>이 과정 전체에서 배포할 애플리케이션이다. 책 1장의 저널 서비스를 최소 형태로 옮긴 것으로, 엔트리를 추가·조회하는 <dfn class="term">REST <span class="en">(Representational State Transfer · 자원을 URL 로 다루는 API 설계 방식)</span></dfn> <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>다. 레디스가 있으면 레디스에, 없으면 메모리에 저장한다 — M14에서 레디스와 함께 배포한다.</p>
   <p>소스는 <code>course/labs/apps/journal-api/</code>에 있다. 여기서는 이미지 빌드와 관련된 부분만 본다.</p>
 <pre><code>course/labs/apps/journal-api/
   package.json          의존성: express, redis / 개발 의존성: typescript, 타입 정의
@@ -216,7 +216,7 @@
     <tr><td><code>GET /readyz</code></td><td>레디스 연결이 끝나 트래픽을 받을 준비가 됐는지</td><td>M15 레디니스 프로브</td></tr>
     <tr><td><code>GET · POST /api/entries</code></td><td>저널 엔트리 조회 · 추가</td><td>M14 배포, M37 부하 테스트</td></tr>
   </table>
-  <p>소스에 한 가지를 미리 넣어 두었다. M02에서 본 PID 1 문제 때문이다.</p>
+  <p>소스에 한 가지를 미리 넣어 두었다. M02에서 본 <dfn class="term">PID <span class="en">(Process Identifier · 프로세스 번호)</span></dfn> 1 문제 때문이다.</p>
 <pre><code>// 서버를 먼저 띄우고 레디스 연결은 뒤에서 시도한다.
 // 저장소가 죽어 있어도 프로세스는 살아 있고, 준비 상태만 /readyz 로 알린다.
 const server = app.listen(PORT, () =&gt; {
@@ -364,7 +364,7 @@ docker exec jtest id</code></pre>
     <div class="out"><code>{"level":"info","msg":"no REDIS_URL, using in-memory store"}
 {"level":"info","msg":"listening","port":8080,"version":"v1"}
 uid=1000(node) gid=1000(node) groups=1000(node)</code></div>
-    <div class="verdict"><span class="lbl">판정</span>API가 응답하고, 로그가 JSON 한 줄로 표준 출력에 나가며, 프로세스가 <code>uid=1000(node)</code> — 루트가 아니다. 세 가지가 M22 로그 수집과 M24 보안 정책의 전제 조건이다.</div>
+    <div class="verdict"><span class="lbl">판정</span>API가 응답하고, 로그가 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 한 줄로 표준 출력에 나가며, 프로세스가 <code>uid=1000(node)</code> — 루트가 아니다. 세 가지가 M22 로그 수집과 M24 보안 정책의 전제 조건이다.</div>
 <pre><code>docker rm -f jtest</code></pre>
   </div>
 </section>
@@ -410,7 +410,7 @@ docker build --progress=plain -t journal-api:cache-test .</code></pre>
     <div class="verdict"><span class="lbl">판정</span>순진한 쪽은 <code>npm install</code>이 <strong>다시 돌았다</strong>. 의존성은 하나도 바뀌지 않았는데도 그렇다.</div>
 <pre><code>mv /tmp/server.ts.bak src/server.ts             # 소스 되돌리기
 tail -n 2 src/server.ts                         # 마지막 줄이 }); 이면 원래대로다</code></pre>
-    <p>이 예제는 의존성이 두 개뿐이라 2.4초에 끝났다. 실제 프로젝트에서 이 자리는 <code>npm ci</code>, <code>./gradlew build</code>, <code>go mod download</code>, <code>pip install -r requirements.txt</code>이며 1~5분이 걸린다. 하루에 스무 번 빌드하면 순서 하나 때문에 한 시간이 날아간다. CI에서는 이 비용이 그대로 요금이 된다(M29).</p>
+    <p>이 예제는 의존성이 두 개뿐이라 2.4초에 끝났다. 실제 프로젝트에서 이 자리는 <code>npm ci</code>, <code>./gradlew build</code>, <code>go mod download</code>, <code>pip install -r requirements.txt</code>이며 1~5분이 걸린다. 하루에 스무 번 빌드하면 순서 하나 때문에 한 시간이 날아간다. <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서는 이 비용이 그대로 요금이 된다(M29).</p>
   </div>
 
   <div class="step">
@@ -440,7 +440,7 @@ curl -s localhost:8082/healthz; echo
 docker rm -f jtest2</code></pre>
     <span class="out-lbl">실행 결과</span>
     <div class="out"><code>{"status":"ok","version":"v2","pod":"d319e38b3e2b"}</code></div>
-    <div class="verdict"><span class="lbl">판정</span><code>"version":"v2"</code>. 소스 파일은 한 글자도 바뀌지 않았다. 이 방식이 실제 CI에서 깃 SHA나 릴리스 번호를 이미지에 새기는 방법이다(M29).</div>
+    <div class="verdict"><span class="lbl">판정</span><code>"version":"v2"</code>. 소스 파일은 한 글자도 바뀌지 않았다. 이 방식이 실제 CI에서 깃 <dfn class="term">SHA <span class="en">(Secure Hash Algorithm · 내용을 고정 길이 값으로 요약하는 해시)</span></dfn>나 릴리스 번호를 이미지에 새기는 방법이다(M29).</div>
   </div>
 </section>
 
@@ -563,9 +563,9 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>이미지는 만들었지만 이 API는 아직 데이터를 메모리에만 담는다. 컨테이너를 지우면 사라진다. M05에서 볼륨으로 데이터를 살리고, 컨테이너끼리 IP가 아니라 이름으로 부르게 만든다 — 쿠버네티스의 퍼시스턴트 볼륨(M18)과 서비스 디스커버리(M11)의 원형이다. <code>journal-api:v1</code>이 그 실습의 애플리케이션 컨테이너다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   226 
+  <p>이미지는 만들었지만 이 API는 아직 데이터를 메모리에만 담는다. 컨테이너를 지우면 사라진다. M05에서 볼륨으로 데이터를 살리고, 컨테이너끼리 IP가 아니라 이름으로 부르게 만든다 — 쿠버네티스의 퍼시스턴트 볼륨(M18)과 서비스 디스커버리(M11)의 원형이다.  203 이 그 실습의 애플리케이션 컨테이너다.</p>
+   227 
   <ul>
     <li>Dockerfile 레퍼런스: https://docs.docker.com/reference/dockerfile/ (ARG · ENV · 캐시 규칙)</li>
     <li>멀티스테이지 빌드: https://docs.docker.com/build/building/multi-stage/</li>

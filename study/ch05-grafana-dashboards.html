@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,15 +161,15 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>그라파나와 대시보드 프로비저닝</h1>
+   99 
   <p class="lede">그라파나는 04장에서 이미 떠 있다. 이 장은 설치가 아니라 <strong>운영 방식</strong>을 정한다 — 대시보드를 클릭으로 만들지 않고 코드로 만든다.</p>
 </header>
 
 <h2><span class="n">01</span>왜 이 장이 필요한가</h2>
 
-<p>그라파나 UI 에서 패널을 끌어다 놓으면 대시보드가 5분 만에 만들어진다. 그 대시보드는 그라파나의 내부 DB 에 저장되고, <strong>클러스터를 지우면 같이 사라진다</strong>. 이 실습은 클러스터를 자주 지우고 다시 만드는 것을 전제하므로 그 방식으로는 진도가 나가지 않는다.</p>
+<p>그라파나 <dfn class="term">UI <span class="en">(User Interface · 사용자 인터페이스)</span></dfn> 에서 패널을 끌어다 놓으면 대시보드가 5분 만에 만들어진다. 그 대시보드는 그라파나의 내부 DB 에 저장되고, <strong>클러스터를 지우면 같이 사라진다</strong>. 이 실습은 클러스터를 자주 지우고 다시 만드는 것을 전제하므로 그 방식으로는 진도가 나가지 않는다.</p>
 
-<p>대신 대시보드 JSON 을 컨피그맵에 담고 라벨 하나를 붙인다. 그라파나 사이드카가 그 라벨을 가진 컨피그맵을 찾아 대시보드로 올린다. 클러스터를 새로 만들어도 <code>kubectl apply</code> 한 번이면 돌아온다. 07장에서 만들 RED 대시보드도 같은 방법으로 배포한다.</p>
+<p>대신 대시보드 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 을 컨피그맵에 담고 라벨 하나를 붙인다. 그라파나 사이드카가 그 라벨을 가진 컨피그맵을 찾아 대시보드로 올린다. 클러스터를 새로 만들어도 <code>kubectl apply</code> 한 번이면 돌아온다. 07장에서 만들 <dfn class="term">RED <span class="en">(Rate, Errors, Duration · 애플리케이션을 보는 세 지표)</span></dfn> 대시보드도 같은 방법으로 배포한다.</p>
 
 <p>그런데 이 방식에는 <strong>조용한 실패</strong>가 하나 있다. 라벨을 빠뜨리면 에러도 이벤트도 없이 대시보드만 안 보인다. 이 장에서 일부러 그것을 겪어 본다.</p>
 
@@ -177,7 +178,7 @@ figcaption b{color:var(--ink)}
 
 <h3>사이드카가 라벨을 보고 파일을 쓴다</h3>
 
-<p>그라파나 파드가 <code>3/3</code> 이었던 것을 기억할 것이다. 컨테이너 세 개가 한 파드에 들어 있고, 앞의 둘이 <dfn class="term">사이드카</dfn>다. 이들은 쿠버네티스 API 를 지켜보다가 <strong>특정 라벨이 붙은 ConfigMap</strong> 을 발견하면 그 내용을 파일로 꺼내 공유 볼륨에 쓴다. 그라파나는 그 디렉터리를 읽을 뿐이다.</p>
+<p>그라파나 파드가 <code>3/3</code> 이었던 것을 기억할 것이다. 컨테이너 세 개가 한 파드에 들어 있고, 앞의 둘이 <dfn class="term">사이드카</dfn>다. 이들은 쿠버네티스 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 를 지켜보다가 <strong>특정 라벨이 붙은 ConfigMap</strong> 을 발견하면 그 내용을 파일로 꺼내 공유 볼륨에 쓴다. 그라파나는 그 디렉터리를 읽을 뿐이다.</p>
 
 <h3>데이터소스는 이름이 아니라 uid 로 참조한다</h3>
 
@@ -219,7 +220,7 @@ figcaption b{color:var(--ink)}
 
 <h2><span class="n">03</span>최종적으로 만들 것</h2>
 
-<p>이 장이 끝나면 그라파나에 <strong>Obs Study</strong> 폴더가 생기고 그 안에 우리가 만든 대시보드가 들어 있다. 그리고 그 대시보드의 원본은 그라파나 안이 아니라 <code>kubectl apply</code> 할 수 있는 YAML 파일이다.</p>
+<p>이 장이 끝나면 그라파나에 <strong>Obs Study</strong> 폴더가 생기고 그 안에 우리가 만든 대시보드가 들어 있다. 그리고 그 대시보드의 원본은 그라파나 안이 아니라 <code>kubectl apply</code> 할 수 있는 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn> 파일이다.</p>
 
 <h3>ConfigMap 이 대시보드가 되기까지</h3>
 
@@ -421,7 +422,7 @@ kubectl -n monitoring get secret kps-grafana \
 <div class="tablewrap">
 <table>
   <tr><th>먼저 열어 볼 대시보드</th><th>보는 것</th></tr>
-  <tr><td>Kubernetes / Compute Resources / Namespace (Pods)</td><td><code>apps</code> 네임스페이스를 고르면 03장에서 배포한 파드 3개의 CPU·메모리가 보인다</td></tr>
+  <tr><td>Kubernetes / Compute Resources / Namespace (Pods)</td><td><code>apps</code> 네임스페이스를 고르면 03장에서 배포한 파드 3개의 <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>·메모리가 보인다</td></tr>
   <tr><td>Node Exporter / Nodes</td><td>노드별 CPU·메모리·디스크. 실습 중 노트북이 버거워지면 여기부터 본다</td></tr>
   <tr><td>Kubernetes / Kubelet</td><td>노드별 파드 수, 컨테이너 런타임 동작 상태</td></tr>
 </table>
@@ -653,7 +654,7 @@ kubectl -n monitoring annotate configmap obs-overview-dashboard \
 <div class="tablewrap">
 <table>
   <tr><th>항목</th><th>내용</th></tr>
-  <tr><td>Dynamic dashboards</td><td>탭·조건부 표시·유연한 레이아웃이 정식 기능이 됐다. USE·RED 형태의 레이아웃 템플릿도 함께 제공된다</td></tr>
+  <tr><td>Dynamic dashboards</td><td>탭·조건부 표시·유연한 레이아웃이 정식 기능이 됐다. <dfn class="term">USE <span class="en">(Utilization, Saturation, Errors · 인프라를 보는 세 지표)</span></dfn>·RED 형태의 레이아웃 템플릿도 함께 제공된다</td></tr>
   <tr><td>양방향 Git 워크플로</td><td>대시보드를 깃 저장소와 동기화하고 UI 변경을 풀 리퀘스트로 만들 수 있다. 이 실습의 ConfigMap 방식보다 진일보한 형태다</td></tr>
   <tr><td><code>grafana-cli</code> 폐기</td><td><code>grafana cli</code>, <code>grafana server</code> 형태로 통합됐다. 예전 명령을 쓰는 자동화 스크립트가 있다면 손봐야 한다</td></tr>
   <tr><td>숫자 id 데이터소스 API 비활성</td><td>데이터소스를 숫자 id 로 참조하던 API 가 기본 비활성이다. <strong>uid 로 참조</strong>하는 것이 유일한 방법이라고 보면 된다</td></tr>
@@ -693,10 +694,10 @@ kubectl -n monitoring annotate configmap obs-overview-dashboard \
   <tr><td>ConfigMap 을 만들었는데 대시보드가 안 보인다</td><td>① 라벨 <code>grafana_dashboard: "1"</code> 누락 ② 그라파나와 다른 네임스페이스인데 <code>searchNamespace: ALL</code> 이 아님. 07절의 두 명령 대조부터 한다</td></tr>
   <tr><td>대시보드는 보이는데 패널이 <code>No data</code></td><td>질의는 맞는데 데이터가 없거나 시간 범위가 데이터보다 앞선다. 같은 질의를 프로메테우스 UI(30900)에서 실행해 비교한다</td></tr>
   <tr><td>패널에 <code>Datasource ... was not found</code></td><td>JSON 이 다른 환경의 데이터소스 uid 를 참조하고 있다. 해당 필드를 <strong>지우는 것</strong>이 가장 간단한 해결이다</td></tr>
-  <tr><td>사이드카 로그에 <code>403 Forbidden</code></td><td><code>searchNamespace: ALL</code> 인데 RBAC 이 좁다. <code>helm upgrade</code> 가 ClusterRole 까지 갱신했는지 확인</td></tr>
+  <tr><td>사이드카 로그에 <code>403 Forbidden</code></td><td><code>searchNamespace: ALL</code> 인데 <dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn> 이 좁다. <code>helm upgrade</code> 가 ClusterRole 까지 갱신했는지 확인</td></tr>
   <tr><td>UI 에서 저장한 대시보드가 사라졌다</td><td>프로비저닝된 대시보드는 원본이 ConfigMap 이다. JSON 을 저장소에 반영해야 한다</td></tr>
   <tr><td>로그인이 안 된다</td><td>값 파일의 <code>adminPassword</code> 는 <strong>최초 생성 시에만</strong> 반영된다. 이미 만들어진 뒤 바꾸려면 시크릿을 직접 수정하거나 재설치한다</td></tr>
-  <tr><td>시간이 UTC 로 보인다</td><td><code>defaultDashboardsTimezone</code> 은 차트 기본 대시보드에만 적용된다. 직접 만든 JSON 에는 <code>"timezone": "Asia/Seoul"</code> 을 넣는다</td></tr>
+  <tr><td>시간이 <dfn class="term">UTC <span class="en">(Coordinated Universal Time · 세계 표준시)</span></dfn> 로 보인다</td><td><code>defaultDashboardsTimezone</code> 은 차트 기본 대시보드에만 적용된다. 직접 만든 JSON 에는 <code>"timezone": "Asia/Seoul"</code> 을 넣는다</td></tr>
 </table>
 </div>
 

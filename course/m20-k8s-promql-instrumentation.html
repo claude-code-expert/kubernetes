@@ -149,13 +149,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 226  227  228 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 20 / 38 · PART 4 관측</div>
-  <h1>PromQL과 애플리케이션 계측</h1>
-  <p class="ch-desc">M19에서 <code>http_server_requests_seconds_count</code>를 질의했을 때 결과가 0건이었다. 앱은 지표를 내놓고 있는데 아무도 가져가지 않는 상태다. 이 모듈에서 그 연결을 만들되, <strong>세 번 실패시키고 세 번 고친다</strong>. 그다음 요청률·에러율·지연을 직접 질의하고, 평균 45ms 뒤에 숨은 790ms짜리 요청을 찾아낸다.</p>
+   194 
+  <p class="ch-desc">M19에서  33 를 질의했을 때 결과가 0건이었다. 앱은 지표를 내놓고 있는데 아무도 가져가지 않는 상태다. 이 모듈에서 그 연결을 만들되, <strong>세 번 실패시키고 세 번 고친다</strong>. 그다음 요청률·에러율·지연을 직접 질의하고, 평균 45ms 뒤에 숨은 790ms짜리 요청을 찾아낸다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">95분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Prometheus Operator v0.93.1</span>
     <br>2026-09-05 검증 (kind v0.33.0 · k6 v2.2.0) · 버전 숫자는 실습 당일 다시 확인한다
@@ -181,21 +181,21 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">20.1</span>왜 앱은 긁히지 않는가</a>
-  <a href="#s2"><span class="num">20.2</span>이론 — 무엇을 재야 하는가</a>
-  <a href="#s3"><span class="num">20.3</span>따라하기 ① 라벨 세 겹을 잇는다</a>
-  <a href="#s4"><span class="num">20.4</span>따라하기 ② 두 번째 앱에 계측을 붙인다</a>
-  <a href="#s5"><span class="num">20.5</span>따라하기 ③ RED 질의를 쓴다</a>
-  <a href="#s6"><span class="num">20.6</span>따라하기 ④ 평균 뒤에 숨은 것을 찾는다</a>
-  <a href="#s7"><span class="num">20.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">20.8</span>운영 관점 — 계측의 값과 대가</a>
-  <a href="#s9"><span class="num">20.9</span>체크포인트와 정리</a>
+   231 
+   232 
+   233 
+   234 
+   235 
+   236 
+   237 
+   238 
+   239 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">20.1</span>왜 앱은 긁히지 않는가</h2>
   <p class="lead">M19 10단계에서 두 명령의 결과가 어긋났다. 파드 안에서 <code>/actuator/prometheus</code>를 부르면 274개 계열이 나오는데, 프로메테우스에 <code>http_server_requests_seconds_count</code>를 물으면 0건이었다.</p>
-  <p>클러스터 구성요소들은 전부 잘 나온다. kubelet도 KSM도 etcd도 나온다. 차이는 하나다 — <strong>그것들의 스크레이프 설정은 차트가 함께 만들어 줬고, 우리 앱의 것은 아무도 만들지 않았다.</strong></p>
+  <p>클러스터 구성요소들은 전부 잘 나온다. kubelet도 <dfn class="term">KSM <span class="en">(kube-state-metrics · API 서버가 아는 오브젝트 상태를 메트릭으로 내보내는 것)</span></dfn>도 etcd도 나온다. 차이는 하나다 — <strong>그것들의 스크레이프 설정은 차트가 함께 만들어 줬고, 우리 앱의 것은 아무도 만들지 않았다.</strong></p>
   <p>이 연결을 만드는 오브젝트가 <code>ServiceMonitor</code>다. 그런데 이것은 만들기는 쉽고 <strong>제대로 만들었는지 확인하기가 어렵다</strong>. 잘못 만들어도 <code>kubectl apply</code>는 성공하고, 오브젝트는 목록에 보이고, 오퍼레이터 로그에는 아무 말도 없다. 그저 타깃이 생기지 않을 뿐이다.</p>
   <p>그래서 이 모듈은 성공 사례를 먼저 보여주지 않는다. 실무에서 실제로 겪는 세 가지 어긋남을 순서대로 만들고, 각각을 <strong>어떤 명령으로 진단하는지</strong>를 익힌 다음에 연결한다. 그 뒤라야 "왜 안 나오지"를 혼자 풀 수 있다.</p>
 </section>
@@ -205,9 +205,9 @@
   <p>지표를 붙일 수 있다고 해서 아무거나 붙이면 대시보드가 늘어날 뿐 판단은 늘지 않는다. 책 3.3이 소개하는 세 가지 묶음은 <strong>무엇부터 재야 하는가</strong>에 대한 답이고, 각각 대상이 다르다.</p>
   <table>
     <tr><th>묶음</th><th>무엇을</th><th>대상</th></tr>
-    <tr><td><dfn class="term">USE</dfn></td><td>사용률 · 포화도 · 오류<br><span class="t-sub">Utilization · Saturation · Errors</span></td><td><strong>자원</strong> — CPU, 메모리, 디스크, 큐</td></tr>
+    <tr><td><dfn class="term">USE</dfn></td><td>사용률 · 포화도 · 오류<br><span class="t-sub">Utilization · Saturation · Errors</span></td><td><strong>자원</strong> — <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>, 메모리, 디스크, 큐</td></tr>
     <tr><td><dfn class="term">RED</dfn></td><td>요청률 · 에러율 · 지연<br><span class="t-sub">Rate · Errors · Duration</span></td><td><strong>서비스</strong> — 요청을 받아 처리하는 것</td></tr>
-    <tr><td>4 골든 시그널</td><td>지연 · 트래픽 · 오류 · 포화도</td><td>둘을 합친 것. 구글 SRE 책의 분류</td></tr>
+    <tr><td>4 골든 시그널</td><td>지연 · 트래픽 · 오류 · 포화도</td><td>둘을 합친 것. 구글 <dfn class="term">SRE <span class="en">(Site Reliability Engineering · 신뢰성을 공학으로 다루는 운영 방식)</span></dfn> 책의 분류</td></tr>
     <tr><td><dfn class="term">SLO</dfn></td><td>"99%의 요청이 200ms 안에"</td><td>사용자와의 약속. M21에서 알림의 기준이 된다</td></tr>
   </table>
   <p>USE는 <strong>원인</strong> 쪽에, RED는 <strong>증상</strong> 쪽에 가깝다. CPU가 90%인 것(USE)은 문제일 수도 아닐 수도 있지만, P99가 3초인 것(RED)은 사용자가 이미 겪고 있는 일이다. 그래서 알림은 RED에 걸고 원인 규명은 USE로 내려간다 — 이것이 책 3.5가 말하는 <strong>계층적 모니터링</strong>의 실제 순서다.</p>
@@ -226,22 +226,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:12px; font-weight:700; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.6; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
       <text class="t-h" x="40" y="46">세 겹이 다 맞아야 연결된다 — 하나만 어긋나면 에러 없이 사라진다</text>
@@ -309,7 +294,7 @@
       <text class="t-mono" x="723" y="374" text-anchor="middle">port: "8080"  (이름이 아니다)</text>
       <text class="t-warn" x="723" y="388" text-anchor="middle">타깃 0건 · 에러 없음</text>
     </svg>
-    <figcaption>그림 20.1 — Prometheus CR → ServiceMonitor → Service로 이어지는 세 겹. 어느 하나가 어긋나도 에러 없이 타깃만 사라진다.</figcaption>
+    <figcaption>그림 20.1 — Prometheus <dfn class="term">CR <span class="en">(Custom Resource · CRD 로 정의한 타입의 실제 오브젝트)</span></dfn> → ServiceMonitor → Service로 이어지는 세 겹. 어느 하나가 어긋나도 에러 없이 타깃만 사라진다.</figcaption>
   </figure>
 
   <p>세 겹이 각각 다른 사람의 책임이라는 점이 중요하다. ①은 클러스터에 프로메테우스를 세운 사람이 정했고(<code>release: kps</code>), ②와 ③은 앱을 배포하는 사람이 쓴다. 앱 팀이 ①의 규칙을 모르면 아무리 정확한 <code>ServiceMonitor</code>를 써도 연결되지 않는다.</p>
@@ -390,7 +375,7 @@ kubectl -n monitoring get secret prometheus-kps-kube-prometheus-stack-prometheus
     http://10.244.1.162:8080/actuator/prometheus up
     http://10.244.2.134:8080/actuator/prometheus up
   http_server_requests_seconds_count: 4 건</code></div>
-    <div class="verdict"><span class="lbl">판정</span>파드 수만큼 타깃이 생겼다. <strong>타깃은 서비스가 아니라 파드 단위</strong>다 — 서비스 뒤에 파드가 둘이면 둘 다 긁는다. 그래야 "3번 파드만 느리다"를 볼 수 있다. IP는 환경마다 다르다.</div>
+    <div class="verdict"><span class="lbl">판정</span>파드 수만큼 타깃이 생겼다. <strong>타깃은 서비스가 아니라 파드 단위</strong>다 — 서비스 뒤에 파드가 둘이면 둘 다 긁는다. 그래야 "3번 파드만 느리다"를 볼 수 있다. <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>는 환경마다 다르다.</div>
   </div>
 </section>
 
@@ -475,7 +460,7 @@ kubectl -n journal rollout status deploy/journal-api</code></pre>
     <span class="out-lbl">확인</span>
 <pre><code>kubectl -n journal exec deploy/journal-api -- sh -c 'wget -qO- localhost:8080/metrics | grep -c "^[a-z]"'</code></pre>
     <div class="out"><code>97</code></div>
-    <div class="verdict"><span class="lbl">판정</span>97개 계열이다. <code>order-api</code>의 274개보다 적은 것은 JVM 지표(힙 영역별 사용량, GC, 스레드 풀)가 없기 때문이다. 런타임이 다르면 낼 수 있는 지표도 다르다.</div>
+    <div class="verdict"><span class="lbl">판정</span>97개 계열이다. <code>order-api</code>의 274개보다 적은 것은 <dfn class="term">JVM <span class="en">(Java Virtual Machine · 자바 가상 머신)</span></dfn> 지표(힙 영역별 사용량, <dfn class="term">GC <span class="en">(Garbage Collection · 쓰지 않는 메모리를 회수하는 동작)</span></dfn>, 스레드 풀)가 없기 때문이다. 런타임이 다르면 낼 수 있는 지표도 다르다.</div>
   </div>
 
   <div class="step">
@@ -610,7 +595,7 @@ sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
     <span class="out-lbl">출력</span>
     <div class="out"><code>    job=order-api = 0.0594</code></div>
     <p><code>order-api</code>는 5.94%가 나왔는데 <code>journal-api</code>는 <strong>아예 결과가 없다.</strong> 값이 0인 것이 아니라 시계열이 없다.</p>
-    <div class="verdict"><span class="lbl">판정</span>분자에 <code>status=~"5.."</code>인 시계열이 하나도 없으면 나눗셈의 결과도 없다. PromQL의 이항 연산은 <strong>양쪽에 다 있는 라벨 조합에 대해서만</strong> 계산하기 때문이다. 대시보드에서 이 패널이 <code>No data</code>가 되고, 알림 규칙이라면 <strong>에러가 없어서 조용한 것인지 규칙이 잘못된 것인지 구분되지 않는다.</strong></div>
+    <div class="verdict"><span class="lbl">판정</span>분자에 <code>status=~"5.."</code>인 시계열이 하나도 없으면 나눗셈의 결과도 없다. <dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn>의 이항 연산은 <strong>양쪽에 다 있는 라벨 조합에 대해서만</strong> 계산하기 때문이다. 대시보드에서 이 패널이 <code>No data</code>가 되고, 알림 규칙이라면 <strong>에러가 없어서 조용한 것인지 규칙이 잘못된 것인지 구분되지 않는다.</strong></div>
     <p>빈 결과를 0으로 채우려면 <code>or</code>로 대체 항을 둔다.</p>
 <pre><code>sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
   / sum by (job) (rate(http_server_requests_seconds_count[5m]))
@@ -838,9 +823,9 @@ pgrep -fl 'k6|port-forward' || echo "없음"</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>지금은 질의를 칠 때만 값을 본다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 그 사실을 알 방법이 없다. M21에서 두 가지를 만든다 — 늘 켜 두고 볼 수 있는 대시보드와, 사람을 부르는 알림이다. 대시보드는 M19 13단계에서 본 사이드카 방식으로 ConfigMap에 코드로 담고, 알림은 이 모듈에서 쓴 RED 질의를 임계값과 함께 <code>PrometheusRule</code>로 옮긴다. 그리고 <code>ChaosController</code>로 실제 지연과 에러를 만들어 <strong>pending → firing → resolved</strong> 상태 전이를 직접 관찰한다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   223 
+  <p>지금은 질의를 칠 때만 값을 본다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 그 사실을 알 방법이 없다. M21에서 두 가지를 만든다 — 늘 켜 두고 볼 수 있는 대시보드와, 사람을 부르는 알림이다. 대시보드는 M19 13단계에서 본 사이드카 방식으로 ConfigMap에 코드로 담고, 알림은 이 모듈에서 쓴 RED 질의를 임계값과 함께  187 로 옮긴다. 그리고  188 로 실제 지연과 에러를 만들어 <strong>pending → firing → resolved</strong> 상태 전이를 직접 관찰한다.</p>
+   224 
   <ul>
     <li>PromQL 기초: https://prometheus.io/docs/prometheus/latest/querying/basics/</li>
     <li>histogram_quantile과 히스토그램: https://prometheus.io/docs/practices/histograms/</li>

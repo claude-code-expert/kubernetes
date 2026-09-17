@@ -148,13 +148,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 154  155  156 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 34 / 38 · PART 7 확장</div>
-  <h1>멀티클러스터와 외부 서비스 연동</h1>
-  <p class="ch-desc">M32에서 클러스터를 둘로 늘렸지만 <strong>배포만 나눴고 통신은 나누지 않았다.</strong> 각 리전의 앱은 자기 클러스터 안에서만 서로를 불렀다. 실제로는 클러스터 밖의 데이터베이스를 부르고, 다른 클러스터의 서비스를 부른다. 이 모듈에서 <strong>셀렉터 없는 서비스</strong>와 <code>EndpointSlice</code>를 손으로 써서 그 경로를 만들고, <code>ExternalName</code>이 무엇을 하고 무엇을 못 하는지 확인한다. 그리고 <strong>손으로 쓴 엔드포인트가 상태를 모른다</strong>는 것을 장애로 재현한다.</p>
+   120 
+  <p class="ch-desc">M32에서 클러스터를 둘로 늘렸지만 <strong>배포만 나눴고 통신은 나누지 않았다.</strong> 각 리전의 앱은 자기 클러스터 안에서만 서로를 불렀다. 실제로는 클러스터 밖의 데이터베이스를 부르고, 다른 클러스터의 서비스를 부른다. 이 모듈에서 <strong>셀렉터 없는 서비스</strong>와  23 를 손으로 써서 그 경로를 만들고,  24 이 무엇을 하고 무엇을 못 하는지 확인한다. 그리고 <strong>손으로 쓴 엔드포인트가 상태를 모른다</strong>는 것을 장애로 재현한다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
     <br>2026-09-06 검증 (kind v0.33.0 · 클러스터 2개 · redis 8.2-alpine) · 도커에 1GiB 이상 여유가 필요하다
@@ -174,26 +174,26 @@
 <div class="tldr">
   <h2>핵심 3줄</h2>
   <p>1. 셀렉터 없는 서비스에 <code>EndpointSlice</code>를 손으로 붙여, 클러스터 밖 주소를 <strong>클러스터 안 서비스와 구분되지 않게</strong> 만든다.</p>
-  <p>2. <code>ExternalName</code>이 <strong>DNS 별칭일 뿐</strong>이라는 것을 포트 매핑 실패와 엔드포인트 부재로 확인한다.</p>
+  <p>2. <code>ExternalName</code>이 <strong><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 별칭일 뿐</strong>이라는 것을 포트 매핑 실패와 엔드포인트 부재로 확인한다.</p>
   <p>3. 다른 클러스터의 서비스를 같은 방법으로 가져오고, <strong>상대가 죽어도 <code>ready: true</code>가 유지되는</strong> 이 방식의 한계를 재현한다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">34.1</span>클러스터 밖은 서비스가 아니다</a>
-  <a href="#s2"><span class="num">34.2</span>이론 — 서비스가 감추는 것</a>
-  <a href="#s3"><span class="num">34.3</span>따라하기 ① 셀렉터 없는 서비스</a>
-  <a href="#s4"><span class="num">34.4</span>따라하기 ② ExternalName의 자리</a>
-  <a href="#s5"><span class="num">34.5</span>따라하기 ③ 다른 클러스터의 서비스</a>
-  <a href="#s6"><span class="num">34.6</span>따라하기 ④ MCS API가 채우려는 자리</a>
-  <a href="#s7"><span class="num">34.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">34.8</span>운영 관점 — 어디까지 연결할 것인가</a>
-  <a href="#s9"><span class="num">34.9</span>체크포인트와 정리</a>
+   159 
+   160 
+   161 
+   162 
+   163 
+   164 
+   165 
+   166 
+   167 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">34.1</span>클러스터 밖은 서비스가 아니다</h2>
-  <p class="lead">M11에서 서비스를 배웠을 때 그것은 <strong>클러스터 안의 파드를 묶는 것</strong>이었다. <code>selector</code>가 라벨로 파드를 고르고, 엔드포인트 컨트롤러가 그 파드들의 IP를 모아 준다. 이 구조는 대상이 파드일 때만 동작한다.</p>
-  <p>그런데 실제 시스템에서 앱이 부르는 것의 절반은 파드가 아니다. 관리형 데이터베이스, 사내 레거시 시스템, 다른 팀의 클러스터, 외부 API. 이것들에는 라벨이 없고, 엔드포인트 컨트롤러가 찾을 방법도 없다.</p>
+  <p class="lead">M11에서 서비스를 배웠을 때 그것은 <strong>클러스터 안의 파드를 묶는 것</strong>이었다. <code>selector</code>가 라벨로 파드를 고르고, 엔드포인트 컨트롤러가 그 파드들의 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>를 모아 준다. 이 구조는 대상이 파드일 때만 동작한다.</p>
+  <p>그런데 실제 시스템에서 앱이 부르는 것의 절반은 파드가 아니다. 관리형 데이터베이스, 사내 레거시 시스템, 다른 팀의 클러스터, 외부 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>. 이것들에는 라벨이 없고, 엔드포인트 컨트롤러가 찾을 방법도 없다.</p>
   <p>가장 쉬운 대응은 <strong>앱에 주소를 박는 것</strong>이다. 환경 변수에 <code>db.internal:5432</code>를 넣으면 된다. 그리고 그것이 문제를 만든다 — 주소가 바뀌면 <strong>앱을 다시 배포해야</strong> 하고, 환경마다 다른 값을 관리해야 하며, 클러스터 안의 서비스와 밖의 서비스를 앱이 <strong>다르게 다뤄야</strong> 한다.</p>
   <p>이 모듈은 그 차이를 없앤다. 클러스터 밖의 주소도 <strong>서비스 이름으로</strong> 부르게 만들면, 앱은 상대가 어디 있는지 몰라도 되고 주소 변경은 매니페스트 한 줄이 된다. 그 대신 무엇을 잃는지도 함께 확인한다 — <strong>공짜가 아니다.</strong></p>
 </section>
@@ -217,23 +217,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">앱은 상대가 어디 있는지 모른다 — 서비스가 그것을 감춘다</text>
@@ -298,7 +282,7 @@
   <h3>클러스터를 넘을 때의 문제</h3>
   <p>다른 클러스터의 서비스를 부르려면 세 가지가 필요하다. <strong>거기까지 닿는 네트워크</strong>, <strong>클러스터 밖에서 접근 가능한 주소</strong>, 그리고 <strong>그 주소를 이쪽에서 이름으로 부르는 방법</strong>.</p>
   <p>두 번째가 실무의 난점이다. 상대 클러스터의 ClusterIP는 그 클러스터 안에서만 의미가 있으므로, <strong>내보내는 쪽이 노출 지점을 만들어야</strong> 한다 — 클라우드에서는 내부 로드밸런서, 실습에서는 NodePort다. 세 번째는 이 모듈의 기법 그대로다.</p>
-  <p>이 손작업을 표준화하려는 것이 <dfn class="term">MCS API<span class="en">Multi-Cluster Services</span></dfn>다. <code>ServiceExport</code>를 만들면 컨트롤러가 다른 클러스터에 <code>ServiceImport</code>와 엔드포인트를 만들어 준다. <strong>다만 기본으로 들어 있지 않고</strong> CRD와 컨트롤러를 따로 설치해야 한다 — 34.6에서 그 사실을 확인한다.</p>
+  <p>이 손작업을 표준화하려는 것이 <dfn class="term">MCS API<span class="en">Multi-Cluster Services</span></dfn>다. <code>ServiceExport</code>를 만들면 컨트롤러가 다른 클러스터에 <code>ServiceImport</code>와 엔드포인트를 만들어 준다. <strong>다만 기본으로 들어 있지 않고</strong> <dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn>와 컨트롤러를 따로 설치해야 한다 — 34.6에서 그 사실을 확인한다.</p>
 </section>
 
 <section id="s3">
@@ -317,7 +301,7 @@ docker exec ext-redis redis-cli -a extpass SET greeting "클러스터 밖에서 
     <span class="out-lbl">출력</span>
     <div class="out"><code>172.20.0.5
 OK</code></div>
-    <p>도커의 <code>kind</code> 네트워크에 붙인 것이 요점이다. kind 노드들이 그 네트워크에 있으므로 <strong>파드에서 이 IP로 나갈 수 있다.</strong> 실제 환경에서는 이 자리가 VPC 안의 데이터베이스 주소가 된다.</p>
+    <p>도커의 <code>kind</code> 네트워크에 붙인 것이 요점이다. kind 노드들이 그 네트워크에 있으므로 <strong>파드에서 이 IP로 나갈 수 있다.</strong> 실제 환경에서는 이 자리가 <dfn class="term">VPC <span class="en">(Virtual Private Cloud · 클라우드 안의 격리된 사설 네트워크)</span></dfn> 안의 데이터베이스 주소가 된다.</p>
   </div>
 
   <div class="step">
@@ -639,10 +623,10 @@ kubectl --context kind-study -n journal get deploy,sts --no-headers</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   151 
   <p>M33에서 CRD를, 이 모듈에서 서비스 확장을 다뤘다. 쿠버네티스를 확장하는 지점은 그 둘만이 아니다 — 어드미션 웹훅(M26), 스케줄러, CSI 드라이버, 디바이스 플러그인이 각각 다른 층을 연다. <strong>어느 것을 언제 쓰는지</strong>가 플랫폼 팀의 실질적인 판단이다.</p>
-  <p>M35에서 그 지도를 그리고, 지금까지 다루지 않은 워크로드 종류 — <strong>배치 작업</strong> — 를 실습한다. <code>Job</code>·<code>CronJob</code>·<code>Indexed Job</code>으로 분산 훈련의 형태를 흉내 내고, 재시도 정책과 특수 하드웨어 요청이 어떻게 표현되는지 본다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+  <p>M35에서 그 지도를 그리고, 지금까지 다루지 않은 워크로드 종류 — <strong>배치 작업</strong> — 를 실습한다.  113 · 114 · 115 으로 분산 훈련의 형태를 흉내 내고, 재시도 정책과 특수 하드웨어 요청이 어떻게 표현되는지 본다.</p>
+   152 
   <ul>
     <li>셀렉터 없는 서비스: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors</li>
     <li>EndpointSlice: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/</li>

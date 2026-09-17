@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>프로메테우스 스택 설치</h1>
+   187 
   <p class="lede">헬름 차트 하나로 프로메테우스·Alertmanager·그라파나·node-exporter·kube-state-metrics 가 한꺼번에 올라온다. 설치는 명령 두 줄이고, 이 장의 내용은 <strong>타깃이 전부 UP 으로 뜨는지 확인하는 절차</strong>다.</p>
 </header>
 
@@ -201,7 +202,7 @@ figcaption b{color:var(--ink)}
 <table>
   <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
   <tr><td>cAdvisor</td><td>Container Advisor</td><td>컨테이너의 실제 자원 사용을 재는 구성요소. kubelet 에 내장돼 있다. 모든 컨테이너 메트릭의 진실 공급원</td></tr>
-  <tr><td>metrics-server</td><td>Metrics Server</td><td>리소스 메트릭 API 의 구현체. <code>kubectl top</code> 과 HPA 가 이것을 쓴다. <strong>장기 저장을 하지 않는다</strong></td></tr>
+  <tr><td>metrics-server</td><td>Metrics Server</td><td>리소스 메트릭 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 의 구현체. <code>kubectl top</code> 과 <dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn> 가 이것을 쓴다. <strong>장기 저장을 하지 않는다</strong></td></tr>
   <tr><td>node-exporter</td><td>Node Exporter</td><td><strong>기계의 상태</strong>를 낸다 — 이 노드의 메모리가 몇 바이트 남았는가. 노드마다 하나(DaemonSet)</td></tr>
   <tr><td>kube-state-metrics</td><td>Kube State Metrics</td><td><strong>API 서버가 아는 상태</strong>를 낸다 — 레플리카 3개를 원하는데 실제로는 2개인가. 클러스터에 하나</td></tr>
   <tr><td>프로메테우스 오퍼레이터</td><td>Prometheus Operator</td><td>CRD 를 감시해 프로메테우스 설정을 대신 써 주는 컨트롤러. 스크레이프는 하지 않는다</td></tr>
@@ -209,7 +210,7 @@ figcaption b{color:var(--ink)}
   <tr><td>ServiceMonitor</td><td>Service Monitor</td><td>“이 라벨을 가진 서비스의 이 포트를 긁어라”를 선언하는 커스텀 리소스 (06장)</td></tr>
   <tr><td>PrometheusRule</td><td>Prometheus Rule</td><td>알림 규칙과 기록 규칙을 선언하는 커스텀 리소스 (07장)</td></tr>
   <tr><td>Alertmanager</td><td>Alertmanager</td><td>발생한 알림을 묶고 억제하고 라우팅하는 구성요소 (07장)</td></tr>
-  <tr><td>스크레이프</td><td>Scrape</td><td>프로메테우스가 대상의 <code>/metrics</code> 를 HTTP 로 긁어 오는 동작</td></tr>
+  <tr><td>스크레이프</td><td>Scrape</td><td>프로메테우스가 대상의 <code>/metrics</code> 를 <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 로 긁어 오는 동작</td></tr>
   <tr><td>타깃</td><td>Target</td><td>스크레이프 대상 하나. 살아 있으면 <code>up</code> 이 1 이다</td></tr>
   <tr><td>job</td><td>Job (라벨)</td><td>같은 종류의 타깃 묶음에 붙는 라벨. <code>kubelet</code> · <code>node-exporter</code> 같은 값</td></tr>
   <tr><td>보존 기간</td><td>Retention</td><td>시계열을 며칠 보관할지. 실습은 3일로 짧게 잡는다</td></tr>
@@ -218,7 +219,7 @@ figcaption b{color:var(--ink)}
 </div>
 
 <blockquote class="warn">
-  <span class="label">metrics-server 는 “10분 전 CPU” 에 답하지 못한다</span>
+  <span class="label">metrics-server 는 “10분 전 <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>” 에 답하지 못한다</span>
   <p>리소스 메트릭 API 는 <strong>현재 값만</strong> 제공한다. 과거를 묻는 질문에 답하려고 프로메테우스를 설치하는 것이다. 전임자 힙스터(Heapster)가 데이터 싱크 설계 문제로 사용 중단됐고, 리소스 메트릭 API 를 집계 API 로 표준화하면서 지금 형태가 됐다.</p>
 </blockquote>
 
@@ -296,7 +297,7 @@ figcaption b{color:var(--ink)}
 <ul class="steps">
   <li><span class="b">1</span><span>
     <strong>노드의 상태를 묻는다.</strong> node-exporter 가 살아 있는지 확인하는 질의다.
-    <span class="chk">확인 <code>node_memory_MemAvailable_bytes / 1024^3</code> → 노드 수만큼의 줄, GiB 단위 숫자</span>
+    <span class="chk">확인 <code>node_memory_MemAvailable_bytes / 1024^3</code> → 노드 수만큼의 줄, <dfn class="term">GiB <span class="en">(Gibibyte · 2의 30제곱 바이트. 쿠버네티스가 쓰는 단위)</span></dfn> 단위 숫자</span>
   </span></li>
   <li><span class="b">2</span><span>
     <strong>API 서버의 기대값을 묻는다.</strong> kube-state-metrics 가 살아 있는지 본다.
@@ -342,7 +343,7 @@ kubeProxy:
   <tr><td>cAdvisor</td><td>kubelet 에 내장. 차트가 kubelet 타깃을 만든다</td><td>없다</td></tr>
   <tr><td>node-exporter</td><td>차트가 DaemonSet 으로 설치</td><td>자원 요청 정도</td></tr>
   <tr><td>kube-state-metrics</td><td>차트가 Deployment 로 설치</td><td><code>nodeSelector</code></td></tr>
-  <tr><td>컨트롤 플레인 4종</td><td><code>enabled: true</code> + <strong>01장 bind-address 패치</strong></td><td>포트와 TLS 옵션 (06절)</td></tr>
+  <tr><td>컨트롤 플레인 4종</td><td><code>enabled: true</code> + <strong>01장 bind-address 패치</strong></td><td>포트와 <dfn class="term">TLS <span class="en">(Transport Layer Security · 전송 구간 암호화)</span></dfn> 옵션 (06절)</td></tr>
 </table>
 </div>
 
@@ -455,7 +456,7 @@ ls</code></pre>
 
 <h2><span class="n">05</span>차트 버전 확정</h2>
 
-<p class="cap">목적: 팀 전체가 같은 차트 버전을 쓰게 만든다. 버전이 갈리면 07장에서 대시보드 JSON 이 어긋난다.</p>
+<p class="cap">목적: 팀 전체가 같은 차트 버전을 쓰게 만든다. 버전이 갈리면 07장에서 대시보드 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 이 어긋난다.</p>
 
 <p>문서에 버전을 박아 두지 않는다. 설치 직전에 확인하고, 그 값을 공유한다.</p>
 
@@ -573,7 +574,7 @@ kubeProxy:
 
 <blockquote class="warn">
   <span class="label">insecureSkipVerify 를 쓰는 이유와 한계</span>
-  <p>컨트롤 플레인 구성요소는 HTTPS 로 메트릭을 제공하는데, 인증서에 노드 IP 가 들어 있지 않아 이름 검증에 실패한다. 로컬 클러스터에서는 검증만 건너뛰는 것이 현실적이다. <strong>암호화와 토큰 인증은 그대로 유지</strong>되므로, 아예 HTTPS 를 끄고 평문 포트를 여는 방법보다 안전하다. 운영 클러스터에서는 적절한 SAN 을 가진 인증서를 발급해 이 옵션을 끄는 것이 정답이다.</p>
+  <p>컨트롤 플레인 구성요소는 <dfn class="term">HTTPS <span class="en">(HTTP Secure · TLS 로 암호화한 HTTP)</span></dfn> 로 메트릭을 제공하는데, 인증서에 노드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn> 가 들어 있지 않아 이름 검증에 실패한다. 로컬 클러스터에서는 검증만 건너뛰는 것이 현실적이다. <strong>암호화와 토큰 인증은 그대로 유지</strong>되므로, 아예 HTTPS 를 끄고 평문 포트를 여는 방법보다 안전하다. 운영 클러스터에서는 적절한 <dfn class="term">SAN <span class="en">(Subject Alternative Name · 인증서가 보증하는 이름·주소 목록)</span></dfn> 을 가진 인증서를 발급해 이 옵션을 끄는 것이 정답이다.</p>
 </blockquote>
 
 <blockquote>
@@ -703,7 +704,7 @@ prometheus-operator         1</code></pre>
   <tr><td><code>connection refused</code></td><td>포트가 그 주소로 열려 있지 않다</td><td>01장 bind-address 패치</td></tr>
   <tr><td><code>context deadline exceeded</code></td><td>연결은 되는데 응답이 없다</td><td>포트 번호. etcd 라면 2379 가 아니라 2381 인지</td></tr>
   <tr><td><code>x509: cannot validate certificate</code></td><td>인증서 이름 검증 실패</td><td><code>insecureSkipVerify: true</code> 가 빠졌다</td></tr>
-  <tr><td><code>401</code> / <code>403</code></td><td>인증은 됐는데 권한이 없다</td><td>RBAC. 차트가 만든 ClusterRole 확인</td></tr>
+  <tr><td><code>401</code> / <code>403</code></td><td>인증은 됐는데 권한이 없다</td><td><dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn>. 차트가 만든 ClusterRole 확인</td></tr>
 </table>
 </div>
 
@@ -717,13 +718,13 @@ prometheus-operator         1</code></pre>
   <tr><th>job</th><th>포트</th><th>무엇을 알려주나</th></tr>
   <tr><td><code>apiserver</code></td><td>6443</td><td>API 요청 지연·에러율. 클러스터 건강의 1차 지표</td></tr>
   <tr><td><code>kubelet</code></td><td>10250</td><td>노드별 파드·컨테이너 상태. <strong>cAdvisor 컨테이너 지표가 여기 포함</strong></td></tr>
-  <tr><td><code>node-exporter</code></td><td>9100</td><td>CPU·메모리·디스크·네트워크 (USE 지표의 재료)</td></tr>
+  <tr><td><code>node-exporter</code></td><td>9100</td><td>CPU·메모리·디스크·네트워크 (<dfn class="term">USE <span class="en">(Utilization, Saturation, Errors · 인프라를 보는 세 지표)</span></dfn> 지표의 재료)</td></tr>
   <tr><td><code>kube-state-metrics</code></td><td>8080</td><td>레플리카 수, 파드 재시작 횟수, PVC 상태</td></tr>
   <tr><td><code>kube-controller-manager</code></td><td>10257</td><td>컨트롤러 큐 깊이, 조정 지연 — 01장 패치 필요</td></tr>
   <tr><td><code>kube-scheduler</code></td><td>10259</td><td>스케줄링 시도·지연 — 01장 패치 필요</td></tr>
   <tr><td><code>kube-etcd</code></td><td>2381</td><td>디스크 동기화 지연, DB 크기 — 01장 패치 필요</td></tr>
   <tr><td><code>kube-proxy</code></td><td>10249</td><td>규칙 동기화 지연 — 01장 패치 필요</td></tr>
-  <tr><td><code>coredns</code> / <code>kube-dns</code></td><td>9153</td><td>DNS 질의 수와 실패율</td></tr>
+  <tr><td><code>coredns</code> / <code>kube-dns</code></td><td>9153</td><td><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 질의 수와 실패율</td></tr>
   <tr><td><code>prometheus</code> 외</td><td>—</td><td>스택 자기 자신의 상태</td></tr>
 </table>
 </div>
@@ -823,7 +824,7 @@ ensure CRDs are installed first</code></pre>
   <tr><td><code>x509: cannot validate certificate</code></td><td><code>insecureSkipVerify: true</code> 가 빠졌다</td></tr>
   <tr><td><code>localhost:30900</code> 접속 불가</td><td>01장 <code>hostPort: 30900</code> 과 값 파일의 <code>nodePort: 30900</code> 이 어긋났다</td></tr>
   <tr><td><code>no matches for kind "ServiceMonitor"</code></td><td>CRD 미설치 또는 <code>apiVersion</code> 오타 (11절 실패 2)</td></tr>
-  <tr><td>대시보드가 비어 있고 <code>No data</code></td><td>05장에서 다룬다. 지금은 프로메테우스 UI 만 확인하면 된다</td></tr>
+  <tr><td>대시보드가 비어 있고 <code>No data</code></td><td>05장에서 다룬다. 지금은 프로메테우스 <dfn class="term">UI <span class="en">(User Interface · 사용자 인터페이스)</span></dfn> 만 확인하면 된다</td></tr>
 </table>
 </div>
 
@@ -877,7 +878,7 @@ kubectl get crd -o name | grep monitoring.coreos.com | xargs -r kubectl delete</
   <tr><td><code>helm -n monitoring uninstall kps</code></td><td>릴리스 삭제. PVC 와 CRD 는 남는다</td></tr>
   <tr><td><code>kubectl -n monitoring get pods</code></td><td>설치된 파드가 전부 Running·Ready 인지</td></tr>
   <tr><td><code>kubectl get crd | grep monitoring.coreos.com</code></td><td>오퍼레이터가 쓰는 커스텀 리소스 종류 확인</td></tr>
-  <tr><td><code>curl -s --get localhost:30900/api/v1/query --data-urlencode 'query=...'</code></td><td>PromQL 을 API 로 실행. 이 장의 핵심 검증</td></tr>
+  <tr><td><code>curl -s --get localhost:30900/api/v1/query --data-urlencode 'query=...'</code></td><td><dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn> 을 API 로 실행. 이 장의 핵심 검증</td></tr>
   <tr><td><code>kubectl -n monitoring get prometheus -o yaml</code></td><td>오퍼레이터가 무엇을 고르는지(셀렉터) 확인</td></tr>
 </table>
 </div>

@@ -151,12 +151,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 148  149  150 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 03 / 38 · PART 1 도커</div>
-  <h1>이미지와 레이어</h1>
+   127 
   <p class="ch-desc">태그는 움직인다. 다이제스트는 움직이지 않는다. 이 한 문장의 차이가 "내 노트북에서는 됐는데요"의 절반을 만든다. 이미지를 열어 레이어를 세고, 태그와 다이제스트를 손으로 구분한다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">40분</span><span class="tag">Docker Engine 29.2.1</span>
@@ -180,20 +180,20 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">3.1</span>왜 레이어를 알아야 하나</a>
-  <a href="#s2"><span class="num">3.2</span>이론 — 레이어 · 태그 · 다이제스트</a>
-  <a href="#s3"><span class="num">3.3</span>따라하기 ① 이미지를 열어본다</a>
-  <a href="#s4"><span class="num">3.4</span>따라하기 ② 태그와 다이제스트</a>
-  <a href="#s5"><span class="num">3.5</span>일부러 실패시키기</a>
-  <a href="#s6"><span class="num">3.6</span>디스크 관리</a>
-  <a href="#s7"><span class="num">3.7</span>체크포인트</a>
-  <a href="#s8"><span class="num">3.8</span>정리</a>
+   152 
+   153 
+   154 
+   155 
+   156 
+   157 
+   158 
+   159 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">3.1</span>왜 레이어를 알아야 하나</h2>
   <p class="lead">M02에서 <code>docker run nginx:1.29-alpine</code>을 쳤을 때 도커는 92.7MB를 받아왔다. 다음에 같은 베이스를 쓰는 다른 이미지를 받으면 그만큼을 다시 받지 않는다. 이 구조를 모르면 빌드가 5초에 끝날 수 있는 상황에서 5분을 기다리게 된다(M04의 주제).</p>
-  <p>더 중요한 이유는 재현성이다. 팀원 A의 노트북에서는 통과한 테스트가 CI에서 실패한다. 둘 다 <code>myapp:latest</code>를 썼는데 내용이 다르기 때문이다. 쿠버네티스에서는 이 문제가 더 조용히 온다 — 파드가 재시작되면서 같은 태그를 다시 받았는데 그 사이 레지스트리의 태그가 다른 이미지를 가리키게 되면, 클러스터 안에서 <strong>버전이 섞인 파드</strong>가 돌아간다. 원인을 찾기 가장 어려운 종류의 장애다.</p>
+  <p>더 중요한 이유는 재현성이다. 팀원 A의 노트북에서는 통과한 테스트가 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서 실패한다. 둘 다 <code>myapp:latest</code>를 썼는데 내용이 다르기 때문이다. 쿠버네티스에서는 이 문제가 더 조용히 온다 — 파드가 재시작되면서 같은 태그를 다시 받았는데 그 사이 레지스트리의 태그가 다른 이미지를 가리키게 되면, 클러스터 안에서 <strong>버전이 섞인 파드</strong>가 돌아간다. 원인을 찾기 가장 어려운 종류의 장애다.</p>
 </section>
 
 <section id="s2">
@@ -210,7 +210,7 @@
     <tr><td>같은 문자열이 내일도 같은 이미지인가</td><td><strong>보장 없음</strong></td><td>보장됨</td></tr>
     <tr><td>쓰는 곳</td><td>사람이 읽고 고르는 자리</td><td>재현이 필요한 자리 — CI, 프로덕션 배포 매니페스트, M01의 kind 노드 이미지</td></tr>
   </table>
-  <p>표의 "배포 매니페스트"는 쿠버네티스에 무엇을 띄울지 적은 YAML(파드 · 디플로이먼트 정의, M08부터)을 말한다. 이 모듈 뒤쪽에서 나오는 "레지스트리 매니페스트"는 다른 것이다 — 레지스트리가 이미지 하나의 레이어 목록과 설정을 적어둔 JSON 문서(OCI 이미지 매니페스트)로, 다이제스트는 바로 이 문서를 해시한 값이다. 두 낱말이 같은 문장에 나오면 앞에 붙은 수식어로 구분한다.</p>
+  <p>표의 "배포 매니페스트"는 쿠버네티스에 무엇을 띄울지 적은 YAML(파드 · 디플로이먼트 정의, M08부터)을 말한다. 이 모듈 뒤쪽에서 나오는 "레지스트리 매니페스트"는 다른 것이다 — 레지스트리가 이미지 하나의 레이어 목록과 설정을 적어둔 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 문서(<dfn class="term">OCI <span class="en">(Open Container Initiative · 컨테이너 이미지·런타임 표준)</span></dfn> 이미지 매니페스트)로, 다이제스트는 바로 이 문서를 해시한 값이다. 두 낱말이 같은 문장에 나오면 앞에 붙은 수식어로 구분한다.</p>
   <h3>latest를 쓰지 않는 근거 — 책 1.3.1</h3>
   <p>책 1.3.1(이미지 관리 모범 사례)은 컨테이너 빌드 자체는 다루지 않는다고 선을 그으면서도 두 가지는 못 박는다. 프로덕션에서 <code>latest</code> 태그를 쓰지 말 것, 그리고 태그가 소스의 어느 시점을 가리키는지 알 수 있는 전략(버전 번호나 커밋 해시)을 세울 것. 이 과정이 첫 도커 모듈부터 태그를 강제하는 근거가 이 절이다.</p>
   <p>이유는 위 표에 다 들어 있다. <code>latest</code>는 특별한 태그가 아니라 태그를 생략했을 때 채워지는 기본값일 뿐이고, "가장 최신"을 보장하지 않으며, 누군가 마지막으로 그 이름을 붙인 이미지를 가리킨다. 문제는 이것이 <strong>움직이는 포인터</strong>라는 점이 배포 시스템 안에서 세 번 증폭된다는 데 있다. 첫째, 무엇이 배포됐는지 기록이 남지 않는다 — 매니페스트에 <code>myapp:latest</code>라고 적혀 있으면 지난주 장애 때 돌던 것이 어느 빌드였는지 알 길이 없다. 둘째, 롤백이 불가능하다 — 이전 버전을 가리키는 이름이 없으므로 "직전으로 되돌린다"는 명령을 만들 수 없다. 셋째, 쿠버네티스는 노드에 이미 같은 태그의 이미지가 있으면 다시 받지 않는 것이 기본(<code>imagePullPolicy: IfNotPresent</code>)인데, <code>latest</code>만은 예외로 매번 받도록 정책이 바뀐다. 그래서 노드 A는 어제 캐시한 것을, 노드 B는 오늘 받은 것을 돌리는 상황이 같은 디플로이먼트 안에서 생긴다. 3.5절의 실패①이 이 셋째 상황을 노트북 한 대에서 재현한다.</p>
@@ -227,7 +227,7 @@
     <span class="out-lbl">실행 결과</span>
     <div class="out"><code>REPOSITORY   TAG           DIGEST                                                                    IMAGE ID       CREATED        SIZE
 nginx        1.29-alpine   sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de   5616878291a2   4 months ago   92.7MB</code></div>
-    <p><code>CREATED</code>가 4개월 전인 것에 주의한다. 이것은 <strong>이미지가 빌드된 시각</strong>이지 내가 받은 시각이 아니다. 공식 이미지도 몇 달씩 그대로인 경우가 있고, 그 사이 베이스 OS에 보안 패치가 나왔을 수 있다 — M07에서 취약점 스캔으로 확인한다.</p>
+    <p><code>CREATED</code>가 4개월 전인 것에 주의한다. 이것은 <strong>이미지가 빌드된 시각</strong>이지 내가 받은 시각이 아니다. 공식 이미지도 몇 달씩 그대로인 경우가 있고, 그 사이 베이스 <dfn class="term">OS <span class="en">(Operating System · 운영체제)</span></dfn>에 보안 패치가 나왔을 수 있다 — M07에서 취약점 스캔으로 확인한다.</p>
   </div>
 
   <div class="step">
@@ -420,9 +420,9 @@ docker rmi myweb:v1 2>/dev/null || true</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>지금까지는 남이 만든 이미지를 받아 썼다. M04에서 직접 만든다. 같은 애플리케이션으로 두 가지를 비교한다 — <code>COPY</code> 줄의 순서 하나로 소스 한 줄을 고친 뒤의 재빌드에서 의존성 설치가 <code>CACHED</code>로 건너뛰어져 마지막 단계가 2.7초에서 1.6초로 줄고(실제 프로젝트에서는 이 자리가 몇 분짜리다), 멀티스테이지 빌드로 이미지가 1.68GB에서 246MB로, 배포 때 내려받는 양은 413MB에서 59.3MB로 줄어든다. 두 실험 모두 이 모듈에서 본 <code>docker history</code>로 어느 레이어가 달라졌는지 확인하며 진행한다.</p>
-  <h3>참고 (2026-09-03 접근 확인)</h3>
+   145 
+  <p>지금까지는 남이 만든 이미지를 받아 썼다. M04에서 직접 만든다. 같은 애플리케이션으로 두 가지를 비교한다 —  120  줄의 순서 하나로 소스 한 줄을 고친 뒤의 재빌드에서 의존성 설치가  121 로 건너뛰어져 마지막 단계가 2.7초에서 1.6초로 줄고(실제 프로젝트에서는 이 자리가 몇 분짜리다), 멀티스테이지 빌드로 이미지가 1.68GB에서 246MB로, 배포 때 내려받는 양은 413MB에서 59.3MB로 줄어든다. 두 실험 모두 이 모듈에서 본  122 로 어느 레이어가 달라졌는지 확인하며 진행한다.</p>
+   146 
   <ul>
     <li>이미지 레이어 개념: https://docs.docker.com/get-started/docker-concepts/building-images/understanding-image-layers/</li>
     <li>이미지 저장 방식(containerd 스토어): https://docs.docker.com/engine/storage/containerd/</li>

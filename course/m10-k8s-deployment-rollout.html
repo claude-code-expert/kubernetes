@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 198  199  200 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 10 / 38 · PART 2 쿠버네티스 코어</div>
-  <h1>디플로이먼트와 롤아웃</h1>
+   179 
   <p class="ch-desc">버전을 바꾸는 동안 서비스가 끊기지 않는지 실제로 측정한다. 40초 동안 11,754건 성공, 17건 실패 — 무중단 설정을 했는데도 0이 아니었다. 그 17건이 어디서 왔는지가 이 모듈의 핵심이다.</p>
   <div class="meta">
     <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 · journal-api:v1 · v2 · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 · journal-api:v1 · v2 · 버전 숫자는 실습 당일  23 으로 다시 확인한다
   </div>
 </header>
 
@@ -181,13 +181,13 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">10.1</span>왜 파드 YAML만으로는 안 되는가</a>
-  <a href="#s2"><span class="num">10.2</span>이론 — 롤아웃은 무엇을 하는가</a>
-  <a href="#s3"><span class="num">10.3</span>따라하기 ① 무중단 측정</a>
-  <a href="#s4"><span class="num">10.4</span>따라하기 ② 이력과 되돌리기</a>
-  <a href="#s5"><span class="num">10.5</span>일부러 실패시키기</a>
-  <a href="#s6"><span class="num">10.6</span>남은 17건의 정체</a>
-  <a href="#s7"><span class="num">10.7</span>체크포인트와 정리</a>
+   203 
+   204 
+   205 
+   206 
+   207 
+   208 
+   209 
 </nav>
 
 <section id="s1">
@@ -220,24 +220,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .dash { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; stroke-dasharray:4 3; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
-        .wline { stroke:#a1442a; stroke-width:1.5; fill:none; }
-        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="390" rx="6"/>
       <text class="t-h" x="40" y="46">롤아웃 중에는 레플리카셋이 둘이다</text>
@@ -543,7 +526,7 @@ REVISION  CHANGE-CAUSE
 
   <div class="fail">
     <span class="lbl">실패 ① — 존재하지 않는 이미지로 배포한다</span>
-    <p>가장 흔한 배포 사고를 재현한다. 태그 오타나 CI가 이미지를 아직 안 올린 상태에서 배포하는 경우다.</p>
+    <p>가장 흔한 배포 사고를 재현한다. 태그 오타나 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>가 이미지를 아직 안 올린 상태에서 배포하는 경우다.</p>
 <pre><code>kubectl set image deploy/journal-api api=journal-api:v99
 sleep 12
 kubectl get pods -l app=journal-api
@@ -563,7 +546,7 @@ error: timed out waiting for the condition
 exit=1</code></div>
     <div class="verdict"><span class="lbl">판정</span>여기서 봐야 할 것은 <strong>기존 파드 4개(v1, <code>55c87ff598</code>)가 그대로 살아 있다는 사실</strong>이다. 6단계에서 되돌린 직후라 AGE가 40초 안팎이다. 서비스는 멀쩡히 동작한다. 새 파드 하나(<code>544b4499df</code>)만 <code>ErrImagePull</code>에 갇혀 있다 — 보는 시점에 따라 <code>ImagePullBackOff</code>로 보일 수도 있다. kubelet이 재시도 간격을 늘리는 중이라는 뜻이며 같은 상태다.</div>
     <p><code>maxUnavailable: 0</code>이 여기서 값을 한다. 새 파드가 준비되지 않았으므로 옛 파드를 하나도 빼지 않았다. 기본값(25%)이었다면 파드 1개를 미리 뺀 뒤 새 파드를 기다렸을 것이고, 용량이 75%로 떨어진 채 멈춰 있었을 것이다.</p>
-    <p><code>rollout status</code>의 종료 코드 1도 중요하다. CI/CD 파이프라인은 이 코드를 보고 배포 실패를 판정한다(M29 · M30). <code>--timeout</code>을 주지 않으면 <code>progressDeadlineSeconds</code>(기본 600초)까지 기다린다.</p>
+    <p><code>rollout status</code>의 종료 코드 1도 중요하다. CI/<dfn class="term">CD <span class="en">(Continuous Delivery · 검증을 통과한 것을 자동으로 배포까지 잇는 것)</span></dfn> 파이프라인은 이 코드를 보고 배포 실패를 판정한다(M29 · M30). <code>--timeout</code>을 주지 않으면 <code>progressDeadlineSeconds</code>(기본 600초)까지 기다린다.</p>
 <pre><code>kubectl rollout undo deploy/journal-api
 sleep 5
 kubectl get pods -l app=journal-api
@@ -664,9 +647,9 @@ kubectl delete svc journal-api</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>이 모듈에서 <code>kubectl expose</code>로 서비스를 급하게 하나 만들어 썼다. M11에서 그것을 제대로 다룬다 — 서비스 4종의 차이, 엔드포인트가 실제로 어떻게 갱신되는지, 그리고 셀렉터 오타로 엔드포인트가 비었을 때 어떻게 보이는지.</p>
-  <h3>참고 (2026-09-03 접근 확인)</h3>
+   195 
+  <p>이 모듈에서  173 로 서비스를 급하게 하나 만들어 썼다. M11에서 그것을 제대로 다룬다 — 서비스 4종의 차이, 엔드포인트가 실제로 어떻게 갱신되는지, 그리고 셀렉터 오타로 엔드포인트가 비었을 때 어떻게 보이는지.</p>
+   196 
   <ul>
     <li>디플로이먼트: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/</li>
     <li>롤아웃 전략과 파라미터: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy</li>

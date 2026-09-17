@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 146  147  148 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 05 / 38 · PART 1 도커</div>
-  <h1>데이터와 네트워크</h1>
+   126 
   <p class="ch-desc">컨테이너를 지우면 안에 쓴 것은 사라진다. 그리고 기본 네트워크에서는 컨테이너끼리 이름으로 부르지 못한다. 두 문제를 볼륨과 사용자 정의 네트워크로 해결하면서, 쿠버네티스의 퍼시스턴트 볼륨과 서비스 디스커버리가 왜 그렇게 생겼는지 미리 본다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">50분</span><span class="tag">Docker Engine 29.2.1</span>
-    <br>2026-09-05 검증 · redis:8.2-alpine · journal-api:v1 (M04 산출물) · 여기 적힌 버전 숫자는 실습 당일 <code>docker version</code>과 각 이미지의 태그 목록에서 다시 확인한다
+    <br>2026-09-05 검증 · redis:8.2-alpine · journal-api:v1 (M04 산출물) · 여기 적힌 버전 숫자는 실습 당일  19 과 각 이미지의 태그 목록에서 다시 확인한다
   </div>
 </header>
 
@@ -180,19 +180,19 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">5.1</span>왜 이 두 가지가 같은 모듈인가</a>
-  <a href="#s2"><span class="num">5.2</span>이론 — 저장 방식 세 가지</a>
-  <a href="#s3"><span class="num">5.3</span>따라하기 ① 데이터를 잃어보고, 살린다</a>
-  <a href="#s4"><span class="num">5.4</span>따라하기 ② 바인드 마운트</a>
-  <a href="#s5"><span class="num">5.5</span>따라하기 ③ 이름으로 부르기</a>
-  <a href="#s6"><span class="num">5.6</span>일부러 실패시키기</a>
-  <a href="#s7"><span class="num">5.7</span>쿠버네티스에서는 어떻게 되는가</a>
-  <a href="#s8"><span class="num">5.8</span>체크포인트와 정리</a>
+   150 
+   151 
+   152 
+   153 
+   154 
+   155 
+   156 
+   157 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">5.1</span>왜 이 두 가지가 같은 모듈인가</h2>
-  <p class="lead">M04에서 만든 저널 API는 엔트리를 메모리 <code>Map</code>에 담는다. 컨테이너를 재시작하면 전부 사라진다. 실제 서비스라면 저장소가 필요하고, 그 저장소는 별도 컨테이너(레디스)가 된다.</p>
+  <p class="lead">M04에서 만든 저널 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>는 엔트리를 메모리 <code>Map</code>에 담는다. 컨테이너를 재시작하면 전부 사라진다. 실제 서비스라면 저장소가 필요하고, 그 저장소는 별도 컨테이너(레디스)가 된다.</p>
   <p>저장소를 분리하는 순간 두 문제가 동시에 생긴다. <strong>레디스의 데이터를 어떻게 살릴 것인가</strong>, 그리고 <strong>API가 레디스를 어떻게 찾을 것인가</strong>. 앞의 것이 볼륨, 뒤의 것이 네트워크다. 두 문제는 한 애플리케이션을 여러 컨테이너로 쪼개는 순간 항상 함께 온다 — 그래서 한 모듈에서 다룬다.</p>
   <p>이 모듈이 끝나면 저널 API가 레디스에 데이터를 쓰고, 레디스 컨테이너를 삭제한 뒤 다시 만들어도 그 데이터가 남아 있는 것을 확인한다. M06에서 이 구성을 파일 하나로 묶고, M14에서 같은 구성을 쿠버네티스에 올린다.</p>
 </section>
@@ -208,7 +208,7 @@
   </table>
   <p>고르는 기준은 단순하다. <strong>사라지면 곤란한 데이터는 볼륨</strong>, <strong>내 노트북에서만 필요한 연결은 바인드 마운트</strong>. 실무에서 사고가 나는 경우는 대개 그 반대로 쓸 때다 — 프로덕션 데이터베이스를 바인드 마운트로 띄웠다가 호스트를 옮기며 데이터를 잃는 식이다.</p>
   <h3>네트워크</h3>
-  <p>도커는 기본 네트워크 <code>bridge</code>를 하나 갖고 있고, 별다른 지정이 없으면 컨테이너가 여기 붙는다. 이 기본 네트워크에는 <strong>내장 DNS가 없다</strong> — 컨테이너 이름으로 상대를 찾을 수 없고 IP를 직접 알아야 한다. 그런데 컨테이너 IP는 재시작할 때마다 바뀐다.</p>
+  <p>도커는 기본 네트워크 <code>bridge</code>를 하나 갖고 있고, 별다른 지정이 없으면 컨테이너가 여기 붙는다. 이 기본 네트워크에는 <strong>내장 <dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn>가 없다</strong> — 컨테이너 이름으로 상대를 찾을 수 없고 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>를 직접 알아야 한다. 그런데 컨테이너 IP는 재시작할 때마다 바뀐다.</p>
   <p><code>docker network create</code>로 만든 사용자 정의 네트워크는 다르다. 도커의 내장 DNS가 컨테이너 이름을 IP로 풀어준다. 같은 네트워크에 있는 컨테이너끼리 <code>redis1:6379</code>처럼 이름으로 접속할 수 있고, IP가 바뀌어도 이름은 그대로다.</p>
   <p>이 구조를 기억해 둔다. 쿠버네티스에서 파드 IP는 훨씬 더 자주 바뀌고(파드는 언제든 죽고 다시 만들어진다), 그래서 Service라는 안정적인 이름과 주소를 앞에 세운다(M11). 문제와 해결 방식이 같다.</p>
 </section>
@@ -253,7 +253,7 @@ docker volume inspect journal-data</code></pre>
         "Scope": "local"
     }
 ]</code></div>
-    <p><code>Mountpoint</code>는 <strong>리눅스 VM 안의 경로</strong>다(M02 참조). 맥 터미널에서 그 경로로 <code>cd</code>해도 없다. 볼륨을 쓸 때 호스트 경로를 신경 쓰지 않아도 되는 것이 바인드 마운트와의 차이다. <code>CreatedAt</code>은 환경마다 다르다.</p>
+    <p><code>Mountpoint</code>는 <strong>리눅스 <dfn class="term">VM <span class="en">(Virtual Machine · 가상 머신)</span></dfn> 안의 경로</strong>다(M02 참조). 맥 터미널에서 그 경로로 <code>cd</code>해도 없다. 볼륨을 쓸 때 호스트 경로를 신경 쓰지 않아도 되는 것이 바인드 마운트와의 차이다. <code>CreatedAt</code>은 환경마다 다르다.</p>
 <pre><code>docker run -d --name redis1 -v journal-data:/data redis:8.2-alpine redis-server --save 60 1
 sleep 2
 docker exec redis1 redis-cli set entry:1 '{"text":"survives"}'
@@ -387,7 +387,7 @@ curl -s -w ' [http %{http_code}]\n' localhost:8085/readyz
 curl -s -w ' [http %{http_code}]\n' localhost:8085/healthz
 docker logs app-bad | head -3</code></pre>
     <ul class="tight">
-      <li><code>-w ' [http %{http_code}]\n'</code> — 응답 본문 뒤에 HTTP 상태 코드를 붙여 출력한다. 본문만 보면 200과 503을 구분하기 어렵다</li>
+      <li><code>-w ' [http %{http_code}]\n'</code> — 응답 본문 뒤에 <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 상태 코드를 붙여 출력한다. 본문만 보면 200과 503을 구분하기 어렵다</li>
     </ul>
     <span class="out-lbl">실행 결과</span>
     <div class="out"><code>{"status":"not ready","reason":"redis not connected"} [http 503]
@@ -472,9 +472,9 @@ docker rm -f app1 app-bad redis1
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>지금 구성을 다시 만들려면 <code>docker run</code>을 두 번, 네트워크와 볼륨 생성까지 네 명령이 필요하고 옵션을 하나라도 빠뜨리면 동작이 달라진다 — 실패 ①이 정확히 그 경우였다. M06에서 이것을 파일 하나에 선언한다. 그리고 그 파일이 쿠버네티스 매니페스트와 무엇이 같고 무엇이 다른지 본다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   143 
+  <p>지금 구성을 다시 만들려면  121 을 두 번, 네트워크와 볼륨 생성까지 네 명령이 필요하고 옵션을 하나라도 빠뜨리면 동작이 달라진다 — 실패 ①이 정확히 그 경우였다. M06에서 이것을 파일 하나에 선언한다. 그리고 그 파일이 쿠버네티스 매니페스트와 무엇이 같고 무엇이 다른지 본다.</p>
+   144 
   <ul>
     <li>볼륨: https://docs.docker.com/engine/storage/volumes/</li>
     <li>바인드 마운트: https://docs.docker.com/engine/storage/bind-mounts/</li>

@@ -149,16 +149,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 361  362  363 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 16 / 38 · PART 3 운영 기초</div>
-  <h1>리소스 · QoS · 스케줄링</h1>
-  <p class="ch-desc">M15까지 만든 저널 애플리케이션의 모든 파드는 <code>BestEffort</code>다. 스케줄러는 이 파드에 얼마가 필요한지 모르고, 노드가 빠듯해지면 가장 먼저 쫓겨난다. 이 모듈에서 <code>requests</code>를 붙여 <strong>Pending을 일부러 만들고</strong> 이벤트에서 원인을 읽은 뒤, 파드를 어느 노드에 놓을지 통제하고, 노드를 안전하게 비운다.</p>
+   324 
+  <p class="ch-desc">M15까지 만든 저널 애플리케이션의 모든 파드는  45 다. 스케줄러는 이 파드에 얼마가 필요한지 모르고, 노드가 빠듯해지면 가장 먼저 쫓겨난다. 이 모듈에서  46 를 붙여 <strong>Pending을 일부러 만들고</strong> 이벤트에서 원인을 읽은 뒤, 파드를 어느 노드에 놓을지 통제하고, 노드를 안전하게 비운다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전 숫자는 실습 당일  47 으로 다시 확인한다
   </div>
 </header>
 
@@ -177,25 +177,25 @@
   <h2>핵심 3줄</h2>
   <p>1. 노드가 텅 비어 있는데도 파드가 <code>Pending</code>이 되는 상황을 만들고, <code>describe</code>의 이벤트 한 줄에서 원인을 읽어낸다.</p>
   <p>2. <code>nodeSelector</code> · 테인트 · <code>topologySpreadConstraints</code>로 파드를 어디에 놓을지 정하고, 실패했을 때 스케줄러가 남기는 메시지가 원인마다 어떻게 다른지 구분한다.</p>
-  <p>3. PDB를 걸고 노드를 비워 본다. 값을 잘못 잡으면 노드를 영원히 못 비운다는 것을 교착 상태로 직접 확인한다.</p>
+  <p>3. <dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>를 걸고 노드를 비워 본다. 값을 잘못 잡으면 노드를 영원히 못 비운다는 것을 교착 상태로 직접 확인한다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">16.1</span>왜 BestEffort가 문제인가</a>
-  <a href="#s2"><span class="num">16.2</span>이론 — 두 개의 자, 그리고 세 등급</a>
-  <a href="#s3"><span class="num">16.3</span>따라하기 ① requests가 자리를 정한다</a>
-  <a href="#s4"><span class="num">16.4</span>따라하기 ② 어느 노드에 놓을지 고른다</a>
-  <a href="#s5"><span class="num">16.5</span>따라하기 ③ 고르게 편다</a>
-  <a href="#s6"><span class="num">16.6</span>따라하기 ④ 네임스페이스 단위로 막는다</a>
-  <a href="#s7"><span class="num">16.7</span>따라하기 ⑤ 노드를 비운다</a>
-  <a href="#s8"><span class="num">16.8</span>일부러 실패시키기</a>
-  <a href="#s9"><span class="num">16.9</span>운영 관점 — limits를 걸 것인가</a>
-  <a href="#s10"><span class="num">16.10</span>체크포인트와 정리</a>
+   366 
+   367 
+   368 
+   369 
+   370 
+   371 
+   372 
+   373 
+   374 
+   375 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">16.1</span>왜 BestEffort가 문제인가</h2>
-  <p class="lead">M15를 마친 상태에서 저널 네임스페이스의 QoS 등급을 본다.</p>
+  <p class="lead">M15를 마친 상태에서 저널 네임스페이스의 <dfn class="term">QoS <span class="en">(Quality of Service · 자원이 부족할 때 누구를 먼저 죽일지 정하는 등급)</span></dfn> 등급을 본다.</p>
 <pre><code>kubectl -n journal get pods -o custom-columns='NAME:.metadata.name,QOS:.status.qosClass,NODE:.spec.nodeName'</code></pre>
   <span class="out-lbl">출력</span>
   <div class="out"><code>NAME                           QOS          NODE
@@ -207,7 +207,7 @@ web-static-74cfbb9764-krnjh    BestEffort   study-worker2
 web-static-74cfbb9764-pcnsf    BestEffort   study-worker</code></div>
   <p>전부 <code>BestEffort</code>다. 그리고 노드 배치를 보면 <code>study-worker2</code>에 넷, <code>study-worker</code>에 둘이 몰려 있다. 둘 다 우연이 아니라 우리가 아무것도 지시하지 않은 결과다.</p>
   <p><code>BestEffort</code>는 "이 파드가 얼마를 쓸지 모른다"는 뜻이다. 결과가 두 갈래로 나타난다. 첫째, <strong>스케줄러가 이 파드를 무게 없는 것으로 취급한다</strong> — 노드에 몇 개를 넣든 계산상 늘 자리가 있다. 둘째, <strong>노드에 메모리가 부족해지면 축출 대상 1순위</strong>가 된다. 데이터베이스든 프론트엔드든 가리지 않는다.</p>
-  <p>레디스가 <code>BestEffort</code>인 것이 특히 위험하다. 노드가 빠듯해지면 상태를 들고 있는 파드가 먼저 죽는다. M14에서 PVC를 붙여 데이터는 살렸지만, 축출 순서까지 고려하지는 않았다.</p>
+  <p>레디스가 <code>BestEffort</code>인 것이 특히 위험하다. 노드가 빠듯해지면 상태를 들고 있는 파드가 먼저 죽는다. M14에서 <dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>를 붙여 데이터는 살렸지만, 축출 순서까지 고려하지는 않았다.</p>
   <p>그런데 <code>requests</code>를 붙이는 순간 새로운 문제가 생긴다. 노드가 텅 비어 있는데도 파드가 뜨지 않는 상황이다. 왜 그런지가 이 모듈의 절반이다.</p>
 </section>
 
@@ -233,23 +233,7 @@ web-static-74cfbb9764-pcnsf    BestEffort   study-worker</code></div>
           <line x1="0" y1="0" x2="0" y2="7" stroke="#2456c4" stroke-width="1" opacity="0.5"/>
         </pattern>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .resv { fill:url(#resv); stroke:#2456c4; stroke-width:1.2; }
-        .used { fill:#e8e8e6; stroke:#777777; stroke-width:1; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="390" rx="6"/>
       <text class="t-h" x="40" y="46">같은 노드를 두 개의 자로 잰다 — 어느 쪽도 틀리지 않았다</text>
@@ -296,7 +280,7 @@ web-static-74cfbb9764-pcnsf    BestEffort   study-worker</code></div>
     <figcaption>그림 16.1 — <code>describe node</code>는 예약량을, <code>top node</code>는 실제 사용량을 보여준다. 실사용 0%인 노드가 스케줄링상으로는 94% 차 있을 수 있다.</figcaption>
   </figure>
 
-  <p>초과했을 때의 처리도 자원에 따라 다르다. <strong>메모리는 압축할 수 없으므로</strong> 상한을 넘으면 컨테이너를 죽인다(<code>OOMKilled</code>). <strong>CPU는 압축할 수 있으므로</strong> 죽이지 않고 조인다 — 주어진 몫을 다 쓰면 다음 주기까지 기다리게 한다. 이것을 <dfn class="term">스로틀링 <span class="en">throttling</span></dfn>이라고 한다. 증상이 전혀 다르다. 메모리 초과는 재시작으로 드러나고 CPU 초과는 조용히 느려지기만 한다. 16.9에서 둘 다 확인한다.</p>
+  <p>초과했을 때의 처리도 자원에 따라 다르다. <strong>메모리는 압축할 수 없으므로</strong> 상한을 넘으면 컨테이너를 죽인다(<code>OOMKilled</code>). <strong><dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>는 압축할 수 있으므로</strong> 죽이지 않고 조인다 — 주어진 몫을 다 쓰면 다음 주기까지 기다리게 한다. 이것을 <dfn class="term">스로틀링 <span class="en">throttling</span></dfn>이라고 한다. 증상이 전혀 다르다. 메모리 초과는 재시작으로 드러나고 CPU 초과는 조용히 느려지기만 한다. 16.9에서 둘 다 확인한다.</p>
 
   <h3>QoS 세 등급 — 스스로 정하지 않는다</h3>
   <p>QoS 등급은 필드로 지정하는 것이 아니라 <code>requests</code>와 <code>limits</code>를 어떻게 적었는지에 따라 <strong>자동으로 결정된다</strong>.</p>
@@ -396,7 +380,7 @@ EOF</code></pre>
 hungry-75bc79769c-2984x   1/1     Running   0          15s   10.244.2.113   study-worker2   &lt;none&gt;
 hungry-75bc79769c-9vdtp   1/1     Running   0          15s   10.244.1.117   study-worker    &lt;none&gt;
 hungry-75bc79769c-k2dbb   0/1     Pending   0          15s   &lt;none&gt;         &lt;none&gt;          &lt;none&gt;</code></div>
-    <p>IP와 파드 접미사는 환경마다 다르다.</p>
+    <p><dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>와 파드 접미사는 환경마다 다르다.</p>
     <div class="verdict"><span class="lbl">판정</span>둘은 떴고 하나는 <code>Pending</code>이다. <code>NODE</code>가 <code>&lt;none&gt;</code>이면 아직 어느 노드에도 배정되지 않았다는 뜻이다.</div>
   </div>
 
@@ -816,14 +800,14 @@ oomtest   1/1     Running   0          26s
 
 할당 824 MiB
 할당 832 MiB</code></div>
-    <p>96Mi 제한인데 832 MiB를 "할당"하고도 멀쩡하다. 제한이 안 걸린 것인지부터 확인한다.</p>
+    <p>96Mi 제한인데 832 <dfn class="term">MiB <span class="en">(Mebibyte · 2의 20제곱 바이트)</span></dfn>를 "할당"하고도 멀쩡하다. 제한이 안 걸린 것인지부터 확인한다.</p>
 <pre><code>kubectl -n m16 exec oomtest -- sh -c 'cat /sys/fs/cgroup/memory.max; cat /sys/fs/cgroup/memory.current'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>100663296
 13766656</code></div>
     <span class="lbl">원인</span>
     <p><code>memory.max</code>는 100663296바이트 = 96Mi로 제대로 걸려 있다. 그런데 <code>memory.current</code>는 13MB뿐이다. <strong>832 MiB를 할당했다고 믿었지만 실제로 쓴 메모리는 13MB였다.</strong></p>
-    <p>커널은 익명 메모리를 요청받으면 주소 공간만 내주고 물리 페이지는 <strong>처음 쓰는 순간</strong>에 붙인다. <code>Buffer.alloc()</code>은 0으로 채워 주는 API인데, 갓 받아 온 익명 페이지는 이미 0이므로 굳이 쓸 일이 없다. 그래서 물리 페이지가 붙지 않고 cgroup 사용량도 오르지 않는다. 메모리 한계 테스트가 통과했다고 안심하는 흔한 오해가 여기서 나온다.</p>
+    <p>커널은 익명 메모리를 요청받으면 주소 공간만 내주고 물리 페이지는 <strong>처음 쓰는 순간</strong>에 붙인다. <code>Buffer.alloc()</code>은 0으로 채워 주는 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>인데, 갓 받아 온 익명 페이지는 이미 0이므로 굳이 쓸 일이 없다. 그래서 물리 페이지가 붙지 않고 cgroup 사용량도 오르지 않는다. 메모리 한계 테스트가 통과했다고 안심하는 흔한 오해가 여기서 나온다.</p>
     <span class="lbl">고친다 — 실제로 페이지를 만진다</span>
 <pre><code>kubectl -n m16 delete pod oomtest
 
@@ -935,7 +919,7 @@ throttled   100m         10Mi</code></div>
   <div class="deliver">
     <span class="lbl">이 모듈이 남기는 파일</span>
     <ul>
-      <li><code>course/labs/k8s/journal/30-journal-api.yaml</code> — <code>resources</code> + <code>topologySpreadConstraints</code>(<code>nodeTaintsPolicy: Honor</code> 포함). M17 HPA가 이 <code>requests.cpu</code>를 기준으로 목표 사용률을 계산한다</li>
+      <li><code>course/labs/k8s/journal/30-journal-api.yaml</code> — <code>resources</code> + <code>topologySpreadConstraints</code>(<code>nodeTaintsPolicy: Honor</code> 포함). M17 <dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn>가 이 <code>requests.cpu</code>를 기준으로 목표 사용률을 계산한다</li>
       <li><code>course/labs/k8s/journal/20-redis.yaml</code> · <code>40-web-static.yaml</code> — <code>resources</code> 추가</li>
       <li><code>course/labs/k8s/journal/60-pdb.yaml</code> — 새 파일. <code>kustomization.yaml</code>의 <code>resources</code>에도 등록했다</li>
       <li><code>labs/charts/journal/</code>은 여전히 고치지 않았다. M15 변경분과 함께 M28에서 따라잡는다</li>
@@ -969,9 +953,9 @@ study-worker2         Ready    &lt;none&gt;          44h   v1.37.0</code></div>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>이 모듈에서 <code>requests.cpu: 50m</code>을 붙였다. 이 숫자가 M17의 전제다 — HPA는 "현재 CPU 사용량이 <strong>requests의</strong> 몇 퍼센트인가"로 파드 수를 계산하므로, <code>requests</code>가 없으면 오토스케일링 자체가 성립하지 않는다. M17에서 M01에 설치해 둔 metrics-server 위에 HPA를 얹고, M15에서 만든 <code>loadgen.sh</code>로 부하를 걸어 파드가 늘어나는 것을 본다. 그리고 부하를 걷었을 때 왜 바로 줄지 않는지, 안정화 윈도우가 무엇을 막는지 확인한다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   358 
+  <p>이 모듈에서  315 을 붙였다. 이 숫자가 M17의 전제다 — HPA는 "현재 CPU 사용량이 <strong>requests의</strong> 몇 퍼센트인가"로 파드 수를 계산하므로,  316 가 없으면 오토스케일링 자체가 성립하지 않는다. M17에서 M01에 설치해 둔 metrics-server 위에 HPA를 얹고, M15에서 만든  317 로 부하를 걸어 파드가 늘어나는 것을 본다. 그리고 부하를 걷었을 때 왜 바로 줄지 않는지, 안정화 윈도우가 무엇을 막는지 확인한다.</p>
+   359 
   <ul>
     <li>파드와 컨테이너의 리소스 관리: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/</li>
     <li>QoS 등급과 축출 순서: https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/</li>

@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 281  282  283 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 28 / 38 · PART 6 배포 자동화</div>
-  <h1>Helm과 Kustomize</h1>
-  <p class="ch-desc">M14에서 만든 헬름 차트는 그 뒤 <strong>13개 모듈치의 변경을 하나도 모른다.</strong> 프로브 셋, <code>preStop</code>, 리소스, 토폴로지 분산, HPA, PDB, <code>securityContext</code> — 전부 <code>k8s/journal/</code>의 YAML에만 들어갔다. 이 모듈에서 그 격차를 메우고, <strong>차트가 <code>restricted</code> 네임스페이스에서 실제로 뜨는지</strong>로 따라잡았음을 증명한다. 그다음 같은 앱을 Kustomize 오버레이로 다시 만들어 두 방식이 각각 어디서 미끄러지는지 본다.</p>
+   244 
+  <p class="ch-desc">M14에서 만든 헬름 차트는 그 뒤 <strong>13개 모듈치의 변경을 하나도 모른다.</strong> 프로브 셋,  27 , 리소스, 토폴로지 분산, HPA, PDB,  28  — 전부  29 의 YAML에만 들어갔다. 이 모듈에서 그 격차를 메우고, <strong>차트가  30  네임스페이스에서 실제로 뜨는지</strong>로 따라잡았음을 증명한다. 그다음 같은 앱을 Kustomize 오버레이로 다시 만들어 두 방식이 각각 어디서 미끄러지는지 본다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">110분</span><span class="tag">Helm v4.2.4</span>
-    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전 숫자는 실습 당일 <code>helm version</code>으로 다시 확인한다
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전 숫자는 실습 당일  31 으로 다시 확인한다
   </div>
 </header>
 
@@ -180,21 +180,21 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">28.1</span>차트가 13개 모듈만큼 뒤처져 있다</a>
-  <a href="#s2"><span class="num">28.2</span>이론 — 빈칸 채우기와 덮어쓰기</a>
-  <a href="#s3"><span class="num">28.3</span>따라하기 ① 차트를 따라잡힌다</a>
-  <a href="#s4"><span class="num">28.4</span>따라하기 ② 설치하고 테스트한다</a>
-  <a href="#s5"><span class="num">28.5</span>따라하기 ③ 실패하는 업그레이드와 롤백</a>
-  <a href="#s6"><span class="num">28.6</span>따라하기 ④ 같은 앱을 오버레이로</a>
-  <a href="#s7"><span class="num">28.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">28.8</span>운영 관점 — 무엇을 언제 쓰는가</a>
-  <a href="#s9"><span class="num">28.9</span>체크포인트와 정리</a>
+   286 
+   287 
+   288 
+   289 
+   290 
+   291 
+   292 
+   293 
+   294 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">28.1</span>차트가 13개 모듈만큼 뒤처져 있다</h2>
-  <p class="lead">M14에서 차트를 만들 때 <code>k8s/journal/</code>의 매니페스트를 템플릿으로 옮겼다. 그 뒤로 열세 개 모듈 동안 매니페스트를 계속 고쳤는데, 고친 것은 <strong>전부 YAML 쪽</strong>이었다. 차트는 그때 그 상태로 남아 있다.</p>
-  <p>무엇이 빠졌는지 세어 보면 이렇다. M15의 프로브 셋과 <code>preStop</code>·<code>terminationGracePeriodSeconds</code>, M16의 <code>resources</code>·토폴로지 분산·PDB, M17의 HPA와 <strong><code>replicas</code>를 지운 결정</strong>, M20의 ServiceMonitor, M24의 <code>securityContext</code>·<code>automountServiceAccountToken</code>·비루트 nginx 이미지와 포트 변경. 지금 이 차트로 설치하면 <strong>M24의 <code>restricted</code> 네임스페이스에서 파드가 뜨지 못한다.</strong></p>
+  <p class="lead">M14에서 차트를 만들 때 <code>k8s/journal/</code>의 매니페스트를 템플릿으로 옮겼다. 그 뒤로 열세 개 모듈 동안 매니페스트를 계속 고쳤는데, 고친 것은 <strong>전부 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn> 쪽</strong>이었다. 차트는 그때 그 상태로 남아 있다.</p>
+  <p>무엇이 빠졌는지 세어 보면 이렇다. M15의 프로브 셋과 <code>preStop</code>·<code>terminationGracePeriodSeconds</code>, M16의 <code>resources</code>·토폴로지 분산·<dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>, M17의 <dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn>와 <strong><code>replicas</code>를 지운 결정</strong>, M20의 ServiceMonitor, M24의 <code>securityContext</code>·<code>automountServiceAccountToken</code>·비루트 nginx 이미지와 포트 변경. 지금 이 차트로 설치하면 <strong>M24의 <code>restricted</code> 네임스페이스에서 파드가 뜨지 못한다.</strong></p>
   <p>이것은 게으름이 아니라 <strong>정의를 두 벌 유지할 때 반드시 생기는 일</strong>이다. 하나를 고치면 다른 하나가 늦고, 늦은 쪽은 시간이 지날수록 고치기 어려워진다. 이 교재는 M15에서 "정본은 <code>k8s/journal/</code>이고 차트는 M28에서 따라잡는다"고 정해 두고 여기까지 왔다. 미룬 대가를 지금 치른다.</p>
   <p>따라잡는 것으로 끝나지 않는다. <strong>같은 정의를 두 벌 두는 문제 자체</strong>를 어떻게 할 것인지가 이 모듈의 진짜 주제이고, 그래서 Kustomize도 함께 다룬다. 둘 중 하나를 고르는 것이 답일 수도 있고, 둘을 다른 층에서 쓰는 것이 답일 수도 있다.</p>
 </section>
@@ -217,22 +217,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">빈칸을 채우는 방식과 완성본을 덮어쓰는 방식</text>
@@ -305,7 +290,7 @@
   <p><code>helm diff</code>는 <strong>여전히 내장이 아니다.</strong> 플러그인을 깔거나, 28.5처럼 <code>helm template</code>과 <code>kubectl diff</code>를 조합한다. 후자는 플러그인 없이 되고 서버가 실제로 계산한 차이를 보여 준다.</p>
 
   <h3>차트도 테스트 대상이다</h3>
-  <p>책 5.3의 원칙 — 테스트가 실패하면 빌드도 실패한다 — 를 차트에 적용하면 검사가 세 층이 된다. <code>helm lint</code>는 <strong>렌더링과 스키마</strong>를 본다. <code>--dry-run=server</code>는 <strong>API 서버가 받아 주는지</strong>를 본다(어드미션 포함). <code>helm test</code>는 <strong>뜬 다음에 동작하는지</strong>를 본다. 셋은 서로를 대신하지 못한다 — lint를 통과한 차트가 어드미션에서 거부되고, 어드미션을 통과한 릴리스가 레디스에 못 붙는다.</p>
+  <p>책 5.3의 원칙 — 테스트가 실패하면 빌드도 실패한다 — 를 차트에 적용하면 검사가 세 층이 된다. <code>helm lint</code>는 <strong>렌더링과 스키마</strong>를 본다. <code>--dry-run=server</code>는 <strong><dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 서버가 받아 주는지</strong>를 본다(어드미션 포함). <code>helm test</code>는 <strong>뜬 다음에 동작하는지</strong>를 본다. 셋은 서로를 대신하지 못한다 — lint를 통과한 차트가 어드미션에서 거부되고, 어드미션을 통과한 릴리스가 레디스에 못 붙는다.</p>
 </section>
 
 <section id="s3">
@@ -364,7 +349,7 @@ podSecurity:
   enabled: true
   apiRunAsUser: 1000</code></pre>
     <p>선택의 기준이 보인다. <strong>환경마다 달라지는 것은 값으로 빼고, 달라질 이유가 없는 것은 템플릿에 박는다.</strong> <code>nodeTaintsPolicy: Honor</code>를 값으로 빼지 않은 이유가 그것이다 — 이 값을 바꿀 이유가 있는 환경이 없고, 값으로 빼면 누군가 <code>Ignore</code>로 바꿔 M16의 사고를 다시 만들 뿐이다.</p>
-    <p><code>podSecurity.enabled</code>처럼 <strong>끌 수 있게 만든 것</strong>도 있다. 보안 설정을 끄는 스위치를 두는 것은 위험해 보이지만, 이 차트를 PSA가 없는 낡은 클러스터에 설치할 때 필요하다. 스위치를 두되 기본값을 <code>true</code>로 하는 것이 실무의 타협이다.</p>
+    <p><code>podSecurity.enabled</code>처럼 <strong>끌 수 있게 만든 것</strong>도 있다. 보안 설정을 끄는 스위치를 두는 것은 위험해 보이지만, 이 차트를 <dfn class="term">PSA <span class="en">(Pod Security Admission · 파드 보안 표준을 네임스페이스 단위로 강제하는 것)</span></dfn>가 없는 낡은 클러스터에 설치할 때 필요하다. 스위치를 두되 기본값을 <code>true</code>로 하는 것이 실무의 타협이다.</p>
   </div>
 
   <div class="step">
@@ -498,7 +483,7 @@ context deadline exceeded</code></div>
     <span class="out-lbl">출력</span>
     <div class="out"><code>journal-api:v1</code></div>
     <div class="verdict"><span class="lbl">판정</span>리비전이 <strong>셋</strong>이 됐다. 실패한 2가 지워지는 게 아니라 <code>failed</code>로 남고, 되돌린 결과가 3으로 기록된다. 이력은 <strong>일어난 일의 기록</strong>이지 성공한 상태의 목록이 아니다. 이미지도 <code>v1</code>으로 돌아왔다.</div>
-    <p><code>--rollback-on-failure</code>가 없으면 릴리스는 <code>failed</code> 상태로 멈춰 있고, 클러스터에는 <strong>새 파드가 뜨지 못한 채 옛 파드가 남은</strong> 어중간한 상태가 된다. 그 상태에서 다음 <code>helm upgrade</code>를 치면 <code>has no deployed releases</code>로 거부되는 경우가 있어서, CI에서는 이 플래그를 기본으로 켜는 것이 낫다.</p>
+    <p><code>--rollback-on-failure</code>가 없으면 릴리스는 <code>failed</code> 상태로 멈춰 있고, 클러스터에는 <strong>새 파드가 뜨지 못한 채 옛 파드가 남은</strong> 어중간한 상태가 된다. 그 상태에서 다음 <code>helm upgrade</code>를 치면 <code>has no deployed releases</code>로 거부되는 경우가 있어서, <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서는 이 플래그를 기본으로 켜는 것이 낫다.</p>
     <p><code>--timeout 60s</code>도 의도적이다. 이 값이 없으면 기본 5분을 기다린다 — CI에서 실패를 5분 뒤에 아는 것과 1분 뒤에 아는 것은 다르다. 다만 너무 짧으면 <strong>느리게 뜨는 정상 배포를 실패로 판정</strong>하므로, M15에서 잰 기동 시간을 근거로 정한다.</p>
   </div>
 
@@ -665,7 +650,7 @@ LOG_LEVEL
 REDIS_PASSWORD
 REDIS_URL</code></div>
     <div class="verdict"><span class="lbl">판정</span>병합이 <code>REDIS_URL</code>을 <strong>목록 맨 앞으로 옮겼다.</strong> 쿠버네티스의 <code>$(VAR)</code> 치환은 <strong>앞에 정의된 변수만</strong> 참조할 수 있어서, <code>REDIS_PASSWORD</code>가 뒤에 있으면 치환되지 않고 <code>$(REDIS_PASSWORD)</code> 문자열이 그대로 비밀번호로 전송된다. 그래서 <code>WRONGPASS</code>다.</div>
-    <p>이 실패의 무서운 점은 <strong>증상이 원인과 멀다</strong>는 것이다. 로그만 보면 시크릿이 잘못됐다고 판단하기 쉽고, 시크릿을 아무리 확인해도 값은 맞다. 위치를 지정하는 JSON 패치로 바꾼다.</p>
+    <p>이 실패의 무서운 점은 <strong>증상이 원인과 멀다</strong>는 것이다. 로그만 보면 시크릿이 잘못됐다고 판단하기 쉽고, 시크릿을 아무리 확인해도 값은 맞다. 위치를 지정하는 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 패치로 바꾼다.</p>
 <pre><code>  - target: {kind: Deployment, name: journal-api}
     patch: |-
       - op: replace
@@ -766,10 +751,10 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>차트와 오버레이가 준비됐지만 지금은 <strong>사람이 손으로</strong> <code>helm upgrade</code>를 친다. 이미지도 손으로 빌드해서 <code>kind load</code>로 넣었다. 28.8의 표에 적은 네 단계 검사도 아직 어디서도 자동으로 돌지 않는다.</p>
-  <p>M29에서 파이프라인을 만든다. 커밋 하나가 <strong>테스트 → 빌드 → 스캔 → 차트 검사</strong>를 거치게 하고, 책 5.3의 원칙대로 <strong>테스트가 실패하면 이미지가 만들어지지 않게</strong> 한다. M27에서 잰 이미지 취약점 숫자가 여기서 임계값이 되고, M26의 <code>policy-audit.sh</code>가 검사 단계 하나로 들어간다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+   278 
+  <p>차트와 오버레이가 준비됐지만 지금은 <strong>사람이 손으로</strong>  238 를 친다. 이미지도 손으로 빌드해서  239 로 넣었다. 28.8의 표에 적은 네 단계 검사도 아직 어디서도 자동으로 돌지 않는다.</p>
+  <p>M29에서 파이프라인을 만든다. 커밋 하나가 <strong>테스트 → 빌드 → 스캔 → 차트 검사</strong>를 거치게 하고, 책 5.3의 원칙대로 <strong>테스트가 실패하면 이미지가 만들어지지 않게</strong> 한다. M27에서 잰 이미지 취약점 숫자가 여기서 임계값이 되고, M26의  240 가 검사 단계 하나로 들어간다.</p>
+   279 
   <ul>
     <li>Helm 문서: https://helm.sh/docs/</li>
     <li>Helm 4 변경점: https://helm.sh/docs/community/v4-changes/</li>
@@ -778,7 +763,7 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
     <li>values 스키마: https://helm.sh/docs/topics/charts/#schema-files</li>
     <li>Kustomize 레퍼런스: https://kubectl.docs.kubernetes.io/references/kustomize/</li>
     <li>이름 참조 변환: https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/nameprefix/</li>
-    <li>환경 변수 <code>$(VAR)</code> 치환: https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/</li>
+    <li>환경 변수  241  치환: https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5.3 테스트와 빌드 · 15장 템플릿과 패키징</li>
   </ul>
   <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Helm v4.2.4 · kustomize (kubectl 내장)</p>

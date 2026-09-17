@@ -149,16 +149,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 219  220  221 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 15 / 38 · PART 3 운영 기초</div>
-  <h1>프로브와 파드 라이프사이클</h1>
+   187 
   <p class="ch-desc">M10에서 롤아웃 중 요청 17건이 실패했다. M14의 매니페스트에는 프로브 두 줄이 들어 있지만 왜 그 값인지는 아무도 설명하지 않았다. 이 모듈에서 프로브를 <strong>떼었다 붙였다 하며 실패 건수를 직접 센다</strong>. 프로브만으로는 0이 되지 않는다는 것을 숫자로 확인하고, 무엇이 남은 실패를 없애는지 찾는다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">75분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전 숫자는 실습 당일  21 으로 다시 확인한다
   </div>
 </header>
 
@@ -181,15 +181,15 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">15.1</span>왜 프로브 두 줄로는 부족한가</a>
-  <a href="#s2"><span class="num">15.2</span>이론 — 프로브 셋과 종료 창</a>
-  <a href="#s3"><span class="num">15.3</span>따라하기 ① 재는 도구부터 세운다</a>
-  <a href="#s4"><span class="num">15.4</span>따라하기 ② 프로브를 떼고 재본다</a>
-  <a href="#s5"><span class="num">15.5</span>따라하기 ③ 느린 시작을 흉내 낸다</a>
-  <a href="#s6"><span class="num">15.6</span>따라하기 ④ 종료 창을 닫는다</a>
-  <a href="#s7"><span class="num">15.7</span>일부러 실패시키기 — liveness가 앱을 죽인다</a>
-  <a href="#s8"><span class="num">15.8</span>운영 관점 — 값은 어떻게 정하나</a>
-  <a href="#s9"><span class="num">15.9</span>체크포인트와 정리</a>
+   224 
+   225 
+   226 
+   227 
+   228 
+   229 
+   230 
+   231 
+   232 
 </nav>
 
 <section id="s1">
@@ -229,21 +229,7 @@
           <line x1="0" y1="0" x2="0" y2="6" stroke="#a1442a" stroke-width="1" opacity="0.45"/>
         </pattern>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .gap { fill:url(#hatch); stroke:#a1442a; stroke-width:1; stroke-dasharray:4 3; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="390" rx="6"/>
       <text class="t-h" x="40" y="46">파드 하나가 종료될 때 — 두 경로는 동시에 끝나지 않는다</text>
@@ -439,7 +425,7 @@ bash course/labs/scripts/loadgen.sh stop</code></pre>
 1584
    1576 200
       8 000</code></div>
-    <div class="verdict"><span class="lbl">판정</span>1584건 중 8건 실패(0.51%). 실패 코드가 전부 <code>000</code>이다 — HTTP 상태 코드가 아니라 <strong>연결 자체가 안 된</strong> 것이다. 502나 503이 아니라는 점이 중요하다. 받아 줄 프로세스가 아예 없었다는 뜻이고, 이것이 종료 창의 흔적이다.</div>
+    <div class="verdict"><span class="lbl">판정</span>1584건 중 8건 실패(0.51%). 실패 코드가 전부 <code>000</code>이다 — <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 상태 코드가 아니라 <strong>연결 자체가 안 된</strong> 것이다. 502나 503이 아니라는 점이 중요하다. 받아 줄 프로세스가 아예 없었다는 뜻이고, 이것이 종료 창의 흔적이다.</div>
   </div>
 
   <div class="step">
@@ -457,7 +443,7 @@ sleep 6
 bash course/labs/scripts/loadgen.sh stop</code></pre>
     <table>
       <tr><th>옵션</th><th>뜻</th></tr>
-      <tr><td><code>--type=json</code></td><td>JSON Patch. <code>remove</code>로 필드를 지울 수 있다. 기본 전략적 병합 패치로는 필드 삭제가 번거롭다</td></tr>
+      <tr><td><code>--type=json</code></td><td><dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> Patch. <code>remove</code>로 필드를 지울 수 있다. 기본 전략적 병합 패치로는 필드 삭제가 번거롭다</td></tr>
       <tr><td><code>"op":"remove"</code></td><td>해당 경로의 필드를 없앤다. 경로가 없으면 에러가 나므로 두 번 실행하면 실패한다</td></tr>
     </table>
     <span class="out-lbl">출력 (끝부분)</span>
@@ -477,7 +463,7 @@ bash course/labs/scripts/loadgen.sh stop</code></pre>
 
 <section id="s5">
   <h2 class="sec"><span class="num">15.5</span>따라하기 ③ 느린 시작을 흉내 낸다</h2>
-  <p>readiness가 일하는 장면을 보려면 느리게 뜨는 앱이 필요하다. 저널 API를 고치는 대신 컨테이너의 <code>command</code>를 덮어써 8초를 지연시킨다. JVM 애플리케이션, 커넥션 풀 예열, 캐시 적재가 있는 서비스에서는 이 8초가 흉내가 아니다 — M19에서 두 번째 실습 앱으로 들어오는 Spring Boot <code>order-api</code>가 그 예다.</p>
+  <p>readiness가 일하는 장면을 보려면 느리게 뜨는 앱이 필요하다. 저널 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>를 고치는 대신 컨테이너의 <code>command</code>를 덮어써 8초를 지연시킨다. <dfn class="term">JVM <span class="en">(Java Virtual Machine · 자바 가상 머신)</span></dfn> 애플리케이션, 커넥션 풀 예열, 캐시 적재가 있는 서비스에서는 이 8초가 흉내가 아니다 — M19에서 두 번째 실습 앱으로 들어오는 Spring Boot <code>order-api</code>가 그 예다.</p>
 
   <div class="step">
     <h4>5단계 — 8초 늦게 뜨게 만든다 (프로브 없는 상태 그대로)</h4>
@@ -492,7 +478,7 @@ kubectl -n journal set image deploy/journal-api api=journal-api:v2
 kubectl -n journal rollout status deploy/journal-api
 sleep 6
 bash course/labs/scripts/loadgen.sh stop</code></pre>
-    <p><code>exec</code>를 붙이는 이유는 M02에서 본 PID 1 문제다. <code>exec</code> 없이 <code>sh -c "sleep 8; node ..."</code>로 쓰면 <code>sh</code>가 PID 1이 되고 노드 프로세스는 자식이 되어, kubelet이 보낸 SIGTERM을 앱이 받지 못한다.</p>
+    <p><code>exec</code>를 붙이는 이유는 M02에서 본 <dfn class="term">PID <span class="en">(Process Identifier · 프로세스 번호)</span></dfn> 1 문제다. <code>exec</code> 없이 <code>sh -c "sleep 8; node ..."</code>로 쓰면 <code>sh</code>가 PID 1이 되고 노드 프로세스는 자식이 되어, kubelet이 보낸 SIGTERM을 앱이 받지 못한다.</p>
     <span class="out-lbl">출력 (끝부분)</span>
     <div class="out"><code>deployment "journal-api" successfully rolled out
 부하 종료. 마지막 집계:
@@ -500,7 +486,7 @@ bash course/labs/scripts/loadgen.sh stop</code></pre>
    1360 000
     155 200</code></div>
     <div class="verdict"><span class="lbl">판정</span>1515건 중 <strong>1360건 실패(89.8%)</strong>. 그런데 <code>rollout status</code>는 <strong>2초 만에</strong> <code>successfully rolled out</code>을 찍었다. 롤아웃이 성공을 보고하는 것과 서비스가 되는 것은 다른 일이다.</div>
-    <p>readiness가 없으면 kubelet은 컨테이너가 시작되는 즉시 파드를 Ready로 표시한다. 엔드포인트슬라이스에 IP가 올라가고 트래픽이 들어오는데, 그 안에서는 <code>sleep 8</code>이 돌고 있다. 세 파드가 차례로 교체되는 동안 서비스 뒤에 있는 파드 대부분이 이 상태였다.</p>
+    <p>readiness가 없으면 kubelet은 컨테이너가 시작되는 즉시 파드를 Ready로 표시한다. 엔드포인트슬라이스에 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>가 올라가고 트래픽이 들어오는데, 그 안에서는 <code>sleep 8</code>이 돌고 있다. 세 파드가 차례로 교체되는 동안 서비스 뒤에 있는 파드 대부분이 이 상태였다.</p>
   </div>
 
   <div class="step">
@@ -825,9 +811,9 @@ Error from server (NotFound): pods "curlbox" not found</code></div>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>이 모듈은 파드가 <strong>언제</strong> 트래픽을 받고 <strong>언제</strong> 죽는지를 다뤘다. M16은 파드가 <strong>어디에</strong> 놓이는지를 다룬다. 지금 <code>30-journal-api.yaml</code>에는 <code>resources</code>가 없다 — 스케줄러가 이 파드에 얼마가 필요한지 모른다는 뜻이고, <code>kubectl get pod -o jsonpath='{.status.qosClass}'</code>가 <code>BestEffort</code>를 돌려준다. 노드가 빠듯해지면 가장 먼저 쫓겨나는 등급이다. M16에서 <code>requests</code>를 붙여 Pending을 일부러 재현하고, 이벤트에서 원인을 읽고, 어피니티와 taint로 배치를 통제한다. 이 모듈에서 만든 <code>loadgen.sh</code>는 M17에서 HPA가 실제로 늘어나는지 확인하는 데 그대로 쓴다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   216 
+  <p>이 모듈은 파드가 <strong>언제</strong> 트래픽을 받고 <strong>언제</strong> 죽는지를 다뤘다. M16은 파드가 <strong>어디에</strong> 놓이는지를 다룬다. 지금  177 에는  178 가 없다 — 스케줄러가 이 파드에 얼마가 필요한지 모른다는 뜻이고,  179 가  180 를 돌려준다. 노드가 빠듯해지면 가장 먼저 쫓겨나는 등급이다. M16에서  181 를 붙여 Pending을 일부러 재현하고, 이벤트에서 원인을 읽고, 어피니티와 taint로 배치를 통제한다. 이 모듈에서 만든  182 는 M17에서 HPA가 실제로 늘어나는지 확인하는 데 그대로 쓴다.</p>
+   217 
   <ul>
     <li>파드 라이프사이클과 종료 절차: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/</li>
     <li>라이브니스 · 레디니스 · 스타트업 프로브 설정: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/</li>

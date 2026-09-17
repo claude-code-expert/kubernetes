@@ -148,12 +148,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 161  162  163 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 38 / 38 · PART 8 검증</div>
-  <h1>실험과 최종 캡스톤</h1>
+   123 
   <p class="ch-desc">서른일곱 개 모듈의 산출물이 흩어져 있다. 이 모듈에서 셋을 한다. <strong>기능 플래그로 두 구현을 나란히 돌려</strong> 메트릭으로 판정하고, <strong>49개 항목의 통주 점검</strong>으로 전체가 실제로 서 있는지 확인하고, <strong>장애 세 개를 심어</strong> 대시보드와 로그만으로 원인을 규명하는 훈련을 만든다. 마지막 장애는 이 교재가 <strong>고쳤던 문제를 그대로 되살린 것</strong>이다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">캡스톤 90분 + 통주 점검 30분</span><span class="tag">Kubernetes 1.37.0</span>
@@ -173,21 +173,21 @@
 
 <div class="tldr">
   <h2>핵심 3줄</h2>
-  <p>1. 두 구현을 한 서비스 뒤에 두고 <strong>변형별 에러율·지연·처리량</strong>을 PromQL로 갈라 판정한다.</p>
+  <p>1. 두 구현을 한 서비스 뒤에 두고 <strong>변형별 에러율·지연·처리량</strong>을 <dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn>로 갈라 판정한다.</p>
   <p>2. 49개 항목의 통주 점검을 만들어 <strong>문서가 말하는 것이 클러스터에 실제로 있는지</strong> 확인한다.</p>
   <p>3. 장애 세 개를 심고, 각각이 <strong>다른 층의 진단 능력</strong>을 시험하도록 설계한다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">38.1</span>흩어진 것을 하나로 묶는다</a>
-  <a href="#s2"><span class="num">38.2</span>이론 — 실험과 판정</a>
-  <a href="#s3"><span class="num">38.3</span>따라하기 ① 두 구현을 나란히</a>
-  <a href="#s4"><span class="num">38.4</span>따라하기 ② 메트릭으로 판정한다</a>
-  <a href="#s5"><span class="num">38.5</span>따라하기 ③ 통주 점검</a>
-  <a href="#s6"><span class="num">38.6</span>따라하기 ④ 장애 세 개</a>
-  <a href="#s7"><span class="num">38.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">38.8</span>운영 관점 — 여기서부터 어디로</a>
-  <a href="#s9"><span class="num">38.9</span>체크포인트와 정리</a>
+   167 
+   168 
+   169 
+   170 
+   171 
+   172 
+   173 
+   174 
+   175 
 </nav>
 
 <section id="s1">
@@ -209,21 +209,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="440" rx="6"/>
       <text class="t-h" x="40" y="46">세 장애가 각각 다른 곳을 시험한다</text>
@@ -288,7 +274,7 @@
   <h3>공정한 비교의 조건</h3>
   <p>같은 트래픽이 두 구현에 가야 하고, 같은 방식으로 측정돼야 하고, <strong>다른 조건이 같아야</strong> 한다. 이 셋 중 하나만 어긋나도 결론이 뒤집힌다.</p>
   <p>가장 흔한 오염이 <strong>시간</strong>이다. A를 오전에 재고 B를 오후에 재면 트래픽 패턴이 달라 비교가 성립하지 않는다. <strong>동시에 돌리는 것</strong>이 이 문제를 없애고, 그것이 A/B 실험을 <strong>순차 배포가 아니라 병렬 배포</strong>로 하는 이유다.</p>
-  <p>M37에서 이 함정에 실제로 걸렸다 — <code>limit</code>을 제거한 뒤의 측정이 기준보다 느렸는데, 그 사이 HPA가 파드를 늘려 클러스터 상태가 달랐다. <strong>비교하려는 것 말고 다른 것이 바뀌지 않았는지</strong>를 항상 확인한다.</p>
+  <p>M37에서 이 함정에 실제로 걸렸다 — <code>limit</code>을 제거한 뒤의 측정이 기준보다 느렸는데, 그 사이 <dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn>가 파드를 늘려 클러스터 상태가 달랐다. <strong>비교하려는 것 말고 다른 것이 바뀌지 않았는지</strong>를 항상 확인한다.</p>
 
   <h3>판정 기준을 먼저 정한다</h3>
   <p>M30의 카나리와 같다. <strong>어떤 지표를 어느 값으로 판정할지</strong>를 실험 전에 쓴다. 나중에 정하면 <strong>보고 싶은 결론에 맞는 지표를 고르게</strong> 된다.</p>
@@ -460,7 +446,7 @@ Part 5 — 보안 (M23~M27)
 결과
   통과 49 · 실패 0
   전부 통과 — 통주 완료</code></div>
-    <div class="verdict"><span class="lbl">판정</span>49개가 전부 통과한다. 이 스크립트가 있으면 <strong>클러스터를 새로 세울 때마다 어디까지 왔는지</strong>를 한 줄로 안다. 종료 코드로 판정하므로 CI에도 넣을 수 있다.</div>
+    <div class="verdict"><span class="lbl">판정</span>49개가 전부 통과한다. 이 스크립트가 있으면 <strong>클러스터를 새로 세울 때마다 어디까지 왔는지</strong>를 한 줄로 안다. 종료 코드로 판정하므로 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에도 넣을 수 있다.</div>
     <p>처음 돌렸을 때 <strong>1건이 실패했다.</strong> 원인은 클러스터가 아니라 <strong>점검 스크립트 자체</strong>였다 — <code>resources.limits</code>를 문자열로 비교했는데 <code>kubectl</code>의 출력 형식이 예상과 달랐다(<code>{"memory":"192Mi"}</code> vs <code>map[memory:192Mi]</code>). <strong>점검 도구도 검증 대상이다.</strong></p>
   </div>
 </section>
@@ -499,8 +485,8 @@ AppTargetDown 알림: 울리지 않는다</code></div>
     <div class="out"><code>파드 안에서: nslookup redis-0.redis  -&gt; ;; connection timed out
 인그레스 /api/entries: 200          &lt;- 지금 도는 요청은 멀쩡하다
 web-static 재시작 -&gt; 정상 기동       &lt;- 이 파드는 DNS 없이도 뜬다</code></div>
-    <div class="verdict"><span class="lbl">판정</span>서비스가 정상으로 보이는데 <strong>파드 안에서는 이름이 안 풀린다.</strong> 이 장애는 <strong>다음 재시작 때</strong> 터진다 — 저널 API가 재시작하면 레디스에 못 붙어 <code>/readyz</code>가 503이 된다. M25에서 재현한 그 사고이고, <strong>배포한 날이 아니라 며칠 뒤 새벽에 터지는</strong> 형태다.</div>
-    <p>구분 포인트가 하나 있다. <code>timed out</code>은 <strong>DNS 서버에 닿지 못한 것</strong>이고 <code>NXDOMAIN</code>은 <strong>서버가 "없다"고 답한 것</strong>이다. 뒤의 것은 정상 동작일 수 있다(검색 도메인을 순서대로 시도하는 중). <strong>이 둘을 헷갈리면 엉뚱한 곳을 판다.</strong></p>
+    <div class="verdict"><span class="lbl">판정</span>서비스가 정상으로 보이는데 <strong>파드 안에서는 이름이 안 풀린다.</strong> 이 장애는 <strong>다음 재시작 때</strong> 터진다 — 저널 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>가 재시작하면 레디스에 못 붙어 <code>/readyz</code>가 503이 된다. M25에서 재현한 그 사고이고, <strong>배포한 날이 아니라 며칠 뒤 새벽에 터지는</strong> 형태다.</div>
+    <p>구분 포인트가 하나 있다. <code>timed out</code>은 <strong><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 서버에 닿지 못한 것</strong>이고 <code>NXDOMAIN</code>은 <strong>서버가 "없다"고 답한 것</strong>이다. 뒤의 것은 정상 동작일 수 있다(검색 도메인을 순서대로 시도하는 중). <strong>이 둘을 헷갈리면 엉뚱한 곳을 판다.</strong></p>
   </div>
 
   <div class="step">
@@ -575,11 +561,11 @@ variant-b-...-trp9k   4.16 %</code></div>
 
   <h3>이 교재가 만든 것</h3>
   <p>서른여덟 개 모듈의 산출물을 한 문장으로 줄이면 이렇다. <strong>단일 노드 도커에서 시작해, 3노드 클러스터에서 관측·보안·배포 자동화·검증을 갖춘 애플리케이션 한 벌</strong>이다. 그 과정에서 실제로 겪은 실패가 60개 남짓이고, <strong>그것들이 이 교재의 본체</strong>다.</p>
-  <p>산출물의 구조도 정리해 둔다. <code>infra/</code>(클러스터), <code>apps/</code>(앱 소스), <code>k8s/</code>(매니페스트), <code>charts/</code>(헬름), <code>monitoring/</code>(관측 값), <code>chaos/</code>(실험), <code>operator/</code>(CRD), <code>scripts/</code>(도구 12종). 역할로 나눈 것이 <strong>모듈로 나누지 않은 이유</strong>는 실제 저장소가 그렇게 생겼기 때문이다.</p>
+  <p>산출물의 구조도 정리해 둔다. <code>infra/</code>(클러스터), <code>apps/</code>(앱 소스), <code>k8s/</code>(매니페스트), <code>charts/</code>(헬름), <code>monitoring/</code>(관측 값), <code>chaos/</code>(실험), <code>operator/</code>(<dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn>), <code>scripts/</code>(도구 12종). 역할로 나눈 것이 <strong>모듈로 나누지 않은 이유</strong>는 실제 저장소가 그렇게 생겼기 때문이다.</p>
 
   <h3>이 교재가 다루지 않은 것</h3>
-  <p>정직하게 적어 둔다. <strong>실제 클라우드</strong>(관리형 클러스터, 로드밸런서, IAM 연동), <strong>스토리지의 실제</strong>(복제, 백업, 재해 복구), <strong>대규모</strong>(수백 노드에서 달라지는 것들), <strong>비용</strong>(자원 사용을 돈으로 환산하고 줄이는 일), <strong>조직</strong>(여러 팀이 한 클러스터를 나눠 쓰는 운영).</p>
-  <p>마지막이 특히 크다. 이 교재의 클러스터는 <strong>한 사람이 전부를 관리</strong>했다. 실제로는 플랫폼 팀과 애플리케이션 팀이 나뉘고, <strong>M23의 RBAC과 M26의 정책이 그 경계에서 진짜 의미를 갖는다.</strong></p>
+  <p>정직하게 적어 둔다. <strong>실제 클라우드</strong>(관리형 클러스터, 로드밸런서, <dfn class="term">IAM <span class="en">(Identity and Access Management · 클라우드의 신원·권한 관리)</span></dfn> 연동), <strong>스토리지의 실제</strong>(복제, 백업, 재해 복구), <strong>대규모</strong>(수백 노드에서 달라지는 것들), <strong>비용</strong>(자원 사용을 돈으로 환산하고 줄이는 일), <strong>조직</strong>(여러 팀이 한 클러스터를 나눠 쓰는 운영).</p>
+  <p>마지막이 특히 크다. 이 교재의 클러스터는 <strong>한 사람이 전부를 관리</strong>했다. 실제로는 플랫폼 팀과 애플리케이션 팀이 나뉘고, <strong>M23의 <dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn>과 M26의 정책이 그 경계에서 진짜 의미를 갖는다.</strong></p>
 
   <h3>다음에 할 것 셋</h3>
   <p><strong>① 자기 애플리케이션으로 다시 한다.</strong> 이 교재의 저널 앱은 일부러 단순하게 만들었다. 실제 앱은 의존이 많고, 상태가 크고, 기동이 느리다 — 그때 M15의 프로브 값과 M16의 리소스 값이 <strong>전혀 다른 숫자</strong>가 된다.</p>
@@ -643,16 +629,16 @@ bash course/labs/scripts/capstone-check.sh</code></pre>
 </div>
 
 <footer>
-  <h3>과정을 마치며</h3>
-  <p>M01에서 컨테이너 하나를 띄웠고, 여기서 클러스터 전체를 검증했다. 그 사이에 <strong>실패를 60번 넘게 재현했다</strong> — 프로브 임계값 때문에 파드가 계속 죽고, 라벨 하나가 틀려 타깃이 안 잡히고, 하이픈 하나가 네임스페이스를 열고, 셸 변수 이름이 시스템 것과 겹치고, <code>cpu limit</code> 하나가 P99를 4000배로 만들었다.</p>
+   158 
+  <p>M01에서 컨테이너 하나를 띄웠고, 여기서 클러스터 전체를 검증했다. 그 사이에 <strong>실패를 60번 넘게 재현했다</strong> — 프로브 임계값 때문에 파드가 계속 죽고, 라벨 하나가 틀려 타깃이 안 잡히고, 하이픈 하나가 네임스페이스를 열고, 셸 변수 이름이 시스템 것과 겹치고,  118  하나가 P99를 4000배로 만들었다.</p>
   <p>그 실패들이 이 교재의 실제 내용이다. 성공하는 절차는 문서에 적혀 있지만, <strong>무엇이 어떻게 틀어지는지</strong>는 겪어야 안다. 다음에 만날 장애는 여기 있는 것이 아니겠지만, <strong>증상에서 원인으로 좁혀 가는 절차</strong>는 같다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+   159 
   <ul>
-    <li>PromQL <code>label_replace</code>: https://prometheus.io/docs/prometheus/latest/querying/functions/#label_replace</li>
+    <li>PromQL  119 : https://prometheus.io/docs/prometheus/latest/querying/functions/#label_replace</li>
     <li>서비스와 셀렉터: https://kubernetes.io/docs/concepts/services-networking/service/</li>
     <li>기능 플래그와 실험: https://martinfowler.com/articles/feature-toggles.html</li>
     <li>사고 대응과 포스트모템: https://sre.google/sre-book/postmortem-culture/</li>
-    <li>이 과정의 커리큘럼 정본: <code>CURRICULUM.md</code></li>
+    <li>이 과정의 커리큘럼 정본:  120 </li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 20.3 실험 · 전체 21개 장</li>
   </ul>
   <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · 전 모듈 산출물 기준 통주 점검 49/49 통과</p>

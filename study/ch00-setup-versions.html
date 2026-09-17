@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>실습 환경 준비와 버전 고정</h1>
+   154 
   <p class="lede">코드는 한 줄도 쓰지 않는다. 클러스터를 올리기 전에 도구를 갖추고, 모두가 같은 화면을 보도록 버전을 못 박는다.</p>
 </header>
 
@@ -169,7 +170,7 @@ figcaption b{color:var(--ink)}
 
 <p>관측성 실습은 도구가 서로 맞물려 돌아간다. 프로메테우스가 앱을 긁고, 그라파나가 프로메테우스에 질의하고, 오퍼레이터가 그 설정을 만든다. 어느 한 쪽 버전이 어긋나면 <strong>에러 없이 화면만 비는</strong> 상태가 된다.</p>
 
-<p>예를 들어 대시보드 JSON 은 특정 차트 버전이 만드는 데이터소스 이름에 의존한다. 한 사람이 차트 88.3.0 으로, 다른 사람이 90.x 로 설치하면 같은 JSON 이 한쪽에서만 그려진다. 그런데 오류 메시지는 나오지 않는다. 패널이 비어 있을 뿐이다.</p>
+<p>예를 들어 대시보드 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 은 특정 차트 버전이 만드는 데이터소스 이름에 의존한다. 한 사람이 차트 88.3.0 으로, 다른 사람이 90.x 로 설치하면 같은 JSON 이 한쪽에서만 그려진다. 그런데 오류 메시지는 나오지 않는다. 패널이 비어 있을 뿐이다.</p>
 
 <p>그래서 첫 장에서 버전을 정하고 넘어간다. 여기서 쓰는 시간이 뒤 열 장에서 아낄 시간이다.</p>
 
@@ -189,7 +190,7 @@ figcaption b{color:var(--ink)}
   <tr><th>구분</th><th>영문</th><th>무엇을 보나</th><th>한계 / 쓸모</th></tr>
   <tr>
     <td>폐쇄형</td><td>closed-box<br>(black-box)</td>
-    <td>애플리케이션 <strong>바깥</strong>에서 관찰. CPU · 메모리 · 디스크</td>
+    <td>애플리케이션 <strong>바깥</strong>에서 관찰. <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> · 메모리 · 디스크</td>
     <td>인프라에는 유용하다. 앱이 왜 그렇게 동작하는지는 알려주지 못한다</td>
   </tr>
   <tr>
@@ -223,10 +224,10 @@ figcaption b{color:var(--ink)}
   <tr><td>kind</td><td>Kubernetes IN Docker</td><td>도커 컨테이너 하나를 쿠버네티스 노드 하나로 삼아 로컬 클러스터를 만드는 도구. 이 실습의 클러스터를 만든다</td></tr>
   <tr><td>헬름</td><td>Helm</td><td>쿠버네티스 매니페스트 묶음을 설치·업그레이드하는 패키지 매니저. 관측 스택 전체를 명령 한 줄로 올린다</td></tr>
   <tr><td>차트</td><td>Helm Chart</td><td>템플릿 + 기본값(<code>values.yaml</code>) 묶음. 헬름이 설치하는 단위</td></tr>
-  <tr><td>CRD</td><td>Custom Resource Definition</td><td>쿠버네티스 API 를 확장해 만든 사용자 정의 리소스 타입. <code>ServiceMonitor</code> 가 그 예다</td></tr>
+  <tr><td>CRD</td><td>Custom Resource Definition</td><td>쿠버네티스 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 를 확장해 만든 사용자 정의 리소스 타입. <code>ServiceMonitor</code> 가 그 예다</td></tr>
   <tr><td>오퍼레이터</td><td>Operator</td><td>CRD 를 감시하며 실제 리소스를 만들어 주는 컨트롤러. Prometheus Operator 가 대표 사례</td></tr>
   <tr><td>ServiceMonitor</td><td>ServiceMonitor (CRD)</td><td>“이 서비스의 이 포트를 몇 초마다 긁어라”를 선언하는 리소스. 06장의 주인공</td></tr>
-  <tr><td>스크레이프</td><td>Scrape</td><td>프로메테우스가 대상 엔드포인트에 HTTP GET 을 보내 메트릭을 수집하는 행위</td></tr>
+  <tr><td>스크레이프</td><td>Scrape</td><td>프로메테우스가 대상 엔드포인트에 <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> GET 을 보내 메트릭을 수집하는 행위</td></tr>
   <tr><td>익스포터</td><td>Exporter</td><td>프로메테우스 포맷을 모르는 시스템의 상태를 번역해 노출하는 부가 프로세스</td></tr>
   <tr><td>node-exporter</td><td>Prometheus Node Exporter</td><td>노드의 CPU · 메모리 · 디스크 · 네트워크 메트릭을 노출한다. 노드마다 하나씩 뜬다</td></tr>
   <tr><td>kube-state-metrics</td><td>kube-state-metrics</td><td>디플로이먼트 레플리카 수, 파드 상태 등 <em>오브젝트의 상태</em> 메트릭을 노출한다. 클러스터에 하나</td></tr>
@@ -245,7 +246,7 @@ figcaption b{color:var(--ink)}
 <div class="goals">
   <h3>이 장을 마치면 할 수 있는 것</h3>
   <ol>
-    <li>맥에 <code>docker</code> · <code>kubectl</code> · <code>kind</code> · <code>helm</code> · JDK 21 을 갖추고 각각이 <em>무슨 일을 하는지</em> 말할 수 있다.</li>
+    <li>맥에 <code>docker</code> · <code>kubectl</code> · <code>kind</code> · <code>helm</code> · <dfn class="term">JDK <span class="en">(Java Development Kit · 자바 개발 도구 모음)</span></dfn> 21 을 갖추고 각각이 <em>무슨 일을 하는지</em> 말할 수 있다.</li>
     <li><code>helm search repo --versions</code> 로 차트 버전을 확인하고 팀 공용 값으로 고정할 수 있다.</li>
     <li><code>preflight.sh</code> 를 돌려 “통과 / 실패”를 판정하고, 실패한 항목이 무엇 때문인지 짚을 수 있다.</li>
     <li>앞으로 만들 구조(노드 3개 · 네임스페이스 3개 · pull/push 방향)를 그림으로 설명할 수 있다.</li>
@@ -255,7 +256,7 @@ figcaption b{color:var(--ink)}
 
 <h2><span class="n">03</span>최종적으로 만들 것</h2>
 
-<p>실습 전체가 노트북 한 대 안에서 끝난다. 클라우드 계정도 별도 VM 도 필요 없다. <strong>도커 컨테이너 3개가 쿠버네티스 노드 역할</strong>을 하고, 그 안에서 애플리케이션과 관측 스택이 함께 돈다.</p>
+<p>실습 전체가 노트북 한 대 안에서 끝난다. 클라우드 계정도 별도 <dfn class="term">VM <span class="en">(Virtual Machine · 가상 머신)</span></dfn> 도 필요 없다. <strong>도커 컨테이너 3개가 쿠버네티스 노드 역할</strong>을 하고, 그 안에서 애플리케이션과 관측 스택이 함께 돈다.</p>
 
 <h3>물리 구조 — 컨테이너 3개가 노드 3개다</h3>
 
@@ -487,7 +488,7 @@ nodes:                      # ② 이 목록의 항목 수 = 뜨는 컨테이너
   </span></li>
   <li><span class="b">3</span><span>
     <strong>서비스 → 파드.</strong> 서비스가 고른 파드의 컨테이너 포트 3000 으로 전달된다.
-    <span class="chk">확인 <code>kubectl -n monitoring get endpointslices -l kubernetes.io/service-name=kps-grafana</code> → 파드 IP 가 한 줄 이상</span>
+    <span class="chk">확인 <code>kubectl -n monitoring get endpointslices -l kubernetes.io/service-name=kps-grafana</code> → 파드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn> 가 한 줄 이상</span>
   </span></li>
   <li><span class="b" style="background:#2e7d4f">✓</span><span>
     <strong>세 칸이 전부 이어졌는지 한 번에 본다.</strong> 중간 어디가 끊겼는지는 위 셋을 순서대로 짚어 좁힌다.
@@ -710,7 +711,7 @@ brew install --cask temurin@21</code></pre>
 
 <blockquote class="warn">
   <span class="label">Docker Desktop 자원 설정을 먼저 올린다</span>
-  <p>Settings → Resources 에서 <strong>CPU 4코어 이상 · 메모리 10 GiB 이상</strong>으로 올린다. 기본값(2코어 / 2 GiB)으로는 04장에서 반드시 멈춘다. 메모리가 12 GiB 미만인 노트북이라면 01장에서 워커 노드를 1개로 줄이고, 08장 로키는 공용 클러스터로 대체한다.</p>
+  <p>Settings → Resources 에서 <strong>CPU 4코어 이상 · 메모리 10 <dfn class="term">GiB <span class="en">(Gibibyte · 2의 30제곱 바이트. 쿠버네티스가 쓰는 단위)</span></dfn> 이상</strong>으로 올린다. 기본값(2코어 / 2 GiB)으로는 04장에서 반드시 멈춘다. 메모리가 12 GiB 미만인 노트북이라면 01장에서 워커 노드를 1개로 줄이고, 08장 로키는 공용 클러스터로 대체한다.</p>
 </blockquote>
 
 <h3>설치 확인</h3>
@@ -734,7 +735,7 @@ openjdk version "21.0.7" 2026-04-15 LTS</code></pre>
     <li><code>docker version</code> 의 <em>Server</em> 버전 — 데몬이 실제로 살아 있어야 값이 나온다. 여기서 막히면 Docker Desktop 이 안 떠 있는 것이다.</li>
     <li><code>kubectl version --client</code> — 클라이언트만 본다. 서버와 마이너 버전이 한 칸을 넘게 벌어지면 지원 범위 밖이다.</li>
     <li><code>kind version</code> — 노드 이미지 다이제스트와 짝이 맞아야 한다. 01장 설정 파일이 특정 kind 버전을 전제한다.</li>
-    <li><code>helm version</code> — 차트 문법이 메이저 버전에서 갈린다. 3.16 이상이어야 OCI 아티팩트 차트를 다룰 수 있다.</li>
+    <li><code>helm version</code> — 차트 문법이 메이저 버전에서 갈린다. 3.16 이상이어야 <dfn class="term">OCI <span class="en">(Open Container Initiative · 컨테이너 이미지·런타임 표준)</span></dfn> 아티팩트 차트를 다룰 수 있다.</li>
   </ul>
 </blockquote>
 
@@ -776,15 +777,15 @@ prometheus-community/kube-prometheus-stack      88.1.0          v0.90.2</code></
 <table>
   <tr><th>구성요소</th><th>고정 버전</th><th>알아 둘 변경점</th></tr>
   <tr><td>Kubernetes</td><td>1.36.x</td><td>유지 브랜치는 최근 3개(1.36 / 1.35 / 1.34)다. 실습 중에 최신판을 따라가지 않는다</td></tr>
-  <tr><td>kind</td><td>v0.32.0</td><td>기본 노드 이미지 <code>kindest/node:v1.36.1</code>. K8s 1.36+ 는 kubeadm 설정 포맷이 <code>v1beta4</code> 다. <strong>노드 이미지는 <code>@sha256:</code> 다이제스트까지 고정한다</strong> — 태그만 쓰면 서로 다른 이미지를 받는다</td></tr>
+  <tr><td>kind</td><td>v0.32.0</td><td>기본 노드 이미지 <code>kindest/node:v1.36.1</code>. <dfn class="term">K8s <span class="en">(Kubernetes · k 와 s 사이 글자 8개를 줄인 표기)</span></dfn> 1.36+ 는 kubeadm 설정 포맷이 <code>v1beta4</code> 다. <strong>노드 이미지는 <code>@sha256:</code> 다이제스트까지 고정한다</strong> — 태그만 쓰면 서로 다른 이미지를 받는다</td></tr>
   <tr><td>kube-prometheus-stack</td><td>차트 86.x–88.x</td><td>Prometheus Operator v0.91.0 계열. 설치 직전 <code>--versions</code> 로 확정한다</td></tr>
-  <tr><td>Prometheus</td><td>3.x</td><td>네이티브 히스토그램은 3.8.0부터 정식. OTLP 수신 엔드포인트는 인증 계층이 없어 기본 비활성</td></tr>
+  <tr><td>Prometheus</td><td>3.x</td><td>네이티브 히스토그램은 3.8.0부터 정식. <dfn class="term">OTLP <span class="en">(OpenTelemetry Protocol · 메트릭·로그·트레이스를 실어 나르는 벤더 중립 규격)</span></dfn> 수신 엔드포인트는 인증 계층이 없어 기본 비활성</td></tr>
   <tr><td>Grafana</td><td>13.x</td><td><code>grafana-cli</code> · <code>grafana-server</code> 명령이 폐기됐다(→ <code>grafana cli</code>). 숫자 id 기반 데이터소스 API 기본 비활성</td></tr>
   <tr><td>Loki</td><td>3.7.x (차트 17.x)</td><td>헬름 차트가 <code>grafana-community</code> 로 이전했다</td></tr>
-  <tr><td>로그 수집기</td><td>Grafana Alloy</td><td><strong>Promtail 은 2026-03-02 EOL</strong> 이다. 신규 구성에서는 선택지가 아니다</td></tr>
+  <tr><td>로그 수집기</td><td>Grafana Alloy</td><td><strong>Promtail 은 2026-03-02 <dfn class="term">EOL <span class="en">(End Of Life · 지원이 끝나 더는 고쳐지지 않는 상태)</span></dfn></strong> 이다. 신규 구성에서는 선택지가 아니다</td></tr>
   <tr><td>Spring Boot</td><td>4.1.0</td><td>Spring Framework 7.0.8 기반, Java 17 최소</td></tr>
   <tr><td>Spring Cloud Gateway</td><td>Server WebFlux</td><td>스타터가 <code>spring-cloud-starter-gateway-server-webflux</code> 로 분리됐고 프로퍼티 접두사도 <code>spring.cloud.gateway.server.webflux.*</code> 로 바뀌었다</td></tr>
-  <tr><td>JDK</td><td>21 LTS</td><td>Boot 4.1 은 17 이상이면 동작하지만 결과를 맞추기 위해 21로 통일한다</td></tr>
+  <tr><td>JDK</td><td>21 <dfn class="term">LTS <span class="en">(Long Term Support · 오래 지원하는 릴리스 라인)</span></dfn></td><td>Boot 4.1 은 17 이상이면 동작하지만 결과를 맞추기 위해 21로 통일한다</td></tr>
   <tr><td>Helm</td><td>3.16 이상</td><td>OCI 아티팩트로 배포되는 차트를 다루려면 필요</td></tr>
 </table>
 </div>
@@ -806,7 +807,7 @@ prometheus-community/kube-prometheus-stack      88.1.0          v0.90.2</code></
   <tr><th>항목</th><th>최소</th><th>권장 · 이유</th></tr>
   <tr><td>CPU</td><td>4코어</td><td>6코어 이상. 노드 3개 + 관측 스택이 동시에 뜬다</td></tr>
   <tr><td>메모리</td><td>12 GiB</td><td>16 GiB. 도커에 최소 10 GiB 를 할당해야 08장(로키)까지 버틴다</td></tr>
-  <tr><td>디스크</td><td>30 GB 여유</td><td>노드 이미지 · 앱 이미지 · 프로메테우스 TSDB 가 쌓인다</td></tr>
+  <tr><td>디스크</td><td>30 GB 여유</td><td>노드 이미지 · 앱 이미지 · 프로메테우스 <dfn class="term">TSDB <span class="en">(Time Series Database · 시계열 데이터베이스)</span></dfn> 가 쌓인다</td></tr>
   <tr><td>cgroup</td><td>v2</td><td>K8s 1.35부터 cgroup v1 지원이 제거됐다. kind 도 v1 감지 시 경고를 낸다</td></tr>
   <tr><td>아키텍처</td><td>amd64 / arm64</td><td>Apple Silicon 정상 동작. 노드 이미지와 호스트 아키텍처가 같아야 한다</td></tr>
 </table>
@@ -818,7 +819,7 @@ prometheus-community/kube-prometheus-stack      88.1.0          v0.90.2</code></
 <table>
   <tr><th>어디까지 진행했나</th><th>메모리 사용(대략)</th><th>그때까지 뜬 것</th></tr>
   <tr><td>01 — 빈 클러스터</td><td>1.5 GiB</td><td>노드 3개 + 컨트롤 플레인</td></tr>
-  <tr><td>03 — 앱 배포</td><td>2.5 GiB</td><td>+ gateway · order-api (각 512 MiB 상한)</td></tr>
+  <tr><td>03 — 앱 배포</td><td>2.5 GiB</td><td>+ gateway · order-api (각 512 <dfn class="term">MiB <span class="en">(Mebibyte · 2의 20제곱 바이트)</span></dfn> 상한)</td></tr>
   <tr><td>05 — 관측 스택</td><td>5–6 GiB</td><td>+ Prometheus · Grafana · Alertmanager · 익스포터</td></tr>
   <tr><td>08 — 로그까지</td><td>7–8 GiB</td><td>+ Loki · Alloy</td></tr>
 </table>
@@ -955,7 +956,7 @@ cgroup2fs
 
 <h2>부록 D. 다른 운영체제에서 설치</h2>
 
-<p>이 문서의 설치와 실행 결과는 전부 <strong>macOS 기준</strong>이다. 우분투 · 윈도우(WSL2) 절차는 따로 정리해 두었다.</p>
+<p>이 문서의 설치와 실행 결과는 전부 <strong>macOS 기준</strong>이다. 우분투 · 윈도우(<dfn class="term">WSL2 <span class="en">(Windows Subsystem for Linux 2 · 윈도우에서 리눅스를 돌리는 계층)</span></dfn>) 절차는 따로 정리해 두었다.</p>
 
 <p><a href="appendix-install.html">→ 부록: 우분투 · 윈도우에서 도구 설치</a></p>
 

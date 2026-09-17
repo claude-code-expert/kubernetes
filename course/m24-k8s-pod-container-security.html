@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 286  287  288 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 24 / 38 · PART 5 보안과 정책</div>
-  <h1>파드와 컨테이너 보안</h1>
+   248 
   <p class="ch-desc">M23의 RBAC은 <strong>API를 통해 무엇을 할 수 있는가</strong>를 정한다. 파드가 일단 뜨고 나면 그 안에서 하는 일 — 루트로 실행하고, 호스트 파일시스템을 마운트하고, 커널 기능을 요구하는 것 — 은 RBAC이 관여하지 않는다. 이 모듈에서 네임스페이스에 라벨 하나를 붙여 그것을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>부터 본다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">90분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일  37 으로 다시 확인한다
   </div>
 </header>
 
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">24.1</span>파드 안에서는 무엇이든 할 수 있었다</a>
-  <a href="#s2"><span class="num">24.2</span>이론 — 세 수준과 세 모드</a>
-  <a href="#s3"><span class="num">24.3</span>따라하기 ① 거부당해 본다</a>
-  <a href="#s4"><span class="num">24.4</span>따라하기 ② 두 번째 문지기</a>
-  <a href="#s5"><span class="num">24.5</span>따라하기 ③ 세 수준을 비교한다</a>
-  <a href="#s6"><span class="num">24.6</span>따라하기 ④ 실제 워크로드를 통과시킨다</a>
-  <a href="#s7"><span class="num">24.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">24.8</span>운영 관점 — 어디까지 강제할 것인가</a>
-  <a href="#s9"><span class="num">24.9</span>체크포인트와 정리</a>
+   290 
+   291 
+   292 
+   293 
+   294 
+   295 
+   296 
+   297 
+   298 
 </nav>
 
 <section id="s1">
@@ -205,7 +205,7 @@
   <span class="out-lbl">출력</span>
   <div class="out"><code>pod={}
 container=</code></div>
-  <p>둘 다 비어 있다. 아무것도 제한하지 않았고, 이것이 쿠버네티스의 기본값이다. RBAC이 "누가 무엇을 요청할 수 있는가"를 정한다면, 이 모듈에서 켜는 것은 <strong>"어떤 파드를 만들 수 있는가"</strong>다.</p>
+  <p>둘 다 비어 있다. 아무것도 제한하지 않았고, 이것이 쿠버네티스의 기본값이다. <dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn>이 "누가 무엇을 요청할 수 있는가"를 정한다면, 이 모듈에서 켜는 것은 <strong>"어떤 파드를 만들 수 있는가"</strong>다.</p>
 </section>
 
 <section id="s2">
@@ -215,7 +215,7 @@ container=</code></div>
   <h3>세 수준</h3>
   <table>
     <tr><th>수준</th><th>막는 것</th><th>쓰는 곳</th></tr>
-    <tr><td><code>privileged</code></td><td>아무것도 막지 않는다</td><td>CNI·CSI·모니터링 에이전트 같은 시스템 구성요소</td></tr>
+    <tr><td><code>privileged</code></td><td>아무것도 막지 않는다</td><td><dfn class="term">CNI <span class="en">(Container Network Interface · 파드에 네트워크를 붙이는 플러그인 규약)</span></dfn>·<dfn class="term">CSI <span class="en">(Container Storage Interface · 스토리지를 붙이는 플러그인 규약)</span></dfn>·모니터링 에이전트 같은 시스템 구성요소</td></tr>
     <tr><td><code>baseline</code></td><td>알려진 권한 상승 경로 — <code>hostPath</code>, <code>privileged</code>, <code>hostNetwork</code>, 위험한 capability</td><td>기존 워크로드를 옮길 때의 현실적인 출발점</td></tr>
     <tr><td><code>restricted</code></td><td>여기에 더해 모범 사례까지 — 비루트 실행, 모든 capability 제거, seccomp 프로파일</td><td>새로 만드는 워크로드의 기본값</td></tr>
   </table>
@@ -234,7 +234,7 @@ pod-security.kubernetes.io/warn: restricted
 pod-security.kubernetes.io/audit: restricted</code></pre>
 
   <h3>문지기는 둘이다</h3>
-  <p>어드미션을 통과했다고 컨테이너가 뜨는 것은 아니다. PSA는 <strong>파드 스펙</strong>만 보고, kubelet은 <strong>실제 이미지</strong>를 본다. 스펙에 <code>runAsNonRoot: true</code>가 있어도 이미지가 정말 비루트로 뜨는지는 kubelet이 확인하고, 확인할 수 없으면 거부한다 — 24.4에서 그 상황을 만든다.</p>
+  <p>어드미션을 통과했다고 컨테이너가 뜨는 것은 아니다. <dfn class="term">PSA <span class="en">(Pod Security Admission · 파드 보안 표준을 네임스페이스 단위로 강제하는 것)</span></dfn>는 <strong>파드 스펙</strong>만 보고, kubelet은 <strong>실제 이미지</strong>를 본다. 스펙에 <code>runAsNonRoot: true</code>가 있어도 이미지가 정말 비루트로 뜨는지는 kubelet이 확인하고, 확인할 수 없으면 거부한다 — 24.4에서 그 상황을 만든다.</p>
 
   <figure>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
@@ -243,21 +243,7 @@ pod-security.kubernetes.io/audit: restricted</code></pre>
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
       <text class="t-h" x="40" y="46">문지기가 둘이다 — 어드미션과 kubelet</text>
@@ -408,7 +394,7 @@ ReplicaFailure=True FailedCreate</code></div>
       <tr><th>필드</th><th>막는 것</th></tr>
       <tr><td><code>allowPrivilegeEscalation: false</code></td><td>프로세스가 <code>setuid</code> 바이너리로 권한을 올리는 것</td></tr>
       <tr><td><code>capabilities.drop: ["ALL"]</code></td><td>컨테이너 런타임이 기본으로 주는 커널 기능 전부. 필요하면 <code>add</code>로 하나씩 되돌린다</td></tr>
-      <tr><td><code>runAsNonRoot: true</code></td><td>UID 0으로 실행하는 것</td></tr>
+      <tr><td><code>runAsNonRoot: true</code></td><td><dfn class="term">UID <span class="en">(User Identifier · 사용자를 가리키는 숫자 식별자)</span></dfn> 0으로 실행하는 것</td></tr>
       <tr><td><code>seccompProfile.type: RuntimeDefault</code></td><td>런타임의 기본 시스템 콜 필터를 적용한다. 없으면 필터가 없다</td></tr>
     </table>
 <pre><code>kubectl -n m24 get deploy,po</code></pre>
@@ -577,7 +563,7 @@ nginx:x:101:101:nginx:/var/cache/nginx:/sbin/nologin</code></div>
         fsGroup: 999                # PVC 의 소유자를 이 그룹으로 바꿔 준다 (M18)
         seccompProfile:
           type: RuntimeDefault</code></pre>
-    <p><code>fsGroup</code>이 없으면 비루트로 뜬 레디스가 <strong>자기 PVC에 쓰지 못한다.</strong> 볼륨은 기본적으로 루트 소유로 마운트되기 때문이다 — M18의 스토리지와 이 모듈의 보안이 만나는 지점이다.</p>
+    <p><code>fsGroup</code>이 없으면 비루트로 뜬 레디스가 <strong>자기 <dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>에 쓰지 못한다.</strong> 볼륨은 기본적으로 루트 소유로 마운트되기 때문이다 — M18의 스토리지와 이 모듈의 보안이 만나는 지점이다.</p>
   </div>
 
   <div class="step">
@@ -706,7 +692,7 @@ kubectl -n journal apply -k course/labs/k8s/journal --dry-run=server</code></pre
   <p>그런 것은 M26에서 다룬다 — 내장 <code>ValidatingAdmissionPolicy</code>로 조건을 직접 쓰거나, Kyverno 같은 정책 엔진을 쓴다. PSA는 <strong>가장 흔한 위험을 설치 없이 막는 장치</strong>이고, 그 이상은 다른 도구의 몫이다.</p>
 
   <h3>보안은 층으로 쌓인다</h3>
-  <p>지금까지 세 층이 쌓였다. M23의 RBAC이 <strong>API 요청</strong>을, 이 모듈의 PSA가 <strong>파드 스펙</strong>을, seccomp가 <strong>시스템 콜</strong>을 제한한다. 여기에 M25가 <strong>네트워크</strong>를 더한다.</p>
+  <p>지금까지 세 층이 쌓였다. M23의 RBAC이 <strong><dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 요청</strong>을, 이 모듈의 PSA가 <strong>파드 스펙</strong>을, seccomp가 <strong>시스템 콜</strong>을 제한한다. 여기에 M25가 <strong>네트워크</strong>를 더한다.</p>
   <p>어느 하나도 충분하지 않다는 것이 요점이다. RBAC이 완벽해도 파드가 <code>hostPath</code>를 쓰면 노드를 가져가고, PSA가 완벽해도 파드가 클러스터의 모든 서비스에 접근할 수 있으면 하나가 뚫렸을 때 전부 뚫린다. <strong>한 층이 무너져도 다음 층이 남는 것</strong>이 목적이다.</p>
 </section>
 
@@ -758,10 +744,10 @@ kubectl get ns --no-headers | awk '{print $1}'</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>파드가 무엇을 할 수 있는지는 제한했다. 그런데 <strong>어디와 통신할 수 있는지</strong>는 아직 아무 제한이 없다. 지금 클러스터에서는 어느 네임스페이스의 어느 파드든 다른 모든 파드에 접근할 수 있다 — <code>apps</code>의 <code>order-api</code>가 <code>journal</code>의 레디스에 붙을 수 있고, 비밀번호만 알면 데이터를 읽는다.</p>
-  <p>M25에서 그것을 먼저 확인하고 <code>default-deny</code>를 건다. 그다음 필요한 경로만 열면서 <strong>DNS를 빠뜨려 모든 이름 해석이 죽는</strong> 흔한 사고를 재현한다 — 이그레스 정책의 대표적인 함정이다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   283 
+  <p>파드가 무엇을 할 수 있는지는 제한했다. 그런데 <strong>어디와 통신할 수 있는지</strong>는 아직 아무 제한이 없다. 지금 클러스터에서는 어느 네임스페이스의 어느 파드든 다른 모든 파드에 접근할 수 있다 —  241 의  242 가  243 의 레디스에 붙을 수 있고, 비밀번호만 알면 데이터를 읽는다.</p>
+  <p>M25에서 그것을 먼저 확인하고  244 를 건다. 그다음 필요한 경로만 열면서 <strong>DNS를 빠뜨려 모든 이름 해석이 죽는</strong> 흔한 사고를 재현한다 — 이그레스 정책의 대표적인 함정이다.</p>
+   284 
   <ul>
     <li>파드 시큐리티 표준: https://kubernetes.io/docs/concepts/security/pod-security-standards/</li>
     <li>파드 시큐리티 어드미션: https://kubernetes.io/docs/concepts/security/pod-security-admission/</li>

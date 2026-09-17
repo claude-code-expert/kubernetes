@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>로그 수집 — Loki 와 Alloy</h1>
+   135 
   <p class="lede">메트릭은 “무언가 이상하다”까지 알려주고 멈춘다. 그다음 질문인 “무슨 일이 있었나”는 로그의 몫이다. 화살표 방향이 메트릭과 반대라는 것이 이 장의 핵심이다.</p>
 </header>
 
@@ -234,13 +235,13 @@ figcaption b{color:var(--ink)}
   <tr><th>용어</th><th>영문 풀네임</th><th>뜻과 역할</th></tr>
   <tr><td>Loki</td><td>Loki</td><td>로그 저장소. 라벨만 색인하고 본문은 압축 보관한다</td></tr>
   <tr><td>Alloy</td><td>Grafana Alloy</td><td>수집기. 노드마다 하나씩 떠서 로그를 읽어 로키로 민다. Promtail 의 후계</td></tr>
-  <tr><td>LogQL</td><td>Log Query Language</td><td>로키의 질의 언어. PromQL 과 문법이 닮았다</td></tr>
+  <tr><td>LogQL</td><td>Log Query Language</td><td>로키의 질의 언어. <dfn class="term">PromQL <span class="en">(Prometheus Query Language · 프로메테우스 질의 언어)</span></dfn> 과 문법이 닮았다</td></tr>
   <tr><td>스트림</td><td>Stream</td><td>같은 라벨 조합을 가진 로그의 흐름. 로키의 저장 단위</td></tr>
   <tr><td>DaemonSet</td><td>Daemon Set</td><td>노드마다 파드를 하나씩 띄우는 워크로드 종류</td></tr>
   <tr><td>단일 바이너리 모드</td><td>Monolithic / Single Binary</td><td>로키의 모든 구성요소를 한 프로세스로 돌리는 배포 방식. 실습에 적합하다</td></tr>
   <tr><td>리레이블</td><td>Relabel</td><td>수집 시점에 메타데이터를 골라 라벨로 만드는 처리. 여기서 안 고르면 버려진다</td></tr>
   <tr><td>구조화 메타데이터</td><td>Structured Metadata</td><td>색인되지 않지만 필드로 다룰 수 있는 값. 요청 ID 같은 것을 여기 넣는다</td></tr>
-  <tr><td>구조화 로그</td><td>Structured Logging</td><td>사람이 읽는 문장 대신 JSON 등으로 찍는 방식. <code>| json</code> 으로 필드를 뽑는다</td></tr>
+  <tr><td>구조화 로그</td><td>Structured Logging</td><td>사람이 읽는 문장 대신 <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn> 등으로 찍는 방식. <code>| json</code> 으로 필드를 뽑는다</td></tr>
   <tr><td>보존 기간</td><td>Retention</td><td>로그를 며칠 보관할지. 실습은 72시간</td></tr>
   <tr><td>게이트웨이</td><td>Gateway</td><td>로키 앞단의 nginx. 읽기·쓰기 요청을 내부 구성요소로 넘긴다</td></tr>
 </table>
@@ -324,7 +325,7 @@ figcaption b{color:var(--ink)}
 </svg>
 <figcaption>
   <b>그림 2.</b> 2번과 3번 사이가 이 장에서 새로 만드는 부분이다.
-  <code>loki.source.kubernetes</code> 를 쓰면 <code>/var/log</code> 호스트 마운트가 필요 없어, 맥의 도커 VM 환경에서 문제가 덜 생긴다.
+  <code>loki.source.kubernetes</code> 를 쓰면 <code>/var/log</code> 호스트 마운트가 필요 없어, 맥의 도커 <dfn class="term">VM <span class="en">(Virtual Machine · 가상 머신)</span></dfn> 환경에서 문제가 덜 생긴다.
 </figcaption>
 </figure>
 
@@ -554,7 +555,7 @@ kubectl -n logging port-forward svc/alloy 12345:12345 &gt;/dev/null 2&gt;&amp;1 
 open http://localhost:12345</code></pre>
 
 <blockquote>
-  <span class="label">Alloy UI 를 꼭 한 번 연다</span>
+  <span class="label">Alloy <dfn class="term">UI <span class="en">(User Interface · 사용자 인터페이스)</span></dfn> 를 꼭 한 번 연다</span>
   <p>03절에서 본 네 블록이 <strong>그래프로 그려지고</strong> 각각의 상태와 처리 건수가 보인다. “로그가 안 들어온다”는 상황에서 어느 단계가 끊겼는지 즉시 알 수 있어, 설정 파일을 노려보는 것보다 훨씬 빠르다.</p>
 </blockquote>
 
@@ -621,7 +622,7 @@ sum by (container) (rate({namespace="apps"} |= "ERROR" [5m]))</code></pre>
 
 <p>03절에서 “여기서 안 고른 메타데이터는 버려진다”고 했다. 그 결과를 직접 본다. <strong>없는 라벨로 질의하면 에러가 나지 않는다</strong> — 이것이 이 장의 함정이다.</p>
 
-<p class="cap">아래 출력은 로키 게이트웨이에 포트포워드해 API 로 질의한 결과다 (확인 2026-09-13). 브라우저 Explore 에서도 결과는 같다.</p>
+<p class="cap">아래 출력은 로키 게이트웨이에 포트포워드해 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 로 질의한 결과다 (확인 2026-09-13). 브라우저 Explore 에서도 결과는 같다.</p>
 
 <pre><code class="language-bash">kubectl -n logging port-forward svc/loki-gateway 33100:80 &gt;/dev/null 2&gt;&amp;1 &amp;
 
@@ -818,7 +819,7 @@ kubectl -n logging delete pvc --all</code></pre>
   <tr><td><code>{namespace="apps"} |= "ERROR"</code></td><td>에러 주입 뒤 줄이 보인다</td></tr>
   <tr><td><code>sum by (container) (rate({namespace="apps"} |= "ERROR" [5m]))</code></td><td>숫자 그래프가 그려진다</td></tr>
   <tr><td>그라파나 Data sources</td><td><strong>Loki</strong> 가 있고 uid 가 <code>loki</code></td></tr>
-  <tr><td>RED 대시보드</td><td>맨 아래 로그 패널이 있고, 변수 <code>$namespace</code> 를 따라간다</td></tr>
+  <tr><td><dfn class="term">RED <span class="en">(Rate, Errors, Duration · 애플리케이션을 보는 세 지표)</span></dfn> 대시보드</td><td>맨 아래 로그 패널이 있고, 변수 <code>$namespace</code> 를 따라간다</td></tr>
   <tr><td>없는 라벨 질의</td><td>에러가 아니라 빈 결과라는 것을 직접 봤다 (이해 확인)</td></tr>
   <tr><td>부하 루프·포트포워드</td><td><strong>모두 종료했다</strong></td></tr>
 </table>
@@ -851,7 +852,7 @@ kubectl -n logging delete pvc --all</code></pre>
   <li>Loki 배포 모드 — https://grafana.com/docs/loki/latest/get-started/deployment-modes/</li>
   <li>LogQL — https://grafana.com/docs/loki/latest/query/</li>
   <li>구조화 메타데이터 — https://grafana.com/docs/loki/latest/get-started/labels/structured-metadata/</li>
-  <li>Loki HTTP API (labels · query_range) — https://grafana.com/docs/loki/latest/reference/loki-http-api/</li>
+  <li>Loki <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> API (labels · query_range) — https://grafana.com/docs/loki/latest/reference/loki-http-api/</li>
   <li>Spring Boot 구조화 로깅 — https://docs.spring.io/spring-boot/reference/features/logging.html</li>
 </ul>
 </div>

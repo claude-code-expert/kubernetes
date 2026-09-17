@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>운영과 모범 사례</h1>
+   119 
   <p class="lede">여기까지 만든 것은 <strong>동작하는 관측 스택</strong>이다. 이 장은 그것을 <strong>망가지지 않는 스택</strong>으로 바꾸고, 실습에서 일부러 타협한 설정을 하나씩 되짚는다.</p>
 </header>
 
@@ -191,7 +192,7 @@ figcaption b{color:var(--ink)}
 
 <h3>CPU 와 메모리는 성질이 다르다</h3>
 
-<p>CPU 는 모자라면 <strong>느려진다</strong>. 메모리는 모자라면 <strong>죽는다</strong>. 그래서 CPU 제한은 신중하게 걸고, 메모리 제한은 반드시 건다. 03장에서 CPU limit 을 일부러 비워 둔 판단의 근거가 이것이고, 이 장에서 숫자로 확인한다.</p>
+<p><dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> 는 모자라면 <strong>느려진다</strong>. 메모리는 모자라면 <strong>죽는다</strong>. 그래서 CPU 제한은 신중하게 걸고, 메모리 제한은 반드시 건다. 03장에서 CPU limit 을 일부러 비워 둔 판단의 근거가 이것이고, 이 장에서 숫자로 확인한다.</p>
 
 <h3>용어 정리</h3>
 
@@ -205,7 +206,7 @@ figcaption b{color:var(--ink)}
   <tr><td>drop</td><td>drop</td><td>해당 메트릭을 저장하지 않는다. 되돌릴 수 없다</td></tr>
   <tr><td>보존 기간</td><td>Retention</td><td>며칠 보관할지. <code>retentionSize</code> 와 함께 쓰면 <strong>먼저 걸리는 쪽이 이긴다</strong></td></tr>
   <tr><td>원격 쓰기</td><td>Remote Write</td><td>장기 저장소로 메트릭을 보내는 방식. Thanos · Mimir 가 수신 측</td></tr>
-  <tr><td>CFS 쿼터</td><td>Completely Fair Scheduler Quota</td><td>리눅스의 CPU 제한 구현. 한도를 넘으면 주기가 끝날 때까지 강제로 쉰다</td></tr>
+  <tr><td><dfn class="term">CFS <span class="en">(Completely Fair Scheduler · 리눅스의 CPU 스케줄러. 제한을 넘으면 스로틀링한다)</span></dfn> 쿼터</td><td>Completely Fair Scheduler Quota</td><td>리눅스의 CPU 제한 구현. 한도를 넘으면 주기가 끝날 때까지 강제로 쉰다</td></tr>
   <tr><td>스로틀링</td><td>Throttling</td><td>CPU 제한에 걸려 강제로 쉬는 것. 응답 시간 그래프에 톱니를 만든다</td></tr>
   <tr><td>In-Place Pod Resize</td><td>In-Place Pod Resize</td><td>파드를 재시작하지 않고 자원을 바꾸는 기능. 1.35 정식</td></tr>
   <tr><td>Silence</td><td>Silence</td><td>Alertmanager 에서 알림을 일시적으로 막는 것. 만료를 안 걸면 규칙 삭제와 같다</td></tr>
@@ -603,17 +604,17 @@ kubectl -n apps get pod "$POD" \
 <div class="tablewrap">
 <table>
   <tr><th>장</th><th>실습에서의 선택</th><th>운영에서 바꿀 것</th></tr>
-  <tr><td>01</td><td><code>bind-address: 0.0.0.0</code> 으로 컨트롤 플레인 메트릭 개방</td><td>노드 IP 만 바인딩하거나 방화벽으로 대역 제한. kind 는 VM 안에 갇혀 있어 안전했을 뿐이다</td></tr>
+  <tr><td>01</td><td><code>bind-address: 0.0.0.0</code> 으로 컨트롤 플레인 메트릭 개방</td><td>노드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn> 만 바인딩하거나 방화벽으로 대역 제한. kind 는 <dfn class="term">VM <span class="en">(Virtual Machine · 가상 머신)</span></dfn> 안에 갇혀 있어 안전했을 뿐이다</td></tr>
   <tr><td>02</td><td><code>ChaosController</code> 가 항상 활성</td><td><code>@Profile</code> 로 분리. 운영 프로파일에서는 빈 등록조차 되지 않게 한다</td></tr>
   <tr><td>03</td><td>CPU limit 미설정</td><td>공용 클러스터라면 반드시 설정. 대신 스로틀링 메트릭을 함께 감시한다 (07절)</td></tr>
   <tr><td>03</td><td><code>readOnlyRootFilesystem</code> 미적용</td><td>적용하고 <code>/tmp</code> 에 emptyDir 을 붙인다</td></tr>
   <tr><td>03</td><td>레지스트리 없이 <code>kind load</code></td><td>사내 레지스트리 + 이미지 서명·스캔 파이프라인</td></tr>
-  <tr><td>04</td><td><code>insecureSkipVerify: true</code></td><td>노드 IP 를 SAN 에 포함한 인증서를 발급해 검증을 켠다</td></tr>
+  <tr><td>04</td><td><code>insecureSkipVerify: true</code></td><td>노드 IP 를 <dfn class="term">SAN <span class="en">(Subject Alternative Name · 인증서가 보증하는 이름·주소 목록)</span></dfn> 에 포함한 인증서를 발급해 검증을 켠다</td></tr>
   <tr><td>04</td><td>관측 스택을 노드 한 대에 몰아넣음</td><td>분산 배치. <strong>모니터링이 한 노드와 함께 죽으면 장애를 볼 눈이 없어진다</strong></td></tr>
-  <tr><td>04</td><td>그라파나 비밀번호를 값 파일에 평문으로</td><td>Secret 또는 외부 시크릿 관리자. 가능하면 SSO 연동</td></tr>
-  <tr><td>04</td><td>NodePort 로 UI 직접 노출</td><td>인증을 거치는 진입점 뒤에 둔다. <strong>프로메테우스 UI 에는 인증이 없다</strong></td></tr>
+  <tr><td>04</td><td>그라파나 비밀번호를 값 파일에 평문으로</td><td>Secret 또는 외부 시크릿 관리자. 가능하면 <dfn class="term">SSO <span class="en">(Single Sign-On · 한 번 로그인으로 여러 서비스를 쓰는 것)</span></dfn> 연동</td></tr>
+  <tr><td>04</td><td>NodePort 로 <dfn class="term">UI <span class="en">(User Interface · 사용자 인터페이스)</span></dfn> 직접 노출</td><td>인증을 거치는 진입점 뒤에 둔다. <strong>프로메테우스 UI 에는 인증이 없다</strong></td></tr>
   <tr><td>04</td><td><code>retention: 3d</code></td><td>주간 비교가 가능한 길이로. 06절의 곱셈으로 디스크를 먼저 계산한다</td></tr>
-  <tr><td>05</td><td>사이드카 <code>searchNamespace: ALL</code></td><td>필요한 네임스페이스만 나열. 권한과 API 부하를 줄인다</td></tr>
+  <tr><td>05</td><td>사이드카 <code>searchNamespace: ALL</code></td><td>필요한 네임스페이스만 나열. 권한과 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 부하를 줄인다</td></tr>
   <tr><td>07</td><td>임계값 5% · 500ms 를 임의로 설정</td><td>2주 이상 관측한 실제 분포를 근거로 재설정</td></tr>
   <tr><td>08</td><td>로키 파일시스템 단일 인스턴스</td><td>오브젝트 스토리지 + 확장 모드. 파일시스템 단일 인스턴스는 데이터를 잃는 구성이다</td></tr>
   <tr><td>08</td><td>캐시 비활성</td><td>운영 규모에서는 필수. 없으면 질의가 감당되지 않는다</td></tr>
@@ -633,7 +634,7 @@ kubectl -n apps get pod "$POD" \
 <div class="tablewrap">
 <table>
   <tr><th>#</th><th>증상</th><th>첫 번째로 볼 곳</th></tr>
-  <tr><td>1</td><td>클러스터 생성이 타임아웃</td><td>Docker Desktop 메모리 할당. 10 GiB 미만이면 04장에서 반드시 막힌다</td></tr>
+  <tr><td>1</td><td>클러스터 생성이 타임아웃</td><td>Docker Desktop 메모리 할당. 10 <dfn class="term">GiB <span class="en">(Gibibyte · 2의 30제곱 바이트. 쿠버네티스가 쓰는 단위)</span></dfn> 미만이면 04장에서 반드시 막힌다</td></tr>
   <tr><td>2</td><td>컨트롤 플레인 타깃 DOWN</td><td>01장 bind-address 패치. 클러스터 재생성이 필요하다</td></tr>
   <tr><td>3</td><td><code>ImagePullBackOff</code></td><td><code>kind load</code> 여부와 <code>imagePullPolicy: IfNotPresent</code></td></tr>
   <tr><td>4</td><td><code>CrashLoopBackOff</code> 인데 로그는 정상</td><td><code>startupProbe</code> 의 <code>failureThreshold × periodSeconds</code></td></tr>

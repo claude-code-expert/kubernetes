@@ -148,12 +148,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 185  186  187 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 36 / 38 · PART 8 검증</div>
-  <h1>카오스 테스팅</h1>
+   150 
   <p class="ch-desc">Part 1부터 여기까지 <strong>만드는 것</strong>을 했다. 프로브를 걸고, 리소스를 정하고, 정책을 붙이고, 알림을 만들었다. 그것들이 <strong>실제로 동작하는지</strong>는 대부분 정상 상황에서만 확인했다. 이 모듈에서 클러스터를 <strong>계획적으로 망가뜨린다</strong> — 파드를 죽이고, 통신에 지연을 넣고, CPU를 태우고, 앱이 오류를 내게 한다. 가설을 먼저 쓰고 실험으로 검증하며, <strong>측정 도구가 먼저 막히는 것</strong>부터 겪는다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">140분</span><span class="tag">Chaos Mesh 2.8.4</span>
@@ -175,27 +175,27 @@
 <div class="tldr">
   <h2>핵심 3줄</h2>
   <p>1. 실험을 시작하기 전에 <strong>측정 도구가 동작하는지</strong> 확인한다 — M24와 M25가 부하 생성기를 두 번 막는다.</p>
-  <p>2. 파드 킬·지연·CPU 고갈을 주입하고 <strong>가설과 실측을 표로 남긴다</strong>. 지연 실험이 앱의 레디스 호출 횟수를 드러낸다.</p>
+  <p>2. 파드 킬·지연·<dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn> 고갈을 주입하고 <strong>가설과 실측을 표로 남긴다</strong>. 지연 실험이 앱의 레디스 호출 횟수를 드러낸다.</p>
   <p>3. 앱이 500을 내게 해서 <strong>M21의 알림이 실제로 발화하는지</strong> 확인하고, 퍼즈로 <strong>입력 검증이 없다는 것</strong>을 찾아낸다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">36.1</span>만든 것이 동작하는지 모른다</a>
-  <a href="#s2"><span class="num">36.2</span>이론 — 게임 데이와 폭발 반경</a>
-  <a href="#s3"><span class="num">36.3</span>따라하기 ① 측정 도구부터 고친다</a>
-  <a href="#s4"><span class="num">36.4</span>따라하기 ② 파드를 죽인다</a>
-  <a href="#s5"><span class="num">36.5</span>따라하기 ③ 느리게 만든다</a>
-  <a href="#s6"><span class="num">36.6</span>따라하기 ④ 오류와 알림</a>
-  <a href="#s7"><span class="num">36.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">36.8</span>운영 관점 — 실험 시트와 스테이징의 한계</a>
-  <a href="#s9"><span class="num">36.9</span>체크포인트와 정리</a>
+   192 
+   193 
+   194 
+   195 
+   196 
+   197 
+   198 
+   199 
+   200 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">36.1</span>만든 것이 동작하는지 모른다</h2>
   <p class="lead">M15에서 <code>preStop</code>을 10초로 잡았다. 그때 실패 요청이 20건에서 0건이 되는 것을 쟀으므로 그 설정은 검증됐다. 그런데 그 뒤로 <strong>스물한 개 모듈이 지나갔다.</strong> 이미지가 두 번 바뀌었고, 리소스와 보안 컨텍스트가 붙었고, 네트워크가 화이트리스트가 됐다.</p>
   <p>지금도 파드 하나가 죽었을 때 요청이 떨어지지 않는지 <strong>아무도 모른다.</strong> M21에서 만든 알림도 마찬가지다 — 규칙을 쓰고 문법이 맞는 것은 확인했지만, <strong>실제 장애에서 울리는지는 확인하지 않았다.</strong></p>
-  <p>이런 것들의 공통점이 있다. <strong>정상일 때는 아무것도 알려 주지 않는다.</strong> 프로브가 잘못 설정돼 있어도, 알림 표현식이 틀렸어도, PDB가 무의미해도 평소에는 증상이 없다. 그리고 진짜 장애가 났을 때 <strong>동작하지 않는다는 것을 그때 처음 안다.</strong></p>
+  <p>이런 것들의 공통점이 있다. <strong>정상일 때는 아무것도 알려 주지 않는다.</strong> 프로브가 잘못 설정돼 있어도, 알림 표현식이 틀렸어도, <dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>가 무의미해도 평소에는 증상이 없다. 그리고 진짜 장애가 났을 때 <strong>동작하지 않는다는 것을 그때 처음 안다.</strong></p>
   <p>카오스 테스팅은 그 확인을 <strong>계획된 시간에 앞당기는 것</strong>이다. 새벽 3시에 알게 될 일을 평일 오후에 알게 하고, 그때는 옆에 사람이 있고 되돌릴 준비가 돼 있다. 이 모듈의 실험 다섯 개 중 <strong>둘이 가설을 벗어난 결과</strong>를 냈다 — 그것이 이 방식의 값이다.</p>
 </section>
 
@@ -214,21 +214,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">가설을 먼저 쓴다 — 그래야 실험이다</text>
@@ -323,7 +309,7 @@ dnsServer:
 EOF
 helm install chaos-mesh chaos-mesh/chaos-mesh --version 2.8.4 \
   -n chaos-mesh --create-namespace -f course/labs/chaos/values.yaml --wait --timeout 300s</code></pre>
-    <p><code>runtime: containerd</code>가 필수다. 기본값은 도커이고, kind는 containerd를 쓰므로 <strong>카오스 데몬이 컨테이너를 찾지 못한다.</strong> 대시보드는 만들지 않는다 — <strong>실험은 매니페스트로 한다</strong>는 것이 이 모듈의 방침이고, UI로 클릭한 실험은 재현되지도 리뷰되지도 않는다.</p>
+    <p><code>runtime: containerd</code>가 필수다. 기본값은 도커이고, kind는 containerd를 쓰므로 <strong>카오스 데몬이 컨테이너를 찾지 못한다.</strong> 대시보드는 만들지 않는다 — <strong>실험은 매니페스트로 한다</strong>는 것이 이 모듈의 방침이고, <dfn class="term">UI <span class="en">(User Interface · 사용자 인터페이스)</span></dfn>로 클릭한 실험은 재현되지도 리뷰되지도 않는다.</p>
 <pre><code>kubectl -n chaos-mesh get po --no-headers
 kubectl get crd | grep -c chaos-mesh</code></pre>
     <span class="out-lbl">출력</span>
@@ -517,7 +503,7 @@ spec:
 
   <div class="step">
     <h4>3단계 — CPU를 태운다</h4>
-    <p class="purpose"><span class="lbl">목적</span>작동 카오스(20.1.4). M17의 HPA가 실제로 반응하는지 본다.</p>
+    <p class="purpose"><span class="lbl">목적</span>작동 카오스(20.1.4). M17의 <dfn class="term">HPA <span class="en">(Horizontal Pod Autoscaler · 부하에 따라 파드 수를 늘리고 줄이는 것)</span></dfn>가 실제로 반응하는지 본다.</p>
     <p><strong>가설</strong>: 파드 하나의 CPU를 고갈시키면 ① HPA가 파드를 늘리고 ② 실패는 없다.</p>
 <pre><code>kind: StressChaos
 spec:
@@ -551,7 +537,7 @@ journal-api-...-bdb4x     23m   38Mi
 
   <div class="step">
     <h4>1단계 — 밖에서 연결을 끊는다</h4>
-    <p class="purpose"><span class="lbl">목적</span>앱을 고치지 않고 HTTP 응답을 바꾼다. <strong>그리고 알림이 울리지 않는 것을 본다.</strong></p>
+    <p class="purpose"><span class="lbl">목적</span>앱을 고치지 않고 <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 응답을 바꾼다. <strong>그리고 알림이 울리지 않는 것을 본다.</strong></p>
 <pre><code>kind: HTTPChaos
 spec:
   mode: all
@@ -573,7 +559,7 @@ curl -s -o /dev/null -m 5 -w '%{http_code}\n' -H 'Host: journal.local' http://lo
 
 502
 200</code></div>
-    <div class="verdict"><span class="lbl">판정</span>API는 완전히 죽었고 <strong>정적 파일은 200</strong>이다 — 폭발 반경이 <code>path</code>와 <code>labelSelectors</code>로 제한됐다. 인그레스는 <code>502</code>를 준다: 업스트림이 연결을 끊었을 때의 표준 응답이다.</div>
+    <div class="verdict"><span class="lbl">판정</span><dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>는 완전히 죽었고 <strong>정적 파일은 200</strong>이다 — 폭발 반경이 <code>path</code>와 <code>labelSelectors</code>로 제한됐다. 인그레스는 <code>502</code>를 준다: 업스트림이 연결을 끊었을 때의 표준 응답이다.</div>
 <pre><code># 프로메테우스 /api/v1/alerts 에서 우리 알림만</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>(AppHighErrorRate 가 없다)
@@ -609,7 +595,7 @@ kubectl -n journal set image deploy/journal-api api=journal-api:v1</code></pre>
   <div class="step">
     <h4>3단계 — 퍼즈</h4>
     <p class="purpose"><span class="lbl">목적</span>입력을 흔든다(20.1.5). <strong>500이 나오는 지점</strong>을 찾는 것이 목표다.</p>
-    <p>무작위 바이트열보다 <strong>경계값과 형식 위반</strong>이 버그를 잘 찾는다. 빈 객체, <code>null</code>, 타입 위반, 아주 긴 값, JSON이 아닌 것.</p>
+    <p>무작위 바이트열보다 <strong>경계값과 형식 위반</strong>이 버그를 잘 찾는다. 빈 객체, <code>null</code>, 타입 위반, 아주 긴 값, <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn>이 아닌 것.</p>
 <pre><code>bash course/labs/scripts/fuzz-api.sh 26</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>퍼즈 시작 — 26 회
@@ -636,7 +622,7 @@ kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries</
   {"text":{"nested":"object"}}
   {"text":"ok","extra":"모르는 필드"}</code></div>
     <div class="verdict"><span class="lbl">판정</span><strong>입력 검증이 전혀 없다.</strong> <code>400</code>이 나온 것은 JSON 파서가 거부한 하나뿐이고, JSON이기만 하면 무엇이든 저장된다. 퍼즈가 찾으려던 <strong>충돌(500)</strong>은 없었지만 <strong>데이터 오염</strong>을 찾았다 — 이 앱을 그대로 쓰면 저장소가 쓰레기로 찬다.</div>
-    <p>조치는 둘이다. <strong>앱에 스키마 검증을 넣고</strong>(<code>text</code>가 문자열이고 길이 제한이 있어야 한다), <strong>퍼즈를 CI에 넣는다</strong>(M29의 파이프라인에 한 단계로). 그리고 <strong>실험이 만든 쓰레기 31건을 지운다</strong> — 카오스 실험은 뒷정리까지가 실험이다.</p>
+    <p>조치는 둘이다. <strong>앱에 스키마 검증을 넣고</strong>(<code>text</code>가 문자열이고 길이 제한이 있어야 한다), <strong>퍼즈를 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에 넣는다</strong>(M29의 파이프라인에 한 단계로). 그리고 <strong>실험이 만든 쓰레기 31건을 지운다</strong> — 카오스 실험은 뒷정리까지가 실험이다.</p>
   </div>
 </section>
 
@@ -700,7 +686,7 @@ kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries</
   <p>세 번째를 빠뜨리면 실험이 <strong>다른 팀의 장애 대응을 유발</strong>한다. 실험 시간과 대상을 미리 알리는 것이 게임 데이의 절반이다.</p>
 
   <h3>다음에 추가할 실험</h3>
-  <p>이 모듈에서 다루지 않은 것 중 값이 큰 것 셋을 적어 둔다. <strong>노드 하나를 통째로 잃는 실험</strong>(M16의 PDB와 토폴로지 분산이 그때 시험된다), <strong>DNS 장애</strong>(M25에서 본 이그레스 사고를 <code>DNSChaos</code>로 재현), <strong>디스크 가득 참</strong>(M18의 볼륨 확장이 그때 필요해진다).</p>
+  <p>이 모듈에서 다루지 않은 것 중 값이 큰 것 셋을 적어 둔다. <strong>노드 하나를 통째로 잃는 실험</strong>(M16의 PDB와 토폴로지 분산이 그때 시험된다), <strong><dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn> 장애</strong>(M25에서 본 이그레스 사고를 <code>DNSChaos</code>로 재현), <strong>디스크 가득 참</strong>(M18의 볼륨 확장이 그때 필요해진다).</p>
   <p>공통점이 있다. <strong>앞의 모듈에서 만든 것을 시험한다</strong>는 것이다. 카오스 실험은 새로운 것을 찾는 도구가 아니라 <strong>이미 넣은 안전장치를 확인하는 도구</strong>다.</p>
 </section>
 
@@ -766,10 +752,10 @@ kubectl -n journal get deploy journal-api \
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   182 
   <p>이 모듈의 부하 생성기는 <strong>측정 도구지 부하 도구가 아니다.</strong> 초당 170건을 보내며 응답 코드를 세는 것이 전부이고, 목표 RPS를 정하거나 분위수를 보거나 시나리오를 나누지 못한다.</p>
   <p>M37에서 k6로 제대로 된 부하 시험을 만든다. 목표 RPS를 계단식으로 올리며 <strong>어디서 무너지는지</strong>를 찾고, M20의 히스토그램과 k6가 각각 재는 지연이 <strong>왜 다른지</strong>를 확인한다. 그리고 이 모듈의 카오스와 겹쳐서 <strong>부하가 있는 상태의 장애</strong>를 본다.</p>
-  <h3>참고 (2026-09-06 접근 확인)</h3>
+   183 
   <ul>
     <li>Chaos Mesh: https://chaos-mesh.org/docs/</li>
     <li>PodChaos: https://chaos-mesh.org/docs/simulate-pod-chaos-on-kubernetes/</li>

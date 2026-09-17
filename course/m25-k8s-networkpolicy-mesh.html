@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 241  242  243 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 25 / 38 · PART 5 보안과 정책</div>
-  <h1>네트워크 정책과 서비스 메시</h1>
-  <p class="ch-desc">M24까지 온 클러스터에서 <code>apps</code> 네임스페이스의 파드는 <code>journal</code>의 레디스에 지금 붙을 수 있다. 비밀번호만 알면 데이터를 읽는다. 이 모듈에서 그것을 먼저 확인하고, <strong>정책 하나로 전부 끊은 다음</strong> 필요한 경로만 다시 연다. 마지막에 네트워크 정책이 <strong>볼 수 없는 것</strong>을 측정해서, 서비스 메시가 무엇을 채우는지를 말이 아니라 숫자로 확인한다.</p>
+   200 
+  <p class="ch-desc">M24까지 온 클러스터에서  30  네임스페이스의 파드는  31 의 레디스에 지금 붙을 수 있다. 비밀번호만 알면 데이터를 읽는다. 이 모듈에서 그것을 먼저 확인하고, <strong>정책 하나로 전부 끊은 다음</strong> 필요한 경로만 다시 연다. 마지막에 네트워크 정책이 <strong>볼 수 없는 것</strong>을 측정해서, 서비스 메시가 무엇을 채우는지를 말이 아니라 숫자로 확인한다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">95분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0 · kindnetd v20260820-69b56db7) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0 · kindnetd v20260820-69b56db7) · 버전 숫자는 실습 당일  32 으로 다시 확인한다
   </div>
 </header>
 
@@ -175,27 +175,27 @@
 <div class="tldr">
   <h2>핵심 3줄</h2>
   <p>1. 네임스페이스 경계가 네트워크를 나누지 않는다는 것을 측정으로 확인하고, <code>default-deny</code> 하나로 전부 끊었다가 필요한 다섯 경로만 연다.</p>
-  <p>2. 이그레스 정책에서 DNS를 빠뜨렸을 때의 증상을 재현한다 — <strong>지금 도는 요청은 멀쩡하고 몇 시간 뒤 재시작할 때 죽는다</strong>는 것이 이 사고의 본질이다.</p>
+  <p>2. 이그레스 정책에서 <dfn class="term">DNS <span class="en">(Domain Name System · 이름을 IP 주소로 바꿔 주는 체계)</span></dfn>를 빠뜨렸을 때의 증상을 재현한다 — <strong>지금 도는 요청은 멀쩡하고 몇 시간 뒤 재시작할 때 죽는다</strong>는 것이 이 사고의 본질이다.</p>
   <p>3. 정책이 <strong>경로도 신원도 보지 못한다</strong>는 것을 <code>/metrics</code>가 200으로 뚫리는 것으로 확인하고, 거기서부터 메시를 쓸지 판단한다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">25.1</span>지금은 누구나 레디스에 붙을 수 있다</a>
-  <a href="#s2"><span class="num">25.2</span>이론 — 허용만 있고 거부는 없다</a>
-  <a href="#s3"><span class="num">25.3</span>따라하기 ① 막히지 않는다는 것을 측정한다</a>
-  <a href="#s4"><span class="num">25.4</span>따라하기 ② 전부 끊는다</a>
-  <a href="#s5"><span class="num">25.5</span>따라하기 ③ 다섯 경로만 연다</a>
-  <a href="#s6"><span class="num">25.6</span>따라하기 ④ 정책이 보지 못하는 것</a>
-  <a href="#s7"><span class="num">25.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">25.8</span>운영 관점 — 메시를 쓸 것인가</a>
-  <a href="#s9"><span class="num">25.9</span>체크포인트와 정리</a>
+   247 
+   248 
+   249 
+   250 
+   251 
+   252 
+   253 
+   254 
+   255 
 </nav>
 
 <section id="s1">
   <h2 class="sec"><span class="num">25.1</span>지금은 누구나 레디스에 붙을 수 있다</h2>
-  <p class="lead">M23은 API 서버를 통해 무엇을 할 수 있는지를 제한했고, M24는 파드 안에서 무엇을 할 수 있는지를 제한했다. 둘 다 <strong>파드가 다른 파드와 어떤 대화를 할 수 있는지</strong>는 건드리지 않았다.</p>
-  <p>쿠버네티스의 기본 네트워크 모델은 명시적으로 <strong>모든 파드가 NAT 없이 모든 파드와 통신할 수 있다</strong>이다. 이것은 버그가 아니라 설계다. 서비스 디스커버리와 라우팅을 단순하게 만들려고 평평한 주소 공간을 택했고, 격리는 별도의 기능으로 빼 뒀다. 그래서 네임스페이스를 나누는 것은 이름을 나누는 것이고, 쿼터를 나누는 것이고(M17), RBAC의 범위를 나누는 것이지만(M23), <strong>네트워크를 나누는 것은 아니다.</strong></p>
-  <p>지금 이 클러스터에서 그 결과는 구체적이다. <code>apps</code>에서 도는 <code>order-api</code> 옆에 파드 하나를 띄우면 <code>journal</code>의 레디스에 TCP로 붙는다. M14에서 넣은 레디스 비밀번호가 유일한 방어선이고, 그 비밀번호는 시크릿에 들어 있으며 시크릿은 <strong>같은 네임스페이스의 파드가 읽는다.</strong> 침해가 한 네임스페이스에서 시작해도 옆으로 번지는 경로가 열려 있다는 뜻이다.</p>
+  <p class="lead">M23은 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 서버를 통해 무엇을 할 수 있는지를 제한했고, M24는 파드 안에서 무엇을 할 수 있는지를 제한했다. 둘 다 <strong>파드가 다른 파드와 어떤 대화를 할 수 있는지</strong>는 건드리지 않았다.</p>
+  <p>쿠버네티스의 기본 네트워크 모델은 명시적으로 <strong>모든 파드가 <dfn class="term">NAT <span class="en">(Network Address Translation · 패킷의 주소를 바꿔 주는 것)</span></dfn> 없이 모든 파드와 통신할 수 있다</strong>이다. 이것은 버그가 아니라 설계다. 서비스 디스커버리와 라우팅을 단순하게 만들려고 평평한 주소 공간을 택했고, 격리는 별도의 기능으로 빼 뒀다. 그래서 네임스페이스를 나누는 것은 이름을 나누는 것이고, 쿼터를 나누는 것이고(M17), <dfn class="term">RBAC <span class="en">(Role-Based Access Control · 역할로 권한을 주는 인가 방식)</span></dfn>의 범위를 나누는 것이지만(M23), <strong>네트워크를 나누는 것은 아니다.</strong></p>
+  <p>지금 이 클러스터에서 그 결과는 구체적이다. <code>apps</code>에서 도는 <code>order-api</code> 옆에 파드 하나를 띄우면 <code>journal</code>의 레디스에 <dfn class="term">TCP <span class="en">(Transmission Control Protocol · 연결을 맺고 순서를 보장하는 전송 규약)</span></dfn>로 붙는다. M14에서 넣은 레디스 비밀번호가 유일한 방어선이고, 그 비밀번호는 시크릿에 들어 있으며 시크릿은 <strong>같은 네임스페이스의 파드가 읽는다.</strong> 침해가 한 네임스페이스에서 시작해도 옆으로 번지는 경로가 열려 있다는 뜻이다.</p>
   <p>이 모듈은 그 경로를 닫는다. 그리고 닫는 과정에서 배우는 것은 문법이 아니라 <strong>순서</strong>다 — 먼저 전부 끊고, 무엇이 깨지는지 보고, 깨진 것만 다시 연다. 반대로 하면 무엇이 열려 있는지 영원히 모른다.</p>
 </section>
 
@@ -208,7 +208,7 @@
   <p>여기서 두 가지가 따라 나온다. 첫째, 정책이 하나도 붙지 않은 파드는 전부 열려 있다 — 옆 파드에 정책을 걸어도 그 파드는 그대로다. 둘째, 정책 여러 개를 붙이면 서로 <strong>합쳐질 뿐 서로를 좁히지 못한다.</strong> 넓게 여는 정책 하나가 뒤에 있으면 앞의 좁은 정책은 의미가 없다. 그래서 정책을 추가할 때는 "이걸 더하면 무엇이 더 열리는가"만 생각하면 되고, 반대로 <strong>무언가를 막고 싶으면 정책을 추가하는 게 아니라 허용을 지워야 한다.</strong></p>
 
   <h3>selector 두 개를 붙이는 자리가 의미를 바꾼다</h3>
-  <p><code>from</code>과 <code>to</code>는 목록이다. 목록의 <strong>항목끼리는 OR</strong>이고, <strong>한 항목 안의 selector끼리는 AND</strong>다. YAML에서 이 둘의 차이는 하이픈 하나뿐이다.</p>
+  <p><code>from</code>과 <code>to</code>는 목록이다. 목록의 <strong>항목끼리는 OR</strong>이고, <strong>한 항목 안의 selector끼리는 AND</strong>다. <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>에서 이 둘의 차이는 하이픈 하나뿐이다.</p>
 <pre><code># AND — ingress-nginx 네임스페이스에 있으면서 그 라벨을 가진 파드
 from:
   - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
@@ -222,10 +222,10 @@ from:
   <p><code>namespaceSelector</code>가 없이 <code>podSelector</code>만 쓰면 <strong>정책이 있는 네임스페이스 안에서만</strong> 찾는다. 다른 네임스페이스의 파드를 허용하려면 <code>namespaceSelector</code>가 반드시 있어야 한다. 네임스페이스에 라벨을 따로 붙이지 않았어도 쿠버네티스가 <code>kubernetes.io/metadata.name</code>을 자동으로 넣어 주므로 이름으로 고를 수 있다.</p>
 
   <h3>이그레스는 DNS부터 생각한다</h3>
-  <p>인그레스 정책은 잘못 써도 그 서비스만 죽는다. 이그레스 정책은 잘못 쓰면 <strong>이름 해석이 죽어서 전부 죽는다.</strong> 파드가 <code>redis-0.redis</code>를 부르려면 먼저 <code>kube-system</code>의 CoreDNS에 UDP/TCP 53으로 나가야 하는데, 이 경로를 열어 두지 않은 이그레스 정책은 그 파드의 모든 이름 기반 통신을 끊는다. 이그레스를 쓰는 클러스터에서 <code>allow-dns</code>는 사실상 필수 항목이고, 대개 <code>podSelector: {}</code>로 네임스페이스 전체에 건다.</p>
+  <p>인그레스 정책은 잘못 써도 그 서비스만 죽는다. 이그레스 정책은 잘못 쓰면 <strong>이름 해석이 죽어서 전부 죽는다.</strong> 파드가 <code>redis-0.redis</code>를 부르려면 먼저 <code>kube-system</code>의 CoreDNS에 <dfn class="term">UDP <span class="en">(User Datagram Protocol · 연결 없이 보내는 전송 규약)</span></dfn>/TCP 53으로 나가야 하는데, 이 경로를 열어 두지 않은 이그레스 정책은 그 파드의 모든 이름 기반 통신을 끊는다. 이그레스를 쓰는 클러스터에서 <code>allow-dns</code>는 사실상 필수 항목이고, 대개 <code>podSelector: {}</code>로 네임스페이스 전체에 건다.</p>
 
   <h3>집행하는 것은 쿠버네티스가 아니라 CNI다</h3>
-  <p>API 서버는 NetworkPolicy 오브젝트를 저장할 뿐이다. 실제로 패킷을 떨어뜨리는 것은 CNI 플러그인이고, <strong>집행하지 않는 CNI에서는 정책이 만들어지기만 하고 아무것도 막지 않는다.</strong> 오류도 경고도 없다 — <code>kubectl get netpol</code>에 줄이 보이니까 되고 있다고 착각하기 딱 좋다. 그래서 이 모듈의 첫 명령은 정책 작성이 아니라 <strong>CNI 확인</strong>이다. 이 교재의 kind 클러스터는 kindnet을 쓰고, 지금 버전의 kindnet은 정책을 집행한다.</p>
+  <p>API 서버는 NetworkPolicy 오브젝트를 저장할 뿐이다. 실제로 패킷을 떨어뜨리는 것은 <dfn class="term">CNI <span class="en">(Container Network Interface · 파드에 네트워크를 붙이는 플러그인 규약)</span></dfn> 플러그인이고, <strong>집행하지 않는 CNI에서는 정책이 만들어지기만 하고 아무것도 막지 않는다.</strong> 오류도 경고도 없다 — <code>kubectl get netpol</code>에 줄이 보이니까 되고 있다고 착각하기 딱 좋다. 그래서 이 모듈의 첫 명령은 정책 작성이 아니라 <strong>CNI 확인</strong>이다. 이 교재의 kind 클러스터는 kindnet을 쓰고, 지금 버전의 kindnet은 정책을 집행한다.</p>
 
   <figure>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
@@ -237,23 +237,7 @@ from:
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">정책이 붙는 순간 그 파드는 화이트리스트로 바뀐다</text>
@@ -308,7 +292,7 @@ from:
   </figure>
 
   <h3>정책이 보는 것은 IP와 포트뿐이다</h3>
-  <p>selector에 <code>app: journal-api</code>라고 쓰지만 CNI가 판정에 쓰는 것은 라벨이 아니라 <strong>그 라벨이 붙은 파드의 IP</strong>다. 컨트롤 플레인이 라벨을 IP 목록으로 번역해 각 노드에 내려 주고, 노드는 패킷의 출발지 IP를 그 목록과 대조한다. 결과적으로 정책은 <strong>출발지가 어디인지(위치)</strong>는 판정하지만 <strong>호출자가 누구인지(신원)</strong>는 증명하지 못하고, HTTP 경로·메서드·헤더는 아예 보이지 않는다. 이 두 칸이 서비스 메시가 채우는 자리다. 25.6에서 그 두 칸이 실제로 비어 있는 것을 확인한 뒤 25.8에서 값을 매긴다.</p>
+  <p>selector에 <code>app: journal-api</code>라고 쓰지만 CNI가 판정에 쓰는 것은 라벨이 아니라 <strong>그 라벨이 붙은 파드의 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn></strong>다. 컨트롤 플레인이 라벨을 IP 목록으로 번역해 각 노드에 내려 주고, 노드는 패킷의 출발지 IP를 그 목록과 대조한다. 결과적으로 정책은 <strong>출발지가 어디인지(위치)</strong>는 판정하지만 <strong>호출자가 누구인지(신원)</strong>는 증명하지 못하고, <dfn class="term">HTTP <span class="en">(HyperText Transfer Protocol · 웹 요청·응답 규약)</span></dfn> 경로·메서드·헤더는 아예 보이지 않는다. 이 두 칸이 서비스 메시가 채우는 자리다. 25.6에서 그 두 칸이 실제로 비어 있는 것을 확인한 뒤 25.8에서 값을 매긴다.</p>
 </section>
 
 <section id="s3">
@@ -728,7 +712,7 @@ kubectl -n ingress-nginx exec l7probe -- \
     <div class="out"><code>인그레스 /api/entries -> 200
 l7probe -> journal-api: 200</code></div>
     <div class="verdict"><span class="lbl">판정</span>서비스는 200이다. <strong>스모크 테스트만 보면 아무 문제가 없다.</strong> 그런데 아까 막혔던 <code>l7probe</code>가 200으로 바뀌었다 — 네임스페이스 전체가 조용히 다시 열렸다. 두 항목이 되면서 OR이 됐고, 두 번째 항목의 <code>podSelector</code>는 <code>journal</code> 네임스페이스에서 그 라벨을 찾으므로 아무것도 고르지 못해 무해하게 무시된다.</div>
-    <p>정책 변경을 검증할 때 <strong>"열려야 할 것이 열렸는가"만 보면 안 된다.</strong> "닫혀야 할 것이 닫혀 있는가"를 같은 스크립트에 넣어야 이런 변경이 CI에서 잡힌다. M29에서 이 두 줄을 파이프라인에 넣는다.</p>
+    <p>정책 변경을 검증할 때 <strong>"열려야 할 것이 열렸는가"만 보면 안 된다.</strong> "닫혀야 할 것이 닫혀 있는가"를 같은 스크립트에 넣어야 이런 변경이 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서 잡힌다. M29에서 이 두 줄을 파이프라인에 넣는다.</p>
     <p>되돌린다.</p>
 <pre><code>kubectl apply -f course/labs/k8s/netpol/10-allow.yaml
 kubectl -n ingress-nginx exec l7probe -- \
@@ -746,7 +730,7 @@ l7probe -> journal-api: 000</code></div>
   <p>25.6에서 확인한 두 칸(경로·신원)은 메시가 채운다. 그런데 그 대가가 무엇인지를 먼저 세는 것이 순서다.</p>
 
   <h3>사이드카 방식의 비용</h3>
-  <p>고전적인 메시는 파드마다 프록시 컨테이너를 하나씩 더 넣는다. 이 클러스터를 예로 들면 <code>journal-api</code> 3개 + <code>web-static</code> + <code>redis</code> + <code>order-api</code>에 프록시가 붙으므로 <strong>컨테이너 수가 두 배</strong>가 되고, 프록시 하나가 대략 수십 MiB의 메모리와 얼마간의 CPU를 상시 점유한다. M16에서 requests/limits를 잡을 때 앱만 계산했다면 그 계산을 전부 다시 해야 한다. 지연도 공짜가 아니다 — 요청 하나가 프록시를 두 번(보내는 쪽, 받는 쪽) 통과하므로 P99에 밀리초 단위가 더해진다.</p>
+  <p>고전적인 메시는 파드마다 프록시 컨테이너를 하나씩 더 넣는다. 이 클러스터를 예로 들면 <code>journal-api</code> 3개 + <code>web-static</code> + <code>redis</code> + <code>order-api</code>에 프록시가 붙으므로 <strong>컨테이너 수가 두 배</strong>가 되고, 프록시 하나가 대략 수십 <dfn class="term">MiB <span class="en">(Mebibyte · 2의 20제곱 바이트)</span></dfn>의 메모리와 얼마간의 <dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>를 상시 점유한다. M16에서 requests/limits를 잡을 때 앱만 계산했다면 그 계산을 전부 다시 해야 한다. 지연도 공짜가 아니다 — 요청 하나가 프록시를 두 번(보내는 쪽, 받는 쪽) 통과하므로 P99에 밀리초 단위가 더해진다.</p>
   <p>더 큰 비용은 <strong>디버깅 경로가 하나 늘어난다</strong>는 것이다. 지금까지 "요청이 안 간다"의 용의자는 서비스·엔드포인트·정책이었는데, 메시를 넣으면 프록시 설정과 인증서 만료가 추가된다. M22에서 만든 로그 파이프라인에도 프록시 로그가 섞여 들어온다.</p>
 
   <h3>앰비언트 방식이 바꾼 것</h3>
@@ -812,10 +796,10 @@ kubectl get po -A --no-headers | grep -E '(netprobe|l7probe)' || echo "없음"</
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>지금까지 만든 규칙은 전부 <strong>이미 만들어진 리소스</strong>에 대한 것이었다. PSA는 파드 스펙을 보고 거부했고, 네트워크 정책은 패킷을 떨어뜨렸다. 그런데 "이미지에 <code>latest</code> 태그를 쓰지 마라", "모든 디플로이먼트에 <code>resources</code>를 적어라" 같은 조직 규칙은 어디에도 걸 곳이 없다 — 지금은 리뷰에서 사람이 잡는 수밖에 없다.</p>
-  <p>M26에서 <code>ValidatingAdmissionPolicy</code>로 그 규칙을 클러스터에 심는다. CEL 표현식 한 줄로 <code>latest</code> 태그를 거부하고, <code>warn</code>에서 <code>enforce</code>로 승격하는 순서를 밟는다. 이미 배포된 위반 리소스를 감사로 찾아내는 방법도 함께 본다 — 정책을 새로 만들 때 항상 뒤따르는 질문이다.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+   238 
+  <p>지금까지 만든 규칙은 전부 <strong>이미 만들어진 리소스</strong>에 대한 것이었다. PSA는 파드 스펙을 보고 거부했고, 네트워크 정책은 패킷을 떨어뜨렸다. 그런데 "이미지에  191  태그를 쓰지 마라", "모든 디플로이먼트에  192 를 적어라" 같은 조직 규칙은 어디에도 걸 곳이 없다 — 지금은 리뷰에서 사람이 잡는 수밖에 없다.</p>
+  <p>M26에서  193 로 그 규칙을 클러스터에 심는다. CEL 표현식 한 줄로  194  태그를 거부하고,  195 에서  196 로 승격하는 순서를 밟는다. 이미 배포된 위반 리소스를 감사로 찾아내는 방법도 함께 본다 — 정책을 새로 만들 때 항상 뒤따르는 질문이다.</p>
+   239 
   <ul>
     <li>네트워크 정책: https://kubernetes.io/docs/concepts/services-networking/network-policies/</li>
     <li>네트워크 정책 레시피: https://github.com/ahmetb/kubernetes-network-policy-recipes</li>

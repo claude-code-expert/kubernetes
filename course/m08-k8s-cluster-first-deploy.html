@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 234  235  236 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 08 / 38 · PART 2 쿠버네티스 코어</div>
-  <h1>클러스터 구조와 첫 배포</h1>
+   211 
   <p class="ch-desc">Compose에서는 컨테이너가 죽으면 도커가 같은 자리에 다시 띄웠다. 쿠버네티스는 다르다 — 파드를 지우면 <strong>다른 파드가</strong> 생긴다. 이 한 문장의 차이가 선언형 시스템의 전부이고, 이 모듈에서 그것을 눈으로 확인한다.</p>
   <div class="meta">
     <span class="tag">초반→중반</span><span class="tag">60분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 · kind 3노드 클러스터 · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 · kind 3노드 클러스터 · 버전 숫자는 실습 당일  22 으로 다시 확인한다
   </div>
 </header>
 
@@ -175,19 +175,19 @@
 <div class="tldr">
   <h2>핵심 3줄</h2>
   <p>1. 모든 명령은 <strong>apiserver</strong>로 가고, 상태는 etcd에 적히며, 컨트롤러가 그 상태에 현실을 맞춘다. <code>kubectl</code>은 그 흐름의 입력 도구일 뿐이다.</p>
-  <p>2. 파드를 지워도 개수는 유지된다. 되살아나는 것이 아니라 <strong>새로 만들어진다</strong> — 이름도 IP도 다르다.</p>
+  <p>2. 파드를 지워도 개수는 유지된다. 되살아나는 것이 아니라 <strong>새로 만들어진다</strong> — 이름도 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>도 다르다.</p>
   <p>3. <code>describe</code>의 <code>Events</code>가 1차 진단 도구다. 무엇이 언제 왜 일어났는지 시간순으로 적혀 있다.</p>
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">8.1</span>왜 Compose로는 안 되는가</a>
-  <a href="#s2"><span class="num">8.2</span>이론 — 명령 하나가 지나가는 길</a>
-  <a href="#s3"><span class="num">8.3</span>따라하기 ① 첫 배포</a>
-  <a href="#s4"><span class="num">8.4</span>따라하기 ② 들여다보기</a>
-  <a href="#s5"><span class="num">8.5</span>따라하기 ③ 죽여보기</a>
-  <a href="#s6"><span class="num">8.6</span>일부러 실패시키기</a>
-  <a href="#s7"><span class="num">8.7</span>운영 관점 — 명령형에서 선언형으로</a>
-  <a href="#s8"><span class="num">8.8</span>체크포인트와 정리</a>
+   239 
+   240 
+   241 
+   242 
+   243 
+   244 
+   245 
+   246 
 </nav>
 
 <section id="s1">
@@ -207,15 +207,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-      <style>
-        .b { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .acc { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .t { font-size:13px; font-weight:600; fill:#111111; }
-        .s { font-size:11px; fill:#555555; }
-        .n { font-size:11.5px; font-weight:700; fill:#2456c4; }
-        .l { stroke:#444444; stroke-width:1.2; fill:none; }
-        .d { stroke:#999999; stroke-width:1; fill:none; stroke-dasharray:4 3; }
-      </style>
+       1 
       <rect class="acc" x="20" y="130" width="120" height="58" rx="4"/>
       <text class="t" x="80" y="154" text-anchor="middle">kubectl</text>
       <text class="s" x="80" y="172" text-anchor="middle">사용자</text>
@@ -567,7 +559,7 @@ default     web-587bcb4dcb-zpgcp   1/1     Running   0          67s</code></div>
   strategy:
     rollingUpdate:</code></div>
   <p>내가 지정하지 않은 필드가 잔뜩 채워져 있다. apiserver가 기본값을 적용한 결과이며, 여기에 <code>status</code>와 <code>managedFields</code>까지 붙어 실제 출력은 수십 줄이다. 이것을 그대로 파일로 저장하면 안 된다 — 클러스터 고유의 값(<code>uid</code>, <code>resourceVersion</code>, <code>creationTimestamp</code>)이 섞여 다른 클러스터에서 적용되지 않는다.</p>
-  <p>M09부터는 매니페스트를 손으로 쓴다(M09의 파드 YAML, M10의 <code>labs/k8s/m10-journal-deployment.yaml</code>). 그 파일들은 이 과정이 미리 써 두었으므로 여기서 만든 것을 저장할 필요는 없다. 다만 빈 화면에서 뼈대가 필요할 때 쓰는 방법 하나는 지금 알아둔다.</p>
+  <p>M09부터는 매니페스트를 손으로 쓴다(M09의 파드 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn>, M10의 <code>labs/k8s/m10-journal-deployment.yaml</code>). 그 파일들은 이 과정이 미리 써 두었으므로 여기서 만든 것을 저장할 필요는 없다. 다만 빈 화면에서 뼈대가 필요할 때 쓰는 방법 하나는 지금 알아둔다.</p>
 <pre><code># 실제로 만들지 않고 YAML만 화면에 출력한다
 kubectl create deployment web --image=nginx:1.29-alpine --replicas=3 \
   --dry-run=client -o yaml</code></pre>
@@ -597,7 +589,7 @@ status: {}</code></div>
   <p>위의 <code>kubectl get -o yaml</code> 출력과 비교하면 클러스터 고유의 값이 하나도 없다. M10의 매니페스트는 이 뼈대에 <code>strategy</code>와 <code>readinessProbe</code>를 채운 것이다. 비어 있는 <code>strategy: {}</code>, <code>resources: {}</code>, <code>status: {}</code>는 지워도 되고 두어도 된다.</p>
   <ul class="tight">
     <li><code>--dry-run=client</code> — 클라이언트에서만 처리하고 서버에 보내지 않는다. 뼈대 생성용</li>
-    <li><code>--dry-run=server</code> — 서버로 보내되 저장하지 않는다. <strong>어드미션 검증까지 통과하는지</strong> 확인할 수 있어 CI에서 매니페스트를 검사할 때 쓴다(M29)</li>
+    <li><code>--dry-run=server</code> — 서버로 보내되 저장하지 않는다. <strong>어드미션 검증까지 통과하는지</strong> 확인할 수 있어 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에서 매니페스트를 검사할 때 쓴다(M29)</li>
   </ul>
 </section>
 
@@ -632,9 +624,9 @@ kubectl delete deploy web</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
-  <p>지금은 명령 한 줄로 배포했고, 파드 안에 무엇이 들어가는지는 보지 않았다. M09에서 파드 YAML을 직접 쓴다 — 컨테이너 두 개를 한 파드에 넣어 <code>localhost</code>로 통신시키고, init 컨테이너로 순서를 강제하고, 레이블 오타로 셀렉터가 아무것도 못 잡는 상황을 재현한다.</p>
-  <h3>참고 (2026-09-03 접근 확인)</h3>
+   231 
+  <p>지금은 명령 한 줄로 배포했고, 파드 안에 무엇이 들어가는지는 보지 않았다. M09에서 파드 YAML을 직접 쓴다 — 컨테이너 두 개를 한 파드에 넣어  203 로 통신시키고, init 컨테이너로 순서를 강제하고, 레이블 오타로 셀렉터가 아무것도 못 잡는 상황을 재현한다.</p>
+   232 
   <ul>
     <li>쿠버네티스 컴포넌트: https://kubernetes.io/docs/concepts/overview/components/</li>
     <li>디플로이먼트: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/</li>

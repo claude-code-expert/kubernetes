@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
+  <nav class="cb-rail"> 224  225  226 </nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 23 / 38 · PART 5 보안과 정책</div>
-  <h1>RBAC과 인가</h1>
-  <p class="ch-desc">M01부터 M22까지 우리는 이 클러스터에서 <strong>무엇이든 할 수 있었다</strong>. 네임스페이스를 지우고, 노드의 정적 파드 매니페스트를 고치고, 시크릿을 <code>base64 -d</code>로 열어 봤다. 실제 클러스터에서 그런 권한을 가진 사람은 극소수다. 이 모듈에서 권한을 실제로 좁히고, <strong>권한 밖의 명령이 어떻게 거부되는지</strong>를 메시지로 확인한다.</p>
+   192 
+  <p class="ch-desc">M01부터 M22까지 우리는 이 클러스터에서 <strong>무엇이든 할 수 있었다</strong>. 네임스페이스를 지우고, 노드의 정적 파드 매니페스트를 고치고, 시크릿을  27 로 열어 봤다. 실제 클러스터에서 그런 권한을 가진 사람은 극소수다. 이 모듈에서 권한을 실제로 좁히고, <strong>권한 밖의 명령이 어떻게 거부되는지</strong>를 메시지로 확인한다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">80분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일  28 으로 다시 확인한다
   </div>
 </header>
 
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-  <a href="#s1"><span class="num">23.1</span>우리는 지금까지 무엇이든 할 수 있었다</a>
-  <a href="#s2"><span class="num">23.2</span>이론 — 네 조각과 요청의 경로</a>
-  <a href="#s3"><span class="num">23.3</span>따라하기 ① 개발자 계정을 만든다</a>
-  <a href="#s4"><span class="num">23.4</span>따라하기 ② 거부당해 본다</a>
-  <a href="#s5"><span class="num">23.5</span>따라하기 ③ 치기 전에 물어본다</a>
-  <a href="#s6"><span class="num">23.6</span>따라하기 ④ 집약 ClusterRole</a>
-  <a href="#s7"><span class="num">23.7</span>일부러 실패시키기</a>
-  <a href="#s8"><span class="num">23.8</span>운영 관점 — 최소 권한을 실제로 지키려면</a>
-  <a href="#s9"><span class="num">23.9</span>체크포인트와 정리</a>
+   228 
+   229 
+   230 
+   231 
+   232 
+   233 
+   234 
+   235 
+   236 
 </nav>
 
 <section id="s1">
@@ -197,7 +197,7 @@
 <pre><code>kubectl auth can-i '*' '*' --all-namespaces</code></pre>
   <span class="out-lbl">출력</span>
   <div class="out"><code>yes</code></div>
-  <p>실무에서 이 권한을 가진 사람은 클러스터 운영자 몇 명이다. 애플리케이션 개발자는 자기 네임스페이스에서 파드를 보고 로그를 읽고 배포를 굴리는 정도이고, CI 파이프라인은 그보다 더 좁다 — 특정 디플로이먼트의 이미지만 바꿀 수 있으면 된다.</p>
+  <p>실무에서 이 권한을 가진 사람은 클러스터 운영자 몇 명이다. 애플리케이션 개발자는 자기 네임스페이스에서 파드를 보고 로그를 읽고 배포를 굴리는 정도이고, <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn> 파이프라인은 그보다 더 좁다 — 특정 디플로이먼트의 이미지만 바꿀 수 있으면 된다.</p>
   <p>권한을 좁히는 것이 번거로워 보이지만, 좁히지 않으면 <strong>실수 하나가 클러스터 전체에 닿는다.</strong> 잘못된 네임스페이스에 <code>delete</code>를 치거나, CI 토큰이 유출됐을 때 그 토큰으로 할 수 있는 일이 전부이거나. 이 모듈에서 만드는 것은 그 경계다.</p>
 </section>
 
@@ -230,23 +230,7 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-      <style>
-        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
-        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
-        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
-        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
-        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
-        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
-        .t-h { font-size:13px; font-weight:700; fill:#333333; }
-        .t-title { font-size:13px; font-weight:600; fill:#111111; }
-        .t-sub { font-size:11px; fill:#555555; }
-        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
-        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
-        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
-        .line { stroke:#444444; stroke-width:1.2; fill:none; }
-        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
-      </style>
+       1 
 
       <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
       <text class="t-h" x="40" y="46">권한의 정의와 범위는 따로 정해진다</text>
@@ -376,7 +360,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io</code></pre>
     <table>
       <tr><th>선택</th><th>이유</th></tr>
-      <tr><td><code>apiGroups: [""]</code></td><td>빈 문자열이 <strong>핵심 API 그룹</strong>이다. 파드·서비스·컨피그맵이 여기 있다</td></tr>
+      <tr><td><code>apiGroups: [""]</code></td><td>빈 문자열이 <strong>핵심 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 그룹</strong>이다. 파드·서비스·컨피그맵이 여기 있다</td></tr>
       <tr><td><code>pods/log</code></td><td>서브리소스다. <code>pods</code>를 읽을 수 있어도 로그는 별도 권한이 필요하다</td></tr>
       <tr><td><code>deployments/scale</code></td><td><code>kubectl scale</code>이 쓰는 서브리소스. 이것만 주면 <strong>파드 수만</strong> 바꿀 수 있다</td></tr>
       <tr><td><code>delete</code>가 없다</td><td>파드를 직접 지울 수 없다. 롤아웃으로 교체하게 만든다</td></tr>
@@ -577,7 +561,7 @@ kubectl get clusterrole study-viewer \
     <div class="out"><code>  ["monitoring.coreos.com"] ["servicemonitors","prometheusrules"] ["get","list","watch"]
   ["apps"] ["deployments","statefulsets","daemonsets"] ["get","list","watch"]</code></div>
     <div class="verdict"><span class="lbl">판정</span>우리가 <code>rules: []</code>로 비워 둔 <code>study-viewer</code>에 두 벌의 규칙이 들어와 있다. 컨트롤러가 라벨이 맞는 ClusterRole을 찾아 합친 것이다. 이후 관측 팀이 자기 ClusterRole만 고치면 상위 역할이 자동으로 따라간다.</div>
-    <p>쿠버네티스가 기본으로 만드는 <code>view</code>·<code>edit</code>·<code>admin</code>도 같은 방식으로 되어 있다. CRD를 설치하는 오퍼레이터들이 <code>rbac.authorization.k8s.io/aggregate-to-view: "true"</code> 라벨이 붙은 ClusterRole을 함께 넣는 것이 그래서다.</p>
+    <p>쿠버네티스가 기본으로 만드는 <code>view</code>·<code>edit</code>·<code>admin</code>도 같은 방식으로 되어 있다. <dfn class="term">CRD <span class="en">(Custom Resource Definition · 쿠버네티스 API 를 확장해 만든 리소스 타입)</span></dfn>를 설치하는 오퍼레이터들이 <code>rbac.authorization.k8s.io/aggregate-to-view: "true"</code> 라벨이 붙은 ClusterRole을 함께 넣는 것이 그래서다.</p>
   </div>
 
   <div class="step">
@@ -697,7 +681,7 @@ for b in ca:
   <p>마지막이 특히 위험하다. <code>system:authenticated</code>는 <strong>토큰을 가진 모두</strong>이므로, 여기에 시크릿 읽기를 주면 클러스터의 모든 파드가 모든 시크릿을 읽을 수 있게 된다.</p>
 
   <h3>사람과 워크로드는 인증 방식이 다르다</h3>
-  <p>이 모듈은 서비스어카운트를 썼다. 쿠버네티스에는 <strong>사람 사용자라는 오브젝트가 없다</strong> — 인증서, OIDC, 프록시 헤더 같은 외부 수단으로 신원을 받고 RBAC은 그 이름에 권한을 붙인다. 그래서 실무에서는 사람은 OIDC(사내 SSO)로, 워크로드는 서비스어카운트로 나누고, 사람에게는 그룹 단위로 권한을 준다.</p>
+  <p>이 모듈은 서비스어카운트를 썼다. 쿠버네티스에는 <strong>사람 사용자라는 오브젝트가 없다</strong> — 인증서, <dfn class="term">OIDC <span class="en">(OpenID Connect · 외부 신원 공급자로 로그인시키는 규격)</span></dfn>, 프록시 헤더 같은 외부 수단으로 신원을 받고 RBAC은 그 이름에 권한을 붙인다. 그래서 실무에서는 사람은 OIDC(사내 <dfn class="term">SSO <span class="en">(Single Sign-On · 한 번 로그인으로 여러 서비스를 쓰는 것)</span></dfn>)로, 워크로드는 서비스어카운트로 나누고, 사람에게는 그룹 단위로 권한을 준다.</p>
   <p>파드가 쓰는 서비스어카운트도 점검 대상이다. 지정하지 않으면 <code>default</code> 서비스어카운트가 자동으로 붙고 토큰이 마운트된다. 필요 없으면 꺼야 한다.</p>
 <pre><code># 파드가 API 를 호출하지 않는다면
 spec:
@@ -730,7 +714,7 @@ spec:
   <div class="deliver">
     <span class="lbl">이 모듈이 남기는 파일</span>
     <ul>
-      <li><code>course/labs/k8s/rbac/10-dev-role.yaml</code> — 개발자용 SA·Role·RoleBinding. M29 CI가 이 패턴으로 파이프라인 계정을 만든다</li>
+      <li><code>course/labs/k8s/rbac/10-dev-role.yaml</code> — 개발자용 <dfn class="term">SA <span class="en">(ServiceAccount · 파드가 API 서버에 자기를 밝히는 계정)</span></dfn>·Role·RoleBinding. M29 CI가 이 패턴으로 파이프라인 계정을 만든다</li>
       <li><code>course/labs/k8s/rbac/20-aggregated.yaml</code> — 집약 ClusterRole 예제</li>
       <li><code>course/labs/scripts/make-dev-kubeconfig.sh</code> — 수명 있는 토큰으로 kubeconfig 생성</li>
       <li>클러스터: <code>journal</code> 네임스페이스에 <code>dev</code> 계정과 그 권한. <code>study-viewer</code> 계열 ClusterRole 3개</li>
@@ -758,10 +742,10 @@ kubectl -n journal get sa,role,rolebinding dev --no-headers</code></pre>
 </div>
 
 <footer>
-  <h3>다음 모듈</h3>
+   221 
   <p>RBAC은 <strong>API를 통해 무엇을 할 수 있는가</strong>를 정한다. 그런데 파드가 일단 뜨고 나면 그 안에서 하는 일은 RBAC이 관여하지 않는다 — 루트로 실행하고, 호스트 파일시스템을 마운트하고, 커널 기능을 요구하는 것은 전부 파드 스펙에 적혀 있고 <strong>지금 우리 클러스터는 그것을 다 허용한다.</strong></p>
-  <p>M24에서 파드 시큐리티 어드미션을 켠다. 네임스페이스에 라벨 하나를 붙여 <code>restricted</code> 수준을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>을 먼저 본다. 그다음 <code>securityContext</code>를 채워 통과시킨다 — <code>runAsNonRoot</code>, <code>readOnlyRootFilesystem</code>, <code>drop: ["ALL"]</code>이 각각 무엇을 막는지 확인하면서.</p>
-  <h3>참고 (2026-09-05 접근 확인)</h3>
+  <p>M24에서 파드 시큐리티 어드미션을 켠다. 네임스페이스에 라벨 하나를 붙여  181  수준을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>을 먼저 본다. 그다음  182 를 채워 통과시킨다 —  183 ,  184 ,  185 이 각각 무엇을 막는지 확인하면서.</p>
+   222 
   <ul>
     <li>RBAC 인가: https://kubernetes.io/docs/reference/access-authn-authz/rbac/</li>
     <li>인가 개요와 모듈 순서: https://kubernetes.io/docs/reference/access-authn-authz/authorization/</li>
@@ -770,7 +754,7 @@ kubectl -n journal get sa,role,rolebinding dev --no-headers</code></pre>
     <li>가장(impersonation): https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 4.4 RBAC 기초 · 17.2 인가</li>
   </ul>
-  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · <code>--authorization-mode=Node,RBAC</code></p>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 ·  186 </p>
 </footer>
 
 </div>

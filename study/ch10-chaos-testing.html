@@ -52,6 +52,7 @@ h3{font-size:27px; line-height:1.38; font-weight:700; letter-spacing:-.015em; ma
 h4{font-size:22px; line-height:1.42; font-weight:700; letter-spacing:-.01em; margin:32px 0 10px}
 .why{font-family:var(--mono); font-size:14.5px; color:var(--ac); letter-spacing:.06em; margin-right:10px}
 dfn.term{font-style:normal; font-weight:700; border-bottom:2px solid var(--line); padding-bottom:1px}
+  dfn.term .en{font-weight:500; color:var(--muted); font-size:.92em; border-bottom:0}
 
 /* ── 설정 파일 인용 ───────────────────────────────────── */
 .srcbox{margin:18px 0}
@@ -160,7 +161,7 @@ figcaption b{color:var(--ink)}
 
 <header>
   <div class="docnum">쿠버네티스 관측성</div>
-  <h1>테스팅과 카오스 실험</h1>
+   106 
   <p class="lede">여기까지 만든 관측 체계가 쓸모 있는지 확인하는 유일한 방법은 이상을 <em>일부러 만들어 보는</em> 것이다. 가설을 먼저 쓰고 실험을 나중에 돌린다.</p>
 </header>
 
@@ -183,7 +184,7 @@ figcaption b{color:var(--ink)}
 
 <h3>새 버전이 정상인지 무엇으로 판단하는가</h3>
 
-<p>롤링 업데이트든 블루/그린이든 카나리든 같은 질문에 부딪힌다. 카나리로 트래픽 10% 를 새 버전에 흘렸다면, <strong>그 10% 가 양호한지 판단할 메트릭</strong>이 있어야 다음 단계로 갈 수 있다. 그 메트릭이 02장에서 심고 06장에서 뽑아낸 RED 지표다. <strong>배포 전략은 관측이 없으면 절반만 동작한다.</strong></p>
+<p>롤링 업데이트든 블루/그린이든 카나리든 같은 질문에 부딪힌다. 카나리로 트래픽 10% 를 새 버전에 흘렸다면, <strong>그 10% 가 양호한지 판단할 메트릭</strong>이 있어야 다음 단계로 갈 수 있다. 그 메트릭이 02장에서 심고 06장에서 뽑아낸 <dfn class="term">RED <span class="en">(Rate, Errors, Duration · 애플리케이션을 보는 세 지표)</span></dfn> 지표다. <strong>배포 전략은 관측이 없으면 절반만 동작한다.</strong></p>
 
 <h3>게임 데이 네 단계</h3>
 
@@ -209,7 +210,7 @@ figcaption b{color:var(--ink)}
 
 <blockquote class="warn">
   <span class="label">책과 달라진 것 — 카오스 도구</span>
-  <p>책 5.9.4 는 <code>chaostoolkit</code> 으로 실습한다. Chaos Toolkit 은 0.39.0(2024-04) 이후 릴리스가 없다. 이 실습은 <strong>Chaos Mesh</strong> 를 쓴다 — CNCF 프로젝트이고, 실험을 쿠버네티스 커스텀 리소스로 <strong>선언해 저장소에 남길 수 있다</strong>는 점이 재현성에서 결정적이다.</p>
+  <p>책 5.9.4 는 <code>chaostoolkit</code> 으로 실습한다. Chaos Toolkit 은 0.39.0(2024-04) 이후 릴리스가 없다. 이 실습은 <strong>Chaos Mesh</strong> 를 쓴다 — <dfn class="term">CNCF <span class="en">(Cloud Native Computing Foundation · 쿠버네티스·프로메테우스를 관리하는 재단)</span></dfn> 프로젝트이고, 실험을 쿠버네티스 커스텀 리소스로 <strong>선언해 저장소에 남길 수 있다</strong>는 점이 재현성에서 결정적이다.</p>
 </blockquote>
 
 <h3>용어 정리</h3>
@@ -356,7 +357,7 @@ spec:
 </div>
 
 <blockquote class="ok">
-  <span class="label">가설을 YAML 주석에 적는 이유</span>
+  <span class="label">가설을 <dfn class="term">YAML <span class="en">(YAML Ain't Markup Language · 들여쓰기로 구조를 적는 설정 형식)</span></dfn> 주석에 적는 이유</span>
   <p>실험 파일과 가설이 <strong>같은 파일에 있으면</strong> 저장소에서 함께 리뷰되고 함께 버전 관리된다. 시트만 따로 두면 시간이 지나며 실험 파일과 어긋난다. 파일을 연 사람이 “이 실험이 무엇을 증명하려는 것인가”를 바로 알 수 있다는 것도 이점이다.</p>
 </blockquote>
 
@@ -582,7 +583,7 @@ kubectl delete -f study/labs/apps/chaos/10-podchaos-order-api-kill.yaml</code></
 </table>
 </div>
 
-<p>발화 여부는 화면 말고 API 로도 남긴다. 시트에 붙일 근거가 된다.</p>
+<p>발화 여부는 화면 말고 <dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn> 로도 남긴다. 시트에 붙일 근거가 된다.</p>
 
 <pre><code class="language-bash">curl -s http://localhost:30900/api/v1/alerts \
   | jq '.data.alerts[] | {name:.labels.alertname, state:.state, since:.activeAt}'</code></pre>
@@ -619,7 +620,7 @@ kubectl delete -f study/labs/apps/chaos/10-podchaos-order-api-kill.yaml</code></
 <pre><code class="language-bash">kubectl -n apps scale deploy/order-api --replicas=1
 kubectl apply -f study/labs/apps/chaos/10-podchaos-order-api-kill.yaml</code></pre>
 
-<p>유일한 파드가 죽는 순간 gateway 는 502 를 뱉는다. JVM 기동과 <code>startupProbe</code> 통과까지 수십 초 동안 에러율이 100% 에 머물고 <code>AppHighErrorRate</code> 가 발화한다.</p>
+<p>유일한 파드가 죽는 순간 gateway 는 502 를 뱉는다. <dfn class="term">JVM <span class="en">(Java Virtual Machine · 자바 가상 머신)</span></dfn> 기동과 <code>startupProbe</code> 통과까지 수십 초 동안 에러율이 100% 에 머물고 <code>AppHighErrorRate</code> 가 발화한다.</p>
 
 <blockquote class="ok">
   <span class="label">03장의 설정이 여기서 증명된다</span>
@@ -704,7 +705,7 @@ helm uninstall chaos-mesh -n chaos-mesh    # Chaos Mesh 자체를 내릴 때</co
   <tr><th>주제</th><th>왜 다음인가</th></tr>
   <tr><td>분산 추적 (OpenTelemetry · Tempo)</td><td>메트릭은 “얼마나”, 로그는 “무엇이”를 준다. 추적은 <strong>“요청 하나가 어디서 시간을 썼나”</strong>를 준다</td></tr>
   <tr><td>장기 저장 (Thanos · Mimir)</td><td>09장에서 이름만 나온 원격 쓰기. 보존 기간의 한계를 푼다</td></tr>
-  <tr><td>SLO 와 에러 버짓</td><td>07장의 임계값을 <strong>합의된 목표</strong>로 바꾼다. 알림 개수 문제의 근본 해법이다</td></tr>
+  <tr><td><dfn class="term">SLO <span class="en">(Service Level Objective · 지키기로 정한 서비스 품질 목표)</span></dfn> 와 에러 버짓</td><td>07장의 임계값을 <strong>합의된 목표</strong>로 바꾼다. 알림 개수 문제의 근본 해법이다</td></tr>
   <tr><td>여러 클러스터 관측</td><td>05장에서 “클러스터가 둘 이상이면 별도 설치”라고 한 지점의 다음 단계</td></tr>
 </table>
 </div>
