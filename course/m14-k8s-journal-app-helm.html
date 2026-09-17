@@ -157,7 +157,7 @@
 <header>
   <div class="ch-no">MODULE 14 / 38 · PART 2 쿠버네티스 코어</div>
   <h1>종합 — 저널 애플리케이션과 Helm 파라미터화</h1>
-  <p class="ch-desc">M08부터 만든 조각들이 <code>default</code> 네임스페이스에 흩어져 있다. 이것을 한 디렉터리의 매니페스트 일습으로 다시 쓰고, <code>kubectl apply -k</code> 한 줄로 배포한 뒤, 같은 것을 Helm 차트로 묶어 <strong>dev와 prod를 값 파일만 바꿔</strong> 배포한다.</p>
+  <p class="ch-desc">M08부터 만든 조각들이 <code>default</code> 네임스페이스에 흩어져 있다. 이것을 한 디렉터리의 매니페스트 묶음으로 다시 쓰고, <code>kubectl apply -k</code> 한 줄로 배포한 뒤, 같은 것을 Helm 차트로 묶어 <strong>dev와 prod를 값 파일만 바꿔</strong> 배포한다.</p>
   <div class="meta">
     <span class="tag">초반→중반</span><span class="tag">135분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Helm 4.2.4</span>
     <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전은 실습 당일 다시 확인한다
@@ -185,7 +185,7 @@
 <nav class="toc">
   <a href="#s1"><span class="num">14.1</span>흩어진 것을 한 덩어리로</a>
   <a href="#s2"><span class="num">14.2</span>무엇이 무엇에 의존하는가</a>
-  <a href="#s3"><span class="num">14.3</span>따라하기 ① 일습으로 배포</a>
+  <a href="#s3"><span class="num">14.3</span>따라하기 ① 한 번에 배포</a>
   <a href="#s4"><span class="num">14.4</span>따라하기 ② 상태는 어디에 남는가</a>
   <a href="#s5"><span class="num">14.5</span>따라하기 ③ 같은 것을 Helm 차트로</a>
   <a href="#s6"><span class="num">14.6</span>따라하기 ④ 값으로 환경을 가른다</a>
@@ -303,13 +303,13 @@
 </section>
 
 <section id="s3">
-  <h2 class="sec"><span class="num">14.3</span>따라하기 ① 일습으로 배포</h2>
+  <h2 class="sec"><span class="num">14.3</span>따라하기 ① 한 번에 배포</h2>
 
   <div class="step">
     <h4>1단계. 네임스페이스와 설정을 쓴다</h4>
     <p class="purpose"><span class="lbl">목적</span>앱이 들어갈 자리와 앱이 읽을 값을 먼저 만든다.</p>
 <pre><code># course/labs/k8s/journal/00-namespace.yaml
-# M14 — 저널 애플리케이션 일습은 전용 네임스페이스에 배포한다.
+# M14 — 저널 애플리케이션 전체를 전용 네임스페이스에 배포한다.
 # M08~M13 실습은 default 에 흩어져 있었다. 여기서부터는 한 덩어리로 지우고 다시 만들 수 있어야 한다.
 apiVersion: v1
 kind: Namespace

@@ -715,7 +715,7 @@ solo   2Gi   1Gi      Bound
     <ul>
       <li><strong>새로 만든 파일이 없다.</strong> 이 모듈은 M14가 쓴 <code>20-redis.yaml</code>을 읽고 그 안의 <code>volumeClaimTemplates</code>·<code>serviceName</code>·헤드리스 서비스가 각각 무엇을 하는지 확인하는 과정이다</li>
       <li>클러스터: <code>journal</code> 네임스페이스가 M17 종료 시점과 같은 상태 — <code>redis-0</code> 하나, PVC 하나</li>
-      <li>Part 3(M15~M18)의 산출물은 <code>labs/k8s/journal/</code>의 매니페스트 일습이다. <code>kubectl apply -k</code> 한 줄로 프로브·리소스·분산·<dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>·HPA가 갖춰진 상태가 재현된다</li>
+      <li>Part 3(M15~M18)의 산출물은 <code>labs/k8s/journal/</code>의 매니페스트 묶음이다. <code>kubectl apply -k</code> 한 줄로 프로브·리소스·분산·<dfn class="term">PDB <span class="en">(PodDisruptionBudget · 한 번에 몇 개까지 내려도 되는지의 한도)</span></dfn>·HPA가 갖춰진 상태가 재현된다</li>
       <li><code>labs/charts/journal/</code>은 M15~M17 변경분을 여전히 반영하지 않았다. M28이 따라잡는다</li>
     </ul>
   </div>

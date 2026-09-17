@@ -1,4 +1,4 @@
-# M20~M21 의 관측 설정 일습. kubectl apply -k course/labs/k8s/monitoring 으로 배포한다.
+# M20~M21 의 관측 설정 묶음. kubectl apply -k course/labs/k8s/monitoring 으로 배포한다.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 

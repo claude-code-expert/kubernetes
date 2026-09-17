@@ -159,7 +159,7 @@
 - 실습: 프론트엔드 Deployment + Redis StatefulSet + 파일 서버 + Service 4종 + Ingress를 순서대로 배포 → 동작 확인 → 같은 것을 Helm 차트로 묶고 values로 환경 분기
 - 명령: `apply -k`, `helm create/lint/template/install/upgrade/uninstall`, `helm get values`
 - 책 연결: 1.7~1.11, 1.11 서비스 배포 모범 사례
-- 산출물: `labs/k8s/journal/` 매니페스트 일습 + `labs/charts/journal/` 차트 + `labs/scripts/rebuild.sh`. M15~M18이 이 앱을 대상으로 삼는다. M15~M27은 `k8s/journal/`을 정본으로 고치고 차트는 M28이 따라잡는다
+- 산출물: `labs/k8s/journal/` 매니페스트 묶음 + `labs/charts/journal/` 차트 + `labs/scripts/rebuild.sh`. M15~M18이 이 앱을 대상으로 삼는다. M15~M27은 `k8s/journal/`을 정본으로 고치고 차트는 M28이 따라잡는다
 
 ---
 
@@ -349,7 +349,7 @@
 | 주 2회 스터디 | 20주 | 2시간 + 과제 |
 | 자습 | 38일 | 1~1.5시간 (M14만 2일) |
 
-집중 과정이 19회가 아니라 **20회**인 이유는 M14 때문이다. M14는 매니페스트 일습과
+집중 과정이 19회가 아니라 **20회**인 이유는 M14 때문이다. M14는 매니페스트 묶음과
 Helm 차트 작성을 한 모듈에 담아 다른 모듈의 두 배(135분)이므로 **단독 회차**로 잡는다.
 나머지는 2개씩 묶되, 후반 파트에서 각각 120분을 넘는 모듈(M30·M32·M33·M36·M37)은
 같은 회차에 묶지 않는다.
