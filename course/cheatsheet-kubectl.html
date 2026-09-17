@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 309  310  311 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">REFERENCE · 모듈이 아니다</div>
-   275 
+  <h1>kubectl 치트시트</h1>
   <p class="ch-desc">38개 모듈 본문에서 <strong>실제로 실행한 명령</strong>만 뽑아 용도별로 다시 묶었다. 실습 순서를 따르지 않으므로 처음부터 읽을 필요가 없다. 손이 멈췄을 때 해당 절만 펴 보는 용도다.</p>
   <div class="meta">
     <span class="tag">참고 자료</span><span class="tag">kubectl v1.37.0</span><span class="tag">Kubernetes 1.37</span>
-    <br>2026-09-09 작성 · 플래그는  10 의  11 로 확인 · 실습 당일  12 으로 클라이언트 버전을 다시 확인한다
+    <br>2026-09-09 작성 · 플래그는 <code>kubectl v1.37.0</code>의 <code>--help</code>로 확인 · 실습 당일 <code>kubectl version</code>으로 클라이언트 버전을 다시 확인한다
   </div>
 </header>
 
@@ -172,23 +172,23 @@
 </div>
 
 <nav class="toc">
-   312 
-   313 
-   314 
-   315 
-   316 
-   317 
-   318 
-   319 
-   320 
-   321 
-   322 
-   323 
-   324 
-   325 
-   326 
-   327 
-   328 
+  <a href="#context"><span class="num">1</span>컨텍스트와 네임스페이스</a>
+  <a href="#get"><span class="num">2</span>조회 — get 과 출력 포맷</a>
+  <a href="#select"><span class="num">3</span>레이블 셀렉터와 필드 셀렉터</a>
+  <a href="#diag"><span class="num">4</span>진단 — describe · events · logs</a>
+  <a href="#into"><span class="num">5</span>컨테이너 안으로 — exec · cp · port-forward · debug</a>
+  <a href="#create"><span class="num">6</span>만들기 — 명령형과 선언형</a>
+  <a href="#modify"><span class="num">7</span>고치기 — set · patch · edit</a>
+  <a href="#rollout"><span class="num">8</span>워크로드 운영 — rollout · scale · wait</a>
+  <a href="#config"><span class="num">9</span>설정과 시크릿</a>
+  <a href="#node"><span class="num">10</span>노드 운영 — top · cordon · drain · taint</a>
+  <a href="#auth"><span class="num">11</span>권한 확인 — auth can-i</a>
+  <a href="#api"><span class="num">12</span>API 탐색 — api-resources · explain</a>
+  <a href="#delete"><span class="num">13</span>삭제와 정리</a>
+  <a href="#output"><span class="num">14</span>출력 가공 — jsonpath · custom-columns</a>
+  <a href="#confuse"><span class="num">15</span>헷갈리는 것 다섯</a>
+  <a href="#obsolete"><span class="num">16</span>지금 쓰면 안 되는 명령</a>
+  <a href="#shell"><span class="num">17</span>셸 설정</a>
 </nav>
 
 <section id="context">
@@ -542,10 +542,10 @@ EOF</code></pre>
   <h3>파드를 지웠는데 다시 생긴다</h3>
   <p>디플로이먼트가 파드 수를 유지하고 있다. 지우려면 컨트롤러를 지워야 한다. 반대로 <strong>재시작이 목적이라면</strong> 파드를 지우는 것도 방법이지만, 의도를 드러내는 쪽은 <code>kubectl rollout restart</code>다.</p>
 
-  <h3> 233 은 전부가 아니다</h3>
+  <h3><code>get all</code>은 전부가 아니다</h3>
   <p><code>all</code>은 주요 워크로드와 서비스를 가리키는 별칭일 뿐이다. 컨피그맵·시크릿·<dfn class="term">PVC <span class="en">(PersistentVolumeClaim · 저장 공간을 달라는 요청서)</span></dfn>·인그레스·네트워크 정책·CRD는 <strong>여기에 안 나온다</strong>. 지웠다고 생각한 것이 남아 다음 실습을 방해하는 원인이 대개 이것이다. 실제로 무엇이 남았는지는 13절 마지막 명령으로 센다.</p>
 
-  <h3> 235  ·  236  ·  237 </h3>
+  <h3><code>-n</code> · <code>-A</code> · <code>--context</code></h3>
   <p><code>-n</code>은 네임스페이스, <code>-A</code>는 모든 네임스페이스, <code>--context</code>는 <strong>클러스터 자체</strong>가 바뀐다. 앞의 둘을 아무리 정확히 써도 컨텍스트가 틀렸으면 남의 클러스터를 보고 있는 것이다.</p>
 
   <h3>Pending 과 CrashLoopBackOff</h3>
@@ -601,7 +601,7 @@ complete -o default -F __start_kubectl k</code></pre>
 </section>
 
 <footer>
-   307 
+  <h3>참고</h3>
   <ul>
     <li>kubectl 공식 레퍼런스: https://kubernetes.io/docs/reference/kubectl/ (2026-09-09 확인)</li>
     <li>kubectl 치트시트(공식): https://kubernetes.io/docs/reference/kubectl/quick-reference/ (2026-09-09 확인)</li>
@@ -609,10 +609,10 @@ complete -o default -F __start_kubectl k</code></pre>
     <li>버전 스큐 정책: https://kubernetes.io/docs/setup/release/version-skew-policy/ (2026-09-09 확인)</li>
     <li>서비스어카운트와 토큰: https://kubernetes.io/docs/concepts/security/service-accounts/ (2026-09-09 확인)</li>
   </ul>
-  <p>이 문서의 명령은  271 의  272 로 플래그 존재를 확인했고, 사용 맥락은 이 과정 38개 모듈 본문에서 가져왔다. 실행 결과와 실패 사례는 각 절 끝에 링크된 모듈에 있다.</p>
+  <p>이 문서의 명령은 <code>kubectl v1.37.0</code>의 <code>--help</code>로 플래그 존재를 확인했고, 사용 맥락은 이 과정 38개 모듈 본문에서 가져왔다. 실행 결과와 실패 사례는 각 절 끝에 링크된 모듈에 있다.</p>
   <div class="navlinks">
-     367 
-     368 
+    <a href="index.html">← 과정 전체 로드맵</a>
+    <a href="m01-setup-environment.html">M01 환경 구축부터 시작 →</a>
   </div>
 </footer>
 </div>

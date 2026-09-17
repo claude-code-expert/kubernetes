@@ -148,12 +148,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 185  186  187 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 36 / 38 · PART 8 검증</div>
-   150 
+  <h1>카오스 테스팅</h1>
   <p class="ch-desc">Part 1부터 여기까지 <strong>만드는 것</strong>을 했다. 프로브를 걸고, 리소스를 정하고, 정책을 붙이고, 알림을 만들었다. 그것들이 <strong>실제로 동작하는지</strong>는 대부분 정상 상황에서만 확인했다. 이 모듈에서 클러스터를 <strong>계획적으로 망가뜨린다</strong> — 파드를 죽이고, 통신에 지연을 넣고, CPU를 태우고, 앱이 오류를 내게 한다. 가설을 먼저 쓰고 실험으로 검증하며, <strong>측정 도구가 먼저 막히는 것</strong>부터 겪는다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">140분</span><span class="tag">Chaos Mesh 2.8.4</span>
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   192 
-   193 
-   194 
-   195 
-   196 
-   197 
-   198 
-   199 
-   200 
+  <a href="#s1"><span class="num">36.1</span>만든 것이 동작하는지 모른다</a>
+  <a href="#s2"><span class="num">36.2</span>이론 — 게임 데이와 폭발 반경</a>
+  <a href="#s3"><span class="num">36.3</span>따라하기 ① 측정 도구부터 고친다</a>
+  <a href="#s4"><span class="num">36.4</span>따라하기 ② 파드를 죽인다</a>
+  <a href="#s5"><span class="num">36.5</span>따라하기 ③ 느리게 만든다</a>
+  <a href="#s6"><span class="num">36.6</span>따라하기 ④ 오류와 알림</a>
+  <a href="#s7"><span class="num">36.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">36.8</span>운영 관점 — 실험 시트와 스테이징의 한계</a>
+  <a href="#s9"><span class="num">36.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -214,7 +214,21 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">가설을 먼저 쓴다 — 그래야 실험이다</text>
@@ -752,10 +766,10 @@ kubectl -n journal get deploy journal-api \
 </div>
 
 <footer>
-   182 
+  <h3>다음 모듈</h3>
   <p>이 모듈의 부하 생성기는 <strong>측정 도구지 부하 도구가 아니다.</strong> 초당 170건을 보내며 응답 코드를 세는 것이 전부이고, 목표 RPS를 정하거나 분위수를 보거나 시나리오를 나누지 못한다.</p>
   <p>M37에서 k6로 제대로 된 부하 시험을 만든다. 목표 RPS를 계단식으로 올리며 <strong>어디서 무너지는지</strong>를 찾고, M20의 히스토그램과 k6가 각각 재는 지연이 <strong>왜 다른지</strong>를 확인한다. 그리고 이 모듈의 카오스와 겹쳐서 <strong>부하가 있는 상태의 장애</strong>를 본다.</p>
-   183 
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>Chaos Mesh: https://chaos-mesh.org/docs/</li>
     <li>PodChaos: https://chaos-mesh.org/docs/simulate-pod-chaos-on-kubernetes/</li>

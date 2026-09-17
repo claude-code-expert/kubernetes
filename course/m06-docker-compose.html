@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 267  268  269 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 06 / 38 · PART 1 도커</div>
-   249 
+  <h1>Compose로 다중 서비스</h1>
   <p class="ch-desc">M05에서 컨테이너 두 개를 띄우는 데 네 개의 명령과 여러 옵션이 필요했다. 옵션 하나를 빠뜨리면 조용히 다른 시스템이 된다. 이 모듈에서 그것을 파일 하나에 선언하고, 그 파일이 쿠버네티스 매니페스트와 무엇이 같고 다른지 본다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">60분</span><span class="tag">Docker Compose v5.1.0</span>
-    <br>2026-09-05 검증 · journal-api:v1 · redis:8.2-alpine · nginx:1.29-alpine · Compose 버전은 실습 당일  24 으로 다시 확인한다 (2026-09-05 확인값  25 )
+    <br>2026-09-05 검증 · journal-api:v1 · redis:8.2-alpine · nginx:1.29-alpine · Compose 버전은 실습 당일 <code>docker compose version</code>으로 다시 확인한다 (2026-09-05 확인값 <code>Docker Compose version v5.1.0</code>)
   </div>
 </header>
 
@@ -181,13 +181,13 @@
 </div>
 
 <nav class="toc">
-   272 
-   273 
-   274 
-   275 
-   276 
-   277 
-   278 
+  <a href="#s1"><span class="num">6.1</span>왜 파일로 옮기는가</a>
+  <a href="#s2"><span class="num">6.2</span>compose.yaml 읽기</a>
+  <a href="#s3"><span class="num">6.3</span>따라하기 ① 3서비스 기동</a>
+  <a href="#s4"><span class="num">6.4</span>따라하기 ② 스케일 · 로그 · 개발 루프</a>
+  <a href="#s5"><span class="num">6.5</span>일부러 실패시키기</a>
+  <a href="#s6"><span class="num">6.6</span>운영 관점 — Compose와 쿠버네티스</a>
+  <a href="#s7"><span class="num">6.7</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -640,9 +640,9 @@ docker images journal-api</code></pre>
 </div>
 
 <footer>
-   264 
-  <p>지금까지 만든 이미지는 이 노트북에만 있다. 다른 머신이 — 그리고 M01에서 만든 kind 클러스터의 노드가 — 이 이미지를 받으려면 레지스트리가 필요하다. M07에서 레지스트리에 올리고, 그 과정에서 이미지에 무엇이 딸려 들어가는지(취약점·비밀·서명) 확인한다. Part 1의 마지막이다. 이 모듈의  243 은 M07이 아니라 M14에서 다시 꺼낸다 — 세 서비스를 쿠버네티스 매니페스트로 옮길 때의 원본이고,  244 의 경로 규칙은 M12 인그레스에서 같은 모양으로 다시 쓴다.</p>
-   265 
+  <h3>다음 모듈</h3>
+  <p>지금까지 만든 이미지는 이 노트북에만 있다. 다른 머신이 — 그리고 M01에서 만든 kind 클러스터의 노드가 — 이 이미지를 받으려면 레지스트리가 필요하다. M07에서 레지스트리에 올리고, 그 과정에서 이미지에 무엇이 딸려 들어가는지(취약점·비밀·서명) 확인한다. Part 1의 마지막이다. 이 모듈의 <code>compose.yaml</code>은 M07이 아니라 M14에서 다시 꺼낸다 — 세 서비스를 쿠버네티스 매니페스트로 옮길 때의 원본이고, <code>nginx.conf</code>의 경로 규칙은 M12 인그레스에서 같은 모양으로 다시 쓴다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>Compose 파일 스펙: https://docs.docker.com/reference/compose-file/</li>
     <li>services 상위 요소: https://docs.docker.com/reference/compose-file/services/</li>

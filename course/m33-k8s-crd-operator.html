@@ -148,13 +148,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 233  234  235 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 33 / 38 · PART 7 확장</div>
-   194 
-  <p class="ch-desc">여기까지 쓴 것은 전부 <strong>쿠버네티스가 이미 아는 리소스</strong>였다 — 디플로이먼트·서비스, 그리고 남이 만든 CRD(M30의  24 , M31의  25 ). 우리 조직에만 있는 개념을 표현하려면 <strong>리소스 종류 자체를 새로 만들어야</strong> 한다. 이 모듈에서  26 라는 종류를 정의하고, 그것을 지켜보며 실제 리소스를 만드는 조정 루프를 <strong>셸로 한 번, Go로 한 번</strong> 만든다. 두 번 만드는 이유는 <strong>둘의 차이가 컨트롤러의 본질</strong>이기 때문이다.</p>
+  <h1>CRD와 오퍼레이터 구현</h1>
+  <p class="ch-desc">여기까지 쓴 것은 전부 <strong>쿠버네티스가 이미 아는 리소스</strong>였다 — 디플로이먼트·서비스, 그리고 남이 만든 CRD(M30의 <code>Rollout</code>, M31의 <code>Application</code>). 우리 조직에만 있는 개념을 표현하려면 <strong>리소스 종류 자체를 새로 만들어야</strong> 한다. 이 모듈에서 <code>JournalSite</code>라는 종류를 정의하고, 그것을 지켜보며 실제 리소스를 만드는 조정 루프를 <strong>셸로 한 번, Go로 한 번</strong> 만든다. 두 번 만드는 이유는 <strong>둘의 차이가 컨트롤러의 본질</strong>이기 때문이다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">125분</span><span class="tag">kubebuilder v4.15.0</span>
     <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · Go 1.27.1) · 버전은 실습 당일 다시 확인한다
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   239 
-   240 
-   241 
-   242 
-   243 
-   244 
-   245 
-   246 
-   247 
+  <a href="#s1"><span class="num">33.1</span>우리 개념을 담을 그릇이 없다</a>
+  <a href="#s2"><span class="num">33.2</span>이론 — API 오브젝트와 조정 루프</a>
+  <a href="#s3"><span class="num">33.3</span>따라하기 ① CRD를 손으로 쓴다</a>
+  <a href="#s4"><span class="num">33.4</span>따라하기 ② 셸로 만드는 조정 루프</a>
+  <a href="#s5"><span class="num">33.5</span>따라하기 ③ kubebuilder로 뼈대를</a>
+  <a href="#s6"><span class="num">33.6</span>따라하기 ④ 조정 함수를 쓴다</a>
+  <a href="#s7"><span class="num">33.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">33.8</span>운영 관점 — 만들 것인가 쓸 것인가</a>
+  <a href="#s9"><span class="num">33.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -230,7 +230,22 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">조정 루프 — 오퍼레이터가 하는 일은 이 셋이다</text>
@@ -651,7 +666,7 @@ scripts/shell-operator.sh: line 27: UID: readonly variable</code></div>
   </div>
 
   <div class="fail">
-    <h4>실패 ② —  140 의 거부 메시지를 사람이 못 읽는다</h4>
+    <h4>실패 ② — <code>not: pattern</code>의 거부 메시지를 사람이 못 읽는다</h4>
     <p class="purpose"><span class="lbl">목적</span>검증을 어디에 어떻게 쓸지 고르는 기준을 만든다.</p>
     <p>33.3에서 본 메시지를 다시 본다.</p>
     <span class="out-lbl">출력</span>
@@ -748,10 +763,10 @@ kubectl api-resources --api-group=study.example.com</code></pre>
 </div>
 
 <footer>
-   230 
+  <h3>다음 모듈</h3>
   <p>M32에서 클러스터를 둘로 늘렸을 때 배포는 나눴지만 <strong>서비스는 나누지 않았다.</strong> 각 리전의 앱은 자기 클러스터 안에서만 통신했고, 클러스터 밖의 데이터베이스나 다른 클러스터의 서비스를 부르는 방법은 다루지 않았다.</p>
-  <p>M34에서 그 경로를 만든다. <strong>셀렉터 없는 서비스</strong>와 엔드포인트를 손으로 써서 클러스터 밖 주소를 서비스처럼 쓰고,  191 이 무엇을 하고 무엇을 못 하는지 확인한다. 그리고 클러스터 사이에 서비스를 공유할 때 표준이 어디까지 왔는지 정리한다.</p>
-   231 
+  <p>M34에서 그 경로를 만든다. <strong>셀렉터 없는 서비스</strong>와 엔드포인트를 손으로 써서 클러스터 밖 주소를 서비스처럼 쓰고, <code>ExternalName</code>이 무엇을 하고 무엇을 못 하는지 확인한다. 그리고 클러스터 사이에 서비스를 공유할 때 표준이 어디까지 왔는지 정리한다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>커스텀 리소스: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/</li>
     <li>CRD 정의: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/</li>

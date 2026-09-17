@@ -148,13 +148,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 221  222  223 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 29 / 38 · PART 6 배포 자동화</div>
-   184 
-  <p class="ch-desc">M28까지 만든 검사는 <strong>전부 손으로 쳐야</strong> 돌아간다. 이미지도 손으로 빌드해서  28 로 넣었다. 이 모듈에서 커밋 하나가 <strong>타입 검사 → 테스트 → 이미지 → 스캔 → 어드미션 → 실제 기동</strong>을 지나가게 만든다. 그리고 두 관문이 실제로 파이프라인을 세우는 것을 본다 — 깨진 테스트 하나가 이미지를 만들지 못하게 하고, 베이스 이미지의 CVE 하나가 배포를 막는다.</p>
+  <h1>CI — 빌드·테스트·이미지</h1>
+  <p class="ch-desc">M28까지 만든 검사는 <strong>전부 손으로 쳐야</strong> 돌아간다. 이미지도 손으로 빌드해서 <code>kind load</code>로 넣었다. 이 모듈에서 커밋 하나가 <strong>타입 검사 → 테스트 → 이미지 → 스캔 → 어드미션 → 실제 기동</strong>을 지나가게 만든다. 그리고 두 관문이 실제로 파이프라인을 세우는 것을 본다 — 깨진 테스트 하나가 이미지를 만들지 못하게 하고, 베이스 이미지의 CVE 하나가 배포를 막는다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Node 24 · Docker 29.x</span>
     <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · trivy 0.69.0) · 버전 숫자는 실습 당일 다시 확인한다
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   227 
-   228 
-   229 
-   230 
-   231 
-   232 
-   233 
-   234 
-   235 
+  <a href="#s1"><span class="num">29.1</span>지금은 사람이 순서를 기억한다</a>
+  <a href="#s2"><span class="num">29.2</span>이론 — 관문의 순서와 각자 잡는 것</a>
+  <a href="#s3"><span class="num">29.3</span>따라하기 ① 테스트할 수 있게 나눈다</a>
+  <a href="#s4"><span class="num">29.4</span>따라하기 ② 테스트를 이미지의 관문으로</a>
+  <a href="#s5"><span class="num">29.5</span>따라하기 ③ 로컬 파이프라인</a>
+  <a href="#s6"><span class="num">29.6</span>따라하기 ④ 워크플로로 옮긴다</a>
+  <a href="#s7"><span class="num">29.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">29.8</span>운영 관점 — 무엇을 언제 막을 것인가</a>
+  <a href="#s9"><span class="num">29.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -217,7 +217,22 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
       <text class="t-h" x="40" y="46">싼 검사가 앞에, 정확한 검사가 뒤에</text>
@@ -716,10 +731,10 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
 </div>
 
 <footer>
-   218 
-  <p>파이프라인이 이미지를 만들어 놨는데 <strong>클러스터에 내보내는 방법</strong>은 아직 하나뿐이다 — M10에서 본 롤링 업데이트. 새 버전이 나쁘면  180 · 181 이 정한 속도로 <strong>전체 트래픽이 그쪽으로 옮겨 간다.</strong></p>
+  <h3>다음 모듈</h3>
+  <p>파이프라인이 이미지를 만들어 놨는데 <strong>클러스터에 내보내는 방법</strong>은 아직 하나뿐이다 — M10에서 본 롤링 업데이트. 새 버전이 나쁘면 <code>maxSurge</code>·<code>maxUnavailable</code>이 정한 속도로 <strong>전체 트래픽이 그쪽으로 옮겨 간다.</strong></p>
   <p>M30에서 그 사이에 판단할 지점을 만든다. 새 버전에 트래픽 일부만 보내고, M20에서 만든 메트릭으로 <strong>에러율과 지연을 비교해</strong> 계속할지 되돌릴지 정한다. 판정 기준을 사람이 아니라 PromQL로 쓰는 것이 이 모듈의 핵심이다.</p>
-   219 
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>Node.js 테스트 러너: https://nodejs.org/api/test.html</li>
     <li>멀티스테이지 빌드: https://docs.docker.com/build/building/multi-stage/</li>

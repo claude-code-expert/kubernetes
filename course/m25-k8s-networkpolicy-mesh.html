@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 241  242  243 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 25 / 38 · PART 5 보안과 정책</div>
-   200 
-  <p class="ch-desc">M24까지 온 클러스터에서  30  네임스페이스의 파드는  31 의 레디스에 지금 붙을 수 있다. 비밀번호만 알면 데이터를 읽는다. 이 모듈에서 그것을 먼저 확인하고, <strong>정책 하나로 전부 끊은 다음</strong> 필요한 경로만 다시 연다. 마지막에 네트워크 정책이 <strong>볼 수 없는 것</strong>을 측정해서, 서비스 메시가 무엇을 채우는지를 말이 아니라 숫자로 확인한다.</p>
+  <h1>네트워크 정책과 서비스 메시</h1>
+  <p class="ch-desc">M24까지 온 클러스터에서 <code>apps</code> 네임스페이스의 파드는 <code>journal</code>의 레디스에 지금 붙을 수 있다. 비밀번호만 알면 데이터를 읽는다. 이 모듈에서 그것을 먼저 확인하고, <strong>정책 하나로 전부 끊은 다음</strong> 필요한 경로만 다시 연다. 마지막에 네트워크 정책이 <strong>볼 수 없는 것</strong>을 측정해서, 서비스 메시가 무엇을 채우는지를 말이 아니라 숫자로 확인한다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">95분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0 · kindnetd v20260820-69b56db7) · 버전 숫자는 실습 당일  32 으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0 · kindnetd v20260820-69b56db7) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
   </div>
 </header>
 
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   247 
-   248 
-   249 
-   250 
-   251 
-   252 
-   253 
-   254 
-   255 
+  <a href="#s1"><span class="num">25.1</span>지금은 누구나 레디스에 붙을 수 있다</a>
+  <a href="#s2"><span class="num">25.2</span>이론 — 허용만 있고 거부는 없다</a>
+  <a href="#s3"><span class="num">25.3</span>따라하기 ① 막히지 않는다는 것을 측정한다</a>
+  <a href="#s4"><span class="num">25.4</span>따라하기 ② 전부 끊는다</a>
+  <a href="#s5"><span class="num">25.5</span>따라하기 ③ 다섯 경로만 연다</a>
+  <a href="#s6"><span class="num">25.6</span>따라하기 ④ 정책이 보지 못하는 것</a>
+  <a href="#s7"><span class="num">25.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">25.8</span>운영 관점 — 메시를 쓸 것인가</a>
+  <a href="#s9"><span class="num">25.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -237,7 +237,23 @@ from:
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">정책이 붙는 순간 그 파드는 화이트리스트로 바뀐다</text>
@@ -796,10 +812,10 @@ kubectl get po -A --no-headers | grep -E '(netprobe|l7probe)' || echo "없음"</
 </div>
 
 <footer>
-   238 
-  <p>지금까지 만든 규칙은 전부 <strong>이미 만들어진 리소스</strong>에 대한 것이었다. PSA는 파드 스펙을 보고 거부했고, 네트워크 정책은 패킷을 떨어뜨렸다. 그런데 "이미지에  191  태그를 쓰지 마라", "모든 디플로이먼트에  192 를 적어라" 같은 조직 규칙은 어디에도 걸 곳이 없다 — 지금은 리뷰에서 사람이 잡는 수밖에 없다.</p>
-  <p>M26에서  193 로 그 규칙을 클러스터에 심는다. CEL 표현식 한 줄로  194  태그를 거부하고,  195 에서  196 로 승격하는 순서를 밟는다. 이미 배포된 위반 리소스를 감사로 찾아내는 방법도 함께 본다 — 정책을 새로 만들 때 항상 뒤따르는 질문이다.</p>
-   239 
+  <h3>다음 모듈</h3>
+  <p>지금까지 만든 규칙은 전부 <strong>이미 만들어진 리소스</strong>에 대한 것이었다. PSA는 파드 스펙을 보고 거부했고, 네트워크 정책은 패킷을 떨어뜨렸다. 그런데 "이미지에 <code>latest</code> 태그를 쓰지 마라", "모든 디플로이먼트에 <code>resources</code>를 적어라" 같은 조직 규칙은 어디에도 걸 곳이 없다 — 지금은 리뷰에서 사람이 잡는 수밖에 없다.</p>
+  <p>M26에서 <code>ValidatingAdmissionPolicy</code>로 그 규칙을 클러스터에 심는다. CEL 표현식 한 줄로 <code>latest</code> 태그를 거부하고, <code>warn</code>에서 <code>enforce</code>로 승격하는 순서를 밟는다. 이미 배포된 위반 리소스를 감사로 찾아내는 방법도 함께 본다 — 정책을 새로 만들 때 항상 뒤따르는 질문이다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>네트워크 정책: https://kubernetes.io/docs/concepts/services-networking/network-policies/</li>
     <li>네트워크 정책 레시피: https://github.com/ahmetb/kubernetes-network-policy-recipes</li>

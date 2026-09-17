@@ -148,13 +148,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 205  206  207 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 31 / 38 · PART 6 배포 자동화</div>
-   166 
-  <p class="ch-desc">M29의 파이프라인은 이미지까지 만들고 멈췄고, M30에서는  25 를 손으로 쳤다. 지금 클러스터의 상태가 <strong>저장소의 어느 커밋에 해당하는지 아무도 답할 수 없다.</strong> 이 모듈에서 저장소를 상태의 정본으로 만든다. 클러스터 안의 컨트롤러가 저장소를 지켜보다가 차이를 없애고, 사람이  26 로 바꾼 것을 <strong>5초 만에 되돌려 놓는다.</strong> 그 되돌림을 직접 겪는 것이 이 모듈의 핵심이다.</p>
+  <h1>GitOps</h1>
+  <p class="ch-desc">M29의 파이프라인은 이미지까지 만들고 멈췄고, M30에서는 <code>kubectl patch</code>를 손으로 쳤다. 지금 클러스터의 상태가 <strong>저장소의 어느 커밋에 해당하는지 아무도 답할 수 없다.</strong> 이 모듈에서 저장소를 상태의 정본으로 만든다. 클러스터 안의 컨트롤러가 저장소를 지켜보다가 차이를 없애고, 사람이 <code>kubectl</code>로 바꾼 것을 <strong>5초 만에 되돌려 놓는다.</strong> 그 되돌림을 직접 겪는 것이 이 모듈의 핵심이다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">110분</span><span class="tag">Argo CD v3.5.2</span>
     <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · SOPS 3.13.3 · age 1.3.2) · 버전은 실습 당일 다시 확인한다
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-   210 
-   211 
-   212 
-   213 
-   214 
-   215 
-   216 
-   217 
-   218 
+  <a href="#s1"><span class="num">31.1</span>지금 클러스터가 어느 커밋인지 모른다</a>
+  <a href="#s2"><span class="num">31.2</span>이론 — 풀 기반과 네 가지 원칙</a>
+  <a href="#s3"><span class="num">31.3</span>따라하기 ① 저장소와 컨트롤러</a>
+  <a href="#s4"><span class="num">31.4</span>따라하기 ② 커밋이 배포다</a>
+  <a href="#s5"><span class="num">31.5</span>따라하기 ③ 드리프트를 만들어 본다</a>
+  <a href="#s6"><span class="num">31.6</span>따라하기 ④ 시크릿을 커밋 가능하게</a>
+  <a href="#s7"><span class="num">31.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">31.8</span>운영 관점 — 저장소 구조와 긴급 상황</a>
+  <a href="#s9"><span class="num">31.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -219,7 +219,24 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#a1442a"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+        .wline { stroke:#a1442a; stroke-width:1.4; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">자격 증명이 어디에 있는가로 갈린다</text>
@@ -724,10 +741,10 @@ kubectl -n argocd get deploy --no-headers | wc -l</code></pre>
 </div>
 
 <footer>
-   202 
+  <h3>다음 모듈</h3>
   <p>지금까지 클러스터는 하나였다. 저장소 하나가 클러스터 하나를 정의했고, 배포는 그 안에서 끝났다. 실제 서비스는 <strong>지역마다 클러스터가 따로</strong> 있고, 같은 변경을 여러 클러스터에 순서대로 내보내면서 <strong>중간에 멈출 수 있어야</strong> 한다.</p>
-  <p>M32에서 그 순서를 만든다. 한 클러스터에서 확인하고 다음으로 넘어가는 절차, 지역별 차이를 오버레이로 다루는 방법, 그리고 <strong>사고가 났을 때 되돌리는 순서</strong>를 다룬다. 이 모듈에서 만든  160 이  161 으로 확장되는 지점이다.</p>
-   203 
+  <p>M32에서 그 순서를 만든다. 한 클러스터에서 확인하고 다음으로 넘어가는 절차, 지역별 차이를 오버레이로 다루는 방법, 그리고 <strong>사고가 났을 때 되돌리는 순서</strong>를 다룬다. 이 모듈에서 만든 <code>Application</code>이 <code>ApplicationSet</code>으로 확장되는 지점이다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>Argo CD: https://argo-cd.readthedocs.io/en/stable/</li>
     <li>동기화 옵션: https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/</li>
@@ -736,7 +753,7 @@ kubectl -n argocd get deploy --no-headers | wc -l</code></pre>
     <li>SOPS: https://github.com/getsops/sops</li>
     <li>age: https://github.com/FiloSottile/age</li>
     <li>External Secrets Operator: https://external-secrets.io/</li>
-    <li> 162  환경 변수: https://git-scm.com/docs/git-config#ENVIRONMENT</li>
+    <li><code>git config</code> 환경 변수: https://git-scm.com/docs/git-config#ENVIRONMENT</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 18.1~18.4 GitOps와 시크릿 관리</li>
   </ul>
   <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Argo CD v3.5.2 · SOPS 3.13.3 · age 1.3.2</p>

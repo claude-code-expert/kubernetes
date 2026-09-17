@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 143  144  145 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 37 / 38 · PART 8 검증</div>
-   108 
-  <p class="ch-desc">M36의 부하 생성기는 <strong>측정 도구지 부하 도구가 아니었다.</strong> 초당 170건을 보내며 응답 코드를 세는 것이 전부다. 이 모듈에서 k6로 램프업·정상·스파이크·회복의 네 구간을 만들고, <strong>cpu limit 하나로 P99를 3.54ms에서 14.74초로 만든 뒤</strong> 그 원인을 PromQL로 찾는다. 그리고  17 이 <strong>한가하다고 말하는데 실제로는 96% 스로틀링</strong>인 상태를 확인한다.</p>
+  <h1>로드 테스팅</h1>
+  <p class="ch-desc">M36의 부하 생성기는 <strong>측정 도구지 부하 도구가 아니었다.</strong> 초당 170건을 보내며 응답 코드를 세는 것이 전부다. 이 모듈에서 k6로 램프업·정상·스파이크·회복의 네 구간을 만들고, <strong>cpu limit 하나로 P99를 3.54ms에서 14.74초로 만든 뒤</strong> 그 원인을 PromQL로 찾는다. 그리고 <code>kubectl top</code>이 <strong>한가하다고 말하는데 실제로는 96% 스로틀링</strong>인 상태를 확인한다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">120분</span><span class="tag">k6 v2.2.0</span>
-    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전은 실습 당일  18 으로 확인한다
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전은 실습 당일 <code>k6 version</code>으로 확인한다
   </div>
 </header>
 
@@ -181,15 +181,15 @@
 </div>
 
 <nav class="toc">
-   149 
-   150 
-   151 
-   152 
-   153 
-   154 
-   155 
-   156 
-   157 
+  <a href="#s1"><span class="num">37.1</span>얼마나 견디는지 모른다</a>
+  <a href="#s2"><span class="num">37.2</span>이론 — 실제와 가까운 부하</a>
+  <a href="#s3"><span class="num">37.3</span>따라하기 ① 시나리오를 쓴다</a>
+  <a href="#s4"><span class="num">37.4</span>따라하기 ② 병목을 만든다</a>
+  <a href="#s5"><span class="num">37.5</span>따라하기 ③ 찾고 고치고 다시 잰다</a>
+  <a href="#s6"><span class="num">37.6</span>따라하기 ④ 한계와 측정 지점</a>
+  <a href="#s7"><span class="num">37.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">37.8</span>운영 관점 — 용량 산정과 튜닝 순서</a>
+  <a href="#s9"><span class="num">37.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -211,7 +211,21 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">같은 부하, 다른 곳에서 잰 값</text>
@@ -385,7 +399,7 @@ http_reqs      : 12800  121.306328/s</code></div>
   </div>
 
   <div class="step">
-    <h4>2단계 —  38 을 본다 (그리고 속는다)</h4>
+    <h4>2단계 — <code>kubectl top</code>을 본다 (그리고 속는다)</h4>
     <p class="purpose"><span class="lbl">목적</span>가장 먼저 치는 명령이 <strong>왜 이 문제를 못 잡는지</strong> 확인한다.</p>
 <pre><code>kubectl top pods -n journal -l app=journal-api --no-headers</code></pre>
     <span class="out-lbl">출력</span>
@@ -520,7 +534,7 @@ k6  http_reqs    : 27000  299.824729/s</code></div>
   </div>
 
   <div class="fail">
-    <h4>실패 ② —  65 으로 CPU를 판단한다</h4>
+    <h4>실패 ② — <code>kubectl top</code>으로 CPU를 판단한다</h4>
     <p class="purpose"><span class="lbl">목적</span>37.4의 관찰을 <strong>진단 절차의 문제</strong>로 정리한다.</p>
     <p>P99가 14초인 상태에서 가장 먼저 치는 명령이 <code>kubectl top</code>이고, 그 결과가 <code>20m / 42Mi</code>다. <strong>CPU도 메모리도 여유가 있다.</strong> 그러면 다음 수순은 대개 이렇다 — 네트워크를 의심하고, 레디스를 의심하고, 애플리케이션 코드를 뒤진다. <strong>전부 헛수고다.</strong></p>
     <table>
@@ -625,10 +639,10 @@ kubectl -n journal exec redis-0 -- sh -c \
 </div>
 
 <footer>
-   140 
+  <h3>다음 모듈</h3>
   <p>M01부터 여기까지 서른일곱 개 모듈을 지났다. 컨테이너를 만들고, 클러스터에 올리고, 안정성을 붙이고, 관측을 만들고, 보안을 걸고, 배포를 자동화하고, 확장하고, 망가뜨려 봤다. <strong>각 모듈의 산출물은 있는데 그것들이 하나의 시스템으로 정리돼 있지는 않다.</strong></p>
   <p>M38에서 처음부터 끝까지 다시 세운다. 빈 클러스터에서 시작해 <strong>문서만 보고</strong> 전체를 복구하고, 그 과정에서 빠진 것과 어긋난 것을 찾는다. 그리고 이 교재가 만든 산출물 전부를 <strong>하나의 점검 목록</strong>으로 묶는다.</p>
-   141 
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>k6 문서: https://grafana.com/docs/k6/latest/</li>
     <li>실행자(executor) 종류: https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/</li>

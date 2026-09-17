@@ -151,12 +151,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 208  209  210 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 02 / 38 · PART 1 도커</div>
-   187 
+  <h1>컨테이너는 프로세스다</h1>
   <p class="ch-desc">컨테이너를 "가벼운 가상 머신"으로 배우면 나중에 반드시 막힌다. 실제로는 격리된 리눅스 프로세스 하나다. 이 모듈에서 같은 프로세스를 안에서는 PID 1로, 밖에서는 다섯 자리 PID로 확인한다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">50분</span><span class="tag">Docker Engine 29.2.1</span>
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   212 
-   213 
-   214 
-   215 
-   216 
-   217 
-   218 
-   219 
-   220 
+  <a href="#s1"><span class="num">2.1</span>왜 프로세스인지가 중요한가</a>
+  <a href="#s2"><span class="num">2.2</span>이론 — 격리를 만드는 두 기능</a>
+  <a href="#s3"><span class="num">2.3</span>따라하기 ① 실행하고 접속한다</a>
+  <a href="#s4"><span class="num">2.4</span>따라하기 ② 안과 밖에서 같은 프로세스 보기</a>
+  <a href="#s5"><span class="num">2.5</span>따라하기 ③ 자원 제한과 OOM</a>
+  <a href="#s6"><span class="num">2.6</span>수명 주기 정리</a>
+  <a href="#s7"><span class="num">2.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">2.8</span>체크포인트</a>
+  <a href="#s9"><span class="num">2.9</span>정리</a>
 </nav>
 
 <section id="s1">
@@ -208,7 +208,18 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .vm { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
 
       <!-- 왼쪽: 가상 머신과 컨테이너 -->
       <rect class="outer" x="20" y="20" width="430" height="390" rx="6"/>
@@ -523,9 +534,9 @@ docker ps -a --filter name=web --filter name=oomtest</code></pre>
 </div>
 
 <footer>
-   205 
-  <p>컨테이너를 실행했지만 그 재료인 이미지는 아직 상자였다. M03에서 상자를 연다 — 이미지가 왜 레이어의 묶음인지,  181 이라는 태그와 방금 본  182  다이제스트가 어떻게 다른지, 태그만 믿으면 왜 재현이 깨지는지.</p>
-   206 
+  <h3>다음 모듈</h3>
+  <p>컨테이너를 실행했지만 그 재료인 이미지는 아직 상자였다. M03에서 상자를 연다 — 이미지가 왜 레이어의 묶음인지, <code>nginx:1.29-alpine</code>이라는 태그와 방금 본 <code>sha256:5616878…</code> 다이제스트가 어떻게 다른지, 태그만 믿으면 왜 재현이 깨지는지.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
   <ul>
     <li>docker run 레퍼런스: https://docs.docker.com/reference/cli/docker/container/run/</li>
     <li>런타임 자원 제약: https://docs.docker.com/engine/containers/resource_constraints/</li>

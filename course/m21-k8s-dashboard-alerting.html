@@ -149,12 +149,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 230  231  232 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 21 / 38 · PART 4 관측</div>
-   196 
+  <h1>대시보드와 알림</h1>
   <p class="ch-desc">M20까지는 질의를 칠 때만 값을 봤다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 알 방법이 없다. 이 모듈에서 늘 켜 두는 대시보드와 사람을 부르는 알림을 만들고, 카오스로 실제 장애를 만들어 <strong>pending → firing → 해소</strong>까지 시각과 함께 기록한다. 그리고 각 구간의 길이를 무엇이 정하는지 확인한다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">90분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">kube-prometheus-stack 89.2.2</span>
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   234 
-   235 
-   236 
-   237 
-   238 
-   239 
-   240 
-   241 
-   242 
+  <a href="#s1"><span class="num">21.1</span>보고 있지 않을 때</a>
+  <a href="#s2"><span class="num">21.2</span>이론 — 무엇에 알림을 걸 것인가</a>
+  <a href="#s3"><span class="num">21.3</span>따라하기 ① 알림 규칙 넷</a>
+  <a href="#s4"><span class="num">21.4</span>따라하기 ② 발화시킨다</a>
+  <a href="#s5"><span class="num">21.5</span>따라하기 ③ Alertmanager가 하는 일</a>
+  <a href="#s6"><span class="num">21.6</span>따라하기 ④ 대시보드를 코드로</a>
+  <a href="#s7"><span class="num">21.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">21.8</span>운영 관점 — 알림 피로</a>
+  <a href="#s9"><span class="num">21.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -389,7 +389,23 @@ k6 run -e DURATION=6m course/labs/scripts/k6-red.js</code></pre>
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .load { fill:#e8e8e6; stroke:#777777; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
       <text class="t-h" x="40" y="46">알림 하나가 울리고 꺼지기까지 — 무엇이 각 구간의 길이를 정하는가</text>
@@ -765,9 +781,9 @@ for s in json.load(sys.stdin):
 </div>
 
 <footer>
-   227 
-  <p>알림이 "에러율 5.9%"라고 말해 준다. 그런데 <strong>그 에러가 무엇이었는지</strong>는 메트릭이 답하지 못한다 — 숫자는 얼마나 많이 일어났는지만 알고 무슨 일이었는지는 모른다. M22에서 로그를 모은다. 먼저  189 의 한계를 재현한다 — 파드가 사라지면 로그도 사라진다는 것을 직접 확인하고, Loki와 Alloy로 그것을 클러스터 밖에 남긴다. 그리고 M19 8절에서 다룬 카디널리티 문제가 로그 라벨에서 어떻게 더 심하게 나타나는지 실험한다. <strong>검색하면 나오는 Promtail은 2026-03에 EOL이므로 쓰지 않는다.</strong></p>
-   228 
+  <h3>다음 모듈</h3>
+  <p>알림이 "에러율 5.9%"라고 말해 준다. 그런데 <strong>그 에러가 무엇이었는지</strong>는 메트릭이 답하지 못한다 — 숫자는 얼마나 많이 일어났는지만 알고 무슨 일이었는지는 모른다. M22에서 로그를 모은다. 먼저 <code>kubectl logs</code>의 한계를 재현한다 — 파드가 사라지면 로그도 사라진다는 것을 직접 확인하고, Loki와 Alloy로 그것을 클러스터 밖에 남긴다. 그리고 M19 8절에서 다룬 카디널리티 문제가 로그 라벨에서 어떻게 더 심하게 나타나는지 실험한다. <strong>검색하면 나오는 Promtail은 2026-03에 EOL이므로 쓰지 않는다.</strong></p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>알림 규칙 작성: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/</li>
     <li>알림 설계 원칙(증상 기반): https://prometheus.io/docs/practices/alerting/</li>

@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 281  282  283 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 28 / 38 · PART 6 배포 자동화</div>
-   244 
-  <p class="ch-desc">M14에서 만든 헬름 차트는 그 뒤 <strong>13개 모듈치의 변경을 하나도 모른다.</strong> 프로브 셋,  27 , 리소스, 토폴로지 분산, HPA, PDB,  28  — 전부  29 의 YAML에만 들어갔다. 이 모듈에서 그 격차를 메우고, <strong>차트가  30  네임스페이스에서 실제로 뜨는지</strong>로 따라잡았음을 증명한다. 그다음 같은 앱을 Kustomize 오버레이로 다시 만들어 두 방식이 각각 어디서 미끄러지는지 본다.</p>
+  <h1>Helm과 Kustomize</h1>
+  <p class="ch-desc">M14에서 만든 헬름 차트는 그 뒤 <strong>13개 모듈치의 변경을 하나도 모른다.</strong> 프로브 셋, <code>preStop</code>, 리소스, 토폴로지 분산, HPA, PDB, <code>securityContext</code> — 전부 <code>k8s/journal/</code>의 YAML에만 들어갔다. 이 모듈에서 그 격차를 메우고, <strong>차트가 <code>restricted</code> 네임스페이스에서 실제로 뜨는지</strong>로 따라잡았음을 증명한다. 그다음 같은 앱을 Kustomize 오버레이로 다시 만들어 두 방식이 각각 어디서 미끄러지는지 본다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">110분</span><span class="tag">Helm v4.2.4</span>
-    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전 숫자는 실습 당일  31 으로 다시 확인한다
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0) · 버전 숫자는 실습 당일 <code>helm version</code>으로 다시 확인한다
   </div>
 </header>
 
@@ -180,15 +180,15 @@
 </div>
 
 <nav class="toc">
-   286 
-   287 
-   288 
-   289 
-   290 
-   291 
-   292 
-   293 
-   294 
+  <a href="#s1"><span class="num">28.1</span>차트가 13개 모듈만큼 뒤처져 있다</a>
+  <a href="#s2"><span class="num">28.2</span>이론 — 빈칸 채우기와 덮어쓰기</a>
+  <a href="#s3"><span class="num">28.3</span>따라하기 ① 차트를 따라잡힌다</a>
+  <a href="#s4"><span class="num">28.4</span>따라하기 ② 설치하고 테스트한다</a>
+  <a href="#s5"><span class="num">28.5</span>따라하기 ③ 실패하는 업그레이드와 롤백</a>
+  <a href="#s6"><span class="num">28.6</span>따라하기 ④ 같은 앱을 오버레이로</a>
+  <a href="#s7"><span class="num">28.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">28.8</span>운영 관점 — 무엇을 언제 쓰는가</a>
+  <a href="#s9"><span class="num">28.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -217,7 +217,22 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">빈칸을 채우는 방식과 완성본을 덮어쓰는 방식</text>
@@ -751,10 +766,10 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
 </div>
 
 <footer>
-   278 
-  <p>차트와 오버레이가 준비됐지만 지금은 <strong>사람이 손으로</strong>  238 를 친다. 이미지도 손으로 빌드해서  239 로 넣었다. 28.8의 표에 적은 네 단계 검사도 아직 어디서도 자동으로 돌지 않는다.</p>
-  <p>M29에서 파이프라인을 만든다. 커밋 하나가 <strong>테스트 → 빌드 → 스캔 → 차트 검사</strong>를 거치게 하고, 책 5.3의 원칙대로 <strong>테스트가 실패하면 이미지가 만들어지지 않게</strong> 한다. M27에서 잰 이미지 취약점 숫자가 여기서 임계값이 되고, M26의  240 가 검사 단계 하나로 들어간다.</p>
-   279 
+  <h3>다음 모듈</h3>
+  <p>차트와 오버레이가 준비됐지만 지금은 <strong>사람이 손으로</strong> <code>helm upgrade</code>를 친다. 이미지도 손으로 빌드해서 <code>kind load</code>로 넣었다. 28.8의 표에 적은 네 단계 검사도 아직 어디서도 자동으로 돌지 않는다.</p>
+  <p>M29에서 파이프라인을 만든다. 커밋 하나가 <strong>테스트 → 빌드 → 스캔 → 차트 검사</strong>를 거치게 하고, 책 5.3의 원칙대로 <strong>테스트가 실패하면 이미지가 만들어지지 않게</strong> 한다. M27에서 잰 이미지 취약점 숫자가 여기서 임계값이 되고, M26의 <code>policy-audit.sh</code>가 검사 단계 하나로 들어간다.</p>
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>Helm 문서: https://helm.sh/docs/</li>
     <li>Helm 4 변경점: https://helm.sh/docs/community/v4-changes/</li>
@@ -763,7 +778,7 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
     <li>values 스키마: https://helm.sh/docs/topics/charts/#schema-files</li>
     <li>Kustomize 레퍼런스: https://kubectl.docs.kubernetes.io/references/kustomize/</li>
     <li>이름 참조 변환: https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/nameprefix/</li>
-    <li>환경 변수  241  치환: https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/</li>
+    <li>환경 변수 <code>$(VAR)</code> 치환: https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5.3 테스트와 빌드 · 15장 템플릿과 패키징</li>
   </ul>
   <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · Helm v4.2.4 · kustomize (kubectl 내장)</p>

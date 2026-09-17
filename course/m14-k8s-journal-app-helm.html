@@ -151,13 +151,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 460  461  462 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 14 / 38 · PART 2 쿠버네티스 코어</div>
-   420 
-  <p class="ch-desc">M08부터 만든 조각들이  52  네임스페이스에 흩어져 있다. 이것을 한 디렉터리의 매니페스트 일습으로 다시 쓰고,  53  한 줄로 배포한 뒤, 같은 것을 Helm 차트로 묶어 <strong>dev와 prod를 값 파일만 바꿔</strong> 배포한다.</p>
+  <h1>종합 — 저널 애플리케이션과 Helm 파라미터화</h1>
+  <p class="ch-desc">M08부터 만든 조각들이 <code>default</code> 네임스페이스에 흩어져 있다. 이것을 한 디렉터리의 매니페스트 일습으로 다시 쓰고, <code>kubectl apply -k</code> 한 줄로 배포한 뒤, 같은 것을 Helm 차트로 묶어 <strong>dev와 prod를 값 파일만 바꿔</strong> 배포한다.</p>
   <div class="meta">
     <span class="tag">초반→중반</span><span class="tag">135분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Helm 4.2.4</span>
     <br>2026-09-05 검증 (kind v0.33.0 · Docker Engine 29.2.1) · 버전은 실습 당일 다시 확인한다
@@ -183,15 +183,15 @@
 </div>
 
 <nav class="toc">
-   467 
-   468 
-   469 
-   470 
-   471 
-   472 
-   473 
-   474 
-   475 
+  <a href="#s1"><span class="num">14.1</span>흩어진 것을 한 덩어리로</a>
+  <a href="#s2"><span class="num">14.2</span>무엇이 무엇에 의존하는가</a>
+  <a href="#s3"><span class="num">14.3</span>따라하기 ① 일습으로 배포</a>
+  <a href="#s4"><span class="num">14.4</span>따라하기 ② 상태는 어디에 남는가</a>
+  <a href="#s5"><span class="num">14.5</span>따라하기 ③ 같은 것을 Helm 차트로</a>
+  <a href="#s6"><span class="num">14.6</span>따라하기 ④ 값으로 환경을 가른다</a>
+  <a href="#s7"><span class="num">14.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">14.8</span>운영 관점</a>
+  <a href="#s9"><span class="num">14.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -211,7 +211,18 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .cluster { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .ns { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .store { fill:#f7f7f5; stroke:#999999; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
 
       <rect class="accent" x="20" y="180" width="150" height="66" rx="4"/>
       <text class="t-title" x="95" y="206" text-anchor="middle">curl · 브라우저</text>
@@ -279,7 +290,7 @@
   kustomization.yaml    위 전부를 묶는 파일</code></pre>
   <p>번호는 적용 순서를 강제하기 위한 것이 아니다(<code>apply</code>는 순서를 보장하지 않는다). 사람이 파일 목록을 봤을 때 <strong>바깥에서 안쪽으로 읽히도록</strong> 하기 위한 것이다.</p>
 
-  <h3>왜  75 가 아니라 새 네임스페이스인가</h3>
+  <h3>왜 <code>default</code>가 아니라 새 네임스페이스인가</h3>
   <p>네임스페이스 하나가 곧 삭제 단위다. <code>kubectl delete ns journal</code> 한 줄이면 이 앱이 만든 모든 것이 사라진다. <code>default</code>에 쌓아 두면 무엇을 지워야 할지 매번 목록을 만들어야 한다. 책 2.3.2가 개발자마다 네임스페이스를 주라고 말하는 것도 같은 이유다 — 격리보다 <strong>정리가 쉬워지는 것</strong>이 실무에서 더 자주 도움이 된다.</p>
   <p>대신 대가가 있다. M13에서 <code>default</code>에 만들었던 <code>journal-config</code>와 <code>journal-secret</code>은 — 지우지 않고 남겨 두었더라도 — 여기서 쓸 수 없다. <strong>컨피그맵과 시크릿은 네임스페이스를 넘지 못한다</strong>. 그래서 <code>10-config.yaml</code>에 같은 것을 다시 정의한다. M13 실패 ①에서 봤던 세 가지 원인 중 세 번째가 바로 이것이었다.</p>
 </section>
@@ -1839,9 +1850,9 @@ namespace "journal-dev" deleted</code></div>
 </div>
 
 <footer>
-   457 
-  <p>지금 배포한  407 에는  408 와  409 가 이미 붙어 있지만, 값이 왜 그 숫자인지는 설명하지 않았다. M15는 프로브를 <strong>떼어 낸 상태로 롤링 업데이트를 돌려 5xx를 눈으로 보는 것</strong>부터 시작한다. 그 다음 readiness를 붙여 실패를 0으로 만들고, liveness 임계값을 일부러 낮춰 재시작 루프를 재현한다. 실습 대상은 이 모듈이 남긴  410 이고, 롤링 업데이트에는 노드에 적재된  411 를 쓴다.</p>
-   458 
+  <h3>다음 모듈</h3>
+  <p>지금 배포한 <code>journal-api</code>에는 <code>readinessProbe</code>와 <code>livenessProbe</code>가 이미 붙어 있지만, 값이 왜 그 숫자인지는 설명하지 않았다. M15는 프로브를 <strong>떼어 낸 상태로 롤링 업데이트를 돌려 5xx를 눈으로 보는 것</strong>부터 시작한다. 그 다음 readiness를 붙여 실패를 0으로 만들고, liveness 임계값을 일부러 낮춰 재시작 루프를 재현한다. 실습 대상은 이 모듈이 남긴 <code>course/labs/k8s/journal/30-journal-api.yaml</code>이고, 롤링 업데이트에는 노드에 적재된 <code>journal-api:v2</code>를 쓴다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>StatefulSet: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/</li>
     <li>StatefulSet 기본 사용법 튜토리얼: https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/</li>

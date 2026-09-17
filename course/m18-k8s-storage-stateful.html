@@ -149,16 +149,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 253  254  255 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 18 / 38 · PART 3 운영 기초</div>
-   224 
-  <p class="ch-desc">M15부터 M17까지 다룬 것은 전부 <strong>죽여도 되는</strong> 워크로드였다. 파드를 지우고 옮기고 늘렸다 줄여도 잃을 것이 없었다.  31  네임스페이스에서 그동안 한 번도 건드리지 않은  32 은 그렇지 않다. M16에서 노드를 비울 때 레디스만 제외했던 이유를 이 모듈에서 확인한다.</p>
+  <h1>스토리지와 스테이트풀 애플리케이션</h1>
+  <p class="ch-desc">M15부터 M17까지 다룬 것은 전부 <strong>죽여도 되는</strong> 워크로드였다. 파드를 지우고 옮기고 늘렸다 줄여도 잃을 것이 없었다. <code>journal</code> 네임스페이스에서 그동안 한 번도 건드리지 않은 <code>redis-0</code>은 그렇지 않다. M16에서 노드를 비울 때 레디스만 제외했던 이유를 이 모듈에서 확인한다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">80분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0 · local-path-provisioner) · 버전 숫자는 실습 당일  33 으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0 · local-path-provisioner) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
   </div>
 </header>
 
@@ -181,15 +181,15 @@
 </div>
 
 <nav class="toc">
-   258 
-   259 
-   260 
-   261 
-   262 
-   263 
-   264 
-   265 
-   266 
+  <a href="#s1"><span class="num">18.1</span>왜 레디스만 다르게 다뤘나</a>
+  <a href="#s2"><span class="num">18.2</span>이론 — 세 오브젝트와 스테이트풀셋</a>
+  <a href="#s3"><span class="num">18.3</span>따라하기 ① 볼륨은 언제 생기는가</a>
+  <a href="#s4"><span class="num">18.4</span>따라하기 ② 데이터는 파드보다 오래 산다</a>
+  <a href="#s5"><span class="num">18.5</span>따라하기 ③ 스테이트풀셋의 세 가지 성질</a>
+  <a href="#s6"><span class="num">18.6</span>따라하기 ④ 지울 때 무슨 일이 일어나나</a>
+  <a href="#s7"><span class="num">18.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">18.8</span>운영 관점 — 어디까지 직접 하고 어디부터 맡길 것인가</a>
+  <a href="#s9"><span class="num">18.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -221,7 +221,23 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
+        .tick { stroke:#c8c8c8; stroke-width:1; stroke-dasharray:3 3; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
       <text class="t-h" x="40" y="46">누가 무엇을 만드는가 — 파드가 붙기 전에는 볼륨이 없다</text>
@@ -735,10 +751,10 @@ data-redis-0   Bound    pvc-0fddef41-d1ca-48c4-ae6c-d836e6f6895e   1Gi        RW
 </div>
 
 <footer>
-   250 
-  <p>Part 3에서 정한 숫자들은 전부 근거가 얇다.  209 은  210 이 보여준 순간값에서 왔고,  211 은 실패가 0이 되는 값을 손으로 찾은 것이며, HPA의 목표 50%는 그냥 정한 값이다.  212 은 <strong>최근값만 들고 있고 기록을 남기지 않기</strong> 때문에 이보다 나은 근거를 만들 수 없다.</p>
-  <p>M19에서 프로메테우스 스택을 세워 그 기록을 남기기 시작한다. 그리고 실습 대상 애플리케이션이 하나 늘어난다 —  213 의 Spring Boot  214 가 두 번째 앱으로 들어온다. 언어가 다른 두 앱이 한 클러스터에 있고 메트릭을 노출하는 방식이 서로 다르다는 것 자체가 관측 파트의 교재다. 먼저  215 이 어떻게 동작하는지(metrics-server)와 프로메테우스가 무엇을 다르게 하는지부터 구분한다.</p>
-   251 
+  <h3>다음 모듈 — Part 4 관측으로</h3>
+  <p>Part 3에서 정한 숫자들은 전부 근거가 얇다. <code>requests.cpu: 50m</code>은 <code>kubectl top</code>이 보여준 순간값에서 왔고, <code>preStop: sleep 10</code>은 실패가 0이 되는 값을 손으로 찾은 것이며, HPA의 목표 50%는 그냥 정한 값이다. <code>kubectl top</code>은 <strong>최근값만 들고 있고 기록을 남기지 않기</strong> 때문에 이보다 나은 근거를 만들 수 없다.</p>
+  <p>M19에서 프로메테우스 스택을 세워 그 기록을 남기기 시작한다. 그리고 실습 대상 애플리케이션이 하나 늘어난다 — <code>docs/kubernetes-monitoring</code>의 Spring Boot <code>order-api</code>가 두 번째 앱으로 들어온다. 언어가 다른 두 앱이 한 클러스터에 있고 메트릭을 노출하는 방식이 서로 다르다는 것 자체가 관측 파트의 교재다. 먼저 <code>kubectl top</code>이 어떻게 동작하는지(metrics-server)와 프로메테우스가 무엇을 다르게 하는지부터 구분한다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>퍼시스턴트 볼륨: https://kubernetes.io/docs/concepts/storage/persistent-volumes/</li>
     <li>스토리지클래스: https://kubernetes.io/docs/concepts/storage/storage-classes/</li>

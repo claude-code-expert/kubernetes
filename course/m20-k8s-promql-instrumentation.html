@@ -149,13 +149,13 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 226  227  228 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 20 / 38 · PART 4 관측</div>
-   194 
-  <p class="ch-desc">M19에서  33 를 질의했을 때 결과가 0건이었다. 앱은 지표를 내놓고 있는데 아무도 가져가지 않는 상태다. 이 모듈에서 그 연결을 만들되, <strong>세 번 실패시키고 세 번 고친다</strong>. 그다음 요청률·에러율·지연을 직접 질의하고, 평균 45ms 뒤에 숨은 790ms짜리 요청을 찾아낸다.</p>
+  <h1>PromQL과 애플리케이션 계측</h1>
+  <p class="ch-desc">M19에서 <code>http_server_requests_seconds_count</code>를 질의했을 때 결과가 0건이었다. 앱은 지표를 내놓고 있는데 아무도 가져가지 않는 상태다. 이 모듈에서 그 연결을 만들되, <strong>세 번 실패시키고 세 번 고친다</strong>. 그다음 요청률·에러율·지연을 직접 질의하고, 평균 45ms 뒤에 숨은 790ms짜리 요청을 찾아낸다.</p>
   <div class="meta">
     <span class="tag">중반</span><span class="tag">95분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">Prometheus Operator v0.93.1</span>
     <br>2026-09-05 검증 (kind v0.33.0 · k6 v2.2.0) · 버전 숫자는 실습 당일 다시 확인한다
@@ -181,15 +181,15 @@
 </div>
 
 <nav class="toc">
-   231 
-   232 
-   233 
-   234 
-   235 
-   236 
-   237 
-   238 
-   239 
+  <a href="#s1"><span class="num">20.1</span>왜 앱은 긁히지 않는가</a>
+  <a href="#s2"><span class="num">20.2</span>이론 — 무엇을 재야 하는가</a>
+  <a href="#s3"><span class="num">20.3</span>따라하기 ① 라벨 세 겹을 잇는다</a>
+  <a href="#s4"><span class="num">20.4</span>따라하기 ② 두 번째 앱에 계측을 붙인다</a>
+  <a href="#s5"><span class="num">20.5</span>따라하기 ③ RED 질의를 쓴다</a>
+  <a href="#s6"><span class="num">20.6</span>따라하기 ④ 평균 뒤에 숨은 것을 찾는다</a>
+  <a href="#s7"><span class="num">20.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">20.8</span>운영 관점 — 계측의 값과 대가</a>
+  <a href="#s9"><span class="num">20.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -226,7 +226,22 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:12px; font-weight:700; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.6; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="400" rx="6"/>
       <text class="t-h" x="40" y="46">세 겹이 다 맞아야 연결된다 — 하나만 어긋나면 에러 없이 사라진다</text>
@@ -823,9 +838,9 @@ pgrep -fl 'k6|port-forward' || echo "없음"</code></pre>
 </div>
 
 <footer>
-   223 
-  <p>지금은 질의를 칠 때만 값을 본다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 그 사실을 알 방법이 없다. M21에서 두 가지를 만든다 — 늘 켜 두고 볼 수 있는 대시보드와, 사람을 부르는 알림이다. 대시보드는 M19 13단계에서 본 사이드카 방식으로 ConfigMap에 코드로 담고, 알림은 이 모듈에서 쓴 RED 질의를 임계값과 함께  187 로 옮긴다. 그리고  188 로 실제 지연과 에러를 만들어 <strong>pending → firing → resolved</strong> 상태 전이를 직접 관찰한다.</p>
-   224 
+  <h3>다음 모듈</h3>
+  <p>지금은 질의를 칠 때만 값을 본다. 아무도 터미널을 보고 있지 않을 때 P99가 3초가 되면 그 사실을 알 방법이 없다. M21에서 두 가지를 만든다 — 늘 켜 두고 볼 수 있는 대시보드와, 사람을 부르는 알림이다. 대시보드는 M19 13단계에서 본 사이드카 방식으로 ConfigMap에 코드로 담고, 알림은 이 모듈에서 쓴 RED 질의를 임계값과 함께 <code>PrometheusRule</code>로 옮긴다. 그리고 <code>ChaosController</code>로 실제 지연과 에러를 만들어 <strong>pending → firing → resolved</strong> 상태 전이를 직접 관찰한다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>PromQL 기초: https://prometheus.io/docs/prometheus/latest/querying/basics/</li>
     <li>histogram_quantile과 히스토그램: https://prometheus.io/docs/practices/histograms/</li>

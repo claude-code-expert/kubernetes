@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 224  225  226 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 23 / 38 · PART 5 보안과 정책</div>
-   192 
-  <p class="ch-desc">M01부터 M22까지 우리는 이 클러스터에서 <strong>무엇이든 할 수 있었다</strong>. 네임스페이스를 지우고, 노드의 정적 파드 매니페스트를 고치고, 시크릿을  27 로 열어 봤다. 실제 클러스터에서 그런 권한을 가진 사람은 극소수다. 이 모듈에서 권한을 실제로 좁히고, <strong>권한 밖의 명령이 어떻게 거부되는지</strong>를 메시지로 확인한다.</p>
+  <h1>RBAC과 인가</h1>
+  <p class="ch-desc">M01부터 M22까지 우리는 이 클러스터에서 <strong>무엇이든 할 수 있었다</strong>. 네임스페이스를 지우고, 노드의 정적 파드 매니페스트를 고치고, 시크릿을 <code>base64 -d</code>로 열어 봤다. 실제 클러스터에서 그런 권한을 가진 사람은 극소수다. 이 모듈에서 권한을 실제로 좁히고, <strong>권한 밖의 명령이 어떻게 거부되는지</strong>를 메시지로 확인한다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">80분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일  28 으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
   </div>
 </header>
 
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-   228 
-   229 
-   230 
-   231 
-   232 
-   233 
-   234 
-   235 
-   236 
+  <a href="#s1"><span class="num">23.1</span>우리는 지금까지 무엇이든 할 수 있었다</a>
+  <a href="#s2"><span class="num">23.2</span>이론 — 네 조각과 요청의 경로</a>
+  <a href="#s3"><span class="num">23.3</span>따라하기 ① 개발자 계정을 만든다</a>
+  <a href="#s4"><span class="num">23.4</span>따라하기 ② 거부당해 본다</a>
+  <a href="#s5"><span class="num">23.5</span>따라하기 ③ 치기 전에 물어본다</a>
+  <a href="#s6"><span class="num">23.6</span>따라하기 ④ 집약 ClusterRole</a>
+  <a href="#s7"><span class="num">23.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">23.8</span>운영 관점 — 최소 권한을 실제로 지키려면</a>
+  <a href="#s9"><span class="num">23.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -230,7 +230,23 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .nsbox { fill:#ffffff; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.5; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="410" rx="6"/>
       <text class="t-h" x="40" y="46">권한의 정의와 범위는 따로 정해진다</text>
@@ -742,10 +758,10 @@ kubectl -n journal get sa,role,rolebinding dev --no-headers</code></pre>
 </div>
 
 <footer>
-   221 
+  <h3>다음 모듈</h3>
   <p>RBAC은 <strong>API를 통해 무엇을 할 수 있는가</strong>를 정한다. 그런데 파드가 일단 뜨고 나면 그 안에서 하는 일은 RBAC이 관여하지 않는다 — 루트로 실행하고, 호스트 파일시스템을 마운트하고, 커널 기능을 요구하는 것은 전부 파드 스펙에 적혀 있고 <strong>지금 우리 클러스터는 그것을 다 허용한다.</strong></p>
-  <p>M24에서 파드 시큐리티 어드미션을 켠다. 네임스페이스에 라벨 하나를 붙여  181  수준을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>을 먼저 본다. 그다음  182 를 채워 통과시킨다 —  183 ,  184 ,  185 이 각각 무엇을 막는지 확인하면서.</p>
-   222 
+  <p>M24에서 파드 시큐리티 어드미션을 켠다. 네임스페이스에 라벨 하나를 붙여 <code>restricted</code> 수준을 강제하고, <strong>지금 잘 돌고 있는 파드들이 거부되는 것</strong>을 먼저 본다. 그다음 <code>securityContext</code>를 채워 통과시킨다 — <code>runAsNonRoot</code>, <code>readOnlyRootFilesystem</code>, <code>drop: ["ALL"]</code>이 각각 무엇을 막는지 확인하면서.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>RBAC 인가: https://kubernetes.io/docs/reference/access-authn-authz/rbac/</li>
     <li>인가 개요와 모듈 순서: https://kubernetes.io/docs/reference/access-authn-authz/authorization/</li>
@@ -754,7 +770,7 @@ kubectl -n journal get sa,role,rolebinding dev --no-headers</code></pre>
     <li>가장(impersonation): https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 4.4 RBAC 기초 · 17.2 인가</li>
   </ul>
-  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 ·  186 </p>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · <code>--authorization-mode=Node,RBAC</code></p>
 </footer>
 
 </div>

@@ -151,12 +151,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 148  149  150 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 03 / 38 · PART 1 도커</div>
-   127 
+  <h1>이미지와 레이어</h1>
   <p class="ch-desc">태그는 움직인다. 다이제스트는 움직이지 않는다. 이 한 문장의 차이가 "내 노트북에서는 됐는데요"의 절반을 만든다. 이미지를 열어 레이어를 세고, 태그와 다이제스트를 손으로 구분한다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">40분</span><span class="tag">Docker Engine 29.2.1</span>
@@ -180,14 +180,14 @@
 </div>
 
 <nav class="toc">
-   152 
-   153 
-   154 
-   155 
-   156 
-   157 
-   158 
-   159 
+  <a href="#s1"><span class="num">3.1</span>왜 레이어를 알아야 하나</a>
+  <a href="#s2"><span class="num">3.2</span>이론 — 레이어 · 태그 · 다이제스트</a>
+  <a href="#s3"><span class="num">3.3</span>따라하기 ① 이미지를 열어본다</a>
+  <a href="#s4"><span class="num">3.4</span>따라하기 ② 태그와 다이제스트</a>
+  <a href="#s5"><span class="num">3.5</span>일부러 실패시키기</a>
+  <a href="#s6"><span class="num">3.6</span>디스크 관리</a>
+  <a href="#s7"><span class="num">3.7</span>체크포인트</a>
+  <a href="#s8"><span class="num">3.8</span>정리</a>
 </nav>
 
 <section id="s1">
@@ -420,9 +420,9 @@ docker rmi myweb:v1 2>/dev/null || true</code></pre>
 </div>
 
 <footer>
-   145 
-  <p>지금까지는 남이 만든 이미지를 받아 썼다. M04에서 직접 만든다. 같은 애플리케이션으로 두 가지를 비교한다 —  120  줄의 순서 하나로 소스 한 줄을 고친 뒤의 재빌드에서 의존성 설치가  121 로 건너뛰어져 마지막 단계가 2.7초에서 1.6초로 줄고(실제 프로젝트에서는 이 자리가 몇 분짜리다), 멀티스테이지 빌드로 이미지가 1.68GB에서 246MB로, 배포 때 내려받는 양은 413MB에서 59.3MB로 줄어든다. 두 실험 모두 이 모듈에서 본  122 로 어느 레이어가 달라졌는지 확인하며 진행한다.</p>
-   146 
+  <h3>다음 모듈</h3>
+  <p>지금까지는 남이 만든 이미지를 받아 썼다. M04에서 직접 만든다. 같은 애플리케이션으로 두 가지를 비교한다 — <code>COPY</code> 줄의 순서 하나로 소스 한 줄을 고친 뒤의 재빌드에서 의존성 설치가 <code>CACHED</code>로 건너뛰어져 마지막 단계가 2.7초에서 1.6초로 줄고(실제 프로젝트에서는 이 자리가 몇 분짜리다), 멀티스테이지 빌드로 이미지가 1.68GB에서 246MB로, 배포 때 내려받는 양은 413MB에서 59.3MB로 줄어든다. 두 실험 모두 이 모듈에서 본 <code>docker history</code>로 어느 레이어가 달라졌는지 확인하며 진행한다.</p>
+  <h3>참고 (2026-09-03 접근 확인)</h3>
   <ul>
     <li>이미지 레이어 개념: https://docs.docker.com/get-started/docker-concepts/building-images/understanding-image-layers/</li>
     <li>이미지 저장 방식(containerd 스토어): https://docs.docker.com/engine/storage/containerd/</li>

@@ -151,16 +151,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 229  230  231 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg on" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 04 / 38 · PART 1 도커</div>
-   209 
+  <h1>Dockerfile — 빌드와 최적화</h1>
   <p class="ch-desc">같은 애플리케이션을 두 가지 Dockerfile로 빌드한다. 하나는 1.68GB, 하나는 246MB. 배포할 때 받는 양은 413MB와 59MB. 차이를 만든 것은 세 줄의 순서와 스테이지 분리다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">65분</span><span class="tag">Docker Engine 29.2.1</span><span class="tag">BuildKit</span>
-    <br>2026-09-05 검증 · node:22-alpine · 여기 적힌 버전 숫자는 실습 당일  24 으로 다시 확인한다 · 이 모듈에서 만든 이미지를 M07에서 클러스터로 올린다
+    <br>2026-09-05 검증 · node:22-alpine · 여기 적힌 버전 숫자는 실습 당일 <code>docker version</code>으로 다시 확인한다 · 이 모듈에서 만든 이미지를 M07에서 클러스터로 올린다
   </div>
 </header>
 
@@ -180,14 +180,14 @@
 </div>
 
 <nav class="toc">
-   233 
-   234 
-   235 
-   236 
-   237 
-   238 
-   239 
-   240 
+  <a href="#s1"><span class="num">4.1</span>왜 이미지 크기가 운영 문제인가</a>
+  <a href="#s2"><span class="num">4.2</span>실습 대상과 기준선 — 저널 API를 순진하게 빌드한다</a>
+  <a href="#s3"><span class="num">4.3</span>이론 — 빌드 캐시가 깨지는 지점</a>
+  <a href="#s4"><span class="num">4.4</span>따라하기 ① 멀티스테이지로 다시 쓴다</a>
+  <a href="#s5"><span class="num">4.5</span>따라하기 ② 캐시 동작 비교</a>
+  <a href="#s6"><span class="num">4.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">4.7</span>운영 관점 — 멀티 아키텍처 빌드</a>
+  <a href="#s8"><span class="num">4.8</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -563,9 +563,9 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 </div>
 
 <footer>
-   226 
-  <p>이미지는 만들었지만 이 API는 아직 데이터를 메모리에만 담는다. 컨테이너를 지우면 사라진다. M05에서 볼륨으로 데이터를 살리고, 컨테이너끼리 IP가 아니라 이름으로 부르게 만든다 — 쿠버네티스의 퍼시스턴트 볼륨(M18)과 서비스 디스커버리(M11)의 원형이다.  203 이 그 실습의 애플리케이션 컨테이너다.</p>
-   227 
+  <h3>다음 모듈</h3>
+  <p>이미지는 만들었지만 이 API는 아직 데이터를 메모리에만 담는다. 컨테이너를 지우면 사라진다. M05에서 볼륨으로 데이터를 살리고, 컨테이너끼리 IP가 아니라 이름으로 부르게 만든다 — 쿠버네티스의 퍼시스턴트 볼륨(M18)과 서비스 디스커버리(M11)의 원형이다. <code>journal-api:v1</code>이 그 실습의 애플리케이션 컨테이너다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>Dockerfile 레퍼런스: https://docs.docker.com/reference/dockerfile/ (ARG · ENV · 캐시 규칙)</li>
     <li>멀티스테이지 빌드: https://docs.docker.com/build/building/multi-stage/</li>

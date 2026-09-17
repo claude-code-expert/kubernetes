@@ -151,12 +151,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 238  239  240 </nav>
+  <nav class="cb-rail"><a class="seg on" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 01 / 38 · PART 0 실습 환경</div>
-   215 
+  <h1>환경 구축과 버전 고정</h1>
   <p class="ch-desc">앞으로 37개 모듈에서 칠 명령이 전부 이 클러스터 위에서 돈다. 만드는 데 20초, 부수는 데 5초. 이 모듈이 끝나면 언제든 처음 상태로 돌아갈 수 있게 된다.</p>
   <div class="meta">
     <span class="tag">초반</span><span class="tag">50분</span><span class="tag">Kubernetes 1.37.0</span><span class="tag">kind v0.33.0</span>
@@ -177,15 +177,15 @@
 </div>
 
 <nav class="toc">
-   241 
-   242 
-   243 
-   244 
-   245 
-   246 
-   247 
-   248 
-   249 
+  <a href="#s1"><span class="num">1.1</span>왜 로컬 클러스터인가</a>
+  <a href="#s2"><span class="num">1.2</span>이론 — 무엇이 어디서 도는가</a>
+  <a href="#s3"><span class="num">1.3</span>설치</a>
+  <a href="#s4"><span class="num">1.4</span>클러스터 설정 파일</a>
+  <a href="#s5"><span class="num">1.5</span>따라하기 — 클러스터 생성과 확인</a>
+  <a href="#s6"><span class="num">1.6</span>일부러 실패시키기</a>
+  <a href="#s7"><span class="num">1.7</span>사전 점검 스크립트</a>
+  <a href="#s8"><span class="num">1.8</span>체크포인트</a>
+  <a href="#s9"><span class="num">1.9</span>정리와 재생성</a>
 </nav>
 
 <section id="s1">
@@ -215,7 +215,18 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .vm { fill:#fafaf8; stroke:#999999; stroke-width:1; stroke-dasharray:5 4; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:13px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
       <rect class="outer" x="20" y="20" width="860" height="360" rx="6"/>
       <text class="t-h" x="40" y="46">macOS — 노트북 한 대</text>
       <rect class="accent" x="46" y="150" width="146" height="76" rx="4"/>
@@ -467,7 +478,7 @@ readyz check passed</code></div>
   </div>
 
   <div class="step">
-    <h4>7단계. metrics-server를 설치해  110 이 수치를 돌려주게 한다</h4>
+    <h4>7단계. metrics-server를 설치해 <code>kubectl top</code>이 수치를 돌려주게 한다</h4>
     <p class="purpose"><span class="lbl">목적</span>노드와 파드의 CPU · 메모리 사용량을 읽는 <code>kubectl top</code>은 <dfn class="term">metrics-server</dfn>가 있어야 동작하는데 kind에는 기본으로 들어 있지 않다. M16 <code>kubectl top</code>과 M17 HPA(오토스케일러가 이 수치로 계산한다)의 전제라서 지금 깔아둔다.</p>
 <pre><code>kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml
 kubectl -n kube-system rollout status deploy/metrics-server --timeout=45s</code></pre>
@@ -670,9 +681,9 @@ No kind clusters found.</code></div>
 </div>
 
 <footer>
-   235 
+  <h3>다음 모듈</h3>
   <p>클러스터는 생겼지만 아직 배포할 것이 없다. M02부터 M07까지는 쿠버네티스를 잠시 두고 도커로 내려간다 — 컨테이너가 무엇인지 손으로 확인하고, 배포할 이미지를 직접 만든다. 여기서 만든 이미지가 M07에서 이 클러스터로 올라간다.</p>
-   236 
+  <h3>참고 (2026-09-03 접근 확인)</h3>
   <ul>
     <li>kind 공식 문서 · 릴리스: https://kind.sigs.k8s.io/docs/user/quick-start/ · https://github.com/kubernetes-sigs/kind/releases</li>
     <li>Kubernetes 컴포넌트 개요: https://kubernetes.io/docs/concepts/overview/components/</li>

@@ -148,16 +148,16 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 229  230  231 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 26 / 38 · PART 5 보안과 정책</div>
-   191 
-  <p class="ch-desc">M24의 PSA와 M25의 네트워크 정책은 쿠버네티스가 <strong>미리 정해 둔 규칙</strong>이었다. 조직에는 그 목록에 없는 규칙이 있다 — " 31  태그 금지", "허용된 레지스트리만", "토큰은 기본으로 끈다". 이 모듈에서 그 규칙을 CEL 표현식으로 써서 API 서버 안에 심고, <strong>경고에서 거부로 승격하는 순서</strong>와 <strong>이미 배포된 위반을 찾아내는 방법</strong>을 함께 만든다.</p>
+  <h1>어드미션 컨트롤과 정책 엔진</h1>
+  <p class="ch-desc">M24의 PSA와 M25의 네트워크 정책은 쿠버네티스가 <strong>미리 정해 둔 규칙</strong>이었다. 조직에는 그 목록에 없는 규칙이 있다 — "<code>latest</code> 태그 금지", "허용된 레지스트리만", "토큰은 기본으로 끈다". 이 모듈에서 그 규칙을 CEL 표현식으로 써서 API 서버 안에 심고, <strong>경고에서 거부로 승격하는 순서</strong>와 <strong>이미 배포된 위반을 찾아내는 방법</strong>을 함께 만든다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일  32 으로 다시 확인한다
+    <br>2026-09-05 검증 (kind v0.33.0) · 버전 숫자는 실습 당일 <code>kubectl version</code>으로 다시 확인한다
   </div>
 </header>
 
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-   234 
-   235 
-   236 
-   237 
-   238 
-   239 
-   240 
-   241 
-   242 
+  <a href="#s1"><span class="num">26.1</span>규칙이 사람 머릿속에만 있다</a>
+  <a href="#s2"><span class="num">26.2</span>이론 — 요청 파이프라인과 CEL</a>
+  <a href="#s3"><span class="num">26.3</span>따라하기 ① latest 태그를 막는다</a>
+  <a href="#s4"><span class="num">26.4</span>따라하기 ② 이미 배포된 위반을 찾는다</a>
+  <a href="#s5"><span class="num">26.5</span>따라하기 ③ 목록을 정책 밖으로 뺀다</a>
+  <a href="#s6"><span class="num">26.6</span>따라하기 ④ 기본값을 주입한다</a>
+  <a href="#s7"><span class="num">26.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">26.8</span>운영 관점 — 어디까지 정책으로 만들 것인가</a>
+  <a href="#s9"><span class="num">26.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -216,7 +216,22 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#2456c4"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+        .aline { stroke:#2456c4; stroke-width:1.4; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="420" rx="6"/>
       <text class="t-h" x="40" y="46">요청 하나가 저장되기까지 — 정책이 끼어드는 자리</text>
@@ -885,10 +900,10 @@ kubectl get validatingadmissionpolicy,mutatingadmissionpolicy --no-headers | awk
 </div>
 
 <footer>
-   226 
+  <h3>다음 모듈</h3>
   <p>M23부터 여기까지 인가·파드 보안·네트워크·어드미션을 하나씩 걸었다. 그런데 <strong>지금 이 클러스터가 전체적으로 어떤 상태인지</strong>는 아직 아무도 모른다 — 정책이 걸리지 않은 네임스페이스가 몇 개인지, 누가 어제 무엇을 지웠는지, etcd가 어떻게 보호되고 있는지.</p>
-  <p>M27에서 감사 로깅을 켜서 <strong>누가 무엇을 했는지</strong>를 읽고, 파드에서 클라우드 메타데이터로 나가는 경로를 막고, 진단 도구로 클러스터 전체를 훑어 상위 지적 셋을 고친다. 이 모듈에서 만든  184 가 그 점검 목록의 한 항목이 된다.</p>
-   227 
+  <p>M27에서 감사 로깅을 켜서 <strong>누가 무엇을 했는지</strong>를 읽고, 파드에서 클라우드 메타데이터로 나가는 경로를 막고, 진단 도구로 클러스터 전체를 훑어 상위 지적 셋을 고친다. 이 모듈에서 만든 <code>policy-audit.sh</code>가 그 점검 목록의 한 항목이 된다.</p>
+  <h3>참고 (2026-09-05 접근 확인)</h3>
   <ul>
     <li>ValidatingAdmissionPolicy: https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/</li>
     <li>MutatingAdmissionPolicy: https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/</li>

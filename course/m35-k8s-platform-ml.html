@@ -148,12 +148,12 @@
 <div class="wrap">
 <div class="coursebar">
   <span class="cb-name"><a href="index.html">도커 &amp; 쿠버네티스 — 이론과 따라하기</a></span>
-  <nav class="cb-rail"> 181  182  183 </nav>
+  <nav class="cb-rail"><a class="seg" href="index.html#roadmap"><b>공통</b>M01 환경</a><a class="seg" href="index.html#roadmap"><b>도커</b>M02–M07</a><a class="seg on" href="index.html#roadmap"><b>쿠버네티스</b>M08–M38</a></nav>
 </div>
 
 <header>
   <div class="ch-no">MODULE 35 / 38 · PART 7 확장</div>
-   148 
+  <h1>플랫폼 패턴과 ML 워크로드</h1>
   <p class="ch-desc">여기까지 다룬 워크로드는 전부 <strong>계속 도는 것</strong>이었다 — 디플로이먼트와 스테이트풀셋. 데이터 처리와 모델 훈련은 <strong>시작해서 끝나는 일</strong>이고, 다른 도구와 다른 실패 처리를 쓴다. 이 모듈에서 인덱스 잡으로 분산 훈련의 형태를 만들고, <strong>재시도해도 소용없는 실패</strong>를 구분해 파드 4개를 1개로 줄인다. 그리고 M33의 CRD를 포함한 <strong>확장 지점 지도</strong>를 정리해, 다음에 무엇을 만들지 고르는 기준을 만든다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Kubernetes 1.37.0</span>
@@ -179,15 +179,15 @@
 </div>
 
 <nav class="toc">
-   187 
-   188 
-   189 
-   190 
-   191 
-   192 
-   193 
-   194 
-   195 
+  <a href="#s1"><span class="num">35.1</span>끝나는 일은 다르게 다룬다</a>
+  <a href="#s2"><span class="num">35.2</span>이론 — 배치의 두 축과 확장 지점</a>
+  <a href="#s3"><span class="num">35.3</span>따라하기 ① 인덱스 잡</a>
+  <a href="#s4"><span class="num">35.4</span>따라하기 ② 실패를 구분한다</a>
+  <a href="#s5"><span class="num">35.5</span>따라하기 ③ 주기 실행</a>
+  <a href="#s6"><span class="num">35.6</span>따라하기 ④ 특수 하드웨어와 DRA</a>
+  <a href="#s7"><span class="num">35.7</span>일부러 실패시키기</a>
+  <a href="#s8"><span class="num">35.8</span>운영 관점 — 확장 지점 고르기</a>
+  <a href="#s9"><span class="num">35.9</span>체크포인트와 정리</a>
 </nav>
 
 <section id="s1">
@@ -214,7 +214,21 @@
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
         </marker>
       </defs>
-       1 
+      <style>
+        .outer { fill:#ffffff; stroke:#444444; stroke-width:1.2; }
+        .node { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .box { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
+        .accent { fill:#ffffff; stroke:#2456c4; stroke-width:1.5; }
+        .warnbox { fill:#ffffff; stroke:#a1442a; stroke-width:1.5; }
+        .soft { fill:#f7f7f5; stroke:#c8c8c8; stroke-width:1; }
+        .t-h { font-size:13px; font-weight:700; fill:#333333; }
+        .t-title { font-size:12.5px; font-weight:600; fill:#111111; }
+        .t-sub { font-size:11px; fill:#555555; }
+        .t-warn { font-size:11px; font-weight:600; fill:#a1442a; }
+        .t-acc { font-size:11px; font-weight:600; fill:#2456c4; }
+        .t-mono { font-size:10.5px; fill:#333333; font-family:ui-monospace,Consolas,monospace; }
+        .line { stroke:#444444; stroke-width:1.2; fill:none; }
+      </style>
 
       <rect class="outer" x="20" y="20" width="860" height="430" rx="6"/>
       <text class="t-h" x="40" y="46">확장 지점 — 무엇을 바꾸고 싶은가로 고른다</text>
@@ -656,10 +670,10 @@ kubectl get po -A --no-headers | grep -vc 'Running\|Completed'</code></pre>
 </div>
 
 <footer>
-   178 
+  <h3>다음 모듈</h3>
   <p>Part 1부터 여기까지 <strong>만드는 것</strong>을 했다. 프로브를 걸고, 리소스를 정하고, 정책을 붙이고, 배포 절차를 만들었다. 그것들이 <strong>실제로 동작하는지</strong>는 대부분 정상 상황에서만 확인했다 — 파드를 하나 지워 보고, 롤아웃을 한 번 되돌려 봤을 뿐이다.</p>
   <p>M36에서 클러스터를 <strong>계획적으로 망가뜨린다.</strong> 파드를 무작위로 죽이고, 네트워크에 지연을 넣고, CPU를 고갈시킨다. 그리고 그때 <strong>M21에서 만든 알림이 실제로 울리는지</strong>, M15의 종료 창이 정말 요청을 지키는지를 확인한다. 가설을 먼저 쓰고 실험으로 검증하는 것이 이 파트의 방식이다.</p>
-   179 
+  <h3>참고 (2026-09-06 접근 확인)</h3>
   <ul>
     <li>Job: https://kubernetes.io/docs/concepts/workloads/controllers/job/</li>
     <li>인덱스 잡: https://kubernetes.io/docs/tasks/job/indexed-parallel-processing-static/</li>
