@@ -20,7 +20,7 @@
   </style>
   <text class="hd" x="20" y="22">M14 가 끝나면 클러스터에 이만큼이 서 있다</text>
   <text class="hs" x="20" y="42">요청 하나가 브라우저에서 파드까지 가는 길이다. 앞 모듈에서 하나씩 만든 것들이 여기서 한 덩어리가 된다.</text>
-  <text class="hs" x="20" y="58">볼 곳 — 레디스만 PVC 를 갖는다. 나머지는 지워도 다시 만들면 그만이지만 레디스는 데이터가 남아야 한다.</text>
+  <text class="hs" x="20" y="58">볼 곳 — 레디스에만 PVC(저장 공간을 달라는 요청서)가 붙는다. 데이터가 남는 대신 그 파드는 노드를 떠날 수 없다.</text>
   <g transform="translate(0,68)">
 
   <rect class="accent" x="20" y="180" width="150" height="66" rx="4"/>
