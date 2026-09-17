@@ -43,7 +43,12 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+      # enablement: Pages 설정이 없으면 켜고 진행한다.
+      # 히스토리를 다시 쓰면 설정이 초기화되면서 Get Pages site failed 로 죽고,
+      # 그 틈에 GitHub 기본 Jekyll 빌드가 README 를 루트로 배포해 버린다 (2026-09-13).
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       # 사이트를 조립한다. labs 의 매니페스트·소스도 함께 올라가므로
       # 수강생이 클론하지 않고 브라우저에서 바로 열어볼 수 있다.
