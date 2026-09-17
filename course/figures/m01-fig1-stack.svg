@@ -19,6 +19,7 @@
 
   <rect class="outer" x="20" y="20" width="860" height="360" rx="6"/>
   <text class="t-h" x="40" y="46">macOS — 노트북 한 대</text>
+  <text class="t-sub" x="40" y="64">맥에서는 컨테이너가 리눅스 VM 안에서 돈다. 그 VM 안에 kind 가 만든 노드 컨테이너가 또 들어 있다 — 겹이 두 개다.</text>
 
   <rect class="accent" x="46" y="150" width="146" height="76" rx="4"/>
   <text class="t-title" x="119" y="176" text-anchor="middle">kubectl · helm · kind</text>

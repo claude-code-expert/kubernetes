@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 478" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
   <defs>
     <marker id="m14ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
@@ -15,7 +15,13 @@
     .t-sub { font-size:11px; fill:#555555; }
     .t-mono { font-size:11px; fill:#555555; font-family:ui-monospace,Consolas,monospace; }
     .line { stroke:#444444; stroke-width:1.2; fill:none; }
+    .hd { font-size:13.5px; font-weight:700; fill:#333333; }
+    .hs { font-size:11px; fill:#555555; }
   </style>
+  <text class="hd" x="20" y="22">M14 가 끝나면 클러스터에 이만큼이 서 있다</text>
+  <text class="hs" x="20" y="42">요청 하나가 브라우저에서 파드까지 가는 길이다. 앞 모듈에서 하나씩 만든 것들이 여기서 한 덩어리가 된다.</text>
+  <text class="hs" x="20" y="58">볼 곳 — 레디스만 PVC 를 갖는다. 나머지는 지워도 다시 만들면 그만이지만 레디스는 데이터가 남아야 한다.</text>
+  <g transform="translate(0,68)">
 
   <rect class="accent" x="20" y="180" width="150" height="66" rx="4"/>
   <text class="t-title" x="95" y="206" text-anchor="middle">curl · 브라우저</text>
@@ -65,4 +71,5 @@
   <text class="t-mono" x="752" y="272">/data</text>
   <path class="line" d="M 500 248 L 500 286" marker-end="url(#m14ar)"/>
   <text class="t-mono" x="510" y="272">env</text>
+  </g>
 </svg>

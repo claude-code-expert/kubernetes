@@ -386,7 +386,10 @@ runtimeOnly 'io.micrometer:micrometer-registry-prometheus'</code></pre>
 <h3>요청 하나가 만드는 메트릭</h3>
 
 <figure>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 470" role="img" aria-label="HTTP 요청 하나가 count sum bucket 세 종류의 시계열로 노출되는 구조">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 524.0" role="img" aria-label="HTTP 요청 하나가 count sum bucket 세 종류의 시계열로 노출되는 구조">
+  <text x="20" y="22" font-size="13.5" font-weight="700" fill="#15181d">요청 하나가 시계열 세 개를 만든다</text>
+  <text x="20" y="42" font-size="11" fill="#585f6b">주문 한 번 받은 것이 프로메테우스 쪽에서는 세 줄로 갈라진다. 셋은 같은 태그를 공유하므로 언제나 같이 움직인다.</text>
+  <g transform="translate(0,58)">
   <rect width="1000" height="470" fill="#ffffff"/>
 
   <rect x="24" y="50" width="280" height="84" rx="6" fill="#f5f6f7" stroke="#585f6b" stroke-width="1.5"/>
@@ -430,6 +433,7 @@ runtimeOnly 'io.micrometer:micrometer-registry-prometheus'</code></pre>
   <text x="24" y="378" font-size="14" font-weight="700" fill="#15181d">세 종류 모두 같은 태그를 공유한다</text>
   <text x="24" y="406" font-size="12" font-family="monospace" fill="#585f6b">uri="/api/orders"  method="POST"  status="201"  outcome="SUCCESS"  exception="none"</text>
   <text x="24" y="440" font-size="13" fill="#8f4408">uri 태그에 실제 ID 값이 찍히면 시계열이 무한히 늘어난다 — 09장 카디널리티의 출발점</text>
+  </g>
 </svg>
 <figcaption>
   <b>그림 2.</b> <code>_bucket</code> 은 기본으로 생성되지 않는다. <code>percentiles-histogram</code> 을 켜야 만들어지고, 켜는 순간 시계열 수가 버킷 개수만큼 늘어난다.

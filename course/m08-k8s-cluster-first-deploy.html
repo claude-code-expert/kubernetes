@@ -201,7 +201,7 @@
   <h2 class="sec"><span class="num">8.2</span>이론 — 명령 하나가 지나가는 길</h2>
   <p>M01에서 컨트롤 플레인 컴포넌트 네 개를 봤다. 이제 그것들이 <strong>순서대로</strong> 무엇을 하는지 본다. <code>kubectl create deployment web --image=nginx --replicas=3</code> 한 줄이 실행될 때의 흐름이다. 책 1.3(디플로이먼트를 이용한 복제 서비스 생성)이 이 명령으로 만들어지는 오브젝트를 설명하고, 이 절은 그 명령이 클러스터 안에서 어떤 경로로 처리되는지를 본다.</p>
   <figure>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 330" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 486" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
       <defs>
         <marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
@@ -214,8 +214,17 @@
         .s { font-size:11px; fill:#555555; }
         .n { font-size:11.5px; font-weight:700; fill:#2456c4; }
         .l { stroke:#444444; stroke-width:1.2; fill:none; }
+        .hd { font-size:13.5px; font-weight:700; fill:#333333; }
+        .hs { font-size:11px; fill:#555555; }
+        .lg { font-size:11px; fill:#555555; }
+        .lgn { font-size:11px; font-weight:700; fill:#2456c4; }
+        .frame { fill:#ffffff; stroke:#c8c8c8; stroke-width:1; }
         .d { stroke:#999999; stroke-width:1; fill:none; stroke-dasharray:4 3; }
       </style>
+      <text class="hd" x="20" y="22">명령 하나가 지나가는 길 — 아무도 지시하지 않는다. 각자 지켜보다 반응한다</text>
+      <text class="hs" x="20" y="42">kubectl 은 apiserver 에게만 말한다. 그다음부터는 컨트롤러와 스케줄러가 스스로 알아채고 움직인다.</text>
+      <text class="hs" x="20" y="60">점선 화살표(③④)가 그 감시(watch)다 — 누가 시켜서가 아니라 변화를 보고 스스로 나선다.</text>
+      <g transform="translate(0,78)">
       <rect class="acc" x="20" y="130" width="120" height="58" rx="4"/>
       <text class="t" x="80" y="154" text-anchor="middle">kubectl</text>
       <text class="s" x="80" y="172" text-anchor="middle">사용자</text>
@@ -260,6 +269,17 @@
       <text class="n" x="521" y="160" text-anchor="middle">⑤</text>
       <path class="l" d="M 690 169 L 728 169" marker-end="url(#a8)"/>
       <text class="n" x="709" y="160" text-anchor="middle">⑥</text>
+      </g>
+
+      <rect class="frame" x="20" y="386" width="860" height="84" rx="5"/>
+      <text class="hs" x="36" y="406" font-weight="700" fill="#333333">번호가 뜻하는 것</text>
+      <text class="lgn" x="36"  y="428">①</text><text class="lg" x="52"  y="428">kubectl 이 apiserver 에 "이런 상태였으면 좋겠다" 를 보낸다</text>
+      <text class="lgn" x="36"  y="446">②</text><text class="lg" x="52"  y="446">apiserver 가 검증한 뒤 etcd 에 적는다. 여기까지가 "접수"다</text>
+      <text class="lgn" x="36"  y="464">③</text><text class="lg" x="52"  y="464">컨트롤러가 그 변화를 보고 레플리카셋과 파드를 만든다</text>
+      <text class="lgn" x="470" y="428">④</text><text class="lg" x="486" y="428">스케줄러가 노드 없는 파드를 찾아 노드를 정해 준다</text>
+      <text class="lgn" x="470" y="446">⑤</text><text class="lg" x="486" y="446">그 노드의 kubelet 이 자기 몫을 알아채고 가져간다</text>
+      <text class="lgn" x="470" y="464">⑥</text><text class="lg" x="486" y="464">컨테이너 런타임에 실행을 지시한다. 이때 파드가 뜬다</text>
+
     </svg>
     <figcaption>그림 8.1 — ① kubectl이 apiserver에 요청 ② apiserver가 검증 후 etcd에 기록 ③ 디플로이먼트 컨트롤러가 변화를 감지해 레플리카셋과 파드를 만든다 ④ 스케줄러가 노드가 정해지지 않은 파드에 노드를 배정 ⑤ 해당 노드의 kubelet이 자기 몫을 받아 ⑥ 컨테이너 런타임에 실행을 지시. ③④는 apiserver를 계속 지켜보다 반응하는 감시(watch) 구조다.</figcaption>
   </figure>

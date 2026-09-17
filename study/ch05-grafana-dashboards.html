@@ -225,7 +225,10 @@ figcaption b{color:var(--ink)}
 <h3>ConfigMap 이 대시보드가 되기까지</h3>
 
 <figure>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440" role="img" aria-label="라벨이 붙은 ConfigMap을 사이드카가 감시해 공유 볼륨에 파일로 쓰고 그라파나가 읽어 대시보드로 등록하는 구조">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 494.0" role="img" aria-label="라벨이 붙은 ConfigMap을 사이드카가 감시해 공유 볼륨에 파일로 쓰고 그라파나가 읽어 대시보드로 등록하는 구조">
+  <text x="20" y="22" font-size="13.5" font-weight="700" fill="#15181d">대시보드는 ConfigMap 으로 들어간다 — 라벨이 있어야 집어 간다</text>
+  <text x="20" y="42" font-size="11" fill="#585f6b">그라파나가 파일을 직접 읽지 않는다. 사이드카가 라벨 붙은 ConfigMap 을 찾아 공유 볼륨에 떨어뜨리고, 그라파나는 그 폴더만 본다.</text>
+  <g transform="translate(0,58)">
   <rect width="1000" height="440" fill="#ffffff"/>
 
   <defs>
@@ -276,6 +279,7 @@ figcaption b{color:var(--ink)}
   <line x1="24" y1="372" x2="976" y2="372" stroke="#d8dbe0" stroke-width="1"/>
   <text x="24" y="400" font-size="13" fill="#15181d">파드를 지웠다 살려도 대시보드가 그대로인 이유 — 원본이 클러스터 리소스로 남아 있기 때문이다</text>
   <text x="24" y="424" font-size="13" fill="#8f4408">라벨이 없으면 이 흐름이 첫 화살표에서 끊긴다. 에러는 나지 않는다</text>
+  </g>
 </svg>
 <figcaption>
   <b>그림 1.</b> 차트가 설치한 기본 대시보드 수십 개도 전부 이 구조로 들어와 있다.

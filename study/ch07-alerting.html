@@ -358,7 +358,10 @@ figcaption b{color:var(--ink)}
 <h3>알림이 울리기까지</h3>
 
 <figure>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" role="img" aria-label="조건이 참이 되어도 for 시간을 채워야 pending에서 firing으로 바뀌는 과정">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 454.0" role="img" aria-label="조건이 참이 되어도 for 시간을 채워야 pending에서 firing으로 바뀌는 과정">
+  <text x="20" y="22" font-size="13.5" font-weight="700" fill="#15181d">조건이 참이 되고도 바로 울리지 않는다</text>
+  <text x="20" y="42" font-size="11" fill="#585f6b">for 가 지정한 시간만큼 계속 참이어야 firing 으로 넘어간다. 잠깐 튀는 것을 걸러 내는 장치다.</text>
+  <g transform="translate(0,58)">
   <rect width="1000" height="400" fill="#ffffff"/>
   <text x="24" y="44" font-size="15" font-weight="700" fill="#15181d">규칙: 에러율 &gt; 5%, <tspan font-family="monospace" font-size="14">for: 2m</tspan></text>
 
@@ -406,6 +409,7 @@ figcaption b{color:var(--ink)}
   <line x1="24" y1="316" x2="976" y2="316" stroke="#d8dbe0" stroke-width="1"/>
   <text x="24" y="346" font-size="13" fill="#15181d">for 가 짧으면 노이즈가, 길면 발견이 늦어진다 — 지표의 변동성을 보고 정한다</text>
   <text x="24" y="372" font-size="13" fill="#585f6b">firing 이 된 뒤에도 group_wait 만큼 더 기다렸다가 통보가 나간다</text>
+  </g>
 </svg>
 <figcaption>
   <b>그림 2.</b> <code>pending</code> 상태는 프로메테우스 <code>/alerts</code> 화면에서 확인할 수 있다.
