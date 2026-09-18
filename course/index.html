@@ -375,20 +375,20 @@
 
 <section id="appendix">
   <h2 class="sec"><span class="num">9</span>부록 — 참고 도판 읽기</h2>
-  <p class="lead">저장소에 오래 있던 요약 인포그래픽 7장을 <a href="appendix-a-reference-figures.html">부록 A</a>에 모아 해설했다. 한 장에 두세 모듈 분량이 들어 있는 복습용 카드라, 모듈을 <strong>마친 뒤</strong> 한 장으로 되짚는 용도다. 각 장마다 무엇을 말하는 그림인지, 어디를 먼저 볼지, 지금 기준과 무엇이 다른지를 적었다.</p>
+  <p class="lead">요약 인포그래픽 7장을 <a href="appendix-a-reference-figures.html">부록 A</a>에 <strong>과정 순서대로</strong> 해설했다. 클러스터가 스스로 맞추는 원리에서 시작해 워크로드 · 네트워크 · 스토리지로 내려간다. 한 장에 두세 모듈 분량이 들어 있는 복습용 카드라 모듈을 <strong>마친 뒤</strong> 한 장으로 되짚는 용도다.</p>
   <table>
-    <tr><th>도판</th><th>주제</th><th>마치고 나서 볼 모듈</th></tr>
-    <tr><td class="num">A.1</td><td>선언형과 조정 루프</td><td><a href="m08-k8s-cluster-first-deploy.html">M08</a></td></tr>
-    <tr><td class="num">A.2</td><td>노드 · 파드 · 컨테이너의 중첩</td><td><a href="m09-k8s-pod-label-namespace.html">M09</a></td></tr>
-    <tr><td class="num">A.3</td><td>3층 구조와 롤링 업데이트</td><td><a href="m10-k8s-deployment-rollout.html">M10</a></td></tr>
-    <tr><td class="num">A.4</td><td>밖에서 들어오는 길과 안에서 도는 길</td><td><a href="m11-k8s-service-network.html">M11</a> · <a href="m12-k8s-ingress-gateway.html">M12</a></td></tr>
-    <tr><td class="num">A.5</td><td>호출 하나가 지나가는 길</td><td><a href="m11-k8s-service-network.html">M11</a></td></tr>
-    <tr><td class="num">A.6</td><td>노드가 다르면 길이 필요하다</td><td><a href="m11-k8s-service-network.html">M11</a></td></tr>
-    <tr><td class="num">A.7</td><td>스테이트풀셋과 스토리지 사슬</td><td><a href="m18-k8s-storage-stateful.html">M18</a></td></tr>
+    <tr><th>도판</th><th>주제</th><th>나오는 개념</th><th>마치고 볼 모듈</th></tr>
+    <tr><td class="num">A.1</td><td>선언형과 조정 루프</td><td>원하는 상태와 실제 상태 · 컨트롤러</td><td><a href="m08-k8s-cluster-first-deploy.html">M08</a></td></tr>
+    <tr><td class="num">A.2</td><td>노드 · 파드 · 컨테이너의 중첩</td><td>파드는 컨테이너 묶음 · 사이드카</td><td><a href="m09-k8s-pod-label-namespace.html">M09</a></td></tr>
+    <tr><td class="num">A.3</td><td>3층 구조와 롤링 업데이트</td><td>디플로이먼트 · 레플리카셋 · 중간 상태</td><td><a href="m10-k8s-deployment-rollout.html">M10</a></td></tr>
+    <tr><td class="num">A.4</td><td>호출 하나가 지나가는 길</td><td>CoreDNS · ClusterIP · DNAT · CNI</td><td><a href="m11-k8s-service-network.html">M11</a></td></tr>
+    <tr><td class="num">A.5</td><td>노드가 다르면 길이 필요하다</td><td>파드 대역 · 오버레이 · 라우팅</td><td><a href="m11-k8s-service-network.html">M11</a></td></tr>
+    <tr><td class="num">A.6</td><td>밖에서 들어오는 길과 안에서 도는 길</td><td>North-South · East-West · 헤드리스</td><td><a href="m11-k8s-service-network.html">M11</a> · <a href="m12-k8s-ingress-gateway.html">M12</a></td></tr>
+    <tr><td class="num">A.7</td><td>스테이트풀셋과 스토리지 사슬</td><td>ordinal · PVC → PV → StorageClass</td><td><a href="m18-k8s-storage-stateful.html">M18</a></td></tr>
   </table>
   <div class="note-2026">
-    <span class="lbl">본문 도판과 섞지 않는다</span>
-    이 자료들은 형광 팔레트에 이모지가 섞여 있어 이 과정의 도판 규약(흰 배경 · 회색 선 · 강조 한 색)과 다르다. 그래서 M09~M12의 본문 도판은 <strong>같은 내용을 과정 팔레트로 다시 그린 것</strong>이고, 원본은 부록에 모아 뒀다. 도판에 박힌 <code>nginx:1.25</code> 같은 낡은 값은 부록의 각 절에서 짚어 두었다 — 숫자는 도판이 아니라 <a href="#versions">버전 매트릭스</a>를 따른다.
+    <span class="lbl">숫자와 이름은 도판을 믿지 않는다</span>
+    도판에 박힌 <code>nginx:1.25</code> 같은 낡은 이미지 태그와 폐기된 API 이름(<code>Endpoints</code>)이 섞여 있다. 절마다 어디가 낡았는지 표시해 두었고, 버전은 <a href="#versions">버전 매트릭스</a>를 따른다.
   </div>
 </section>
 
