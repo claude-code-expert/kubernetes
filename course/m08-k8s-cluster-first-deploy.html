@@ -114,6 +114,8 @@
 
   table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.90625rem; display: block; overflow-x: auto; }
   th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
+  /* 표 안의 긴 토큰(이미지 다이제스트 · 긴 질의)이 칸을 밀어 넓히지 않게 한다 */
+  td code, th code { word-break: break-all; }
   th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
 
   ul.tight, ol.tight { padding-left: 22px; margin: 10px 0 14px; }

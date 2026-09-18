@@ -96,6 +96,8 @@ pre code.hljs{padding:0; background:none}
 .tablewrap{overflow-x:auto; margin:16px 0}
 table{border-collapse:collapse; width:100%; font-size:16.5px}
 th,td{border:1px solid var(--line); padding:12px 15px; text-align:left; vertical-align:top}
+  /* 표 안의 긴 토큰이 칸을 밀어 넓히지 않게 한다 */
+  td code,th code{word-break:break-all}
 th{background:var(--soft); font-weight:700; white-space:nowrap}
 td code{font-size:.9em}
 
