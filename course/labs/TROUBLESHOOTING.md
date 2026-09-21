@@ -77,6 +77,48 @@ helm list -n journal-dev
 kubectl get ingress -A
 ```
 
+### 고쳤는데 다음 업그레이드에서 또 난다
+
+`--set` 으로 호스트를 갈라 한 번 성공했는데, 다음 `helm upgrade` 에서 같은 에러가
+다시 나는 일이 흔하다. **`--set` 은 다음 명령에 남지 않기 때문이다.**
+
+`helm upgrade` 는 매번 값을 처음부터 다시 계산한다.
+
+```
+values.yaml   →   -f values-dev.yaml   →   --set
+  기본값            파일이 덮어씀          마지막이 덮어씀
+```
+
+`--set` 을 빼면 그 자리가 기본값으로 돌아간다. `values.yaml` 의 기본 호스트가
+`journal.local` 이므로 충돌이 그대로 재현된다.
+
+실제로 이런 이력이 남는다 — 2번에서 `--set` 으로 성공했다가 3번에서 빼고 쳐서 실패한다.
+
+```
+REVISION  STATUS      DESCRIPTION
+1         superseded  Release "dev" failed: ... denied the request ...
+2         superseded  Upgrade complete          ← --set 붙여서 성공
+3         failed      Upgrade "dev" failed: ... denied the request ...   ← --set 빼서 실패
+```
+
+**환경별로 고정할 값이면 값 파일에 박는다.** 매번 `--set` 을 기억하는 방식은 오래 못 간다.
+
+```yaml
+# values-dev.yaml
+ingress:
+  host: dev.journal.local
+```
+
+`--reuse-values` 라는 플래그도 있다. 직전 값을 물려받고 `--set` 만 얹는데, **`-f` 로 준
+값 파일을 무시한다.** 무엇이 적용됐는지 파일만 보고는 알 수 없게 되므로 실습에서는
+값 파일에 박는 쪽을 쓴다.
+
+지금 무엇이 적용돼 있는지는 이 명령으로 본다.
+
+```
+helm get values dev -n journal-dev
+```
+
 ### 왜 이 충돌이 M28 에서 나는가
 
 M28 은 같은 앱을 `k8s/journal/`(kustomize)과 `charts/journal/`(Helm) **두 벌로**
@@ -116,6 +158,26 @@ kubectl get secret -A -l owner=helm -o custom-columns='NS:.metadata.namespace,NA
 
 `helm list`는 기본적으로 `deployed`만 보여 준다. 실패본까지 보려면 두 번째 명령이
 확실하다.
+
+### `failed` 가 쌓여 있어도 클러스터는 멀쩡할 수 있다
+
+히스토리에 `failed` 가 여러 줄 있어도 **실제 클러스터는 마지막으로 성공한 상태**다.
+`failed` 는 "그 시도가 실패했다" 는 기록이지 클러스터가 망가졌다는 뜻이 아니다.
+웹훅에 막혀 아무것도 바꾸지 못하고 끝난 경우가 특히 그렇다.
+
+그래서 **성공한 직후에 롤백을 치면 오히려 되돌아간다.** 방금 고친 것이 최신 리비전인데
+롤백하면 고장 난 값으로 가는 것이다. 되돌리기 전에 어디로 가는지 먼저 본다.
+
+```
+helm history dev -n journal-dev
+helm get values dev -n journal-dev --revision <번호>
+```
+
+실제 상태는 릴리스 기록이 아니라 클러스터에 물어본다.
+
+```
+kubectl -n journal-dev get ingress,deploy
+```
 
 ### 푸는 법
 
@@ -379,6 +441,9 @@ kubectl config use-context kind-study
 | `helm install` | `helm upgrade --install` |
 | `kubectl create -f` | `kubectl apply -f` |
 | `kubectl run` | `--rm` 을 붙이거나 `apply -f -` 로 |
+
+덧붙여 — **`--set` 은 다음 명령에 남지 않는다.** 한 번 쓰고 마는 값이면 `--set`,
+환경에 고정할 값이면 값 파일에 박는다(1번 참조).
 
 **둘 — 거부는 대개 안전장치다.** 어드미션 웹훅, 스키마 검증, 이름 중복 검사는 전부
 "그대로 두면 더 나쁜 상태가 된다"고 막는 것이다. 우회할 방법을 찾기 전에 **무엇을

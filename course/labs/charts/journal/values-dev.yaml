@@ -15,3 +15,9 @@ autoscaling:
   enabled: false               # 개발에서는 replicas 를 직접 본다
 pdb:
   enabled: false               # 파드가 1개면 PDB 가 오히려 드레인을 막는다
+
+# 개발은 호스트를 갈라 쓴다.
+# journal 네임스페이스(M14 kustomize)가 journal.local 을 이미 잡고 있어
+# 같은 호스트로 올리면 ingress-nginx 웹훅이 거부한다.
+ingress:
+  host: dev.journal.local
