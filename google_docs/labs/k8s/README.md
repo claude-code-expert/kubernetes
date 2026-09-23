@@ -78,12 +78,74 @@ kubectl port-forward svc/k8s-sample-boot-service 8080:8080
 curl localhost:8080/hello
 ```
 
-응답에 호스트명이 섞여 나온다. 여러 번 치면 **파드마다 다른 이름**이 돌아오는 것을
-볼 수 있다 — 서비스가 3개에 나눠 보내고 있다는 뜻이다.
+`Hello World! <버전> (Host = <파드 이름>)` 이 돌아오면 성공이다. 버전 숫자는 이미지에
+박힌 값이라 환경마다 다르고, 호스트명 뒤 접미사도 파드마다 다르다.
 
 > 포트포워드는 터미널을 닫으면 끊긴다. 끝나면 `Ctrl-C` 로 종료한다.
 
-## 정리
+## 6. 세 파드에 나눠 가는지 본다
+
+**포트포워드로는 이것을 볼 수 없다.** 여러 번 쳐도 같은 파드 이름만 돌아온다.
+
+```
+for i in 1 2 3 4 5 6; do curl -s localhost:8080/hello; echo; done
+# Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-98zww)
+# Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-98zww)   ← 여섯 번 다 같다
+```
+
+`kubectl port-forward` 는 **서비스를 거치지 않기 때문이다.** 서비스 뒤의 파드 목록에서
+하나를 골라 그 파드로 직접 터널을 판다. 서비스 이름을 인자로 받으니 서비스를 통과할
+것 같지만, 실제로는 파드를 찾는 데만 쓴다. 로드밸런싱은 노드 커널의 규칙이 하는 일인데
+포트포워드는 그 규칙을 지나지 않는다.
+
+### 방법 A — 클러스터 안에서 서비스 이름으로 (권장)
+
+임시 파드를 하나 띄워 서비스 이름으로 6번 부르고, 결과는 로그로 읽는다.
+
+```
+kubectl run lbtest --restart=Never --image=curlimages/curl:8.19.0 -- \
+  sh -c 'for i in 1 2 3 4 5 6; do curl -s http://k8s-sample-boot-service:8080/hello; echo; done'
+```
+
+```
+sleep 5
+kubectl logs lbtest
+kubectl delete pod lbtest
+```
+
+```
+Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-jgkt4)
+Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-98zww)
+Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-98zww)
+Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-jgkt4)
+Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-jgkt4)
+Hello World! V3 (Host = k8s-sample-boot-56645b9f4d-dsqqd)
+```
+
+> `--rm -i` 로 화면에 바로 받으면 **출력이 잘린다.** 파드가 끝나면서 스트림이 먼저
+> 닫혀 6줄 중 3~4줄만 나온다. 로그로 읽으면 빠짐없이 나온다.
+
+### 방법 B — 노드 안에서 NodePort 로
+
+서비스가 노드 포트를 하나 열어 두었다. 번호는 환경마다 다르다.
+
+```
+kubectl get svc k8s-sample-boot-service
+# PORT(S)  8080:31104/TCP
+#                ^^^^^ 이 번호
+```
+
+kind 는 노드가 도커 컨테이너라 호스트에서 바로 닿지 않는다. 노드 안에서 친다.
+
+```
+docker exec study-control-plane sh -c 'for i in 1 2 3 4 5 6; do curl -s localhost:31104/hello; echo; done'
+```
+
+> **정확히 번갈아 가지는 않는다.** `98zww 98zww dsqqd` 처럼 같은 파드가 연달아 나온다.
+> kube-proxy 의 기본 분배는 연결마다 **무작위**이지 라운드로빈이 아니다.
+> 횟수를 늘리면 셋이 고르게 나뉜다.
+
+## 7. 정리
 
 ```
 kubectl delete -f google_docs/labs/k8s/service.yml
