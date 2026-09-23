@@ -48,8 +48,10 @@ fi
 
 if part part2; then
 head_ "Part 2 — 쿠버네티스 기초 (M08~M14)"
-check "M10 저널 API 가 떠 있다" "3" \
-  bash -c "kubectl -n journal get deploy journal-api -o jsonpath='{.status.readyReplicas}'"
+# 레플리카 수는 HPA(M17)가 바꾼다. 부하 뒤에는 3보다 많다. 원하는 수만큼 준비됐고 최소치(3) 이상인지 본다
+check "M10 저널 API 가 떠 있다" "true" \
+  bash -c "kubectl -n journal get deploy journal-api -o jsonpath='{.status.readyReplicas} {.spec.replicas}' \
+    | awk '{print (\$1 == \$2 && \$1 >= 3) ? \"true\" : \"false\"}'"
 check "M11 헤드리스 레디스 서비스" "None" \
   bash -c "kubectl -n journal get svc redis -o jsonpath='{.spec.clusterIP}'"
 check_gt0 "M12 인그레스가 있다" \

@@ -167,6 +167,7 @@
   <span class="lbl">사전 조건</span>
   <ul>
     <li><a href="m31-k8s-gitops.html">M31</a> 완료 — <code>argocd</code> 네임스페이스의 컨트롤러가 살아 있다</li>
+    <li>M31의 깃 서버와 작업 저장소가 남아 있다: <code>kubectl -n gitops get deploy gitserver</code> → <code>1/1</code>, <code>git -C /tmp/gitops/app-repo log --oneline | head -1</code>이 출력된다. 없으면 M31 31.3의 1·2단계를 다시 한다</li>
     <li>도커에 <strong>1.5GiB 이상 여유</strong>가 있다. 확인: <code>docker stats --no-stream</code>의 합계와 <code>docker info --format '{{.MemTotal}}'</code></li>
     <li><a href="m28-k8s-helm-kustomize.html">M28</a>의 오버레이 문법을 안다. 리전 차이를 오버레이로 표현한다</li>
     <li>새로 만들 파일: <code>course/labs/infra/kind-edge.yaml</code> · <code>k8s/multi/</code> 전체 · <code>scripts/region-check.sh</code></li>
@@ -334,9 +335,14 @@ nodes:
     image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
 EOF
 kind create cluster --config course/labs/infra/kind-edge.yaml
-kubectl config get-contexts -o name</code></pre>
+kubectl config get-contexts -o name
+
+# kind create 는 현재 컨텍스트를 새 클러스터로 바꿔 둔다. --context 를 빠뜨린 명령이 edge 로 가지 않게 되돌린다
+kubectl config use-context kind-study</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>kind-edge kind-study</code></div>
+    <div class="out"><code>kind-edge
+kind-study
+Switched to context "kind-study".</code></div>
     <p>이 모듈부터는 <strong>모든 명령에 <code>--context</code>를 붙인다.</strong> 컨텍스트를 바꿔 놓고 잊는 것이 멀티 클러스터 작업에서 가장 흔한 사고이고, <code>kubectl config use-context</code>로 전환하는 습관은 <strong>어느 클러스터에 명령을 쳤는지 나중에 알 수 없게</strong> 만든다.</p>
   </div>
 
@@ -349,6 +355,7 @@ echo $EDGE_IP
 
 kubectl --context kind-study run netcheck --image=curlimages/curl:8.19.0 \
   --restart=Never --command -- sleep 60
+kubectl --context kind-study wait --for=condition=Ready pod/netcheck --timeout=60s
 kubectl --context kind-study exec netcheck -- \
   curl -sk -o /dev/null -m 6 -w 'edge API: %{http_code}\n' https://$EDGE_IP:6443/version</code></pre>
     <span class="out-lbl">출력</span>
@@ -383,7 +390,16 @@ type: kubernetes.io/service-account-token</code></pre>
   <div class="step">
     <h4>1단계 — 클러스터를 라벨과 함께 등록한다</h4>
     <p class="purpose"><span class="lbl">목적</span>리전 메타데이터를 <strong>오브젝트에</strong> 적는다. 문서가 아니라.</p>
-<pre><code>apiVersion: v1
+<pre><code># edge 의 토큰과 CA 를 꺼낸다. 토큰 시크릿은 컨트롤러가 채우므로 몇 초 걸릴 수 있다
+EDGE_IP=$(docker inspect edge-control-plane \
+  --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
+TOKEN=$(kubectl --context kind-edge -n kube-system get secret argocd-manager-token \
+  -o jsonpath='{.data.token}' | base64 -d)
+CA=$(kubectl --context kind-edge -n kube-system get secret argocd-manager-token \
+  -o jsonpath='{.data.ca\.crt}')          # base64 그대로 쓴다. caData 가 base64 를 받는다
+
+cat &lt;&lt;EOF | kubectl --context kind-study apply -f -
+apiVersion: v1
 kind: Secret
 metadata:
   name: cluster-edge
@@ -395,9 +411,13 @@ metadata:
 type: Opaque
 stringData:
   name: edge
-  server: https://172.20.0.5:6443
+  server: https://$EDGE_IP:6443
   config: |
-    {"bearerToken": "...", "tlsClientConfig": {"insecure": false, "caData": "..."}}</code></pre>
+    {"bearerToken": "$TOKEN", "tlsClientConfig": {"insecure": false, "caData": "$CA"}}
+EOF
+
+# 로컬 클러스터도 라벨을 붙여 등록한다
+kubectl --context kind-study apply -f course/labs/k8s/multi/10-cluster-secrets.yaml</code></pre>
     <p>로컬 클러스터도 <strong>명시적으로 등록한다.</strong> Argo CD는 자기가 사는 클러스터를 <code>in-cluster</code>로 자동 인식하지만, <strong>그 항목에는 라벨을 붙일 수 없어서</strong> 다음 단계의 클러스터 생성기가 고르지 못한다.</p>
 <pre><code>kubectl --context kind-study -n argocd get secret \
   -l argocd.argoproj.io/secret-type=cluster \
@@ -414,7 +434,50 @@ cluster-primary   primary   prod</code></div>
 <pre><code>base/                    공통 정의 (매니페스트 + kustomization)
 regions/edge/            카나리 — 규모를 줄이고 REGION=edge
 regions/primary/         주 리전 — REGION=primary</code></pre>
-<pre><code># regions/edge/kustomization.yaml 의 차이 부분
+<pre><code>R=/tmp/gitops/app-repo
+git -C $R rm -rq apps                     # M31 의 단일 앱 구조를 걷어낸다
+mkdir -p $R/base $R/regions/edge $R/regions/primary
+
+# base — M31 과 같은 파일에서 시작한다. 태그는 v1 로 되돌려 출발선을 맞춘다
+cp course/labs/k8s/journal/{10-config,20-redis,30-journal-api,40-web-static,70-hpa}.yaml \
+   course/labs/k8s/journal/index.html $R/base/
+cat &gt; $R/base/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 10-config.yaml
+  - 20-redis.yaml
+  - 30-journal-api.yaml
+  - 40-web-static.yaml
+  - 70-hpa.yaml
+configMapGenerator:
+  - name: web-content
+    files: [index.html]
+images:
+  - name: journal-api
+    newTag: v1
+EOF
+
+# 리전마다 네임스페이스 하나. restricted 를 붙여 만든다 (M24)
+for NS in edge:journal primary:journal-primary; do
+  cat &gt; $R/regions/${NS%%:*}/namespace.yaml &lt;&lt;EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NS##*:}
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+EOF
+done
+
+cat &gt; $R/regions/edge/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: journal
+resources:
+  - ../../base
+  - namespace.yaml
 patches:
   - target: {kind: HorizontalPodAutoscaler}
     patch: |-
@@ -427,7 +490,27 @@ patches:
 configMapGenerator:
   - name: journal-config
     behavior: merge
-    literals: [REGION=edge]</code></pre>
+    literals: [REGION=edge]
+EOF
+
+cat &gt; $R/regions/primary/kustomization.yaml &lt;&lt;'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: journal-primary
+resources:
+  - ../../base
+  - namespace.yaml
+configMapGenerator:
+  - name: journal-config
+    behavior: merge
+    literals: [REGION=primary]
+EOF
+
+git -C $R add -A &amp;&amp; git -C $R commit -qm "리전 구조: base + regions/edge·primary"
+
+# edge 에는 이미지가 없다. 레지스트리가 없는 실습이므로 직접 싣는다
+kind load docker-image journal-api:v1 journal-api:v2 --name edge
+bash course/labs/scripts/gitops-push.sh $R</code></pre>
     <p>차이가 셋뿐이라는 점을 확인하고 넘어간다. <strong>차이가 늘어나면 카나리 리전의 판정이 약해진다</strong> — 거기서 통과한 것이 주 리전에서도 통과하리라는 보장이 그만큼 줄어든다.</p>
   </div>
 
@@ -470,13 +553,13 @@ journal-primary   https://kubernetes.default.svc   regions/primary   Synced</cod
 <pre><code>kubectl --context kind-edge  -n journal         get deploy,sts --no-headers
 kubectl --context kind-study -n journal-primary get deploy,sts --no-headers</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>deployment.apps/journal-api   1/1   1   1
-deployment.apps/web-static    1/1   1   1
-statefulset.apps/redis   1/1
+    <div class="out"><code>deployment.apps/journal-api   1/1   1     1     90s
+deployment.apps/web-static    2/2   2     2     90s
+statefulset.apps/redis   1/1   89s
 
-deployment.apps/journal-api   3/3   3   3
-deployment.apps/web-static    2/2   2   2
-statefulset.apps/redis   1/1</code></div>
+deployment.apps/journal-api   3/3   3     3     90s
+deployment.apps/web-static    2/2   2     2     90s
+statefulset.apps/redis   1/1   90s</code></div>
     <div class="verdict"><span class="lbl">판정</span>같은 <code>base</code>에서 나왔는데 규모가 다르다. edge는 1개, primary는 3개다. <strong>차이는 오버레이에만 있고 저장소의 공통 정의는 하나</strong>다.</div>
   </div>
 </section>
@@ -487,19 +570,33 @@ statefulset.apps/redis   1/1</code></div>
   <div class="step">
     <h4>1단계 — 카나리 리전에만 새 버전을 커밋한다</h4>
     <p class="purpose"><span class="lbl">목적</span>영향 범위를 <strong>클러스터 하나</strong>로 묶는다.</p>
-<pre><code>kind load docker-image journal-api:v2 --name edge   # 리전에 이미지가 있어야 한다
+<pre><code># 두 리전의 이미지를 8초 간격으로 본다. edge 가 기대값이 되면 멈춘다
+watch_regions() {   # 사용법: watch_regions &lt;edge 기대 이미지&gt;
+  for i in $(seq 1 12); do
+    E=$(kubectl --context kind-edge  -n journal         get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}')
+    P=$(kubectl --context kind-study -n journal-primary get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}')
+    echo "  $(date +%H:%M:%S)  edge=$E  primary=$P"
+    [ "$E" = "$1" ] &amp;&amp; break
+    sleep 8
+  done
+}
 
-# regions/edge/kustomization.yaml 에만 추가
+R=/tmp/gitops/app-repo
+# regions/edge/kustomization.yaml 에만 추가한다
+cat &gt;&gt; $R/regions/edge/kustomization.yaml &lt;&lt;'EOF'
 images:
   - name: journal-api
     newTag: v2
-
-git commit -m "카나리 리전에 v2 배포" &amp;&amp; bash course/labs/scripts/gitops-push.sh ...</code></pre>
+EOF
+git -C $R commit -qam "카나리 리전에 v2 배포"
+bash course/labs/scripts/gitops-push.sh $R
+watch_regions journal-api:v2</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>  01:18:53  edge=journal-api:v1  primary=journal-api:v1
-  01:19:01  edge=journal-api:v2  primary=journal-api:v1</code></div>
+    <div class="out"><code>푸시 완료. 새로고침: journal-edge journal-primary
+  11:45:58  edge=journal-api:v1  primary=journal-api:v1
+  11:46:07  edge=journal-api:v2  primary=journal-api:v1</code></div>
     <div class="verdict"><span class="lbl">판정</span>8초 만에 edge만 바뀌었고 primary는 그대로다. <strong>같은 저장소, 같은 커밋인데 한 리전만 움직였다</strong> — 디렉터리를 나눈 것이 이 효과를 만든다.</div>
-    <p><code>kind load</code>를 먼저 한 것에 주의한다. 실제 환경에서는 <strong>레지스트리 복제</strong>가 이 자리에 온다. 리전에 이미지가 도착하지 않은 채로 매니페스트만 가면 <code>ImagePullBackOff</code>가 되고, 그것이 32.7의 재현이다.</p>
+    <p>32.4 2단계에서 <code>kind load</code>로 이미지를 먼저 실은 것에 주의한다. 실제 환경에서는 <strong>레지스트리 복제</strong>가 이 자리에 온다. 리전에 이미지가 도착하지 않은 채로 매니페스트만 가면 <code>ImagePullBackOff</code>가 되고, 그것이 32.7의 재현이다.</p>
   </div>
 
   <div class="step">
@@ -514,12 +611,12 @@ git commit -m "카나리 리전에 v2 배포" &amp;&amp; bash course/labs/script
 <pre><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v2
 echo "종료코드=$?"</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>  워크로드 준비                 OK
-  최대 재시작 수                0
-  롤아웃 journal-api            완료
-  롤아웃 web-static             완료
-  이미지                        journal-api:v2
-  readyz                        {"status":"ready"}
+    <div class="out"><code>  워크로드 준비          OK
+  최대 재시작 수         0
+  롤아웃 journal-api        완료
+  롤아웃 web-static         완료
+  이미지                    journal-api:v2
+  readyz                       {"status":"ready"}
 판정: 통과 — 다음 리전으로 확산해도 된다
 종료코드=0</code></div>
     <div class="verdict"><span class="lbl">판정</span>종료 코드 <code>0</code>이 확산의 조건이다. 파이프라인에서는 이 스크립트 뒤에 확산 단계를 두면 <strong>실패 시 자동으로 멈춘다.</strong> 사람이 돌릴 때도 판단이 개입하지 않는다는 점이 같은 값어치를 낸다.</div>
@@ -528,12 +625,21 @@ echo "종료코드=$?"</code></pre>
   <div class="step">
     <h4>3단계 — 확산한다</h4>
     <p class="purpose"><span class="lbl">목적</span>공통 정의를 올려 나머지 리전이 따라오게 한다.</p>
-<pre><code># base/kustomization.yaml 의 newTag 를 v2 로
-git commit -m "확산: 전 리전 v2" &amp;&amp; bash course/labs/scripts/gitops-push.sh ...</code></pre>
+<pre><code>R=/tmp/gitops/app-repo
+sed -i '' 's/    newTag: v1/    newTag: v2/' $R/base/kustomization.yaml
+git -C $R commit -qam "확산: 전 리전 v2"
+bash course/labs/scripts/gitops-push.sh $R
+for i in $(seq 1 12); do
+  P=$(kubectl --context kind-study -n journal-primary get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}')
+  echo "  $(date +%H:%M:%S)  primary=$P"
+  [ "$P" = "journal-api:v2" ] &amp;&amp; break
+  sleep 8
+done</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>  01:19:40  primary=journal-api:v1
-  01:19:48  primary=journal-api:v2</code></div>
-    <p>이제 <code>regions/edge</code>의 <code>newTag: v2</code>는 <strong>중복</strong>이다. 확산이 끝나면 지우는 것이 좋다 — 남겨 두면 다음 배포 때 base를 올려도 edge가 따라오지 않고, <strong>왜 한 리전만 옛 버전인지</strong>를 찾느라 시간을 쓴다.</p>
+    <div class="out"><code>푸시 완료. 새로고침: journal-edge journal-primary
+  11:46:34  primary=journal-api:v1
+  11:46:42  primary=journal-api:v2</code></div>
+    <p>이제 <code>regions/edge</code>의 <code>newTag: v2</code>는 <strong>중복</strong>이다. 확산이 끝나면 지우는 것이 좋다 — 남겨 두면 다음 배포 때 base를 올려도 edge가 따라오지 않고, <strong>왜 한 리전만 옛 버전인지</strong>를 찾느라 시간을 쓴다. 이 모듈에서는 32.6에서 이 줄을 <code>v99</code>로 바꿔 나쁜 배포를 만들 것이므로 아직 남겨 둔다.</p>
   </div>
 </section>
 
@@ -543,13 +649,19 @@ git commit -m "확산: 전 리전 v2" &amp;&amp; bash course/labs/scripts/gitops
   <div class="step">
     <h4>1단계 — 나쁜 배포를 카나리에 보낸다</h4>
     <p class="purpose"><span class="lbl">목적</span>검사가 실제로 막는지 확인한다. <strong>확인하지 않은 관문은 관문이 아니다.</strong></p>
-<pre><code># regions/edge 의 태그를 존재하지 않는 v99 로 바꿔 커밋·푸시
+<pre><code>R=/tmp/gitops/app-repo
+sed -i '' 's/    newTag: v2/    newTag: v99/' $R/regions/edge/kustomization.yaml
+git -C $R commit -qam "카나리 리전에 v99 (존재하지 않는 태그)"
+bash course/labs/scripts/gitops-push.sh $R
+sleep 45
 kubectl --context kind-edge -n journal get po --no-headers</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>journal-api-798f987f5b-jnhlf   0/1   ImagePullBackOff   0   45s
-journal-api-7cb7597d96-2749k   1/1   Running            0   111s
-redis-0                        1/1   Running            0   2m47s
-web-static-88f866755-9kmt7     1/1   Running            0   2m47s</code></div>
+    <div class="out"><code>푸시 완료. 새로고침: journal-edge journal-primary
+journal-api-798f987f5b-lk5zr   0/1   ImagePullBackOff   0     45s
+journal-api-7cb7597d96-5wnmm   1/1   Running            0     95s
+redis-0                        1/1   Running            0     3m19s
+web-static-88f866755-94j4b     1/1   Running            0     3m19s
+web-static-88f866755-wm42f     1/1   Running            0     3m19s</code></div>
     <div class="verdict"><span class="lbl">판정</span>새 파드는 못 뜨는데 <strong>옛 파드가 살아 있어 서비스는 정상이다.</strong> <code>maxUnavailable: 0</code>이 만든 상황이고, 이것 때문에 "준비된 파드 수" 검사는 통과한다 — 32.7의 실패 ①이 바로 이 지점이다.</div>
   </div>
 
@@ -559,12 +671,12 @@ web-static-88f866755-9kmt7     1/1   Running            0   2m47s</code></div>
 <pre><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v99
 echo "종료코드=$?"</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>  워크로드 준비                 OK
-  최대 재시작 수                0
-  롤아웃 journal-api            실패: 20초 안에 끝나지 않음
-  롤아웃 web-static             완료
-  이미지                        journal-api:v99
-  readyz                        실패: 응답 없음
+    <div class="out"><code>  워크로드 준비          OK
+  최대 재시작 수         0
+  롤아웃 journal-api        실패: 20초 안에 끝나지 않음
+  롤아웃 web-static         완료
+  이미지                    journal-api:v99
+  readyz                       실패: 응답 없음
 판정: 실패 — 확산하지 않는다
 종료코드=1</code></div>
     <div class="verdict"><span class="lbl">판정</span>첫 줄이 <code>OK</code>인데 종료 코드는 <code>1</code>이다. <strong>다섯 검사 중 둘이 잡았다</strong> — <code>rollout status</code>가 20초 안에 끝나지 않았고, 새 파드에 대한 <code>readyz</code>가 응답하지 않았다. 검사를 여러 각도로 두는 이유가 이것이다.</div>
@@ -573,14 +685,19 @@ echo "종료코드=$?"</code></pre>
   <div class="step">
     <h4>3단계 — 되돌린다</h4>
     <p class="purpose"><span class="lbl">목적</span>GitOps 클러스터에서 롤백이 무엇인지 확인한다. <strong><code>kubectl</code>로 고치면 5초 뒤 되돌아온다</strong>(M31).</p>
-<pre><code>git revert --no-edit HEAD
-bash course/labs/scripts/gitops-push.sh ...</code></pre>
+<pre><code>R=/tmp/gitops/app-repo
+git -C $R revert --no-edit HEAD
+git -C $R log --oneline -2
+bash course/labs/scripts/gitops-push.sh $R
+watch_regions journal-api:v2</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>cd9b843 Revert "카나리 리전에 v99 (존재하지 않는 태그)"
-04d6eda 카나리 리전에 v99 (존재하지 않는 태그)
-
-  01:21:29  edge=journal-api:v99
-  01:21:37  edge=journal-api:v2</code></div>
+    <div class="out"><code>[main 1d38967] Revert "카나리 리전에 v99 (존재하지 않는 태그)"
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+1d38967 Revert "카나리 리전에 v99 (존재하지 않는 태그)"
+431c92d 카나리 리전에 v99 (존재하지 않는 태그)
+푸시 완료. 새로고침: journal-edge journal-primary
+  11:47:55  edge=journal-api:v99  primary=journal-api:v2
+  11:48:03  edge=journal-api:v2  primary=journal-api:v2</code></div>
     <div class="verdict"><span class="lbl">판정</span>8초. <code>git reset</code>이 아니라 <code>git revert</code>를 쓴 것이 요점이다 — <strong>무슨 일이 있었는지가 이력에 남는다.</strong> 사고 회고에서 "언제 무엇을 되돌렸나"를 저장소에서 읽을 수 있어야 하고, 되돌린 커밋을 지우면 그 기록이 사라진다.</div>
 <pre><code>bash course/labs/scripts/region-check.sh kind-edge journal journal-api:v2</code></pre>
     <span class="out-lbl">출력</span>
@@ -716,6 +833,7 @@ kind delete cluster --name edge
 
 # study 쪽 실습 네임스페이스도 정리
 kubectl --context kind-study delete ns journal-primary gitops --ignore-not-found
+kubectl --context kind-study delete pod netcheck --ignore-not-found   # 32.3 에서 띄운 진단 파드 (Completed 로 남는다)
 
 # 원래 앱이 그대로인지 확인
 kubectl --context kind-study -n journal get deploy,sts --no-headers</code></pre>

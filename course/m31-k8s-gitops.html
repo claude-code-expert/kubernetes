@@ -374,8 +374,15 @@ images:
     newTag: v1
 EOF
 
-cd /tmp/gitops/app-repo &amp;&amp; git init -q -b main &amp;&amp; git add -A
-git commit -qm "저널 앱 초기 상태"</code></pre>
+# 작업 디렉터리는 저장소 루트(kubernetes/)에 그대로 둔다. 이후 명령이 course/labs/... 상대 경로를 쓴다
+R=/tmp/gitops/app-repo
+git -C $R init -q -b main &amp;&amp; git -C $R add -A
+git -C $R commit -qm "저널 앱 초기 상태"
+
+# 클러스터 안 깃 서버에 넣는다. 애플리케이션은 4단계에서 만들므로 스크립트가 그 부분은 건너뛴다
+bash course/labs/scripts/gitops-push.sh $R</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>푸시 완료. 애플리케이션은 아직 없다 — 만들고 나면 푸시할 때마다 새로고침한다.</code></div>
     <p><code>00-namespace.yaml</code>과 <code>50-ingress.yaml</code>을 뺐다. 네임스페이스는 <strong><dfn class="term">PSA <span class="en">(Pod Security Admission · 파드 보안 표준을 네임스페이스 단위로 강제하는 것)</span></dfn> 라벨을 붙여서 우리가 만들고</strong>, 인그레스는 <code>journal.local</code> 호스트가 기존 배포와 겹치기 때문이다. <strong>무엇을 GitOps에 넣고 무엇을 뺄지</strong>가 실제로는 이런 구체적인 이유로 정해진다.</p>
   </div>
 
@@ -456,10 +463,10 @@ poddisruptionbudget.policy/journal-api   2   N/A   1</code></div>
   <div class="step">
     <h4>1단계 — 저장소를 고치고 커밋한다</h4>
     <p class="purpose"><span class="lbl">목적</span>배포 절차가 <strong>커밋 하나</strong>가 되는 것을 확인한다.</p>
-<pre><code>cd /tmp/gitops/app-repo
-sed -i '' 's/LOG_LEVEL: "info"/LOG_LEVEL: "warn"/' apps/journal/10-config.yaml
-sed -i '' 's/    newTag: v1/    newTag: v2/' apps/journal/kustomization.yaml
-git add -A &amp;&amp; git commit -qm "운영 준비: 로그 수준 warn, 이미지 v2"</code></pre>
+<pre><code>R=/tmp/gitops/app-repo
+sed -i '' 's/LOG_LEVEL: "info"/LOG_LEVEL: "warn"/' $R/apps/journal/10-config.yaml
+sed -i '' 's/    newTag: v1/    newTag: v2/' $R/apps/journal/kustomization.yaml
+git -C $R add -A &amp;&amp; git -C $R commit -qm "운영 준비: 로그 수준 warn, 이미지 v2"</code></pre>
     <p>실제 GitOps라면 여기서 <code>git push</code>로 끝난다. 이 실습의 깃 서버는 읽기 전용이라 베어 저장소를 다시 만들어 복사하는 스크립트를 쓴다 — <strong>절차의 본질(커밋이 배포다)은 같다.</strong></p>
 <pre><code>bash course/labs/scripts/gitops-push.sh /tmp/gitops/app-repo</code></pre>
     <p>스크립트 마지막 줄이 <code>argocd.argoproj.io/refresh: hard</code> 주석을 붙인다. Argo CD는 기본으로 <strong>3분마다</strong> 저장소를 확인하는데, 실습에서 3분을 기다리지 않으려는 것이다. 운영에서는 저장소의 웹훅으로 이 확인을 즉시 트리거한다.</p>
@@ -484,11 +491,19 @@ done</code></pre>
   <div class="step">
     <h4>3단계 — 저장소에서 지우면 클러스터에서도 지워진다</h4>
     <p class="purpose"><span class="lbl">목적</span><code>prune: true</code>가 무엇을 하는지 확인한다. <strong>이 옵션이 없으면 저장소가 절반만 정본이다.</strong></p>
-<pre><code>cd /tmp/gitops/app-repo
+<pre><code>R=/tmp/gitops/app-repo
 # kustomization.yaml 의 resources 에서 60-pdb.yaml 을 빼고 파일도 지운다
-rm apps/journal/60-pdb.yaml
-git add -A &amp;&amp; git commit -qm "PDB 제거 — 파드가 2개뿐이라 드레인을 막는다"
-bash course/labs/scripts/gitops-push.sh /tmp/gitops/app-repo</code></pre>
+sed -i '' '/  - 60-pdb.yaml/d' $R/apps/journal/kustomization.yaml
+rm $R/apps/journal/60-pdb.yaml
+git -C $R add -A &amp;&amp; git -C $R commit -qm "PDB 제거 — 파드가 2개뿐이라 드레인을 막는다"
+bash course/labs/scripts/gitops-push.sh $R
+
+for i in $(seq 1 10); do
+  N=$(kubectl -n gitops-journal get pdb --no-headers 2&gt;/dev/null | wc -l | tr -d ' ')
+  echo "  $(date +%H:%M:%S)  PDB 수=$N"
+  [ "$N" = "0" ] &amp;&amp; break
+  sleep 8
+done</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>  01:07:19  PDB 수=1
   01:07:27  PDB 수=0</code></div>
@@ -545,8 +560,8 @@ sleep 12; kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LO
 sleep 20; kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LOG_LEVEL}{"\n"}'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>debug
-info</code></div>
-    <div class="verdict"><span class="lbl">판정</span>12초 뒤에는 아직 <code>debug</code>였고 32초 뒤에 <code>info</code>로 돌아왔다. <strong>selfHeal은 즉시가 아니다.</strong> 그 사이에 파드가 재시작하면 바뀐 값을 읽어 갈 수도 있다 — 손으로 바꾼 것이 <strong>짧게 유효했다가 사라지는</strong> 이 상태가 디버깅을 어렵게 만든다.</div>
+warn</code></div>
+    <div class="verdict"><span class="lbl">판정</span>12초 뒤에는 아직 <code>debug</code>였고 32초 뒤에 저장소 값 <code>warn</code>(31.4에서 커밋한 값)으로 돌아왔다. <strong>selfHeal은 즉시가 아니다.</strong> 1단계의 레플리카는 5초 만에 돌아왔는데 이번에는 왜 느린가 — Argo CD는 되돌리기를 반복할수록 <strong>간격을 지수로 늘린다.</strong> 애플리케이션 컨트롤러의 기본값은 첫 간격 2초(<code>--self-heal-backoff-timeout-seconds</code>), 배수 3(<code>--self-heal-backoff-factor</code>), 상한 300초(<code>--self-heal-backoff-cap-seconds</code>)다. 1·2단계에서 이미 두 번 되돌렸기 때문에 이번에는 간격이 늘어나 있다. 같은 실험을 이어서 하면 더 길어진다 — 이 환경에서는 연달아 잰 복구 시간이 19초, 157초였다. 파드가 그 사이에 재시작하면 손으로 바꾼 값을 읽어 가는 창도 그만큼 길어진다.  그 사이에 파드가 재시작하면 바뀐 값을 읽어 갈 수도 있다 — 손으로 바꾼 것이 <strong>짧게 유효했다가 사라지는</strong> 이 상태가 디버깅을 어렵게 만든다.</div>
     <p>그래서 GitOps 클러스터에서 <strong>디버깅용 임시 변경은 하지 않는다.</strong> 정말 필요하면 애플리케이션의 자동 동기화를 잠깐 끄고(<code>syncPolicy</code>에서 <code>automated</code> 제거), 끝나면 다시 켠다. 끄는 것도 <strong>기록에 남는 행위</strong>여야 한다.</p>
   </div>
 </section>
@@ -559,18 +574,35 @@ info</code></div>
     <h4>1단계 — 키를 만든다</h4>
     <p class="purpose"><span class="lbl">목적</span>암호화의 대상이 되는 키를 만든다. <strong>이 키는 저장소에 들어가지 않는다.</strong></p>
 <pre><code>brew install sops age      # 없으면
-age-keygen -o age.key</code></pre>
+
+# 키와 시크릿은 저장소 밖에서 다룬다. 저장소 안에 둘 거라면 age.key 를 .gitignore 에 먼저 넣는다
+K=/tmp/gitops/sops
+mkdir -p $K
+age-keygen -o $K/age.key
+PUB=$(age-keygen -y $K/age.key)      # 공개 키만 뽑는다</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>Public key: age1d7gyfuu6e9de0h6dz949x0h840ka49ctu9napu04p567yzspu3rqdrrmhp</code></div>
-    <p><code>age</code>는 GPG를 대신하는 단순한 파일 암호화 도구다. 키가 <strong>한 줄짜리 문자열</strong>이라 다루기 쉽고, 공개 키로 암호화하고 개인 키로 푼다. <code>age.key</code> 파일에 둘 다 들어 있으므로 <strong>이 파일은 절대 커밋하지 않는다</strong> — <code>.gitignore</code>에 먼저 넣는다.</p>
+    <div class="out"><code>Public key: age1g5x3wewazfgr6hllcklut2j9ukzagjlvn2pc6eunnxc2h43z0yfqf6w40p</code></div>
+    <p><code>age</code>는 GPG를 대신하는 단순한 파일 암호화 도구다. 키가 <strong>한 줄짜리 문자열</strong>이라 다루기 쉽고, 공개 키로 암호화하고 개인 키로 푼다. <code>age.key</code> 파일에 둘 다 들어 있으므로 <strong>이 파일은 절대 커밋하지 않는다</strong> — <code>.gitignore</code>에 먼저 넣는다. 공개 키 문자열은 만들 때마다 다르다 — 아래 출력의 <code>age1...</code>은 이 환경의 값이다.</p>
   </div>
 
   <div class="step">
     <h4>2단계 — 값만 암호화한다</h4>
     <p class="purpose"><span class="lbl">목적</span>파일 전체를 암호화하지 않는다. <strong>diff가 읽히는 형태</strong>로 만드는 것이 요점이다.</p>
-<pre><code>sops --encrypt --age "$PUB" \
+<pre><code>cat &gt; $K/secret.yaml &lt;&lt;'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: journal-secret
+  namespace: gitops-journal
+type: Opaque
+stringData:
+  REDIS_PASSWORD: s3cr3t-pass
+EOF
+
+sops --encrypt --age "$PUB" \
   --encrypted-regex '^(data|stringData)$' \
-  secret.yaml &gt; secret.enc.yaml</code></pre>
+  $K/secret.yaml &gt; $K/secret.enc.yaml
+cat $K/secret.enc.yaml</code></pre>
     <span class="out-lbl">출력 (secret.enc.yaml)</span>
     <div class="out"><code>apiVersion: v1
 kind: Secret
@@ -579,24 +611,32 @@ metadata:
     namespace: gitops-journal
 type: Opaque
 stringData:
-    REDIS_PASSWORD: ENC[AES256_GCM,data:MTzKK6B81UQRa9s=,iv:kzLZ1GPMhUGjxVYFmmV+x6BGo/m8+4N/gG3EnwNx1Go=,tag:YfbNaJ70duLK5hKnR4H/cA==,type:str]
+    REDIS_PASSWORD: ENC[AES256_GCM,data:tO8LuzhFuCyNOVQ=,iv:rsLx16Xj7cof+RUOD/echLC26Mrvnb63BPghiz+ZZHo=,tag:OADYAkFaETB+uVCigY96IQ==,type:str]
 sops:
     age:
-        - recipient: age1d7gyfuu6e9de0h6dz949x0h840ka49ctu9napu04p567yzspu3rqdrrmhp
-    encrypted_regex: ^(data|stringData)$</code></div>
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            ...
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1g5x3wewazfgr6hllcklut2j9ukzagjlvn2pc6eunnxc2h43z0yfqf6w40p
+    encrypted_regex: ^(data|stringData)$
+    ...</code></div>
     <div class="verdict"><span class="lbl">판정</span><code>--encrypted-regex</code>가 핵심이다. 이름·네임스페이스·타입은 <strong>평문으로 남아서</strong> 리뷰어가 "어느 시크릿을 바꿨는지" 볼 수 있고, 값만 암호문이다. 파일 전체를 암호화하면 모든 변경이 <strong>알아볼 수 없는 diff</strong>가 되어 리뷰가 불가능해진다.</div>
   </div>
 
   <div class="step">
     <h4>3단계 — 안전한지 확인한다</h4>
     <p class="purpose"><span class="lbl">목적</span>"암호화했다"를 믿지 않고 확인한다.</p>
-<pre><code>grep -c 's3cr3t-pass' secret.enc.yaml
-export SOPS_AGE_KEY_FILE=$PWD/age.key
-sops --decrypt secret.enc.yaml | grep REDIS_PASSWORD
-SOPS_AGE_KEY_FILE=/dev/null sops --decrypt secret.enc.yaml</code></pre>
+<pre><code>grep -c 's3cr3t-pass' $K/secret.enc.yaml
+export SOPS_AGE_KEY_FILE=$K/age.key
+sops --decrypt $K/secret.enc.yaml | grep REDIS_PASSWORD
+SOPS_AGE_KEY_FILE=/dev/null sops --decrypt $K/secret.enc.yaml</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>0
     REDIS_PASSWORD: s3cr3t-pass
+Failed to get the data key required to decrypt the SOPS file.
+...
+Recovery failed because no master key was able to decrypt the file. In
 order for SOPS to recover the file, at least one key has to be successful,
 but none were.</code></div>
     <div class="verdict"><span class="lbl">판정</span>세 줄이 각각 다른 것을 확인한다. 평문이 <strong>파일에 없고</strong>, 키가 있으면 <strong>원래 값이 복원되고</strong>, 키가 없으면 <strong>읽히지 않는다.</strong> 이 세 가지를 확인하지 않고 커밋하는 것은 위험하다 — <code>--encrypted-regex</code>를 잘못 쓰면 아무것도 암호화되지 않은 채 "sops" 섹션만 붙은 파일이 나온다.</div>
@@ -702,10 +742,10 @@ uid=1000(git) gid=1000(git) groups=1000(git)</code></div>
       <li><code>kubectl -n gitops-journal get cm journal-config -o jsonpath='{.data.LOG_LEVEL}'</code> → <code>warn</code> (커밋으로 바꾼 값)</li>
       <li><code>kubectl -n gitops-journal get deploy journal-api -o jsonpath='{.spec.template.spec.containers[0].image}'</code> → <code>journal-api:v2</code></li>
       <li><code>kubectl -n gitops-journal get pdb --no-headers | wc -l</code> → <code>0</code> (prune으로 사라졌다)</li>
-      <li><code>kubectl -n gitops-journal scale deploy web-static --replicas=4; sleep 20; kubectl -n gitops-journal get deploy web-static -o jsonpath='{.spec.replicas}'</code> → <code>2</code></li>
+      <li><code>kubectl -n gitops-journal scale deploy web-static --replicas=4; sleep 20; kubectl -n gitops-journal get deploy web-static -o jsonpath='{.spec.replicas}'</code> → <code>2</code> (31.5를 연달아 했다면 selfHeal 백오프 때문에 20초로 부족할 수 있다. 최대 5분 뒤 다시 본다)</li>
       <li><code>kubectl -n gitops-journal get po --no-headers | grep -c '1/1'</code> → <code>5</code> 이상 (restricted 네임스페이스에서 떴다)</li>
-      <li><code>grep -c 's3cr3t-pass' secret.enc.yaml</code> → <code>0</code></li>
-      <li><code>SOPS_AGE_KEY_FILE=./age.key sops --decrypt secret.enc.yaml | grep -c REDIS_PASSWORD</code> → <code>1</code></li>
+      <li><code>grep -c 's3cr3t-pass' /tmp/gitops/sops/secret.enc.yaml</code> → <code>0</code></li>
+      <li><code>SOPS_AGE_KEY_FILE=/tmp/gitops/sops/age.key sops --decrypt /tmp/gitops/sops/secret.enc.yaml | grep -c REDIS_PASSWORD</code> → <code>1</code></li>
       <li><code>ls course/labs/k8s/gitops/</code> → <code>00-gitserver.yaml 10-application.yaml README.md repo-template</code></li>
       <li>(이해 확인) <code>prune: true</code>가 위험한 상황을 하나 적고, 그것을 막는 방법을 함께 적는다</li>
       <li>(이해 확인) 새벽에 긴급하게 레플리카를 늘려야 할 때 GitOps 클러스터에서 무엇을 하는지 순서로 적는다</li>
@@ -728,8 +768,8 @@ uid=1000(git) gid=1000(git) groups=1000(git)</code></div>
 <pre><code># 애플리케이션을 먼저 지운다 (prune 이 켜져 있으므로 리소스가 함께 정리된다)
 kubectl -n argocd delete application journal
 
-# 네임스페이스 셋을 지운다
-kubectl delete ns gitops-journal gitops --ignore-not-found
+# 앱 네임스페이스를 지운다. gitops(깃 서버)는 M32 가 그대로 쓰므로 남긴다 — M32 정리에서 지운다
+kubectl delete ns gitops-journal --ignore-not-found
 
 # Argo CD 는 남긴다. 남아 있는지 확인
 kubectl -n argocd get deploy --no-headers | wc -l</code></pre>

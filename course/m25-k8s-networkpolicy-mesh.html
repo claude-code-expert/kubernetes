@@ -421,7 +421,8 @@ kubectl -n apps exec netprobe -- curl -s -o /dev/null -m 4 -w 'apps -> journal-a
     <span class="out-lbl">출력</span>
     <div class="out"><code>인그레스 /api/entries -> 000
 인그레스 /            -> 000
-apps -> journal-api: 000</code></div>
+apps -> journal-api: 000
+command terminated with exit code 28</code></div>
     <div class="verdict"><span class="lbl">판정</span><code>000</code>은 curl이 <strong>HTTP 응답을 아예 받지 못했다</strong>는 뜻이다(연결 자체가 성립하지 않음). 막고 싶었던 <code>apps</code>만 막힌 게 아니라 <strong>인그레스 컨트롤러도 같이 막혔다.</strong> 정책은 출발지를 가리지 않았으니 당연한 결과인데, 운영 중에 <code>default-deny</code>만 먼저 커밋하면 서비스가 이렇게 죽는다.</div>
   </div>
 
@@ -538,7 +539,8 @@ kubectl -n apps exec netprobe -- curl -s -o /dev/null -m 4 -w 'apps -> journal-a
     <span class="out-lbl">출력</span>
     <div class="out"><code>인그레스 /api/entries -> 200
 인그레스 /            -> 200
-apps -> journal-api: 000</code></div>
+apps -> journal-api: 000
+command terminated with exit code 28</code></div>
     <div class="verdict"><span class="lbl">판정</span>서비스는 복구됐고 이웃 네임스페이스는 막힌 채다. 이 세 줄이 이 모듈의 결과 전체다.</div>
   </div>
 
@@ -657,8 +659,8 @@ kubectl -n ingress-nginx exec l7probe -- \
 echo -n "인그레스 경유 /api/entries -> "; curl -s -o /dev/null -m 5 -w '%{http_code}\n' \
   -H 'Host: journal.local' http://localhost:18080/api/entries</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>command terminated with exit code 28
-l7probe -> journal-api: 000
+    <div class="out"><code>l7probe -> journal-api: 000
+command terminated with exit code 28
 인그레스 경유 /api/entries -> 200</code></div>
     <div class="verdict"><span class="lbl">판정</span>같은 네임스페이스인데도 <code>l7probe</code>는 막히고 컨트롤러는 통한다. <code>exit code 28</code>은 curl의 타임아웃 코드다. 남은 구멍은 하나 — <strong>그 라벨을 붙인 파드를 띄우면 된다.</strong> 라벨은 누구나 자기 파드에 적을 수 있는 문자열이지 증명이 아니다.</div>
   </div>
@@ -737,8 +739,8 @@ kubectl -n ingress-nginx exec l7probe -- \
   curl -s -o /dev/null -m 4 -w 'l7probe -> journal-api: %{http_code}\n' \
   http://journal-api.journal:8080/api/entries</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>command terminated with exit code 28
-l7probe -> journal-api: 000</code></div>
+    <div class="out"><code>l7probe -> journal-api: 000
+command terminated with exit code 28</code></div>
   </div>
 </section>
 

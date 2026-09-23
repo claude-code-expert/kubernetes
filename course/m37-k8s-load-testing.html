@@ -362,7 +362,8 @@ export default function () {
   <div class="step">
     <h4>3단계 — 기준을 잰다</h4>
     <p class="purpose"><span class="lbl">목적</span>비교할 숫자를 먼저 만든다. <strong>기준 없이는 개선도 악화도 말할 수 없다.</strong></p>
-<pre><code>k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js</code></pre>
+<pre><code>T0=$(date +%s)000      # 부하가 쓴 엔트리를 나중에 골라 지우려고 시작 시각(ms)을 적어 둔다
+k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>✓ 'rate&lt;0.01'  rate=0.00%
 ✓ 'p(99)&lt;500'  p(99)=3.54ms
@@ -405,27 +406,37 @@ http_reqs      : 12800  121.306328/s</code></div>
     <p class="purpose"><span class="lbl">목적</span>가장 먼저 치는 명령이 <strong>왜 이 문제를 못 잡는지</strong> 확인한다.</p>
 <pre><code>kubectl top pods -n journal -l app=journal-api --no-headers</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>journal-api-6575b5fd6c-5rd75   20m   42Mi
-journal-api-6575b5fd6c-9cv2k   36m   48Mi
-journal-api-6575b5fd6c-9shsx   32m   63Mi
-journal-api-6575b5fd6c-c2lb7    5m   46Mi
-journal-api-6575b5fd6c-jbf4r    4m   42Mi</code></div>
-    <div class="verdict"><span class="lbl">판정</span><strong>전부 한가해 보인다.</strong> limit이 50m인데 20~36m만 쓰고 있으니 "<dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>는 문제가 아니다"라고 읽게 된다. 그런데 P99는 14초다. <code>top</code>이 보여 주는 것은 <strong>실제로 쓴 시간</strong>이고, <strong>쓰고 싶었는데 못 쓴 시간</strong>은 여기 없다.</div>
+    <div class="out"><code>journal-api-bf4dc769d-29n87   50m   48Mi
+journal-api-bf4dc769d-6r5gt   50m   50Mi
+journal-api-bf4dc769d-7cqp6   50m   51Mi
+journal-api-bf4dc769d-gfmtf   51m   48Mi
+journal-api-bf4dc769d-j7fwr   49m   41Mi
+... (8개 모두 50m 안팎)</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>숫자만 보면 한가해 보인다.</strong> 50m은 0.05코어다 — limit을 모르고 보면 "<dfn class="term">CPU <span class="en">(Central Processing Unit · 중앙처리장치)</span></dfn>는 거의 안 쓴다"로 읽게 된다. 그런데 P99는 10초를 넘었다. <code>top</code>이 보여 주는 것은 <strong>실제로 쓴 시간</strong>이고, <strong>쓰고 싶었는데 못 쓴 시간</strong>은 여기 없다. 부하가 끝난 뒤 조금 늦게 치면 값이 내려가 더 한가해 보인다(작성 환경의 한 측정에서 5~36m).</div>
   </div>
 
   <div class="step">
     <h4>3단계 — 스로틀링을 잰다</h4>
     <p class="purpose"><span class="lbl">목적</span>보이지 않던 것을 보이게 한다. <strong>이 질의가 이 모듈의 핵심 도구</strong>다.</p>
-<pre><code>sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="journal",container="api"}[2m]))
-/
-sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="journal",container="api"}[2m]))</code></pre>
+<pre><code># 프로메테우스(M19 의 port-forward 9090)에 스로틀된 주기의 비율을 묻는다. 부하가 끝나고 2분 안에 친다
+curl -sG http://localhost:9090/api/v1/query --data-urlencode 'query=
+  sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="journal",container="api"}[2m]))
+  /
+  sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="journal",container="api"}[2m]))' \
+| python3 -c '
+import json,sys
+for x in json.load(sys.stdin)["data"]["result"]:
+    print("%s   %.1f %%" % (x["metric"]["pod"], float(x["value"][1])*100))'</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>journal-api-6575b5fd6c-c2lb7   96.2 %
-journal-api-6575b5fd6c-sxbvb   87.8 %
-journal-api-6575b5fd6c-9cv2k   92.1 %
-journal-api-6575b5fd6c-9shsx   91.4 %
-journal-api-6575b5fd6c-vfmg9   91.3 %</code></div>
-    <div class="verdict"><span class="lbl">판정</span><strong>88~96%의 주기가 스로틀됐다.</strong> 리눅스의 <dfn class="term">CFS <span class="en">(Completely Fair Scheduler · 리눅스의 CPU 스케줄러. 제한을 넘으면 스로틀링한다)</span></dfn>는 100ms 단위로 할당량을 주는데, <code>50m</code>은 그 100ms 중 <strong>5ms만 쓸 수 있다</strong>는 뜻이다. 5ms를 다 쓰면 나머지 95ms는 <strong>실행 가능한 상태로 대기</strong>하고, 그 대기가 응답 시간에 그대로 더해진다.</div>
+    <div class="out"><code>journal-api-bf4dc769d-gfmtf   88.7 %
+journal-api-bf4dc769d-pjljz   82.1 %
+journal-api-bf4dc769d-6r5gt   79.1 %
+journal-api-bf4dc769d-pjgxt   87.1 %
+journal-api-bf4dc769d-pnb7s   89.3 %
+journal-api-bf4dc769d-7cqp6   89.5 %
+journal-api-bf4dc769d-29n87   76.3 %
+journal-api-bf4dc769d-j7fwr   84.3 %</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>76~90%의 주기가 스로틀됐다.</strong> 리눅스의 <dfn class="term">CFS <span class="en">(Completely Fair Scheduler · 리눅스의 CPU 스케줄러. 제한을 넘으면 스로틀링한다)</span></dfn>는 100ms 단위로 할당량을 주는데, <code>50m</code>은 그 100ms 중 <strong>5ms만 쓸 수 있다</strong>는 뜻이다. 5ms를 다 쓰면 나머지 95ms는 <strong>실행 가능한 상태로 대기</strong>하고, 그 대기가 응답 시간에 그대로 더해진다.</div>
     <p>왜 <code>top</code>과 어긋나는지 설명된다. 5ms씩 100ms마다 쓰면 평균 사용률은 <strong>50m 근처</strong>로 나오고, 그것이 <code>top</code>이 보여 주는 값이다. <strong>바쁜 것과 조여진 것이 같은 숫자로 보인다.</strong></p>
     <p><code>container_cpu_cfs_throttled_periods_total</code>은 cAdvisor가 내보내는 지표다 — M19에서 세 출처를 구분할 때 본 그 cAdvisor이고, <strong>노드에서만 알 수 있는 정보</strong>라 앱 지표에는 절대 나타나지 않는다.</p>
   </div>
@@ -439,15 +450,16 @@ journal-api-6575b5fd6c-vfmg9   91.3 %</code></div>
     <p class="purpose"><span class="lbl">목적</span>원인이 맞았는지 <strong>같은 측정으로</strong> 확인한다.</p>
 <pre><code>kubectl -n journal patch deploy journal-api --type=json \
   -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"500m"}]'
-k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js</code></pre>
+k6 run -e PROFILE=steady -e RPS=150 -e DURATION=90s course/labs/scripts/k6-capacity.js
+# 3단계의 스로틀링 질의를 다시 친다</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>✓ 'p(99)&lt;500'  p(99)=7.71ms
 lat_list: avg=5.05ms  p(95)=6.01ms
 http_req_failed: 0.00%  0 out of 13500
 http_reqs      : 13500  149.99904/s
 
-스로틀링: 전 파드 0.0 %</code></div>
-    <div class="verdict"><span class="lbl">판정</span>스로틀링이 <strong>0%</strong>가 되고 P99가 7.71ms로 돌아왔다. 150 rps도 다시 달성한다. <strong>원인이 맞았다.</strong></div>
+스로틀링: 새 파드 0.4~0.8 % (2분 창에 걸친 옛 파드 줄은 무시한다)</code></div>
+    <div class="verdict"><span class="lbl">판정</span>스로틀링이 <strong>1% 미만</strong>이 되고 P99가 7.71ms로 돌아왔다. 150 rps도 다시 달성한다. <strong>원인이 맞았다.</strong></div>
   </div>
 
   <div class="step">
@@ -506,18 +518,29 @@ dropped_iterations: 24069  388.273417/s</code></div>
   <div class="step">
     <h4>2단계 — 앱과 k6가 재는 값을 비교한다</h4>
     <p class="purpose"><span class="lbl">목적</span>M20의 히스토그램과 k6의 숫자가 <strong>왜 다른지</strong> 확인한다. 둘 다 맞다.</p>
-<pre><code># k6 를 300 rps 로 돌리는 동안 프로메테우스에 질의한다
-histogram_quantile(0.95, sum by (le) (rate(
-  http_server_requests_seconds_bucket{namespace="journal",job="journal-api",uri="/api/entries"}[1m])))
-
-sum(rate(http_server_requests_seconds_count{namespace="journal",job="journal-api"}[1m]))</code></pre>
+    <p>재기 전에 <strong>앞 시험들이 남긴 데이터를 비운다.</strong> 부하의 15%가 쓰기였으므로 지금까지 1만 건이 넘는 엔트리가 쌓였고, <code>/api/entries</code>는 매번 그 전부를 <code>KEYS</code>+<code>MGET</code>으로 읽어 돌려준다. 이 환경에서 1.7만 건이 쌓인 채로 300 rps를 걸었더니 응답 한 번이 623KB였고, 달성 226 rps · <code>lat_list</code> P95 5.35초로 무너졌다. <strong>부하 시험이 만든 데이터가 다음 시험을 오염시킨다</strong> — 시험마다 출발선을 같게 맞추는 것이 측정의 일부다.</p>
+<pre><code>PW=$(kubectl -n journal get secret journal-secret -o jsonpath='{.data.REDIS_PASSWORD}' | base64 -d)
+# 목록·필터·삭제를 레디스 컨테이너 안의 sh 에서 한 번에 한다 (zsh 는 따옴표 없는 변수를 쪼개지 않는다)
+kubectl -n journal exec redis-0 -- sh -c "redis-cli -a '$PW' --no-auth-warning --scan --pattern 'entry:*' \
+  | awk -F: -v t=$T0 '\$2 &gt;= t' | xargs -r redis-cli -a '$PW' --no-auth-warning DEL" | paste -sd+ - | bc</code></pre>
+    <span class="out-lbl">출력 (지운 건수 · 환경마다 다르다)</span>
+    <div class="out"><code>19537</code></div>
+<pre><code># k6 를 300 rps 로 90초 돌려 두고, 70초 뒤 프로메테우스(9090)에 같은 구간을 묻는다
+k6 run -q -e PROFILE=steady -e RPS=300 -e DURATION=90s course/labs/scripts/k6-capacity.js &gt; /tmp/k6-300.txt 2&gt;&amp;1 &amp;
+sleep 70
+for Q in 'histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{namespace="journal",job="journal-api",uri="/api/entries"}[1m]))) * 1000' \
+         'sum(rate(http_server_requests_seconds_count{namespace="journal",job="journal-api"}[1m]))'; do
+  curl -sG http://localhost:9090/api/v1/query --data-urlencode "query=$Q" \
+    | python3 -c "import json,sys; r=json.load(sys.stdin)['data']['result']; print('앱  ', round(float(r[0]['value'][1]),2)) if r else print('결과 없음')"
+done
+wait        # k6 가 끝나기를 기다린다
+grep -E 'lat_list\.|http_reqs\.' /tmp/k6-300.txt</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>앱  P95      : 48.42 ms
-앱  요청률   : 258.7 req/s
-
-k6  lat_list p95 : 70.49 ms
-k6  http_reqs    : 27000  299.824729/s</code></div>
-    <div class="verdict"><span class="lbl">판정</span>두 값의 차이가 각각 이유가 있다. <strong>지연 22ms</strong>는 인그레스 컨트롤러 통과 시간과 네트워크, 그리고 k6 쪽의 큐잉이다 — <strong>사용자가 겪는 것은 70ms 쪽</strong>이다. <strong>요청률 41건</strong>은 15%가 정적 파일로 가서 <code>journal-api</code>에 오지 않기 때문이다: <code>300 × 0.85 = 255 ≈ 258.7</code>.</div>
+    <div class="out"><code>앱   5.25
+앱   259.89
+    lat_list.......................: avg=5.26ms min=597µs    med=3.24ms max=214.85ms p(90)=6.4ms  p(95)=10.67ms
+    http_reqs......................: 27000  299.99341/s</code></div>
+    <div class="verdict"><span class="lbl">판정</span>두 값의 차이가 각각 이유가 있다. 앱의 P95는 5.25ms, k6의 P95는 10.67ms다. <strong>그 차이 5ms</strong>는 인그레스 컨트롤러 통과 시간과 네트워크, 그리고 k6 쪽의 큐잉이다 — <strong>사용자가 겪는 것은 10.67ms 쪽</strong>이다. <strong>요청률 41건</strong>은 15%가 정적 파일로 가서 <code>journal-api</code>에 오지 않기 때문이다: <code>300 × 0.85 = 255 ≈ 259.9</code>.</div>
     <p>여기서 나오는 원칙이 있다. <strong>SLO는 사용자에게 가까운 지점에서 재야 한다.</strong> 앱의 히스토그램은 원인을 찾는 데 좋고(어느 핸들러가 느린가), <strong>약속을 지켰는지 판정하는 데는 클라이언트 쪽 측정이 맞다.</strong> M21에서 만든 알림이 앱 지표를 쓰는 것은 <strong>탐지</strong>가 목적이고, SLO 판정은 별도의 측정이 필요하다.</p>
   </div>
 </section>
@@ -538,12 +561,12 @@ k6  http_reqs    : 27000  299.824729/s</code></div>
   <div class="fail">
     <h4>실패 ② — <code>kubectl top</code>으로 CPU를 판단한다</h4>
     <p class="purpose"><span class="lbl">목적</span>37.4의 관찰을 <strong>진단 절차의 문제</strong>로 정리한다.</p>
-    <p>P99가 14초인 상태에서 가장 먼저 치는 명령이 <code>kubectl top</code>이고, 그 결과가 <code>20m / 42Mi</code>다. <strong>CPU도 메모리도 여유가 있다.</strong> 그러면 다음 수순은 대개 이렇다 — 네트워크를 의심하고, 레디스를 의심하고, 애플리케이션 코드를 뒤진다. <strong>전부 헛수고다.</strong></p>
+    <p>P99가 14초인 상태에서 가장 먼저 치는 명령이 <code>kubectl top</code>이고, 그 결과가 <code>50m / 48Mi</code>다. 0.05코어 — <strong>CPU도 메모리도 여유가 있어 보인다.</strong> 그러면 다음 수순은 대개 이렇다 — 네트워크를 의심하고, 레디스를 의심하고, 애플리케이션 코드를 뒤진다. <strong>전부 헛수고다.</strong></p>
     <table>
       <thead><tr><th>보이는 것</th><th>실제</th></tr></thead>
       <tbody>
-        <tr><td><code>top</code>: 20~36m 사용</td><td>limit 50m 중 대부분을 쓰고 있다</td></tr>
-        <tr><td>CPU 여유 있음</td><td>주기의 88~96%가 <strong>대기</strong></td></tr>
+        <tr><td><code>top</code>: 50m 사용</td><td>limit 50m을 꽉 채웠다 — limit을 모르면 작은 숫자로 읽힌다</td></tr>
+        <tr><td>CPU 여유 있음</td><td>주기의 76~90%가 <strong>대기</strong></td></tr>
         <tr><td>에러율 0.03%</td><td>P99 14.74초</td></tr>
       </tbody>
     </table>
@@ -627,10 +650,13 @@ pkill -f k6-capacity 2&gt;/dev/null
 kubectl -n journal get deploy journal-api \
   -o jsonpath='{.spec.template.spec.containers[0].resources}{"\n"}'
 
-# 부하로 만들어진 엔트리를 지운다 (쓰기 15% 가 실제로 저장됐다)
+# 부하로 만들어진 엔트리를 지운다 (쓰기 15% 가 실제로 저장됐다). T0 는 37.3 3단계에서 적어 둔 값이다
+# 셸을 새로 열었다면 T0 가 비어 있다 — echo $T0 로 확인하고, 비었으면 이 모듈을 시작한 날의 0시로 둔다:
+#   T0=$(date -j -f "%Y-%m-%d %H:%M:%S" "$(date +%Y-%m-%d) 00:00:00" +%s)000
 PW=$(kubectl -n journal get secret journal-secret -o jsonpath='{.data.REDIS_PASSWORD}' | base64 -d)
-kubectl -n journal exec redis-0 -- sh -c \
-  "redis-cli -a '$PW' --scan --pattern 'entry:*' | head -2000 | xargs -r redis-cli -a '$PW' DEL"</code></pre>
+# 목록·필터·삭제를 레디스 컨테이너 안의 sh 에서 한 번에 한다 (zsh 는 따옴표 없는 변수를 쪼개지 않는다)
+kubectl -n journal exec redis-0 -- sh -c "redis-cli -a '$PW' --no-auth-warning --scan --pattern 'entry:*' \
+  | awk -F: -v t=$T0 '\$2 &gt;= t' | xargs -r redis-cli -a '$PW' --no-auth-warning DEL" | paste -sd+ - | bc</code></pre>
   <p><code>limits</code>에 <code>memory</code>만 있고 <code>cpu</code>가 없어야 한다. <strong>실험이 배포를 바꾼 것은 사람이 되돌린다</strong> — M36에서 배운 규칙이 여기서도 같다.</p>
   <p>부하 시험은 <strong>데이터를 남긴다.</strong> 쓰기 15%가 전부 레디스에 저장됐고, 그대로 두면 다음 측정의 <code>KEYS</code>가 느려져 <strong>결과가 조금씩 나빠진다.</strong> 측정 환경을 같게 유지하는 것도 시험의 일부다.</p>
 </section>

@@ -315,10 +315,22 @@
 EXT_IP=$(docker inspect ext-redis \
   --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
 echo $EXT_IP
-docker exec ext-redis redis-cli -a extpass SET greeting "클러스터 밖에서 왔다"</code></pre>
+docker exec ext-redis redis-cli -a extpass --no-auth-warning SET greeting "클러스터 밖에서 왔다"
+
+# 실습 네임스페이스(restricted)와, 안에서 부를 진단 파드. redis 이미지의 사용자는 UID 999 다
+kubectl apply -f course/labs/k8s/external/00-namespace.yaml
+kubectl -n m34 run probe --image=redis:8.2-alpine --restart=Never --overrides='{"spec":{
+  "securityContext":{"runAsNonRoot":true,"runAsUser":999,"seccompProfile":{"type":"RuntimeDefault"}},
+  "containers":[{"name":"probe","image":"redis:8.2-alpine","command":["sleep","3600"],
+    "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}'
+kubectl -n m34 wait --for=condition=Ready pod/probe --timeout=90s</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>172.20.0.5
-OK</code></div>
+OK
+namespace/m34 created
+pod/probe created
+pod/probe condition met</code></div>
+    <p><code>--no-auth-warning</code>을 빼면 명령마다 <code>Warning: Using a password with '-a' ...</code> 한 줄이 섞인다. IP는 <code>kind</code> 네트워크에 먼저 붙은 컨테이너 수에 따라 달라진다.</p>
     <p>도커의 <code>kind</code> 네트워크에 붙인 것이 요점이다. kind 노드들이 그 네트워크에 있으므로 <strong>파드에서 이 IP로 나갈 수 있다.</strong> 실제 환경에서는 이 자리가 <dfn class="term">VPC <span class="en">(Virtual Private Cloud · 클라우드 안의 격리된 사설 네트워크)</span></dfn> 안의 데이터베이스 주소가 된다.</p>
   </div>
 
@@ -356,7 +368,8 @@ endpoints:
         <tr><td><code>conditions.ready</code></td><td><code>false</code>면 트래픽을 보내지 않는다. <strong>이 값은 우리가 관리한다</strong></td></tr>
       </tbody>
     </table>
-<pre><code>kubectl apply -f course/labs/k8s/external/10-selectorless.yaml
+<pre><code># 파일의 172.20.0.5 는 작성 환경의 값이다. 1단계에서 얻은 주소로 바꿔 적용한다
+sed "s/172\.20\.0\.5/$EXT_IP/" course/labs/k8s/external/10-selectorless.yaml | kubectl apply -f -
 kubectl -n m34 get svc,endpointslice --no-headers</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>service/ext-redis   ClusterIP   10.96.140.114   &lt;none&gt;   6379/TCP   7s
@@ -366,8 +379,8 @@ endpointslice.discovery.k8s.io/ext-redis-1   IPv4   6379   172.20.0.5   7s</code
   <div class="step">
     <h4>3단계 — 파드에서 이름으로 부른다</h4>
     <p class="purpose"><span class="lbl">목적</span>앱이 <strong>안과 밖을 구분하지 못한다</strong>는 것을 확인한다.</p>
-<pre><code>kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass PING
-kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass GET greeting
+<pre><code>kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass --no-auth-warning PING
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass --no-auth-warning GET greeting
 kubectl -n m34 exec probe -- getent hosts ext-redis.m34.svc.cluster.local</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>PONG
@@ -391,7 +404,7 @@ spec:
   type: ExternalName
   externalName: ext-redis.m34.svc.cluster.local</code></pre>
 <pre><code>kubectl -n m34 exec probe -- nslookup -type=cname alias-redis.m34.svc.cluster.local
-kubectl -n m34 exec probe -- redis-cli -h alias-redis -a extpass PING
+kubectl -n m34 exec probe -- redis-cli -h alias-redis -a extpass --no-auth-warning PING
 kubectl -n m34 get svc alias-redis -o jsonpath='{.spec.type}{" clusterIP="}{.spec.clusterIP}{"\n"}'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>alias-redis.m34.svc.cluster.local	canonical name = ext-redis.m34.svc.cluster.local
@@ -413,11 +426,22 @@ spec:
   externalName: ext-redis.m34.svc.cluster.local
   ports:
     - {name: redis, port: 16379, targetPort: 6379}</code></pre>
-<pre><code>kubectl apply -f -   # 위 매니페스트
-kubectl -n m34 exec probe -- redis-cli -h alias-port -p 16379 -a extpass PING</code></pre>
+<pre><code>cat &lt;&lt;'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata: {name: alias-port, namespace: m34}
+spec:
+  type: ExternalName
+  externalName: ext-redis.m34.svc.cluster.local
+  ports:
+    - {name: redis, port: 16379, targetPort: 6379}
+EOF
+kubectl -n m34 exec probe -- redis-cli -h alias-port -p 16379 -t 5 -a extpass --no-auth-warning PING</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>service/alias-port created
-Could not connect to Redis at alias-port:16379: Connection refused</code></div>
+Could not connect to Redis at alias-port:16379: Operation timed out
+command terminated with exit code 1</code></div>
+    <p><code>-t 5</code>(연결 타임아웃 5초)를 빼면 이 환경에서 <strong>2분 30초</strong>를 기다린 끝에 <code>Connection refused</code>가 나왔다. 가상 IP에 16379 규칙이 없어 응답 없는 연결 시도가 재전송되다 끝나는 것이다.</p>
     <div class="verdict"><span class="lbl">판정</span><strong>매니페스트는 받아들여졌는데 <code>ports</code>가 아무 일도 하지 않는다.</strong> 검증에서 걸리지도 않아서 "설정했다고 생각하고 넘어가는" 형태의 사고가 난다. <code>ExternalName</code>에는 포트를 바꿀 주체가 없다 — 트래픽이 클러스터의 어떤 구성요소도 지나지 않기 때문이다.</div>
   </div>
 
@@ -443,8 +467,15 @@ ext-redis-1   IPv4          6379    172.20.0.5   3m7s</code></div>
     <h4>1단계 — 내보내는 쪽을 만든다</h4>
     <p class="purpose"><span class="lbl">목적</span>상대 클러스터 밖에서 닿는 <strong>고정 주소</strong>를 만든다.</p>
 <pre><code>kind create cluster --config course/labs/infra/kind-edge.yaml
+kubectl config use-context kind-study        # kind create 가 바꿔 놓은 컨텍스트를 되돌린다 (M32)
 kind load docker-image journal-api:v1 --name edge
-kubectl --context kind-edge apply -f course/labs/k8s/external/30-export-edge.yaml</code></pre>
+kubectl --context kind-edge apply -f course/labs/k8s/external/30-export-edge.yaml
+kubectl --context kind-edge -n shared rollout status deploy/greeter --timeout=120s
+kubectl --context kind-edge -n shared get po,svc --no-headers
+
+EDGE_IP=$(docker inspect edge-control-plane \
+  --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
+echo "edge 노드 IP: $EDGE_IP"</code></pre>
 <pre><code>apiVersion: v1
 kind: Service
 metadata: {name: greeter, namespace: shared}
@@ -488,7 +519,8 @@ endpoints:
   # edge 클러스터의 노드 주소들. 노드가 늘면 여기도 늘려야 한다.
   - addresses: ["172.20.0.6"]
     conditions: {ready: true}</code></pre>
-<pre><code>kubectl --context kind-study apply -f course/labs/k8s/external/40-import-study.yaml
+<pre><code># 파일의 172.20.0.6 은 작성 환경의 edge 노드 주소다. 1단계에서 얻은 값으로 바꾼다
+sed "s/172\.20\.0\.6/$EDGE_IP/" course/labs/k8s/external/40-import-study.yaml | kubectl --context kind-study apply -f -
 for i in 1 2 3 4; do
   kubectl --context kind-study -n m34 exec probe -- \
     sh -c 'wget -qO- --timeout=5 http://greeter-edge:8080/healthz'; echo
@@ -538,14 +570,14 @@ kubectl --context kind-edge get nodes --no-headers | wc -l</code></pre>
 <pre><code>docker stop ext-redis
 kubectl -n m34 get endpointslice ext-redis-1 \
   -o jsonpath='{.endpoints[0].addresses[0]}{" ready="}{.endpoints[0].conditions.ready}{"\n"}'
-kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass -t 4 PING</code></pre>
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass --no-auth-warning -t 4 PING</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>172.20.0.5 ready=true
 Could not connect to Redis at ext-redis:6379: Operation timed out</code></div>
     <div class="verdict"><span class="lbl">판정</span>레디스는 죽었는데 <strong>엔드포인트는 <code>ready=true</code>라고 말한다.</strong> 파드가 붙는 서비스였다면 프로브가 실패해 엔드포인트에서 빠졌겠지만, 여기서는 <code>ready</code>가 <strong>우리가 쓴 문자열</strong>일 뿐이다. 쿠버네티스는 이 주소를 검사하지 않는다.</div>
     <p>증상이 <strong>타임아웃</strong>이라는 점도 중요하다. M25에서 본 것과 같은 형태라, "네트워크 정책 때문인가" "DNS 문제인가"로 시간을 쓰기 쉽다. 셀렉터 없는 서비스를 쓰는 곳에서는 <strong>진단 순서에 "그 주소가 살아 있는가"를 앞에 둔다.</strong></p>
 <pre><code>docker start ext-redis
-kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass PING</code></pre>
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass --no-auth-warning PING</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>PONG</code></div>
     <p>대응은 셋이다. <strong>주소를 관리하는 컨트롤러를 두거나</strong>(MCS나 External DNS 계열), <strong>상대 쪽에 로드밸런서를 두어</strong> 헬스 체크를 그쪽에 맡기거나, <strong>앱이 재시도와 타임아웃을 제대로 다루게</strong> 한다. 셋 다 하지 않으면 <strong>주소 하나가 죽었을 때 조용히 느려지는</strong> 시스템이 된다.</p>
@@ -554,14 +586,43 @@ kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass PING</code></pre>
   <div class="fail">
     <h4>실패 ② — 라벨 하나로 서비스와 슬라이스가 갈라진다</h4>
     <p class="purpose"><span class="lbl">목적</span>연결 고리가 <strong>라벨 문자열</strong>이라는 것을 확인한다. M20의 3단 라벨 사슬과 같은 부류의 사고다.</p>
-<pre><code># 라벨을 일부러 틀리게 쓴다
+<pre><code>EXT_IP=$(docker inspect ext-redis \
+  --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
+
+# 슬라이스를 지우고 라벨만 틀린 것으로 다시 만든다
+kubectl -n m34 delete endpointslice ext-redis-1
+cat &lt;&lt;EOF | kubectl apply -f -
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
+  name: ext-redis-1
+  namespace: m34
   labels:
-    kubernetes.io/service-name: ext-redis-typo</code></pre>
+    kubernetes.io/service-name: ext-redis-typo     # 일부러 틀리게 쓴다
+addressType: IPv4
+ports:
+  - {name: redis, port: 6379, protocol: TCP}
+endpoints:
+  - addresses: ["$EXT_IP"]
+    conditions: {ready: true}
+EOF</code></pre>
     <p>결과는 오류가 아니라 <strong>침묵</strong>이다. 슬라이스는 만들어지고, 서비스도 만들어지고, 둘이 붙지 않는다.</p>
 <pre><code>kubectl -n m34 get endpointslice -l kubernetes.io/service-name=ext-redis
-kubectl -n m34 describe svc ext-redis | grep -i endpoints</code></pre>
+kubectl -n m34 describe svc ext-redis | grep -i endpoints
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass --no-auth-warning -t 4 PING</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>No resources found in m34 namespace.
+Endpoints:                &lt;none&gt;
+Could not connect to Redis at ext-redis:6379: Connection refused
+command terminated with exit code 1</code></div>
     <div class="verdict"><span class="lbl">판정</span>확인 방법이 정해져 있다. <strong>서비스 이름으로 슬라이스를 조회</strong>해서 나오는지 보고, <code>describe svc</code>의 엔드포인트 줄이 비어 있는지 본다. 비어 있으면 라벨이 틀렸거나 포트 이름이 안 맞는 것이다.</div>
+    <pre><code># 되돌린다 — 2단계의 파일을 다시 적용한다
+kubectl -n m34 delete endpointslice ext-redis-1
+sed "s/172\.20\.0\.5/$EXT_IP/" course/labs/k8s/external/10-selectorless.yaml | kubectl apply -f -
+sleep 3      # 슬라이스가 반영될 때까지
+kubectl -n m34 exec probe -- redis-cli -h ext-redis -a extpass --no-auth-warning PING</code></pre>
+    <span class="out-lbl">출력 (마지막 줄)</span>
+    <div class="out"><code>PONG</code></div>
     <p>포트 이름도 같은 부류다. 서비스가 <code>name: redis</code>인데 슬라이스가 <code>name: tcp</code>면 <strong>슬라이스는 붙지만 그 포트로는 트래픽이 가지 않는다.</strong> 이름을 아예 쓰지 않는 단일 포트 서비스에서는 이 문제가 없으므로, <strong>포트가 하나면 이름을 생략하는 것</strong>도 방법이다.</p>
   </div>
 </section>

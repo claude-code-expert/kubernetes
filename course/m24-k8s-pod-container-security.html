@@ -418,6 +418,14 @@ ReplicaFailure=True FailedCreate</code></div>
     <div class="out"><code>deployment.apps/journal-api    0/1   1   0   51s
 pod/journal-api-798b755857-kqcsc   0/1   CreateContainerConfigError   0   10s</code></div>
     <div class="verdict"><span class="lbl">판정</span><strong>파드가 만들어졌다.</strong> 어드미션은 통과한 것이다. 그런데 <code>CreateContainerConfigError</code>다 — 3단계와 증상이 완전히 다르다. 그때는 파드가 없었고 지금은 파드가 있다.</div>
+    <div class="note-2026">
+      <span class="lbl"><code>rebuild.sh</code>로 복구한 클러스터에서는 바로 Running이 된다</span>
+      <code>rebuild.sh</code>는 <code>labs/apps/journal-api/Dockerfile</code>을 지금 상태 그대로 빌드한다. 그 파일에는 이 모듈 10단계의 <code>USER 1000</code>이 이미 들어 있어서 5단계의 거부가 일어나지 않는다. 확인은 <code>docker image inspect journal-api:v1 --format '{{.Config.User}}'</code> — <code>1000</code>이면 이 경우다. 거부를 직접 보려면 사용자만 이름으로 되돌린 이미지를 하나 만들어 끼운다.
+<pre><code>printf 'FROM journal-api:v1\nUSER node\n' | docker build -q -t journal-api:m24-named -
+kind load docker-image journal-api:m24-named --name study
+kubectl -n m24 set image deploy/journal-api api=journal-api:m24-named</code></pre>
+      새 파드가 <code>CreateContainerConfigError</code>에 멈추고 5단계와 같은 <code>non-numeric user (node)</code> 메시지가 나온다. <code>node:22-alpine</code> 같은 공식 이미지를 그대로 쓰면 안 된다 — 그 이미지는 <code>USER</code>가 비어 있어 루트로 돌기 때문에 다른 메시지(<code>image will run as root</code>)가 나온다.
+    </div>
   </div>
 
   <div class="step">
@@ -427,8 +435,9 @@ pod/journal-api-798b755857-kqcsc   0/1   CreateContainerConfigError   0   10s</c
 kubectl -n m24 describe pod $POD | sed -n '/^Events:/,$p'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>  Normal   Scheduled  17s              default-scheduler  Successfully assigned m24/journal-api-798b755857-kqcsc to study-worker
-  Normal   Pulled     3s (x3 over 17s) kubelet  Container image "journal-api:v1" already present on machine
-  Warning  Failed     3s (x3 over 17s) kubelet  Error: container has runAsNonRoot and image has non-numeric user (node), cannot verify user is non-root</code></div>
+  Normal   Pulled     3s (x3 over 17s) kubelet  spec.containers{api}: Container image "journal-api:v1" already present on machine and can be accessed by the pod
+  Warning  Failed     3s (x3 over 17s) kubelet  spec.containers{api}: Error: container has runAsNonRoot and image has non-numeric user (node), cannot verify user is non-root (pod: "journal-api-798b755857-kqcsc_m24(41937675-...)", container: api)</code></div>
+    <p>1.37의 kubelet은 메시지 앞에 <code>spec.containers{api}:</code>로 어느 컨테이너인지, 뒤에 <code>(pod: ..., container: ...)</code>를 붙인다. 파드 이름과 UID는 환경마다 다르다.</p>
     <span class="lbl">원인</span>
     <p><code>image has non-numeric user (node)</code>. M04에서 쓴 Dockerfile을 보면 이유가 나온다.</p>
 <pre><code>grep -h '^USER' course/labs/apps/journal-api/Dockerfile course/labs/apps/order-api/Dockerfile</code></pre>

@@ -379,10 +379,11 @@ EOF</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>The JournalSite "bad-latest" is invalid: &lt;nil&gt;: Invalid value: "": "spec.image" must not validate the schema (not)</code></div>
     <div class="verdict"><span class="lbl">판정</span>거부는 됐는데 <strong>메시지가 사람에게 쓸모없다.</strong> <code>not</code> 키워드는 "이 스키마를 만족하면 안 된다"만 말하고 이유를 담을 자리가 없다. 33.6에서 CEL로 바꾸면 우리가 쓴 문장이 나온다.</div>
-<pre><code># 태그 없음
-spec: {image: "journal-api"}
-# 범위 초과
-spec: {image: "journal-api:v1", replicas: 50}</code></pre>
+<pre><code># 태그 없음 · 범위 초과 — 이름|spec 쌍으로 두 개를 차례로 넣는다
+for S in 'bad-notag|{image: "journal-api"}' 'bad-replicas|{image: "journal-api:v1", replicas: 50}'; do
+  printf 'apiVersion: study.example.com/v1alpha1\nkind: JournalSite\nmetadata: {name: %s}\nspec: %s\n' \
+    "${S%%|*}" "${S#*|}" | kubectl -n m33 apply -f -
+done</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>The JournalSite "bad-notag" is invalid: spec.image: Invalid value: "journal-api": spec.image in body should match '^[a-z0-9./-]+:[a-zA-Z0-9._-]+$'
 
@@ -481,7 +482,9 @@ kubectl -n m33 delete js demo                                            # 부�
   <div class="step">
     <h4>1단계 — 프로젝트와 API를 만든다</h4>
     <p class="purpose"><span class="lbl">목적</span>손으로 쓸 것과 생성될 것을 나눈다.</p>
-<pre><code>mkdir -p /tmp/operator &amp;&amp; cd /tmp/operator
+<pre><code># 저장소 루트에서 친다. cd 뒤에도 labs 를 찾을 수 있게 절대 경로를 적어 둔다
+LABS=$PWD/course/labs
+mkdir -p /tmp/operator &amp;&amp; cd /tmp/operator
 kubebuilder init --domain example.com --repo example.com/journalsite-operator
 kubebuilder create api --group study --version v1alpha1 --kind JournalSite --resource --controller
 ls api/v1alpha1/ internal/controller/</code></pre>
@@ -530,6 +533,8 @@ type JournalSiteStatus struct {
 // +kubebuilder:resource:shortName=js
 // +kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`</code></pre>
+    <p>위 내용을 모두 담은 완성본이 <code>labs/operator/journalsite/</code>에 있다. 생성된 뼈대 파일을 그것으로 덮어쓴다.</p>
+<pre><code>cp $LABS/operator/journalsite/api/v1alpha1/journalsite_types.go api/v1alpha1/</code></pre>
     <p><code>ObservedGeneration</code>이 왜 필요한지 짚어 둔다. <code>metadata.generation</code>은 <strong><code>spec</code>이 바뀔 때만</strong> 올라간다. 컨트롤러가 조정을 마치고 그 값을 <code>status</code>에 적으면, <strong>둘을 비교해 "status가 최신 spec을 반영했는가"</strong>를 알 수 있다. 이것이 없으면 낡은 <code>status</code>를 보고 "준비됐다"고 판단하는 사고가 난다.</p>
     <p><code>Conditions</code>의 <code>+listType=map</code>도 형식적인 것이 아니다. 이 마커가 있어야 서버 사이드 어플라이가 <strong>조건을 <code>type</code>별로 병합</strong>한다. 없으면 두 컨트롤러가 서로의 조건을 통째로 덮어쓴다.</p>
   </div>
@@ -555,6 +560,8 @@ Replicas Image Ready Phase Age</code></div>
   <div class="step">
     <h4>1단계 — 33.4의 세 단계를 Go로 옮긴다</h4>
     <p class="purpose"><span class="lbl">목적</span>같은 논리를 프레임워크 위에서 쓴다. 구조가 셸과 같다는 것을 확인한다.</p>
+<pre><code>cp $LABS/operator/journalsite/internal/controller/journalsite_controller.go internal/controller/</code></pre>
+    <p>핵심 부분은 다음과 같다(<code>...</code>은 생략한 곳).</p>
 <pre><code>func (r *JournalSiteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// ① 원하는 상태
 	var site studyv1alpha1.JournalSite
@@ -596,7 +603,9 @@ Replicas Image Ready Phase Age</code></div>
   <div class="step">
     <h4>3단계 — 돌린다</h4>
     <p class="purpose"><span class="lbl">목적</span><code>make run</code>은 컨트롤러를 <strong>로컬 프로세스로</strong> 돌린다. 개발 중에는 클러스터에 배포하지 않는다.</p>
-<pre><code>make run &amp;
+<pre><code># 로그는 4단계에서 읽는다. 첫 실행은 컴파일 때문에 30초쯤 걸린다
+make run &gt; /tmp/operator.log 2&gt;&amp;1 &amp;
+sleep 40
 cat &lt;&lt;'EOF' | kubectl -n m33 apply -f -
 apiVersion: study.example.com/v1alpha1
 kind: JournalSite
@@ -624,7 +633,7 @@ kubectl -n m33 get deploy --no-headers
 grep "디플로이먼트를 만든다" /tmp/operator.log | tail -1</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>01:38:48
-site-a-api   3/3   3   3   6s
+site-a-api   2/2   2   2   6s
 2026-09-06T01:38:48+09:00	INFO	디플로이먼트를 만든다 ...</code></div>
     <div class="verdict"><span class="lbl">판정</span>삭제한 시각과 재생성 로그의 시각이 <strong>같은 초</strong>다. 셸 오퍼레이터는 <code>01:34:52</code>에 감지해 <code>01:34:57</code>에 복구했다 — 최대 5초를 기다린다. 폴링 간격을 줄이면 되지 않느냐고 생각하기 쉬운데, 그러면 <strong>오브젝트 수 × 초당 요청</strong>만큼 API 서버 부하가 늘어난다. 감시는 <strong>변화가 있을 때만</strong> 깨어나므로 그 비용이 없다.</div>
   </div>
@@ -633,7 +642,7 @@ site-a-api   3/3   3   3   6s
     <h4>5단계 — status를 읽는다</h4>
     <p class="purpose"><span class="lbl">목적</span>컨트롤러가 남긴 정보로 <strong>사람이 판단할 수 있는지</strong> 확인한다.</p>
 <pre><code>kubectl -n m33 patch js site-a --type=merge -p '{"spec":{"replicas":3}}'
-kubectl -n m33 get js site-a -o jsonpath='{.status}' | python3 -m json.tool</code></pre>
+kubectl -n m33 get js site-a -o jsonpath='{.status}' | python3 -m json.tool --no-ensure-ascii</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>{
     "conditions": [
@@ -659,8 +668,9 @@ kubectl -n m33 get js site-a -o jsonpath='{.status}' | python3 -m json.tool</cod
   <div class="fail">
     <h4>실패 ① — 셸 변수 이름이 시스템 것과 겹친다</h4>
     <p class="purpose"><span class="lbl">목적</span>33.4를 처음 돌렸을 때 실제로 난 오류다. 원인이 스크립트 논리와 무관하다.</p>
-<pre><code>bash course/labs/scripts/shell-operator.sh m33 5</code></pre>
-    <span class="out-lbl">출력</span>
+<pre><code>cd "$LABS/../.."      # 33.5 에서 /tmp/operator 로 옮겨 갔다. 저장소 루트로 돌아온다
+bash course/labs/scripts/shell-operator.sh m33 5</code></pre>
+    <span class="out-lbl">출력 (고치기 전 스크립트)</span>
     <div class="out"><code>조정 루프 시작 — 네임스페이스 m33, 간격 5초 (Ctrl+C 로 종료)
 scripts/shell-operator.sh: line 27: UID: readonly variable</code></div>
     <div class="verdict"><span class="lbl">판정</span><code>UID</code>는 셸이 미리 정해 둔 <strong>읽기 전용 변수</strong>(현재 사용자의 uid)다. 오브젝트의 <code>metadata.uid</code>를 담으려고 같은 이름을 썼다가 대입이 거부됐다. 루프는 계속 돌았지만 <code>ownerReferences</code>의 <code>uid</code>가 비어 디플로이먼트가 만들어지지 않았다 — <strong>오류 한 줄이 지나가고 아무것도 되지 않는</strong> 형태라 원인을 찾기까지 시간이 걸린다.</div>
@@ -747,7 +757,11 @@ Image string `json:"image"`</code></pre>
 
   <h3>정리</h3>
 <pre><code># 컨트롤러 프로세스를 끈다 (make run 을 백그라운드로 돌렸다면)
+# make run 은 go run 이 컴파일한 바이너리(이름 main)를 자식으로 띄운다.
+# go run 만 죽이면 자식이 남아 8081 을 계속 잡고, 다음 make run 이 "address already in use" 로 죽는다
 pkill -f 'go run ./cmd/main.go' 2&gt;/dev/null
+lsof -ti tcp:8081 -sTCP:LISTEN | xargs kill 2&gt;/dev/null
+lsof -nP -iTCP:8081 -sTCP:LISTEN || echo "8081 비었음"
 
 # 실습 네임스페이스와 CRD 를 지운다
 # CRD 를 지우면 그 종류의 오브젝트가 전부 함께 사라진다

@@ -91,7 +91,7 @@ case "${1:-}" in
     " >/dev/null 2>&1 &
     sleep 3
     echo "부하 시작 — $SVC:$PORT$PATHNAME 에 동시 $PARALLEL 줄, 요청 간격 ${INTERVAL}초"
-    echo "멈추려면: bash \$0 stop"
+    echo "멈추려면: bash $0 stop"
     ;;
   report)
     echo "요청 수 / 응답 코드 분포:"

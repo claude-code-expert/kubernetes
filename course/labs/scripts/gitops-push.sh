@@ -15,7 +15,12 @@ kubectl cp "$TMP/repo.git" "gitops/$POD:/repos/repo.git"
 rm -rf "$TMP"
 
 # Argo CD 는 기본 3분마다 폴링한다. 실습에서는 기다리지 않고 즉시 확인시킨다.
-kubectl -n argocd patch application journal --type=merge \
-  -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' >/dev/null
-echo "푸시 완료. 동기화를 지켜본다:"
-echo "  kubectl -n argocd get application journal -w"
+# M31 은 journal 하나, M32 는 journal-edge·journal-primary 둘이다. 있는 것을 전부 새로고침한다.
+# 첫 푸시(M31 31.3 2단계) 때는 애플리케이션이 아직 없으므로 건너뛴다.
+APPS=$(kubectl -n argocd get applications -o name 2>/dev/null || true)
+if [ -n "$APPS" ]; then
+  kubectl -n argocd annotate $APPS argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+  echo "푸시 완료. 새로고침: $(echo $APPS | sed 's|application.argoproj.io/||g')"
+else
+  echo "푸시 완료. 애플리케이션은 아직 없다 — 만들고 나면 푸시할 때마다 새로고침한다."
+fi

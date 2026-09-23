@@ -264,7 +264,7 @@
       <text class="t-sub" x="66" y="328">27 req/s · P95 0.49ms</text>
       <rect class="warnbox" x="248" y="270" width="176" height="76" rx="3"/>
       <text class="t-mono" x="258" y="290">변형 B (v3)</text>
-      <text class="t-warn" x="258" y="310">에러율 4.55 %</text>
+      <text class="t-warn" x="258" y="310">에러율 4.50 %</text>
       <text class="t-sub" x="258" y="328">29 req/s · P95 0.48ms</text>
 
       <!-- 통주 -->
@@ -365,14 +365,22 @@ variant-b-56bf997756-trp9k   1/1   Running   0   30s</code></div>
   <div class="step">
     <h4>1단계 — 먼저 틀린 질의를 쓴다</h4>
     <p class="purpose"><span class="lbl">목적</span>가장 자연스러운 질의가 <strong>절반만 답하는</strong> 것을 확인한다.</p>
-<pre><code>100 * (
+<pre><code># 프로메테우스(M19 의 port-forward 9090)에 PromQL 을 묻고, 라벨 하나와 값을 찍는다
+q() {   # 사용법: q &lt;찍을 라벨&gt; '&lt;PromQL&gt;'
+  curl -sG http://localhost:9090/api/v1/query --data-urlencode "query=$2" | python3 -c '
+import json,sys
+for x in json.load(sys.stdin)["data"]["result"]:
+    print("  %-30s %.2f" % (x["metric"].get(sys.argv[1], "-"), float(x["value"][1])))' "$1"
+}
+
+q pod '100 * (
   sum by (pod) (rate(http_server_requests_seconds_count{namespace="m38",status=~"5.."}[2m]))
   /
   sum by (pod) (rate(http_server_requests_seconds_count{namespace="m38"}[2m]))
-)</code></pre>
+)'</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>variant-b-56bf997756-m4bj6   4.98 %
-variant-b-56bf997756-trp9k   4.16 %</code></div>
+    <div class="out"><code>  variant-b-56bf997756-s4zpk     5.09
+  variant-b-56bf997756-kmhz8     3.92</code></div>
     <div class="verdict"><span class="lbl">판정</span><strong>변형 A가 없다.</strong> A에는 5xx가 없어서 분자의 시계열이 <strong>존재하지 않고</strong>, 없는 것과 나누면 결과도 없다. 이 화면만 보면 "A는 측정이 안 됐나"로 읽히는데, 실제로는 <strong>A가 완벽했다는 뜻</strong>이다. M21에서 본 그 함정이다.</div>
     <p>실험 판정에서 이 오류는 특히 위험하다. <strong>가장 좋은 변형이 결과에서 사라진다.</strong> 그리고 대시보드에 그려 놓으면 선이 하나만 보여서 눈치채기 더 어렵다.</p>
   </div>
@@ -380,7 +388,8 @@ variant-b-56bf997756-trp9k   4.16 %</code></div>
   <div class="step">
     <h4>2단계 — 변형으로 묶고 빈 결과를 0으로</h4>
     <p class="purpose"><span class="lbl">목적</span>파드 이름에서 <code>variant</code>를 뽑아내고, 없는 값을 0으로 만든다.</p>
-<pre><code>(
+<pre><code>echo "에러율(%)"
+q variant '(
   sum by (variant) (label_replace(
     rate(http_server_requests_seconds_count{namespace="m38",status=~"5.."}[2m]),
     "variant", "$1", "pod", "variant-([ab])-.*"))
@@ -392,13 +401,29 @@ variant-b-56bf997756-trp9k   4.16 %</code></div>
 /
 sum by (variant) (label_replace(
   rate(http_server_requests_seconds_count{namespace="m38"}[2m]),
-  "variant", "$1", "pod", "variant-([ab])-.*")) * 100</code></pre>
+  "variant", "$1", "pod", "variant-([ab])-.*")) * 100'
+
+echo "처리량(req/s)"
+q variant 'sum by (variant) (label_replace(
+  rate(http_server_requests_seconds_count{namespace="m38"}[2m]),
+  "variant", "$1", "pod", "variant-([ab])-.*"))'
+
+echo "P95(ms)"
+q variant 'histogram_quantile(0.95, sum by (variant, le) (label_replace(
+  rate(http_server_requests_seconds_bucket{namespace="m38"}[2m]),
+  "variant", "$1", "pod", "variant-([ab])-.*"))) * 1000'</code></pre>
     <p><code>label_replace</code>가 <strong>파드 이름의 일부를 새 라벨로</strong> 만든다. 정규식의 괄호가 <code>$1</code>이 되고, 그것이 <code>variant</code> 라벨이 된다. <code>or ... * 0</code>은 M21에서 쓴 기법이다 — <strong>분자가 없을 때 전체 시계열 집합에 0을 채운다.</strong></p>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>에러율   변형 a : 0.0 %      변형 b : 4.55 %
-처리량   변형 a : 27.0 req/s 변형 b : 29.0 req/s
-P95      변형 a : 0.49 ms    변형 b : 0.48 ms</code></div>
-    <div class="verdict"><span class="lbl">판정</span>세 지표가 다 나왔다. <strong>지연과 처리량은 사실상 같고 에러율만 다르다.</strong> B가 조금 더 많은 요청을 받은 것(29 vs 27)은 A보다 빨리 실패해서 그만큼 더 받았기 때문이다 — <strong>실패가 처리량을 올리는</strong> 착시이고, 처리량만 보면 B가 나아 보인다.</div>
+    <div class="out"><code>에러율(%)
+  b                              4.50
+  a                              0.00
+처리량(req/s)
+  b                              30.31
+  a                              29.79
+P95(ms)
+  b                              0.48
+  a                              0.48</code></div>
+    <div class="verdict"><span class="lbl">판정</span>세 지표가 다 나왔다. <strong>지연과 처리량은 사실상 같고 에러율만 다르다.</strong> B가 조금 더 많은 요청을 받은 것(30.3 vs 29.8)은 A보다 빨리 실패해서 그만큼 더 받았기 때문이다 — <strong>실패가 처리량을 올리는</strong> 착시이고, 처리량만 보면 B가 나아 보인다.</div>
   </div>
 
   <div class="step">
@@ -407,9 +432,9 @@ P95      변형 a : 0.49 ms    변형 b : 0.48 ms</code></div>
     <table>
       <thead><tr><th>지표</th><th>변형 A</th><th>변형 B</th><th>판정</th></tr></thead>
       <tbody>
-        <tr><td>에러율</td><td>0.0%</td><td><strong>4.55%</strong></td><td>A 우세</td></tr>
-        <tr><td>P95 지연</td><td>0.49ms</td><td>0.48ms</td><td>차이 없음</td></tr>
-        <tr><td>처리량</td><td>27 req/s</td><td>29 req/s</td><td>차이 없음 (실패로 인한 착시)</td></tr>
+        <tr><td>에러율</td><td>0.0%</td><td><strong>4.50%</strong></td><td>A 우세</td></tr>
+        <tr><td>P95 지연</td><td>0.48ms</td><td>0.48ms</td><td>차이 없음</td></tr>
+        <tr><td>처리량</td><td>29.8 req/s</td><td>30.3 req/s</td><td>차이 없음 (실패로 인한 착시)</td></tr>
       </tbody>
     </table>
     <div class="verdict"><span class="lbl">판정</span><strong>B를 기각한다.</strong> 지연 개선을 기대했다면 그것도 없었고, 에러율만 나빠졌다. 결정이 명확할 때는 실험을 오래 끌 이유가 없다 — <strong>바로 끝내고 자원을 회수한다.</strong></div>
@@ -546,8 +571,8 @@ kubectl top pods: 50m / 48m       &lt;- limit 에 정확히 붙어 있다
     <p>실험 대시보드에 에러율 패널을 만들고 두 변형을 비교한다고 하자. 질의는 자연스럽게 이렇게 쓴다.</p>
 <pre><code>sum by (pod) (rate(...{status=~"5.."}[2m])) / sum by (pod) (rate(...[2m]))</code></pre>
     <span class="out-lbl">패널에 보이는 것</span>
-    <div class="out"><code>variant-b-...-m4bj6   4.98 %
-variant-b-...-trp9k   4.16 %</code></div>
+    <div class="out"><code>  variant-b-56bf997756-s4zpk     5.09
+  variant-b-56bf997756-kmhz8     3.92</code></div>
     <div class="verdict"><span class="lbl">판정</span>선이 <strong>둘만</strong> 그려진다. B의 두 파드다. 그런데 화면에는 "A가 없다"는 표시가 없으므로, <strong>이 패널만 보면 B가 전부인 것처럼 보인다.</strong> 심하면 "A는 트래픽을 안 받나?"로 판단해 서비스 셀렉터를 뒤지게 된다.</div>
     <p>이 오류가 실험에서 특히 나쁜 이유가 있다. <strong>완벽한 변형이 사라지는 방향</strong>으로 틀린다 — 에러가 없을수록 결과에서 빠진다. 반대로 틀렸다면(에러가 있는 쪽이 사라졌다면) 금방 알아챘을 것이다.</p>
     <p>고치는 방법은 M21에서 쓴 것과 같다. <strong>분모 쪽 시계열 집합에 <code>* 0</code>을 <code>or</code>로 더해</strong> 없는 값을 0으로 만든다. 습관으로 만들 규칙은 하나다 — <strong>비율을 그릴 때는 항상 분자가 없을 경우를 처리한다.</strong></p>

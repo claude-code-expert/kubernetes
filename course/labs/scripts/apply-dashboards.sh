@@ -29,4 +29,6 @@ kubectl -n "$NS" create configmap "$NAME" "${ARGS[@]}" \
 | kubectl apply -f -
 
 echo "적용됨: $NS/$NAME"
-kubectl -n "$NS" get cm "$NAME" -o jsonpath='  labels={.metadata.labels}{"\n"}  files={range .data.*}{"\n"}{end}' 2>/dev/null | head -2
+kubectl -n "$NS" get cm "$NAME" -o jsonpath='  labels={.metadata.labels}{"\n"}' 2>/dev/null
+# jsonpath 는 맵의 키 이름을 뽑지 못한다. 파일 이름은 go-template 으로 센다.
+kubectl -n "$NS" get cm "$NAME" -o go-template='  files={{range $k, $v := .data}}{{$k}} {{end}}{{"\n"}}' 2>/dev/null

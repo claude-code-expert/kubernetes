@@ -800,7 +800,20 @@ spec:
       matchLabels: {policy: enforced}
 EOF
 sleep 6
-# image: nginx:1.29-alpine — 태그도 레지스트리도 문제없는 디플로이먼트</code></pre>
+
+# 태그도 레지스트리도 문제없는 디플로이먼트
+cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: good}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: good}}
+  template:
+    metadata: {labels: {app: good}}
+    spec:
+      containers: [{name: web, image: "nginx:1.29-alpine"}]
+EOF</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>The deployments "good" is invalid: : ValidatingAdmissionPolicy 'broken-cel' with binding 'broken-cel-binding' denied request: expression 'object.spec.replicas &gt; '3'' resulted in error: no such overload</code></div>
     <div class="verdict"><span class="lbl">판정</span>정책과 아무 상관 없는 배포가 거부됐다. <code>failurePolicy: Fail</code>은 "<strong>평가에 실패하면 거부</strong>"라는 뜻이고, 표현식이 깨져 있으면 <strong>모든 요청의 평가가 실패한다.</strong> 바인딩의 범위가 클러스터 전체였다면 그 클러스터의 모든 디플로이먼트 배포가 이 시점에 멈춘다.</div>
@@ -813,8 +826,24 @@ kubectl delete validatingadmissionpolicy broken-cel</code></pre>
   <div class="fail">
     <h4>실패 ② — 레지스트리 정책이 도커 허브 이미지를 막는다</h4>
     <p class="purpose"><span class="lbl">목적</span>맞는 것 같은 표현식이 실제 이미지 이름 규칙과 어긋나는 지점을 찾는다.</p>
-    <p>26.5의 표현식에서 마지막 조건절을 빼고(즉 <code>variables.allowed.exists(r, i.startsWith(r + '/'))</code>만 남기고) 도커 허브 이미지를 배포한다.</p>
-<pre><code># containers: [{name: c, image: "curlimages/curl:8.19.0"}]</code></pre>
+    <p>26.5의 표현식에서 마지막 조건절을 빼고(즉 <code>variables.allowed.exists(r, i.startsWith(r + '/'))</code>만 남기고) 도커 허브 이미지를 배포한다. 26.6에서 만든 <code>tokendeploy</code>를 지우고 같은 매니페스트로 다시 만든다.</p>
+<pre><code>kubectl patch validatingadmissionpolicy allowed-registries --type=json \
+  -p '[{"op":"replace","path":"/spec/validations/0/expression","value":"variables.images.all(i, variables.allowed.exists(r, i.startsWith(r + \"/\")))"}]'
+sleep 5
+kubectl -n m26 delete deploy tokendeploy
+
+cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: tokendeploy}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: tokendeploy}}
+  template:
+    metadata: {labels: {app: tokendeploy}}
+    spec:
+      containers: [{name: c, image: "curlimages/curl:8.19.0", command: ["sleep","300"]}]
+EOF</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>The deployments "tokendeploy" is invalid: : ValidatingAdmissionPolicy 'allowed-registries' with binding 'allowed-registries-binding' denied request: 허용되지 않은 레지스트리다. 허용 목록: docker.io,ghcr.io,registry.k8s.io,quay.io</code></div>
     <div class="verdict"><span class="lbl">판정</span><code>docker.io</code>가 허용 목록에 있는데 도커 허브 이미지가 막혔다. 이미지 이름에서 <strong>레지스트리 호스트가 생략돼 있기 때문</strong>이다. <code>curlimages/curl</code>은 컨테이너 런타임이 <code>docker.io/curlimages/curl</code>로 해석하지만, 정책이 보는 문자열에는 그 해석이 반영돼 있지 않다. <strong>정책은 런타임이 아니라 문자열을 본다.</strong></div>
@@ -824,6 +853,23 @@ kubectl delete validatingadmissionpolicy broken-cel</code></pre>
           variables.allowed.exists(r, i.startsWith(r + '/'))
           || (!i.split('/')[0].contains('.') &amp;&amp; 'docker.io' in variables.allowed))</code></pre>
     <p>첫 구간에 점이 있으면 호스트, 없으면 생략된 것으로 본다. 완벽하지는 않다 — 포트가 붙은 <code>localhost:5000/app</code>이나 점 없는 사내 호스트명은 이 판별을 통과하지 못한다. 정책을 쓸 때는 <strong>이런 예외를 어디까지 감당할지</strong>를 먼저 정하고, 감당하지 않기로 한 것은 주석으로 남긴다.</p>
+    <p>26.5에서 쓴 파일을 다시 적용하면 조건절이 돌아온다. 같은 <code>tokendeploy</code>와, 막혀야 하는 <code>evil2</code>를 차례로 넣는다.</p>
+<pre><code>kubectl apply -f course/labs/k8s/policy/10-allowed-registries.yaml
+sleep 5
+# 위의 tokendeploy 매니페스트를 그대로 다시 적용한다
+
+cat &lt;&lt;'EOF' | kubectl -n m26 apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: evil2}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: evil2}}
+  template:
+    metadata: {labels: {app: evil2}}
+    spec:
+      containers: [{name: web, image: "evil.example.com/web:1.0"}]
+EOF</code></pre>
     <span class="out-lbl">고친 뒤</span>
     <div class="out"><code>deployment.apps/tokendeploy created
 The deployments "evil2" is invalid: : ValidatingAdmissionPolicy 'allowed-registries' with binding 'allowed-registries-binding' denied request: 허용되지 않은 레지스트리다. 허용 목록: docker.io,ghcr.io,registry.k8s.io,quay.io</code></div>

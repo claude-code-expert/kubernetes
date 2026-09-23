@@ -3,7 +3,7 @@
 이 저장소가 지금 어떤 상태이고, 이어서 무엇을 하면 되는지 적는다.
 제작 규약은 `CLAUDE.md`, 커리큘럼 정본은 `CURRICULUM.md` 다. 그 둘을 먼저 읽는다.
 
-최종 갱신 2026-09-23.
+최종 갱신 2026-09-23 (M19~M38 실습 재생·문서 교정 반영).
 
 ---
 
@@ -57,13 +57,20 @@ https://claude-code-expert.github.io/kubernetes/          랜딩
 
 | 네임스페이스 | 무엇 |
 |---|---|
-| `journal` | M14 kustomize 배포. 인그레스가 `journal.local` 을 잡고 있다 |
-| `journal-dev` | 헬름 릴리스 `dev`. 호스트는 `dev.journal.local` |
+| `journal` | 저널 앱. PSA restricted enforce · 네트워크 정책 8개 · 인그레스 `journal.local` |
+| `journal-dev` | 헬름 릴리스 `dev`(values-dev + `api.replicas=3`). 호스트는 `dev.journal.local` |
+| `apps` | `order-api` 2개 (M19) |
+| `monitoring` | kube-prometheus-stack 89.2.2 · 타깃 33/33 up · study-dashboards · study-app-rules |
+| `logging` | Loki 차트 7.3.0 · Alloy 1.12.1 |
+| `policy` | M26 허용 레지스트리 컨피그맵. VAP 2개 · MAP 1개가 `policy=enforced` 네임스페이스에 걸려 있다 |
+| `argo-rollouts` · `argocd` | 컨트롤러만 (M30 · M31). 애플리케이션은 없다 |
+| `chaos-mesh` | Chaos Mesh 2.8.4 (M36) |
 | `ingress-nginx` | 인그레스 컨트롤러 |
 | `default` | google_docs 10·11장 실습 (`k8s-sample-boot` 3개) |
 
-M19 이후(관측 스택 · 정책 · GitOps · 카오스)는 **올라가 있지 않다.** 9월 18일에
-클러스터가 지워진 뒤 `rebuild.sh` 로 M14 시점까지만 복구했다.
+2026-09-23 에 M19~M38 을 문서 순서대로 전부 다시 돌렸다. 컨트롤 플레인은 M19(메트릭 바인딩)와
+M27(감사 로깅·CIS 수정)을 적용한 상태다. `bash course/labs/scripts/capstone-check.sh` → 통과 49 · 실패 0.
+Prometheus port-forward(9090)를 띄워 두고 작업했다 — 새 셸에서는 다시 띄운다.
 
 ## 4. 이어서 할 일
 
@@ -73,7 +80,13 @@ M19 이후(관측 스택 · 정책 · GitOps · 카오스)는 **올라가 있지
   지금은 1.36 에 고정하고 차이를 문서에 밝혀 둔 상태다.
 - **`docs/이미지참고/` 외 자산 정리.** 부록 A 가 7장을 편입했다. `docs/` 의
   chapter0~21, kubenetes 14일 로드맵, kubernetes-in-action 은 아직 손대지 않았다.
-- **M19~M38 실습 복구.** 클러스터에 관측 스택부터 다시 올려야 뒤쪽 모듈을 검증할 수 있다.
+- **`rebuild.sh` 설명을 바로잡을지 결정.** "M14 시점까지 복구"라고 쓰여 있지만 실제로는 labs 최종본
+  (USER 1000 이미지, restricted 보안 설정, 프로브·HPA 포함 매니페스트)을 적용한다. M24 5단계의 거부가
+  재현되지 않는 문제는 M24에 안내를 넣어 막았다. CLAUDE.md·M31·M38도 "M14 시점"이라고 적고 있다.
+- **CURRICULUM.md 의 Loki 3.7.x.** 실제 교안(M22)과 클러스터는 Loki 3.6.12(차트 7.3.0)다. 3.7 라인 차트가
+  나왔는지 확인하고 둘 중 하나로 맞춘다.
+- **M12 Gateway API 는 `rebuild.sh` 가 올리지 않는다.** M26 26.2의 `safe-upgrades.gateway...` VAP 출력은
+  M12를 한 클러스터에서만 나온다.
 
 ### 판단이 필요한 것
 
@@ -148,6 +161,27 @@ export PATH="$JAVA_HOME/bin:$PATH"
 **로컬 레지스트리는 5001 이다**(컨테이너 안 5000). 문서의 `localhost:5000` 은 그대로
 쓸 수 없고, kind 노드는 `localhost` 로 그 레지스트리에 닿지도 못한다.
 실습은 `kind load docker-image` 로 간다.
+
+### 2026-09-23 재생에서 새로 걸린 것
+
+**macOS 기본 셸은 zsh 다.** zsh 는 따옴표 없는 변수를 단어로 쪼개지 않는다. `RC="redis-cli -a $PW"; kubectl exec ... -- $RC DEL $KEYS`
+같은 명령은 bash 에서는 되고 zsh 에서는 `executable file not found` 로 죽는다. 문서에 넣는 명령은
+두 셸에서 다 돌려 본다. 컨테이너 안 `sh -c "..."` 로 옮기면 양쪽에서 같다.
+
+**`make run`(kubebuilder)은 자식 바이너리를 남긴다.** `pkill -f 'go run ./cmd/main.go'` 로는 `go run` 만 죽고
+컴파일된 `main` 이 8081 을 계속 잡는다. 9월 6일에 띄운 것이 9월 23일까지 살아 있었다. `lsof -ti tcp:8081` 로 끈다.
+
+**`kind create cluster` 는 현재 컨텍스트를 새 클러스터로 바꾼다.** M32·M34 에서 edge 를 만든 직후
+`kubectl config use-context kind-study` 로 되돌린다.
+
+**부하 시험의 쓰기가 다음 시험을 오염시킨다.** M37 을 순서대로 하면 엔트리가 1만 건 넘게 쌓이고,
+`/api/entries` 가 전부를 돌려주느라 300 rps 에서 무너진다. 엔트리 ID 가 생성 시각(ms)이라 `T0` 이후 것만 지운다.
+
+**Argo CD selfHeal 은 되돌릴수록 느려진다.** 2초에서 3배씩, 상한 300초. 드리프트 실험을 연달아 하면
+두 번째부터 수십 초~수 분이 걸린다.
+
+**문서 명령이 `...` 이나 주석으로 끝나면 수강생은 진행하지 못한다.** 이번에 M26·M27·M28·M30·M31·M32·
+M33·M34·M35·M36·M37·M38 에서 그런 자리를 실제 명령으로 채웠다(검증 기준: 문서에 있는 명령만으로 끝까지 간다).
 
 ### 내용 검토에서 반복해서 나온 지적
 

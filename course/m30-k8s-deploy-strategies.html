@@ -370,6 +370,13 @@ bg-green-7d6768b6f-h4wpv   1/1   Running   0   25s</code></div>
   <div class="step">
     <h4>3단계 — 전환 전에 확인한다</h4>
     <p class="purpose"><span class="lbl">목적</span>블루/그린의 실질적인 장점을 쓴다. <strong>진짜 클러스터에서</strong> 새 버전을 확인한다.</p>
+    <p>클러스터 안에서 서비스를 부를 클라이언트 파드 <code>c</code>를 먼저 띄운다. 이 네임스페이스는 <code>restricted</code>라서 M24의 네 가지를 채워야 파드가 만들어진다(<code>curlimages/curl</code>의 사용자는 UID 100이다).</p>
+<pre><code>kubectl -n m30 run c --image=curlimages/curl:8.19.0 --restart=Never --overrides='{"spec":{
+  "securityContext":{"runAsNonRoot":true,"runAsUser":100,"seccompProfile":{"type":"RuntimeDefault"}},
+  "containers":[{"name":"c","image":"curlimages/curl:8.19.0","command":["sleep","3600"],
+    "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}'
+kubectl -n m30 wait --for=condition=Ready pod/c --timeout=90s</code></pre>
+    <p><code>bg-*</code> 파드에는 레디니스 프로브가 없다. 2단계 직후 바로 치면 앱이 포트를 열기 전이라 <code>command terminated with exit code 7</code>(연결 거부)이 나온다. 몇 초 뒤 다시 친다.</p>
 <pre><code>for i in 1 2 3 4; do kubectl -n m30 exec c -- curl -s -m 4 http://bg:8080/healthz; echo; done
 kubectl -n m30 exec c -- curl -s -m 4 http://bg-preview:8080/healthz</code></pre>
     <span class="out-lbl">출력</span>
@@ -430,7 +437,9 @@ bg-t2qzk bg-blue-778ccc6864-qnmst bg-blue-778ccc6864-lr672</code></div>
 kubectl apply -n argo-rollouts \
   -f https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/install.yaml</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>deployment.apps/argo-rollouts created
+    <div class="out"><code>...
+deployment.apps/argo-rollouts created
+Error from server (Invalid): error when creating "https://...install.yaml": CustomResourceDefinition.apiextensions.k8s.io "analysisruns.argoproj.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes
 Error from server (Invalid): error when creating "https://...install.yaml": CustomResourceDefinition.apiextensions.k8s.io "rollouts.argoproj.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes</code></div>
     <div class="verdict"><span class="lbl">판정</span>디플로이먼트는 만들어졌는데 <strong>CRD 두 개가 실패했다.</strong> <code>kubectl apply</code>는 적용한 매니페스트 전체를 <code>kubectl.kubernetes.io/last-applied-configuration</code> 주석에 저장하는데, 큰 CRD는 그 주석이 <strong>256KiB 한계</strong>를 넘는다. Argo Rollouts처럼 스키마가 방대한 CRD에서 자주 만나는 오류다.</div>
 <pre><code>kubectl apply -n argo-rollouts --server-side \
@@ -529,12 +538,18 @@ Images:          journal-api:v2 (stable)</code></div>
     <p class="purpose"><span class="lbl">목적</span><strong>메트릭이 없으면 분석은 판정할 수 없다.</strong> 실습 클러스터에는 사용자가 없으므로 만들어 준다.</p>
 <pre><code># course/labs/k8s/rollouts/30-load.yaml — curl 루프 파드 2개
 kubectl apply -f course/labs/k8s/rollouts/30-load.yaml
-# 프로메테우스에서 확인
-sum(rate(http_server_requests_seconds_count{namespace="m30"}[1m]))</code></pre>
+sleep 60     # rate 창(1m)이 찰 때까지
+
+# 프로메테우스에서 확인 (M19 의 port-forward 가 9090 에 떠 있어야 한다)
+for Q in 'sum(rate(http_server_requests_seconds_count{namespace="m30"}[1m]))' \
+         'count(up{namespace="m30"})'; do
+  curl -sG http://localhost:9090/api/v1/query --data-urlencode "query=$Q" \
+    | python3 -c "import json,sys; r=json.load(sys.stdin)['data']['result']; print(round(float(r[0]['value'][1]),1) if r else '결과 없음')"
+done</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>m30 요청률: 30.4
-m30 타깃 수: 5</code></div>
-    <div class="verdict"><span class="lbl">판정</span>초당 30건, 타깃 5개. 카나리가 20%면 초당 6건이 새 버전으로 간다. <strong>분석 창 45초 동안 270건</strong>이므로 성공률을 판정하기에 충분하다. 트래픽이 이보다 훨씬 적으면 표본이 부족해 판정이 흔들리고, 그때는 <code>interval</code>과 창을 늘려야 한다.</div>
+    <div class="out"><code>38.8
+5.0</code></div>
+    <div class="verdict"><span class="lbl">판정</span>초당 30~40건, 타깃 5개(요청률은 노트북 성능에 따라 다르다). 30건으로 잡아도 카나리가 20%면 초당 6건이 새 버전으로 간다. <strong>분석 창 45초 동안 270건</strong>이므로 성공률을 판정하기에 충분하다. 트래픽이 이보다 훨씬 적으면 표본이 부족해 판정이 흔들리고, 그때는 <code>interval</code>과 창을 늘려야 한다.</div>
   </div>
 </section>
 
@@ -653,7 +668,11 @@ Replicas:
   Desired:       5
   Updated:       5
   Ready:         5</code></div>
-<pre><code>kubectl -n m30 get analysisrun canary-59b668c68c-3 -o jsonpath='{.status.metricResults[0]}'</code></pre>
+<pre><code>kubectl -n m30 get analysisrun canary-59b668c68c-3 -o jsonpath='{.status.metricResults[0]}' | python3 -c '
+import json,sys
+m=json.load(sys.stdin)
+print("count: %s  successful: %s  phase: %s" % (m["count"], m.get("successful", 0), m["phase"]))
+for x in m["measurements"]: print("  ", x["phase"], x["value"])'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>count: 3  successful: 3  phase: Successful
    Successful [1]
@@ -665,7 +684,14 @@ Replicas:
   <div class="step">
     <h4>2단계 — 기다리지 않고 승격한다</h4>
     <p class="purpose"><span class="lbl">목적</span>급할 때 쓰는 명령을 <strong>급하지 않을 때</strong> 익힌다.</p>
-<pre><code>kubectl argo rollouts promote canary -n m30</code></pre>
+    <p>승격할 대상이 있어야 하므로 새 리비전을 하나 시작한다. 이미지는 그대로 두고 환경 변수만 바꿔도 파드 템플릿이 바뀌어 카나리가 다시 돈다. 20%에서 멈춘 것을 확인한 뒤 승격한다.</p>
+<pre><code>kubectl -n m30 patch rollout canary --type=json \
+  -p '[{"op":"replace","path":"/spec/template/spec/containers/0/env","value":[{"name":"APP_VERSION","value":"v3.1"}]}]'
+sleep 15
+kubectl argo rollouts get rollout canary -n m30 | sed -n '3,8p'     # Step 1/5 · SetWeight 20
+
+kubectl argo rollouts promote canary -n m30
+kubectl argo rollouts get rollout canary -n m30 | sed -n '3,8p'</code></pre>
     <span class="out-lbl">출력 (승격 전 → 후)</span>
     <div class="out"><code>rollout 'canary' promoted
 

@@ -8,7 +8,7 @@ spec:
   project: default
   source:
     # 클러스터 안의 깃 서버. 실제로는 깃허브/깃랩 URL 이 온다.
-    repoURL: http://gitserver.gitops.svc/repo.git
+    repoURL: git://gitserver.gitops.svc/repo.git
     targetRevision: main
     path: apps/journal
   destination:

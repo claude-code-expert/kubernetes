@@ -45,8 +45,6 @@ patches:
         value: 1
   # nameSuffix 로 서비스 이름이 바뀌었는데, 환경 변수 안의 문자열은 바뀌지 않는다.
   # kustomize 는 자기가 아는 필드(serviceName 등)만 고친다 (M28 실패 ①).
-  # nameSuffix 로 서비스 이름이 바뀌었는데, 환경 변수 안의 문자열은 바뀌지 않는다.
-  # kustomize 는 자기가 아는 필드(serviceName 등)만 고친다 (M28 실패 ①).
   #
   # 여기서 전략적 병합 패치를 쓰면 안 된다. env 목록이 병합되면서 순서가 바뀌고,
   # $(REDIS_PASSWORD) 는 **앞에 정의된 변수만** 치환되므로 값이 그대로 나간다 (M28 실패 ②).

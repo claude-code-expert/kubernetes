@@ -124,8 +124,8 @@ kubectl describe pod web-5d8f7c9b4-x2kqp | tail -n 12
 - Docker Engine **29.x**
 - Helm **4.x** 기준. Helm 3는 2027-02-10 보안 지원 종료 — 차이는 M28에 별도 절
 - Gateway API **v1.6.1** Standard. 실험 리소스는 `gateway.networking.x-k8s.io` 그룹
-- kube-prometheus-stack 88.x / Prometheus 3.x / Grafana 13.x / Loki 3.7.x + **Alloy**
-- Chaos Mesh **v2.8.2**, 부하는 **k6**
+- kube-prometheus-stack 89.x / Prometheus 3.x / Grafana 13.x / Loki 3.7.x + **Alloy**
+- Chaos Mesh **v2.8.4**, 부하는 **k6**
 
 규칙:
 

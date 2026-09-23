@@ -57,7 +57,7 @@
   <text class="t-sub" x="66" y="328">27 req/s · P95 0.49ms</text>
   <rect class="warnbox" x="248" y="270" width="176" height="76" rx="3"/>
   <text class="t-mono" x="258" y="290">변형 B (v3)</text>
-  <text class="t-warn" x="258" y="310">에러율 4.55 %</text>
+  <text class="t-warn" x="258" y="310">에러율 4.50 %</text>
   <text class="t-sub" x="258" y="328">29 req/s · P95 0.48ms</text>
 
   <!-- 통주 -->

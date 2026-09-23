@@ -796,7 +796,7 @@ helm upgrade alloy grafana/alloy -n logging --version 1.12.1 -f .../alloy-values
       <li>부하를 조금 준 뒤 <strong>새로 만들어진 스트림에 <code>path</code> 라벨이 없는지</strong> 확인 → <code>path 라벨 가진 스트림: 0</code>
         <br><code>curl -sG http://localhost:3100/loki/api/v1/series --data-urlencode 'match[]={app="journal-api"}' --data-urlencode "start=$(( $(date +%s) - 120 ))000000000" --data-urlencode "end=$(date +%s)000000000"</code>
         <br><code>/loki/api/v1/labels</code>는 시간 범위를 줘도 <strong>보존 기간 안의 모든 라벨</strong>을 돌려주므로 실험 중 만든 <code>path</code>가 72시간 동안 계속 보인다. 되돌렸는지는 <strong>스트림</strong>으로 확인해야 한다</li>
-      <li>질의 <code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))</code> → <code>journal-api</code>와 <code>order-api</code> 두 줄, 값이 0보다 크다</li>
+      <li>질의 <code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))</code> → <code>journal-api</code>·<code>order-api</code>·<code>web-static</code> 세 줄, 앞의 둘은 값이 0보다 크다 (<code>web-static</code>은 프로브 요청 로그만 남아 120 안팎)</li>
       <li>질의 <code>sum by (status) (count_over_time({namespace="journal", app="journal-api"} | json | __error__="" [5m]))</code> → <code>status=200</code>이 나온다</li>
       <li><code>kubectl -n apps logs deploy/order-api --tail=20 | grep -c 'GET /'</code> → <code>1</code> 이상 (액세스 로그가 켜졌다)</li>
       <li><code>kubectl -n apps get deploy order-api -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="SERVER_TOMCAT_ACCESSLOG_ROTATE")].value}'</code> → <code>false</code></li>

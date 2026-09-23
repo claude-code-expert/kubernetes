@@ -159,7 +159,7 @@
   <p class="ch-desc">M28까지 만든 검사는 <strong>전부 손으로 쳐야</strong> 돌아간다. 이미지도 손으로 빌드해서 <code>kind load</code>로 넣었다. 이 모듈에서 커밋 하나가 <strong>타입 검사 → 테스트 → 이미지 → 스캔 → 어드미션 → 실제 기동</strong>을 지나가게 만든다. 그리고 두 관문이 실제로 파이프라인을 세우는 것을 본다 — 깨진 테스트 하나가 이미지를 만들지 못하게 하고, 베이스 이미지의 CVE 하나가 배포를 막는다.</p>
   <div class="meta">
     <span class="tag">후반</span><span class="tag">100분</span><span class="tag">Node 24 · Docker 29.x</span>
-    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · trivy 0.69.0) · 버전 숫자는 실습 당일 다시 확인한다
+    <br>2026-09-06 검증 (kind v0.33.0 · Kubernetes 1.37.0 · trivy 0.74.0 · 2026-09-23 재검증) · 버전 숫자는 실습 당일 다시 확인한다
   </div>
 </header>
 
@@ -436,13 +436,14 @@ COPY --from=test  --chown=node:node /app/package.json ./package.json</code></pre
     <h4>2단계 — 스캔을 붙인다</h4>
     <p class="purpose"><span class="lbl">목적</span>M27에서 손으로 한 스캔을 임계값이 있는 관문으로 바꾼다.</p>
 <pre><code>docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-  aquasec/trivy:0.69.0 image --scanners vuln \
-  --severity CRITICAL --exit-code 1 --quiet journal-api:ci-test</code></pre>
+  aquasec/trivy:0.74.0 image --scanners vuln \
+  --severity CRITICAL --exit-code 1 --quiet --table-mode detailed journal-api:ci-test</code></pre>
     <table>
       <thead><tr><th>플래그</th><th>뜻</th></tr></thead>
       <tbody>
         <tr><td><code>--severity CRITICAL</code></td><td>이 등급만 본다. M27에서 잰 대로 <code>HIGH</code>까지 내리면 베이스 이미지만으로 계속 깨진다</td></tr>
         <tr><td><code>--exit-code 1</code></td><td>발견되면 종료 코드를 1로. <strong>이 플래그가 없으면 스캔은 보고서일 뿐 관문이 아니다</strong></td></tr>
+        <tr><td><code>--table-mode detailed</code></td><td>발견된 취약점 표만 찍는다. 0.6x 후반부터 기본으로 붙는 요약 표(스캔한 파일마다 한 줄)를 끈다 — 깨끗한 이미지에서도 수백 줄이 나와 결과를 가린다</td></tr>
         <tr><td><code>--ignore-unfixed</code></td><td>(워크플로에서 사용) 고칠 방법이 아직 없는 것은 제외한다. 없으면 손쓸 수 없는 것 때문에 빌드가 막힌다</td></tr>
       </tbody>
     </table>
@@ -493,8 +494,8 @@ chmod +x course/labs/scripts/ci.sh</code></pre>
 ▶ 5) 매니페스트 검사 — 오버레이가 빌드되는가
    kustomize build OK (base + 오버레이 2개)
 
-전부 통과. 배포할 이미지: journal-api:20260906002848</code></div>
-    <div class="verdict"><span class="lbl">판정</span>태그가 <code>20260906002848</code>이다 — 커밋 해시가 아니라 타임스탬프다. 이 저장소에 아직 커밋이 없어서 <code>git rev-parse</code>가 실패했고 폴백이 동작했다. <strong>폴백이 있는 것과 없는 것의 차이</strong>가 여기서 드러난다. 폴백이 없었다면 <code>set -e</code> 때문에 스크립트가 첫 줄에서 죽었다.</div>
+전부 통과. 배포할 이미지: journal-api:a875fd1</code></div>
+    <div class="verdict"><span class="lbl">판정</span>태그가 커밋 해시 일곱 자리다(<code>a875fd1</code>은 환경마다 다르다). 저장소를 <code>git clone</code>이 아니라 압축 파일로 받았다면 <code>git rev-parse</code>가 실패하고 폴백이 동작해 <code>20260906002848</code> 같은 타임스탬프가 붙는다. <strong>폴백이 있는 것과 없는 것의 차이</strong>가 여기서 드러난다. 폴백이 없었다면 <code>set -e</code> 때문에 스크립트가 첫 줄에서 죽었다.</div>
   </div>
 
   <div class="step">
@@ -607,15 +608,18 @@ v3</code></div>
     <p class="purpose"><span class="lbl">목적</span>M27에서 "숫자만 본" 것이 파이프라인에서 어떻게 작동하는지 본다.</p>
 <pre><code>bash course/labs/scripts/ci.sh build scan</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>Node.js (node-pkg)
+    <div class="out"><code>▶ 3) 취약점 스캔 — CRITICAL 이 있으면 실패
+
+Node.js (node-pkg)
 ==================
 Total: 1 (CRITICAL: 1)
 
-┌────────────────────┬────────────────┬──────────┬────────┬───────────────────┬───────────────┐
-│      Library       │ Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version │
-├────────────────────┼────────────────┼──────────┼────────┼───────────────────┼───────────────┤
-│ tar (package.json) │ CVE-2026-59873 │ CRITICAL │ fixed  │ 7.5.11            │ 7.5.19        │
-└────────────────────┴────────────────┴──────────┴────────┴───────────────────┴───────────────┘
+┌────────────────────┬────────────────┬──────────┬────────┬───────────────────┬───────────────┬────────────────────────────────────────────────────────┐
+│      Library       │ Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version │                         Title                          │
+├────────────────────┼────────────────┼──────────┼────────┼───────────────────┼───────────────┼────────────────────────────────────────────────────────┤
+│ tar (package.json) │ CVE-2026-59873 │ CRITICAL │ fixed  │ 7.5.11            │ 7.5.19        │ tar: node-tar: Denial of Service via crafted gzip bomb │
+│                    │                │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2026-59873             │
+└────────────────────┴────────────────┴──────────┴────────┴───────────────────┴───────────────┴────────────────────────────────────────────────────────┘
    CRITICAL 취약점이 있다. 베이스 이미지부터 확인한다 (M27 8절)</code></div>
     <div class="verdict"><span class="lbl">판정</span>파이프라인이 멈췄다. 그런데 <code>tar</code>는 <strong>우리가 설치한 의존성이 아니다</strong> — <code>package.json</code>에 없다. 베이스 이미지에 들어 있는 npm이 들고 있는 것이고, M27에서 층을 나눠 본 그 결과가 여기서 파이프라인을 세운 것이다.</div>
     <p>M27의 표를 그대로 쓴다. <code>node:24-alpine</code>은 <code>HIGH 6</code>에 <code>CRITICAL 0</code>이었다.</p>
@@ -624,18 +628,25 @@ bash course/labs/scripts/ci.sh build scan</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>   CRITICAL 없음
 
-전부 통과. 배포할 이미지: journal-api:20260906002910</code></div>
+전부 통과. 배포할 이미지: journal-api:a875fd1</code></div>
     <p>베이스를 올렸으니 실제로 도는지 확인한다. <strong>스캔을 통과했다는 것과 동작한다는 것은 다르다.</strong></p>
-<pre><code>kind load docker-image journal-api:20260906002910 --name study
-kubectl -n m29 run smoke --image=journal-api:20260906002910 --image-pull-policy=IfNotPresent \
+<pre><code># ci.sh 가 찍은 태그와 같은 값. 압축본으로 받았다면 출력에 찍힌 타임스탬프를 넣는다
+IMAGE=journal-api:$(git rev-parse --short HEAD)
+kind load docker-image "$IMAGE" --name study
+
+kubectl create ns m29
+kubectl -n m29 run smoke --image="$IMAGE" --image-pull-policy=IfNotPresent \
   --restart=Never --env=REDIS_URL=redis://none:6379
+kubectl -n m29 wait --for=condition=Ready pod/smoke --timeout=60s
+sleep 3     # Ready 는 컨테이너가 떴다는 뜻일 뿐이다. 이 파드에는 프로브가 없어 앱이 포트를 열기 전에도 Ready 다
 kubectl -n m29 exec smoke -- node --version
 kubectl -n m29 exec smoke -- id
 kubectl -n m29 exec smoke -- wget -qO- http://127.0.0.1:8080/healthz</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>v24.20.0
+    <div class="out"><code>v24.21.0
 uid=1000(node) gid=1000(node) groups=1000(node)
-{"status":"ok","version":"20260906002910","pod":"smoke"}</code></div>
+{"status":"ok","version":"a875fd1","pod":"smoke"}</code></div>
+    <p>Node 부 버전(<code>v24.21.0</code>)은 <code>node:24-alpine</code> 태그가 가리키는 이미지가 바뀌면 달라진다. <code>sleep</code>을 빼면 마지막 줄이 <code>can't connect to remote host (127.0.0.1): Connection refused</code>로 실패할 수 있다.</p>
     <div class="verdict"><span class="lbl">판정</span>uid가 여전히 <code>1000</code>이다 — M24에서 <code>USER 1000</code>으로 고쳤던 것이 새 베이스에서도 유효하다. 베이스 이미지를 올릴 때 <strong>사용자 번호가 바뀌는 것</strong>이 흔한 사고인데(M19의 <code>order-api</code>에서 실제로 겪었다), 여기서는 무사했다.</div>
     <div class="note-2026">
       <p><code>wget http://localhost:8080</code>은 <code>can't connect to remote host</code>로 실패하고 <code>127.0.0.1</code>은 성공한다. Node가 <code>localhost</code>를 <code>::1</code>로 먼저 풀고 Express는 IPv4에 붙어 있기 때문이다. 컨테이너 안에서 자기 자신을 부를 때는 <strong><code>127.0.0.1</code>을 쓰는 편이 안전하다.</strong> 프로브가 <code>httpGet</code>을 쓰는 한 이 문제는 없다 — kubelet이 파드 <dfn class="term">IP <span class="en">(Internet Protocol · 네트워크에서 주소를 정하는 규약)</span></dfn>로 부른다.</p>
@@ -747,7 +758,7 @@ kubectl -n journal get deploy,sts --no-headers</code></pre>
     <li>kind GitHub Action: https://github.com/helm/kind-action</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5.1~5.5 지속적 통합과 배포</li>
   </ul>
-  <p>검증 환경: macOS 15 (Apple Silicon) · Node 24.20.0 · Docker 29.x · trivy 0.69.0 · kind v0.33.0</p>
+  <p>검증 환경: macOS 15 (Apple Silicon) · Node 24.20.0 · Docker 29.x · trivy 0.74.0 · kind v0.33.0</p>
 </footer>
 
 </div>

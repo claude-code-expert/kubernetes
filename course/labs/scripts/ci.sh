@@ -34,8 +34,8 @@ fi
 if has scan; then
   step "3) 취약점 스캔 — CRITICAL 이 있으면 실패"
   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-    aquasec/trivy:0.69.0 image --scanners vuln \
-    --severity CRITICAL --exit-code 1 --quiet "$IMAGE" \
+    aquasec/trivy:0.74.0 image --scanners vuln \
+    --severity CRITICAL --exit-code 1 --quiet --table-mode detailed "$IMAGE" \
     || { echo "   CRITICAL 취약점이 있다. 베이스 이미지부터 확인한다 (M27 8절)"; exit 1; }
   echo "   CRITICAL 없음"
 fi

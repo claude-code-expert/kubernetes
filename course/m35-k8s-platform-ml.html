@@ -336,7 +336,8 @@
               sleep $(( 3 + I ))
               echo "샤드 ${I} 완료: loss=0.$(( 90 - I * 7 ))"</code></pre>
     <p><code>restartPolicy: Never</code>가 배치의 기본이다. <code>OnFailure</code>로 두면 <strong>같은 파드 안에서</strong> 컨테이너만 다시 시작하는데, 그러면 <code>backoffLimit</code>의 계산이 달라지고 실패한 시도의 로그가 사라진다. <code>Never</code>는 파드를 새로 만들므로 <strong>실패한 파드가 남아 로그를 볼 수 있다.</strong></p>
-<pre><code>kubectl apply -f course/labs/k8s/batch/10-indexed-job.yaml
+<pre><code>kubectl apply -f course/labs/k8s/batch/00-namespace.yaml     # m35 · restricted
+kubectl apply -f course/labs/k8s/batch/10-indexed-job.yaml
 kubectl -n m35 get job,po --no-headers</code></pre>
     <span class="out-lbl">출력 (20초 뒤)</span>
     <div class="out"><code>job.batch/train-shards   Running   4/6   20s
@@ -386,11 +387,20 @@ done | sort</code></pre>
       containers:
         - name: worker
           command: ["sh","-c","echo '입력 형식이 잘못됐다'; exit 42"]</code></pre>
-<pre><code>kubectl -n m35 get po -l job-name=retry-blind --no-headers | wc -l
+<pre><code># 20-failure-policy.yaml 에서 podFailurePolicy 를 걷어내고 이름과 재시도 횟수만 바꾼다
+sed -e 's/name: fail-fast/name: retry-blind/' \
+    -e 's/backoffLimit: 6 .*/backoffLimit: 3/' \
+    -e '/podFailurePolicy:/,/- type: DisruptionTarget/d' \
+    course/labs/k8s/batch/20-failure-policy.yaml | kubectl apply -f -
+kubectl -n m35 wait --for=condition=Failed job/retry-blind --timeout=180s
+
+kubectl -n m35 get po -l job-name=retry-blind --no-headers | wc -l
 kubectl -n m35 get job retry-blind \
   -o jsonpath='{.status.failed}{" "}{.status.conditions[?(@.type=="Failed")].reason}{"\n"}'</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>4
+    <div class="out"><code>job.batch/retry-blind created
+job.batch/retry-blind condition met
+4
 4 BackoffLimitExceeded</code></div>
     <div class="verdict"><span class="lbl">판정</span>파드 <strong>4개</strong>(최초 1 + 재시도 3)가 만들어졌고 전부 같은 이유로 죽었다. 입력이 잘못된 것이므로 <strong>몇 번을 해도 결과가 같다.</strong> 실습에서는 몇 초지만, GPU를 쓰는 훈련이라면 <strong>같은 실패에 네 번의 비용</strong>을 낸다.</div>
     <p>재시도 사이의 대기 시간이 <strong>지수적으로 늘어난다</strong>는 점도 함께 본다(10초·20초·40초…). 그래서 <code>backoffLimit: 6</code>짜리 잡이 확실히 실패하는 데까지 <strong>몇 분이 걸린다</strong> — 파이프라인이 그만큼 늦게 실패를 안다.</p>
@@ -413,15 +423,21 @@ kubectl -n m35 get job retry-blind \
       - action: Ignore
         onPodConditions:
           - type: DisruptionTarget</code></pre>
-<pre><code>kubectl -n m35 get po -l job-name=fail-fast --no-headers | wc -l
-kubectl -n m35 get job fail-fast -o jsonpath='{.status}' | python3 -m json.tool | head -8</code></pre>
-    <span class="out-lbl">출력</span>
-    <div class="out"><code>1
+<pre><code>kubectl apply -f course/labs/k8s/batch/20-failure-policy.yaml
+kubectl -n m35 wait --for=condition=Failed job/fail-fast --timeout=60s
 
+kubectl -n m35 get po -l job-name=fail-fast --no-headers | wc -l
+kubectl -n m35 get job fail-fast -o jsonpath='{.status}' | python3 -m json.tool --no-ensure-ascii | head -9</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>job.batch/fail-fast created
+job.batch/fail-fast condition met
+1
 {
     "conditions": [
         {
-            "message": "Container worker for pod m35/fail-fast-z9css failed with exit code 42 matching FailJob rule at index 0",
+            "lastProbeTime": "2026-09-23T03:10:28Z",
+            "lastTransitionTime": "2026-09-23T03:10:28Z",
+            "message": "Container worker for pod m35/fail-fast-rcqcq failed with exit code 42 matching FailJob rule at index 0",
             "reason": "PodFailurePolicy",
             "status": "True",
             "type": "FailureTarget"</code></div>
@@ -573,11 +589,19 @@ kubectl -n m35 describe po -l job-name=train-gpu | sed -n '/Events:/,$p' | tail 
       containers:
         - name: worker
           command: ["sh","-c","echo '끝나지 않는 훈련'; sleep 600"]</code></pre>
-<pre><code>kubectl -n m35 get job too-long \
+<pre><code>sed -e 's/name: fail-fast/name: too-long/' \
+    -e 's/backoffLimit: 6 .*/backoffLimit: 0\n  activeDeadlineSeconds: 15/' \
+    -e '/podFailurePolicy:/,/- type: DisruptionTarget/d' \
+    -e "s/command: .*/command: [\"sh\",\"-c\",\"echo '끝나지 않는 훈련'; sleep 600\"]/" \
+    course/labs/k8s/batch/20-failure-policy.yaml | kubectl apply -f -
+sleep 25
+
+kubectl -n m35 get job too-long \
   -o jsonpath='{.status.conditions[*].reason}{" | "}{.status.conditions[*].message}{"\n"}'
 kubectl -n m35 get po -l job-name=too-long --no-headers</code></pre>
     <span class="out-lbl">출력 (30초 뒤)</span>
-    <div class="out"><code>DeadlineExceeded | Job was active longer than specified deadline
+    <div class="out"><code>job.batch/too-long created
+DeadlineExceeded | Job was active longer than specified deadline
 too-long-nkkk2   1/1   Terminating   0   30s</code></div>
     <div class="verdict"><span class="lbl">판정</span>15초를 넘기자 잡이 <code>DeadlineExceeded</code>가 되고 파드가 종료된다. <strong><code>activeDeadlineSeconds</code>가 없으면 이 잡은 10분을 다 채운다</strong> — 그리고 실제 상황에서는 몇 시간, 며칠이 된다. 배치 잡을 만들 때 <strong>"정상이라면 최대 얼마"를 반드시 적는다.</strong></div>
     <p>값을 정하는 기준은 <strong>실측</strong>이다. 정상 실행의 최장 시간을 재고 여유를 얹는다. 너무 짧으면 정상 잡이 끊기고, 너무 길면 장치가 없는 것과 같다 — M15에서 프로브 임계값을 정한 것과 같은 판단이다.</p>

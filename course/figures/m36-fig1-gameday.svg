@@ -57,11 +57,11 @@
   <text class="t-warn" x="66" y="256">2,368건/20초 → 109건/40초 (76건 실패)</text>
 
   <rect class="warnbox" x="468" y="222" width="392" height="40" rx="3"/>
-  <text class="t-mono" x="478" y="240">③ CPU 한 파드 → HPA 1051% → 4에서 8로</text>
+  <text class="t-mono" x="478" y="240">③ CPU 한 파드 → HPA 535% → 5에서 8로</text>
   <text class="t-warn" x="478" y="256">HPA 는 평균을 본다. 나머지 7개는 놀고 있었다</text>
 
   <rect class="box" x="56" y="268" width="392" height="42" rx="3"/>
-  <text class="t-mono" x="66" y="286">④ FAULT_RATE 0.5 → 에러율 48.6%</text>
+  <text class="t-mono" x="66" y="286">④ FAULT_RATE 0.5 → 에러율 49.3%</text>
   <text class="t-acc" x="66" y="303">AppHighErrorRate firing (2분 뒤)</text>
 
   <rect class="box" x="468" y="268" width="392" height="42" rx="3"/>

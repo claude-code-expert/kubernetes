@@ -397,18 +397,54 @@ Error: 1 chart(s) linted, 1 chart(s) failed</code></div>
     <p class="purpose"><span class="lbl">목적</span>"옮겼다"를 눈이 아니라 필드 비교로 확인한다.</p>
 <pre><code>helm template journal course/labs/charts/journal -f course/labs/charts/journal/values-prod.yaml &gt; /tmp/chart.yaml
 kubectl kustomize course/labs/k8s/journal &gt; /tmp/kustomize.yaml
-# 두 파일의 journal-api Deployment 를 필드별로 비교한다 (전체 스크립트는 RESULTS 참조)</code></pre>
+
+python3 - /tmp/chart.yaml /tmp/kustomize.yaml &lt;&lt;'PY'
+import sys, json, subprocess
+def api_deploy(path):
+    # 여러 문서가 든 YAML 을 kubectl 로 JSON 목록으로 바꾼 뒤 journal-api 컨테이너를 가진 Deployment 를 고른다
+    out = subprocess.run(["kubectl", "create", "--dry-run=client", "-o", "json", "-f", path],
+                         capture_output=True, text=True).stdout
+    dec, i, items = json.JSONDecoder(), 0, []
+    while i &lt; len(out):                      # 객체가 여러 개 이어 붙어 나온다
+        o, i = dec.raw_decode(out, i)
+        items += o.get("items", [o])
+        while i &lt; len(out) and out[i].isspace(): i += 1
+    for o in items:
+        if o["kind"] == "Deployment" and o["spec"]["template"]["spec"]["containers"][0]["image"].startswith("journal-api"):
+            return o
+c, k = api_deploy(sys.argv[1]), api_deploy(sys.argv[2])
+cs, ks = c["spec"]["template"]["spec"], k["spec"]["template"]["spec"]
+cc, kc = cs["containers"][0], ks["containers"][0]
+def row(name, a, b, show=None):
+    print(f"{'OK  ' if a == b else 'DIFF'} {name:30} {show if show else f'{a} / {b}'}")
+row("replicas 필드 없음", "replicas" not in c["spec"], "replicas" not in k["spec"],
+    f"chart={'replicas' not in c['spec']}  kustomize={'replicas' not in k['spec']}")
+row("terminationGracePeriodSeconds", cs.get("terminationGracePeriodSeconds"), ks.get("terminationGracePeriodSeconds"))
+row("automountServiceAccountToken", cs.get("automountServiceAccountToken"), ks.get("automountServiceAccountToken"))
+row("pod securityContext", cs.get("securityContext"), ks.get("securityContext"), json.dumps(cs.get("securityContext")))
+row("nodeTaintsPolicy", [t.get("nodeTaintsPolicy") for t in cs.get("topologySpreadConstraints", [])],
+    [t.get("nodeTaintsPolicy") for t in ks.get("topologySpreadConstraints", [])])
+for p in ("startupProbe", "readinessProbe", "livenessProbe"):
+    row(p, cc.get(p), kc.get(p), "동일" if cc.get(p) == kc.get(p) else f"chart={cc.get(p)}  kustomize={kc.get(p)}")
+row("preStop", cc.get("lifecycle"), kc.get("lifecycle"), json.dumps(cc.get("lifecycle", {}).get("preStop", {}).get("exec", {}).get("command")))
+row("container securityContext", cc.get("securityContext"), kc.get("securityContext"), json.dumps(cc.get("securityContext")))
+r = lambda x: f"{x['requests'].get('cpu')}/{x['requests'].get('memory')}/{x.get('limits', {}).get('memory')}"
+row("resources", cc.get("resources"), kc.get("resources"),
+    f"chart(prod)={r(cc['resources'])}  kustomize(base)={r(kc['resources'])}")
+PY</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>OK   replicas 필드 없음               chart=True  kustomize=True
+    <div class="out"><code>OK   replicas 필드 없음                 chart=True  kustomize=True
 OK   terminationGracePeriodSeconds  30 / 30
 OK   automountServiceAccountToken   False / False
-OK   pod securityContext            runAsNonRoot·runAsUser 1000·seccompProfile 동일
-OK   nodeTaintsPolicy               Honor / Honor
-OK   프로브 3종                        startup·readiness·liveness 동일
-OK   preStop                        ['sh','-c','sleep 10'] 동일
-OK   container securityContext      allowPrivilegeEscalation False · drop ALL 동일
+OK   pod securityContext            {"runAsNonRoot": true, "runAsUser": 1000, "seccompProfile": {"type": "RuntimeDefault"}}
+OK   nodeTaintsPolicy               ['Honor'] / ['Honor']
+OK   startupProbe                   동일
+OK   readinessProbe                 동일
+OK   livenessProbe                  동일
+OK   preStop                        ["sh", "-c", "sleep 10"]
+OK   container securityContext      {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
 DIFF resources                      chart(prod)=100m/128Mi/384Mi  kustomize(base)=50m/64Mi/192Mi</code></div>
-    <div class="verdict"><span class="lbl">판정</span>여덟 개가 일치하고 하나가 다르다. 그 하나는 <strong>의도한 차이</strong>다 — <code>values-prod.yaml</code>이 리소스를 올렸다. 이렇게 "다른 것이 무엇이고 왜 다른지"를 말할 수 있으면 따라잡기가 끝난 것이다. 목록에 <code>DIFF</code>가 있는데 이유를 말하지 못하면 아직 끝나지 않았다.</div>
+    <div class="verdict"><span class="lbl">판정</span>열 개가 일치하고 하나가 다르다. 그 하나는 <strong>의도한 차이</strong>다 — <code>values-prod.yaml</code>이 리소스를 올렸다. 이렇게 "다른 것이 무엇이고 왜 다른지"를 말할 수 있으면 따라잡기가 끝난 것이다. 목록에 <code>DIFF</code>가 있는데 이유를 말하지 못하면 아직 끝나지 않았다.</div>
   </div>
 </section>
 
@@ -435,7 +471,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: journal-dev.local' http://loc
 dev-redis-0                1/1   Running   0   18s
 dev-web-594f8484d7-bcw8m   1/1   Running   0   18s
 200</code></div>
-    <div class="verdict"><span class="lbl">판정</span>세 파드가 <code>restricted</code> 네임스페이스에서 떴다. M24를 하기 전의 차트로 같은 명령을 치면 <strong>파드가 하나도 만들어지지 않는다</strong>(레플리카셋 이벤트에 <code>violates PodSecurity</code>). 이 한 줄이 "차트를 따라잡았다"의 증거다.</div>
+    <div class="verdict"><span class="lbl">판정</span>세 파드가 <code>restricted</code> 네임스페이스에서 떴다. M24를 하기 전의 차트로 같은 명령을 치면 <strong>파드가 하나도 만들어지지 않는다</strong>(레플리카셋 이벤트에 <code>violates PodSecurity</code>). 이 한 줄이 "차트를 따라잡았다"의 증거다. <code>--wait</code>가 끝난 직후에는 인그레스 컨트롤러가 새 규칙을 아직 싣지 못해 <code>503</code>이 한두 번 나올 수 있다. 몇 초 뒤 다시 치면 <code>200</code>이 된다.</div>
   </div>
 
   <div class="step">
@@ -487,7 +523,8 @@ POD LOGS: dev-test (test)
   --set api.image.tag=v99 \
   --rollback-on-failure --wait --timeout 60s</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>Error: UPGRADE FAILED: release dev failed, and has been rolled back due to rollback-on-failure being set: resource Deployment/journal-dev/dev-api not ready. status: InProgress, message: Pending termination: 1
+    <div class="out"><code>level=WARN msg="upgrade failed" name=dev error="resource Deployment/journal-dev/dev-api not ready. status: InProgress, message: Pending termination: 1\ncontext deadline exceeded"
+Error: UPGRADE FAILED: release dev failed, and has been rolled back due to rollback-on-failure being set: resource Deployment/journal-dev/dev-api not ready. status: InProgress, message: Pending termination: 1
 context deadline exceeded</code></div>
     <p>이력을 본다.</p>
 <pre><code>helm history dev -n journal-dev</code></pre>
@@ -558,6 +595,11 @@ patches:
         value: 1
       - op: remove
         path: /spec/template/spec/topologySpreadConstraints
+  - target: {kind: Deployment, name: web-static}
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
   - target: {kind: Ingress}
     patch: |-
       - op: replace

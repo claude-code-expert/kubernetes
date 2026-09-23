@@ -159,7 +159,7 @@
   <p class="ch-desc">M23부터 인가·파드 보안·네트워크·어드미션을 하나씩 걸었다. 그런데 <strong>지금 이 클러스터가 전체적으로 어떤 상태인지</strong>는 아직 아무도 모른다 — 어제 누가 무엇을 지웠는지, 진단 도구가 무엇을 지적하는지, 파드 하나가 뚫리면 어디까지 가는지. 이 모듈에서 감사 로깅을 켜고, CIS 진단으로 지적 10개를 받아 6개를 고치고, <strong>남은 4개는 근거를 적고 넘어가는</strong> 판단까지 한다.</p>
   <div class="meta">
     <span class="tag">중후반</span><span class="tag">110분</span><span class="tag">Kubernetes 1.37.0</span>
-    <br>2026-09-06 검증 (kind v0.33.0 · kube-bench v0.12.0 · trivy 0.69.0) · 버전 숫자는 실습 당일 다시 확인한다
+    <br>2026-09-06 검증 (kind v0.33.0 · kube-bench v0.12.0 · trivy 0.74.0 · 2026-09-23 재검증) · 버전 숫자는 실습 당일 다시 확인한다
   </div>
 </header>
 
@@ -393,22 +393,29 @@ docker exec study-control-plane \
 docker exec study-control-plane mkdir -p /etc/kubernetes/audit /var/log/kubernetes/audit
 docker cp course/labs/infra/audit-policy.yaml \
   study-control-plane:/etc/kubernetes/audit/policy.yaml</code></pre>
-    <p>매니페스트에 다음을 넣는다. 명령줄 인자 다섯 개와 볼륨 두 쌍이다.</p>
-<pre><code># spec.containers[0].command 에 추가
+    <p>매니페스트에 명령줄 인자 다섯 개와 볼륨 두 쌍을 넣는다. 노드 컨테이너에는 편집기가 없으므로 파일을 호스트로 꺼내 고친 뒤 다시 넣는다. 파이썬은 기준 줄이 정확히 한 번 나오는지 확인하고 그 뒤에 끼워 넣는다 — 두 번 돌리면 첫 단언에서 멈춘다.</p>
+<pre><code>docker cp study-control-plane:/etc/kubernetes/manifests/kube-apiserver.yaml /tmp/kube-apiserver.yaml
+
+python3 - /tmp/kube-apiserver.yaml &lt;&lt;'PY'
+import sys
+p = sys.argv[1]
+t = open(p).read()
+assert '--audit-policy-file' not in t, '이미 들어 있다'
+flags = """    - --allow-privileged=true
     - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
     - --audit-log-path=/var/log/kubernetes/audit/audit.log
-    - --audit-log-maxage=30
-    - --audit-log-maxbackup=10
+    - --audit-log-maxage=8
+    - --audit-log-maxbackup=3
     - --audit-log-maxsize=100
-
-# spec.containers[0].volumeMounts 에 추가
+"""
+mounts = """    volumeMounts:
     - mountPath: /etc/kubernetes/audit
       name: audit-policy
       readOnly: true
     - mountPath: /var/log/kubernetes/audit
       name: audit-log
-
-# spec.volumes 에 추가
+"""
+vols = """  volumes:
   - hostPath:
       path: /etc/kubernetes/audit
       type: DirectoryOrCreate
@@ -416,12 +423,24 @@ docker cp course/labs/infra/audit-policy.yaml \
   - hostPath:
       path: /var/log/kubernetes/audit
       type: DirectoryOrCreate
-    name: audit-log</code></pre>
+    name: audit-log
+"""
+for old, new in [("    - --allow-privileged=true\n", flags),
+                 ("    volumeMounts:\n", mounts),
+                 ("  volumes:\n", vols)]:
+    assert t.count(old) == 1, old
+    t = t.replace(old, new)
+open(p, 'w').write(t)
+print('고침:', p)
+PY
+
+docker cp /tmp/kube-apiserver.yaml study-control-plane:/etc/kubernetes/manifests/kube-apiserver.yaml</code></pre>
+    <p>넣는 것은 세 덩어리다. <code>command</code>에 감사 정책 경로·로그 경로·회전 설정, 컨테이너의 <code>volumeMounts</code>에 두 경로, 파드의 <code>volumes</code>에 같은 이름의 <code>hostPath</code> 둘. 이름(<code>audit-policy</code>, <code>audit-log</code>)이 마운트와 볼륨을 잇는다.</p>
     <table>
       <thead><tr><th>플래그</th><th>뜻</th></tr></thead>
       <tbody>
-        <tr><td><code>--audit-log-maxage</code></td><td>보관 일수. CIS 기준은 30 이상이다</td></tr>
-        <tr><td><code>--audit-log-maxbackup</code></td><td>회전 파일 개수. CIS 기준은 10 이상</td></tr>
+        <tr><td><code>--audit-log-maxage</code></td><td>보관 일수. 여기서는 8을 준다. CIS 기준은 30 이상이다</td></tr>
+        <tr><td><code>--audit-log-maxbackup</code></td><td>회전 파일 개수. 여기서는 3. CIS 기준은 10 이상</td></tr>
         <tr><td><code>--audit-log-maxsize</code></td><td>회전 크기(MB). 27.4의 증가율을 보면 이 값이 하루에 몇 번 도는지 계산할 수 있다</td></tr>
       </tbody>
     </table>
@@ -467,7 +486,7 @@ for l in sys.stdin:
     if d.get("verb") in ("delete","deletecollection") and not d["user"]["username"].startswith("system:"):
         o=d.get("objectRef",{})
         print(d["requestReceivedTimestamp"][11:19], d["user"]["username"],
-              f"{o.get(\"resource\")}/{o.get(\"name\")} in {o.get(\"namespace\")}")'</code></pre>
+              "%s/%s in %s" % (o.get("resource"), o.get("name"), o.get("namespace")))'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>14:50:34 kubernetes-admin deployments/audit-demo in m27</code></div>
     <div class="verdict"><span class="lbl">판정</span>시각·주체·대상이 한 줄에 있다. <code>kubernetes-admin</code>은 kubeconfig의 관리자 인증서다 — <strong>여러 사람이 같은 kubeconfig를 쓰면 이 줄로는 누구인지 알 수 없다.</strong> M23에서 계정을 나눈 이유가 여기서 실질적인 값이 된다. 감사 로그의 품질은 인증 설계에서 결정된다.</div>
@@ -693,7 +712,8 @@ kubectl -n m27 exec probe -- sh -c "
     <span class="out-lbl">출력</span>
     <div class="out"><code>노드 API 서버   : 200
 kubelet :10250  : 401
-메타데이터 주소  : 000</code></div>
+메타데이터 주소  : 000
+command terminated with exit code 28</code></div>
     <div class="verdict"><span class="lbl">판정</span>세 줄이 각각 다른 이야기를 한다. <code>200</code>은 <strong>인증 없이도 응답하는 엔드포인트</strong>(<code>/version</code>)가 있다는 뜻이다. <code>401</code>은 <strong>kubelet에 닿기는 한다</strong>는 뜻이고 — 인증서만 손에 넣으면 그 노드의 모든 파드에서 명령을 실행할 수 있다. <code>000</code>은 kind에 클라우드 메타데이터가 없어서다. 클라우드였다면 이 자리가 <code>200</code>이고, 응답 본문에 자격 증명이 들어 있다.</div>
   </div>
 
@@ -798,7 +818,14 @@ kubelet 10250 : 000
     <div class="out"><code>E0905 14:56:41.237039  1 wrapper.go:41] "Failed to run kube-state-metrics" err="failed to create client: error while trying to communicate with apiserver: Get \"https://10.96.0.1:443/version\": dial tcp 10.96.0.1:443: connect: connection refused"</code></div>
     <div class="verdict"><span class="lbl">판정</span><strong>기동할 때 API 서버가 필요한 파드는 그 40초를 넘기지 못한다.</strong> 이미 떠 있던 파드는 멀쩡했지만, 하필 그 순간 재시작한 파드는 연결에 실패하고 죽었다. 그리고 <code>CrashLoopBackOff</code>의 백오프는 지수적으로 늘어나므로, API 서버가 돌아온 뒤에도 <strong>몇 분 동안 계속 죽어 있는다.</strong></div>
     <p>영향은 관측으로 번졌다.</p>
-<pre><code># 프로메테우스 /api/v1/targets 요약</code></pre>
+<pre><code># API 서버가 재시작되면 떠 있던 port-forward 도 끊긴다. 다시 연다
+pkill -f 'port-forward.*9090' 2&gt;/dev/null
+kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 &gt;/dev/null 2&gt;&amp;1 &amp;
+sleep 4
+curl -s 'http://localhost:9090/api/v1/targets?state=any' | python3 -c "
+import json,sys,collections
+d=json.load(sys.stdin)['data']['activeTargets']
+print('전체:', dict(collections.Counter(t['health'] for t in d)))"</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>전체: {'up': 31, 'unknown': 1, 'down': 1}</code></div>
     <p>복구는 파드를 지우는 것으로 끝난다. 백오프를 기다리는 대신 새로 만든다.</p>
@@ -812,18 +839,40 @@ kubelet 10250 : 000
 <section id="s8">
   <h2 class="sec"><span class="num">27.8</span>운영 관점 — 이미지 스캔을 어디에 둘 것인가</h2>
   <p>M07에서 이미지를 만들었고 M26에서 <code>latest</code>를 막았다. 남은 질문은 "그 이미지 안에 무엇이 들어 있는가"다. 클러스터에 배포된 것을 스캔한다.</p>
-<pre><code>docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.0 \
-  image --scanners vuln --severity HIGH,CRITICAL --quiet journal-api:v2</code></pre>
-  <span class="out-lbl">출력 (요약)</span>
-  <div class="out"><code>journal-api:v2 (alpine 3.24.1)   os-pkgs    {'HIGH': 2}
-Node.js                          lang-pkgs  {'HIGH': 10, 'CRITICAL': 1}
-합계: {'HIGH': 12, 'CRITICAL': 1}</code></div>
-  <p>여기서 멈추면 "13개를 고쳐야 한다"는 결론이 나온다. 한 걸음 더 간다 — <strong>이 취약점들이 어디서 왔는지</strong> 보려고 베이스 이미지만 따로 스캔한다.</p>
-  <span class="out-lbl">출력</span>
-  <div class="out"><code>node:22-alpine                                {'HIGH': 12, 'CRITICAL': 1}
-node:24-alpine                                {'HIGH': 6}
-gcr.io/distroless/nodejs22-debian12:nonroot   {'CRITICAL': 1, 'HIGH': 5}</code></div>
-  <p>우리 이미지의 13개가 베이스 이미지의 13개와 같다. <strong>우리 코드와 우리 의존성이 만든 취약점은 0개</strong>이고, 전부 베이스 이미지에 들어 있던 것이다. 그러면 할 일이 바뀐다 — 개별 <dfn class="term">CVE <span class="en">(Common Vulnerabilities and Exposures · 공개된 보안 취약점에 붙는 고유 식별자)</span></dfn>를 하나씩 쫓는 대신 <strong>베이스 이미지를 올리는 것</strong>이 13개를 6개로 만든다.</p>
+<pre><code># 결과를 JSON 으로 받아 층(Target)별로 센다
+trivy_count() {
+  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.74.0 \
+    image --scanners vuln --severity HIGH,CRITICAL --quiet --format json "$1" |
+  python3 -c '
+import json,sys,collections
+d=json.load(sys.stdin); total=collections.Counter()
+for r in d.get("Results",[]):
+    c=collections.Counter(v["Severity"] for v in r.get("Vulnerabilities") or [])
+    if c: print("  %-40s %-10s %s" % (r["Target"][:40], r["Class"], dict(c)))
+    total+=c
+print("  합계:", dict(total))'
+}
+trivy_count journal-api:v2</code></pre>
+  <p>표 대신 <code>--format json</code>으로 받아 층(<code>Target</code>)별로 센다. 스캐너 태그는 M07과 같은 <code>0.74.0</code>이다.</p>
+  <span class="out-lbl">출력 (2026-09-23)</span>
+  <div class="out"><code>  Node.js                                  lang-pkgs  {'HIGH': 4}
+  합계: {'HIGH': 4}</code></div>
+  <p>여기서 멈추면 "이만큼 고쳐야 한다"는 결론이 나온다. 한 걸음 더 간다 — <strong>이 취약점들이 어디서 왔는지</strong> 보려고 베이스 이미지만 따로 스캔한다. 같은 셸에서 이어서 친다(<code>trivy_count</code> 함수를 다시 쓴다).</p>
+<pre><code>for img in node:22-alpine node:24-alpine gcr.io/distroless/nodejs22-debian12:nonroot; do
+  docker pull -q "$img" &gt;/dev/null
+  echo "$img"; trivy_count "$img"
+done</code></pre>
+  <span class="out-lbl">출력 (2026-09-23)</span>
+  <div class="out"><code>node:22-alpine
+  Node.js                                  lang-pkgs  {'HIGH': 10, 'CRITICAL': 1}
+  합계: {'HIGH': 10, 'CRITICAL': 1}
+node:24-alpine
+  Node.js                                  lang-pkgs  {'HIGH': 4}
+  합계: {'HIGH': 4}
+gcr.io/distroless/nodejs22-debian12:nonroot
+  gcr.io/distroless/nodejs22-debian12:nonr os-pkgs    {'CRITICAL': 1, 'HIGH': 5}
+  합계: {'CRITICAL': 1, 'HIGH': 5}</code></div>
+  <p><strong>우리 이미지의 결과가 베이스 이미지 한 줄과 똑같다.</strong> 어느 줄과 같은지는 <code>journal-api:v2</code>를 언제 빌드했느냐에 달렸다. M04부터 순서대로 왔다면 아직 <code>node:22-alpine</code> 기반이라 그 줄과 같고, <code>rebuild.sh</code>로 복구했다면 M29에서 올린 <code>node:24-alpine</code> 기반이라 위 출력처럼 그 줄과 같다. 어느 쪽이든 <strong>우리 코드와 우리 의존성이 만든 취약점은 0개</strong>이고, 전부 베이스 이미지에 들어 있던 것이다. 그러면 할 일이 바뀐다 — 개별 <dfn class="term">CVE <span class="en">(Common Vulnerabilities and Exposures · 공개된 보안 취약점에 붙는 고유 식별자)</span></dfn>를 하나씩 쫓는 대신 <strong>베이스 이미지를 올리는 것</strong>이 11개를 4개로 만든다. 숫자는 취약점 데이터베이스가 갱신될 때마다 바뀌므로 실습 당일 값이 다를 수 있다. 비교의 결론은 바뀌지 않는다.</p>
   <p>이것이 스캔 결과를 읽는 기본 순서다. <strong>어느 층에서 왔는지 먼저 나눈다.</strong> <dfn class="term">OS <span class="en">(Operating System · 운영체제)</span></dfn> 패키지 층이면 베이스 이미지 갱신, 언어 패키지 층이면 <code>package-lock.json</code> 갱신, 애플리케이션 코드면 우리가 고칠 일이다. 층을 나누지 않고 목록을 위에서부터 처리하면 고칠 수 없는 것에 시간을 쓰게 된다.</p>
 
   <h3>어디서 돌릴 것인가</h3>
@@ -910,7 +959,7 @@ docker exec study-control-plane sh -c 'ls -lh /var/log/kubernetes/audit/'</code>
     <li>Trivy: https://trivy.dev/latest/docs/target/container_image/</li>
     <li>이론 축: 『쿠버네티스 창시자에게 배우는 모범 사례 2판』 19.1 클러스터 보안 · 19.4 컨테이너 이미지 보안</li>
   </ul>
-  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · kube-bench v0.12.0 · trivy 0.69.0</p>
+  <p>검증 환경: macOS 15 (Apple Silicon) · kind v0.33.0 · Kubernetes 1.37.0 · kube-bench v0.12.0 · trivy 0.74.0</p>
 </footer>
 
 </div>

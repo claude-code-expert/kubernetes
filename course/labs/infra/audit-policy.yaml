@@ -23,7 +23,6 @@ rules:
       - system:apiserver
       - system:kube-scheduler
       - system:kube-controller-manager
-      - system:serviceaccount:kube-system:endpoint-controller
     verbs: ["update", "patch"]
     resources:
       - group: ""

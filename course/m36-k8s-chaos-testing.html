@@ -269,11 +269,11 @@
       <text class="t-warn" x="66" y="256">2,368건/20초 → 109건/40초 (76건 실패)</text>
 
       <rect class="warnbox" x="468" y="222" width="392" height="40" rx="3"/>
-      <text class="t-mono" x="478" y="240">③ CPU 한 파드 → HPA 1051% → 4에서 8로</text>
+      <text class="t-mono" x="478" y="240">③ CPU 한 파드 → HPA 535% → 5에서 8로</text>
       <text class="t-warn" x="478" y="256">HPA 는 평균을 본다. 나머지 7개는 놀고 있었다</text>
 
       <rect class="box" x="56" y="268" width="392" height="42" rx="3"/>
-      <text class="t-mono" x="66" y="286">④ FAULT_RATE 0.5 → 에러율 48.6%</text>
+      <text class="t-mono" x="66" y="286">④ FAULT_RATE 0.5 → 에러율 49.3%</text>
       <text class="t-acc" x="66" y="303">AppHighErrorRate firing (2분 뒤)</text>
 
       <rect class="box" x="468" y="268" width="392" height="42" rx="3"/>
@@ -396,6 +396,10 @@ spec:
         - podSelector:
             matchLabels: {app: journal-api}
       ports: [{protocol: TCP, port: 8080}]</code></pre>
+<pre><code>kubectl apply -f course/labs/k8s/netpol/30-allow-loadgen.yaml
+bash course/labs/scripts/loadgen.sh reset      # 막혀 있던 동안의 000 을 지우고 다시 센다
+sleep 25
+bash course/labs/scripts/loadgen.sh report</code></pre>
     <span class="out-lbl">출력 (25초)</span>
     <div class="out"><code>요청 수 / 응답 코드 분포:
 4238
@@ -485,17 +489,24 @@ spec:
   delay: {latency: "200ms"}
   duration: "60s"</code></pre>
     <p><code>direction</code>과 <code>target</code>이 폭발 반경을 만든다. <strong>journal-api에서 redis로 가는 트래픽만</strong> 느려지고, 인그레스에서 오는 것과 프로메테우스 스크레이프는 그대로다.</p>
-<pre><code>kubectl -n journal exec curlbox -- sh -c \
-  'for i in 1 2 3; do curl -s -o /dev/null -w "%{time_total}s %{http_code}\n" \
-     --max-time 5 http://journal-api:8080/api/entries; done'</code></pre>
+<pre><code>timing() {   # 부하 생성기 파드에서 세 번 재 본다
+  kubectl -n journal exec curlbox -- sh -c \
+    'for i in 1 2 3; do curl -s -o /dev/null -w "%{time_total}s %{http_code}\n" \
+       --max-time 5 http://journal-api:8080/api/entries; done'
+}
+kubectl apply -f course/labs/chaos/20-networkchaos.yaml
+sleep 5
+timing            # 지연 중
+sleep 60          # duration 60s 가 끝나기를 기다린다
+timing            # 평상시</code></pre>
     <span class="out-lbl">출력 (지연 중 / 평상시)</span>
-    <div class="out"><code>0.404048s 200
-0.404748s 200
-0.403853s 200
-
-0.001518s 200
-0.001321s 200
-0.001141s 200</code></div>
+    <div class="out"><code>networkchaos.chaos-mesh.org/redis-delay created
+0.404188s 200
+0.406336s 200
+0.403315s 200
+0.001417s 200
+0.001808s 200
+0.001324s 200</code></div>
     <div class="verdict"><span class="lbl">판정</span>가설은 성립했다. 그런데 <strong>404ms는 200ms의 두 배다.</strong> 요청 하나가 레디스를 <strong>두 번</strong> 부른다는 뜻이고, 실제로 그렇다 — <code>KEYS</code>로 키 목록을 받고 <code>MGET</code>으로 값을 받는다. <strong>지연 실험이 호출 횟수를 드러냈다</strong> — 코드를 읽지 않고 알아낸 사실이다.</div>
     <p>이것이 통신 카오스의 부수적인 값이다. 외부 의존이 하나 느려졌을 때 <strong>우리 응답이 몇 배로 느려지는가</strong>가 곧 그 의존을 몇 번 부르는지를 말해 준다. 실측값이 예상보다 크면 <strong>줄일 수 있는 호출이 있다는 신호</strong>다.</p>
   </div>
@@ -506,14 +517,24 @@ spec:
     <p><strong>가설</strong>: 지연이 클라이언트 타임아웃(2초)을 넘으면 실패가 나타난다. 부하 생성기의 <code>--max-time 2</code>가 그 타임아웃이다.</p>
 <pre><code>  delay: {latency: "1500ms"}     # 왕복 2회 = 3초 &gt; 2초
   duration: "45s"</code></pre>
-    <span class="out-lbl">출력 (평상시 20초 / 지연 40초)</span>
-    <div class="out"><code>2368
-   2368 200
+    <p>전문은 <code>course/labs/chaos/21-networkchaos-timeout.yaml</code>이다. 평상시 20초를 먼저 세고, 지연을 건 뒤 40초를 센다.</p>
+<pre><code>bash course/labs/scripts/loadgen.sh reset &gt;/dev/null; sleep 20
+bash course/labs/scripts/loadgen.sh report          # 평상시 20초
 
-109
+kubectl apply -f course/labs/chaos/21-networkchaos-timeout.yaml
+bash course/labs/scripts/loadgen.sh reset &gt;/dev/null; sleep 40
+bash course/labs/scripts/loadgen.sh report          # 지연 40초</code></pre>
+    <span class="out-lbl">출력 (평상시 20초 / 지연 40초)</span>
+    <div class="out"><code>요청 수 / 응답 코드 분포:
+3041
+   3040 200
+      1 000
+networkchaos.chaos-mesh.org/redis-delay-heavy created
+요청 수 / 응답 코드 분포:
+92
      76 000
-     33 200</code></div>
-    <div class="verdict"><span class="lbl">판정</span>처리량이 <strong>118 req/s에서 2.7 req/s로</strong> 떨어졌고 <strong>70%가 실패</strong>했다. 백엔드는 살아 있고 응답도 하는데 클라이언트가 기다려 주지 않는다 — <strong>느림과 죽음의 경계는 클라이언트가 정한다.</strong></div>
+     16 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>처리량이 <strong>152 req/s에서 2.3 req/s로</strong> 떨어졌고 <strong>83%가 실패</strong>했다. 백엔드는 살아 있고 응답도 하는데 클라이언트가 기다려 주지 않는다 — <strong>느림과 죽음의 경계는 클라이언트가 정한다.</strong></div>
     <p>여기서 나오는 설계 질문이 있다. <strong>타임아웃을 늘리면 될까.</strong> 늘리면 실패는 줄지만 <strong>느린 요청이 커넥션을 붙잡아</strong> 처리량이 더 떨어지고, 결국 앞단이 밀린다. 타임아웃은 <strong>포기하는 시점을 정하는 것</strong>이지 성공률을 올리는 손잡이가 아니다.</p>
   </div>
 
@@ -530,20 +551,30 @@ spec:
   stressors:
     cpu: {workers: 2, load: 100}
   duration: "90s"</code></pre>
-<pre><code>kubectl -n journal get hpa journal-api --no-headers   # 실험 전 / 중
-kubectl top pods -n journal -l app=journal-api --no-headers</code></pre>
+<pre><code>kubectl -n journal get hpa journal-api --no-headers                 # 실험 전
+bash course/labs/scripts/loadgen.sh reset &gt;/dev/null
+kubectl apply -f course/labs/chaos/30-stresschaos.yaml
+sleep 75
+kubectl -n journal get hpa journal-api --no-headers                 # 실험 중
+kubectl top pods -n journal -l app=journal-api --no-headers
+bash course/labs/scripts/loadgen.sh report</code></pre>
+    <p><code>top</code>에 2000m 안팎의 파드가 없으면 주입 대상이 이미 사라진 것이다. 주입 직후 HPA가 축소하면 레플리카셋은 <strong>가장 새 파드부터</strong> 지우는데, 그 파드가 하필 대상일 수 있다(이 환경에서 첫 시도가 그랬다). <code>kubectl -n journal get stresschaos cpu-burn -o jsonpath='{.status.experiment.containerRecords[*].id}'</code>로 대상 파드를 확인하고, 목록에 없으면 <code>kubectl -n journal delete stresschaos cpu-burn</code> 뒤 HPA가 가라앉기를 기다려 다시 적용한다.</p>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>실험 전: journal-api   cpu: 33%/50%     3   8   4
-실험 중: journal-api   cpu: 1051%/50%   3   8   5  →  8
-
-journal-api-...-nlrjn   2022m   43Mi      &lt;- 스트레스 받은 파드
-journal-api-...-4vldx     34m   34Mi
-journal-api-...-9h6sb     47m   37Mi
-journal-api-...-bdb4x     23m   38Mi
-... (나머지도 22~47m)
-
-요청 18,756건 전부 200</code></div>
-    <div class="verdict"><span class="lbl">판정</span>가설은 성립했다 — 실패 0건, HPA가 최대치까지 늘렸다. 그런데 <strong>늘린 것이 옳았는가</strong>는 다른 질문이다. 파드 하나가 2022m을 쓰는 동안 나머지 일곱은 <strong>22~47m으로 놀고 있었다.</strong> HPA는 <strong>평균</strong>을 보므로 한 파드의 이상이 전체 평균을 1051%로 만들었고, 클러스터 자원을 8배로 쓰게 했다.</div>
+    <div class="out"><code>journal-api   Deployment/journal-api   cpu: 49%/50%   3     8     5     4d21h
+stresschaos.chaos-mesh.org/cpu-burn created
+journal-api   Deployment/journal-api   cpu: 535%/50%   3     8     8     4d22h
+journal-api-57b58c68d6-6fcqb   15m     41Mi
+journal-api-57b58c68d6-fx6xd   16m     35Mi
+journal-api-57b58c68d6-gkgrl   2014m   45Mi      &lt;- 스트레스 받은 파드
+journal-api-57b58c68d6-hds2c   18m     40Mi
+journal-api-57b58c68d6-hm2t2   17m     43Mi
+journal-api-57b58c68d6-s2s2n   15m     42Mi
+journal-api-57b58c68d6-snmfq   16m     35Mi
+journal-api-57b58c68d6-xxd7d   17m     38Mi
+요청 수 / 응답 코드 분포:
+11974
+  11974 200</code></div>
+    <div class="verdict"><span class="lbl">판정</span>가설은 성립했다 — 실패 0건, HPA가 최대치까지 늘렸다. 그런데 <strong>늘린 것이 옳았는가</strong>는 다른 질문이다. 파드 하나가 2014m을 쓰는 동안 나머지 일곱은 <strong>15~18m으로 놀고 있었다.</strong> HPA는 <strong>평균</strong>을 보므로 한 파드의 이상이 전체 평균을 535%로 만들었고, 클러스터 자원을 8배로 쓰게 했다.</div>
     <p>이것이 M17에서 다룬 HPA의 성질이 <strong>장애 상황에서 어떻게 나타나는지</strong>다. 한 파드가 비정상일 때 필요한 것은 <strong>파드를 늘리는 것이 아니라 그 파드를 빼는 것</strong>인데, HPA에는 그런 개념이 없다. 그 일은 프로브(M15)가 해야 하고, <strong>CPU 고갈은 프로브를 실패시키지 않는다</strong>(요청은 여전히 처리된다, 느릴 뿐). 두 장치 사이에 틈이 있다는 것을 이 실험이 보여 준다.</p>
   </div>
 </section>
@@ -566,21 +597,40 @@ spec:
   method: "GET"
   abort: true
   duration: "180s"</code></pre>
-<pre><code>bash course/labs/scripts/loadgen.sh report
+<pre><code>kubectl apply -f course/labs/chaos/40-httpchaos.yaml
+bash course/labs/scripts/loadgen.sh reset &gt;/dev/null; sleep 25
+bash course/labs/scripts/loadgen.sh report
 curl -s -o /dev/null -m 5 -w '%{http_code}\n' -H 'Host: journal.local' http://localhost:18080/api/entries
 curl -s -o /dev/null -m 5 -w '%{http_code}\n' -H 'Host: journal.local' http://localhost:18080/</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>4291
-   4291 000
-
+    <div class="out"><code>httpchaos.chaos-mesh.org/api-500 created
+요청 수 / 응답 코드 분포:
+4099
+   4030 000
+     69 200
 502
 200</code></div>
+    <p><code>200</code> 69건은 주입이 퍼지기 전 첫 몇 초의 요청이다.</p>
     <div class="verdict"><span class="lbl">판정</span><dfn class="term">API <span class="en">(Application Programming Interface · 프로그램끼리 주고받는 규약)</span></dfn>는 완전히 죽었고 <strong>정적 파일은 200</strong>이다 — 폭발 반경이 <code>path</code>와 <code>labelSelectors</code>로 제한됐다. 인그레스는 <code>502</code>를 준다: 업스트림이 연결을 끊었을 때의 표준 응답이다.</div>
-<pre><code># 프로메테우스 /api/v1/alerts 에서 우리 알림만</code></pre>
+<pre><code>sleep 100      # 에러율 규칙의 for: 2m 을 넘길 만큼 기다린다
+
+# 프로메테우스(M19 의 port-forward 9090)에 지금 울리는 알림 중 우리 앱 것만 본다
+alerts() {
+  curl -s http://localhost:9090/api/v1/alerts | python3 -c '
+import json,sys
+a=[x for x in json.load(sys.stdin)["data"]["alerts"]
+   if x["labels"].get("namespace")=="journal" or x["labels"]["alertname"].startswith("App")]
+if "AppHighErrorRate" not in [x["labels"]["alertname"] for x in a]:
+    print("(AppHighErrorRate 가 없다)")
+for x in a:
+    print(x["labels"]["alertname"], x["state"], x["labels"].get("severity","none"),
+          "—", x["annotations"].get("summary",""))'
+}
+alerts</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>(AppHighErrorRate 가 없다)
-KubeHpaMaxedOut pending warning
-Watchdog firing none</code></div>
+KubeHpaMaxedOut pending warning — HPA is running at max replicas</code></div>
+    <p>필터를 빼면 <code>NodeMemoryHighUtilization</code> 같은 노드 알림이 섞여 나올 수 있다 — 노트북 한 대에 관측 스택과 앱 여덟 파드를 올린 탓이다. 이 실험의 관심사가 아니라서 걸렀다.</p>
     <div class="verdict"><span class="lbl">판정</span><strong>에러율 알림이 울리지 않는다.</strong> 요청이 앱에 도달하지 못했으므로 <code>http_server_requests_seconds_count</code>가 증가하지 않았고, <strong>에러율의 분모도 분자도 0</strong>이다. <strong>알림은 관측 지점 뒤의 고장만 본다</strong> — 이것이 이 실험에서 얻은 가장 중요한 사실이다.</div>
     <p>대응은 <strong>관측 지점을 앞으로도 두는 것</strong>이다. 인그레스 컨트롤러의 메트릭(5xx 비율)이나 클러스터 밖에서의 합성 모니터링이 이 구멍을 메운다. M21에서 앱 지표만으로 알림을 만든 것이 <strong>절반의 커버리지</strong>였다는 뜻이다.</p>
   </div>
@@ -592,17 +642,23 @@ Watchdog firing none</code></div>
 <pre><code># M30 에서 만든 손잡이를 쓴다. FAULT_RATE 는 v3 이미지에만 있다.
 kubectl -n journal set image deploy/journal-api api=journal-api:v3
 kubectl -n journal set env deploy/journal-api FAULT_RATE=0.5
-kubectl -n journal rollout status deploy/journal-api</code></pre>
-    <span class="out-lbl">출력 (45초 부하)</span>
-    <div class="out"><code>7153
-   3616 200
-   3537 500</code></div>
-<pre><code># 2분 30초 뒤 알림과 에러율 쿼리</code></pre>
+kubectl -n journal rollout status deploy/journal-api
+bash course/labs/scripts/loadgen.sh reset &gt;/dev/null; sleep 40
+bash course/labs/scripts/loadgen.sh report</code></pre>
+    <span class="out-lbl">출력 (40초 부하)</span>
+    <div class="out"><code>요청 수 / 응답 코드 분포:
+6443
+   3245 500
+   3198 200</code></div>
+<pre><code>sleep 150      # 2분 30초 뒤 알림과 에러율을 본다. alerts 함수는 1단계에서 정의했다
+alerts
+curl -sG http://localhost:9090/api/v1/query --data-urlencode \
+  'query=sum(rate(http_server_requests_seconds_count{job="journal-api",status=~"5.."}[2m])) / sum(rate(http_server_requests_seconds_count{job="journal-api"}[2m])) * 100' \
+  | python3 -c "import json,sys; r=json.load(sys.stdin)['data']['result']; print('에러율(2m rate):', round(float(r[0]['value'][1]),1), '%') if r else print('결과 없음')"</code></pre>
     <span class="out-lbl">출력</span>
-    <div class="out"><code>AppHighErrorRate firing journal-api — journal-api 에러율 35.5%
-
-에러율(2m rate): 48.6 %</code></div>
-    <div class="verdict"><span class="lbl">판정</span><strong>가설 성립.</strong> M21에서 쓴 규칙이 실제 장애에서 울렸다 — 규칙의 문법이 맞는 것과 <strong>울리는 것</strong> 사이의 간격을 여기서 메웠다. 알림 메시지의 35.5%와 지금 쿼리의 48.6%가 다른 것은 <strong>발화 시점의 값</strong>과 <strong>지금 값</strong>이기 때문이고, 시간창(2분)이 겹쳐 있어 생긴 차이다.</div>
+    <div class="out"><code>AppHighErrorRate firing warning — journal-api 에러율 48.5%
+에러율(2m rate): 49.3 %</code></div>
+    <div class="verdict"><span class="lbl">판정</span><strong>가설 성립.</strong> M21에서 쓴 규칙이 실제 장애에서 울렸다 — 규칙의 문법이 맞는 것과 <strong>울리는 것</strong> 사이의 간격을 여기서 메웠다. 알림 메시지의 48.5%와 지금 쿼리의 49.3%가 다른 것은 <strong>발화 시점의 값</strong>과 <strong>지금 값</strong>이기 때문이고, 시간창(2분)이 겹쳐 있어 생긴 차이다.</div>
     <p>실험이 끝나면 반드시 되돌린다. 되돌리는 것을 <strong>실험 시트의 항목</strong>으로 두는 것이 좋다 — 앞의 실험들은 <code>duration</code>이 있어 저절로 끝나지만, 이것은 배포를 바꾼 것이라 사람이 되돌려야 한다.</p>
 <pre><code>kubectl -n journal set env deploy/journal-api FAULT_RATE-
 kubectl -n journal set image deploy/journal-api api=journal-api:v1</code></pre>
@@ -612,7 +668,8 @@ kubectl -n journal set image deploy/journal-api api=journal-api:v1</code></pre>
     <h4>3단계 — 퍼즈</h4>
     <p class="purpose"><span class="lbl">목적</span>입력을 흔든다(20.1.5). <strong>500이 나오는 지점</strong>을 찾는 것이 목표다.</p>
     <p>무작위 바이트열보다 <strong>경계값과 형식 위반</strong>이 버그를 잘 찾는다. 빈 객체, <code>null</code>, 타입 위반, 아주 긴 값, <dfn class="term">JSON <span class="en">(JavaScript Object Notation · 키·값으로 데이터를 적는 형식)</span></dfn>이 아닌 것.</p>
-<pre><code>bash course/labs/scripts/fuzz-api.sh 26</code></pre>
+<pre><code>T0=$(date +%s)000        # 실험 시작 시각(ms). 뒷정리에서 이 뒤에 생긴 엔트리만 지운다
+bash course/labs/scripts/fuzz-api.sh 26</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>퍼즈 시작 — 26 회
 --- 응답 코드 분포
@@ -621,9 +678,17 @@ kubectl -n journal set image deploy/journal-api api=journal-api:v1</code></pre>
 판정: 통과 — 500 대 없음</code></div>
     <div class="verdict"><span class="lbl">판정</span>가설(500이 나오지 않는다)은 성립했다. <strong>그런데 이 결과가 더 나쁘다.</strong> 26번 중 24번이 <code>201 Created</code>다 — 서버가 <strong>거의 모든 것을 받아들여 저장했다</strong>는 뜻이다.</div>
 <pre><code>for P in '{}' '{"text":null}' '{"text":123}' '{"text":[1,2,3]}' 'not json at all' '[]'; do
-  ... POST 해서 코드만 본다 ...
+  C=$(kubectl -n journal exec curlbox -- curl -s -o /dev/null -w '%{http_code}' -X POST \
+        -H 'content-type: application/json' -d "$P" http://journal-api:8080/api/entries)
+  printf '  %-22s -&gt; %s\n' "$P" "$C"
 done
-kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries</code></pre>
+
+# 무엇이 저장됐는지 센다. 몇 건만 보기로 뽑는다
+kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries | python3 -c '
+import json,sys
+e=json.load(sys.stdin)["entries"]
+print("총", len(e), "건")
+for x in sorted(set(e), key=len)[:4]: print(" ", x)'</code></pre>
     <span class="out-lbl">출력</span>
     <div class="out"><code>  {}                     -&gt; 201
   {"text":null}          -&gt; 201
@@ -631,14 +696,22 @@ kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries</
   {"text":[1,2,3]}       -&gt; 201
   not json at all        -&gt; 400
   []                     -&gt; 201
-
 총 31 건
+  []
   {}
   {"text":""}
-  {"text":{"nested":"object"}}
-  {"text":"ok","extra":"모르는 필드"}</code></div>
+  {"text":123}</code></div>
     <div class="verdict"><span class="lbl">판정</span><strong>입력 검증이 전혀 없다.</strong> <code>400</code>이 나온 것은 JSON 파서가 거부한 하나뿐이고, JSON이기만 하면 무엇이든 저장된다. 퍼즈가 찾으려던 <strong>충돌(500)</strong>은 없었지만 <strong>데이터 오염</strong>을 찾았다 — 이 앱을 그대로 쓰면 저장소가 쓰레기로 찬다.</div>
-    <p>조치는 둘이다. <strong>앱에 스키마 검증을 넣고</strong>(<code>text</code>가 문자열이고 길이 제한이 있어야 한다), <strong>퍼즈를 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에 넣는다</strong>(M29의 파이프라인에 한 단계로). 그리고 <strong>실험이 만든 쓰레기 31건을 지운다</strong> — 카오스 실험은 뒷정리까지가 실험이다.</p>
+    <p>조치는 둘이다. <strong>앱에 스키마 검증을 넣고</strong>(<code>text</code>가 문자열이고 길이 제한이 있어야 한다), <strong>퍼즈를 <dfn class="term">CI <span class="en">(Continuous Integration · 커밋마다 빌드와 테스트를 자동으로 돌리는 것)</span></dfn>에 넣는다</strong>(M29의 파이프라인에 한 단계로). 그리고 <strong>실험이 만든 쓰레기를 지운다</strong> — 카오스 실험은 뒷정리까지가 실험이다. 31건 가운데 29건이 퍼즈의 산물이고 2건은 원래 있던 엔트리다. 엔트리 ID가 생성 시각(ms)이므로 퍼즈를 시작할 때 적어 둔 <code>T0</code> 이후의 것만 지운다.</p>
+<pre><code># 퍼즈가 만든 엔트리만 지운다. 엔트리 ID 가 생성 시각(ms)이므로 T0 이후 것이 실험의 산물이다
+PW=$(kubectl -n journal get secret journal-secret -o jsonpath='{.data.REDIS_PASSWORD}' | base64 -d)
+# 목록·필터·삭제를 레디스 컨테이너 안의 sh 에서 한 번에 한다 (zsh 는 따옴표 없는 변수를 쪼개지 않는다)
+kubectl -n journal exec redis-0 -- sh -c "redis-cli -a '$PW' --no-auth-warning --scan --pattern 'entry:*' \
+  | awk -F: -v t=$T0 '\$2 &gt;= t' | xargs -r redis-cli -a '$PW' --no-auth-warning DEL" | paste -sd+ - | bc
+kubectl -n journal exec curlbox -- curl -s http://journal-api:8080/api/entries; echo</code></pre>
+    <span class="out-lbl">출력</span>
+    <div class="out"><code>29
+{"entries":["{\"text\":\"첫 엔트리\"}","{\"text\":\"rebuild smoke test\"}"]}</code></div>
   </div>
 </section>
 
