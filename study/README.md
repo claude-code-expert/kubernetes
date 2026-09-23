@@ -15,7 +15,7 @@ study/
 │   ├── k8s/            매니페스트
 │   └── monitoring/     values · 대시보드 JSON
 ├── scripts/            fetch-samples.sh
-└── ppt/                별도 저장소가 장표를 만들 때 쓰는 키트
+└── (ppt/)              장표 제작 키트 — 2026-09-13 히스토리 재작성 때 유실. 복원 필요
 ```
 
 ## 합쳐진 것
