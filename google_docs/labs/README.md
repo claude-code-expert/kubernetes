@@ -28,9 +28,9 @@ docker tag demo/k8s-sample-boot:v1 localhost:5000/demo/k8s-sample-boot:v1 \
 # Docker Desktop 의 kubeadm 프로비저너면 호스트 이미지를 그대로 보므로 아무것도 안 해도 된다
 
 # 3) 배포 — 10장 방식 (단일 디플로이먼트)
-kubectl apply -f - <<'YAML'
-... 문서 10.3~10.4절의 service.yml / deployment.yml
-YAML
+#    빌드·적재부터의 전체 절차는 google_docs/labs/k8s/README.md 참조
+kubectl apply -f google_docs/labs/k8s/deployment.yml
+kubectl apply -f google_docs/labs/k8s/service.yml
 
 #    또는 15장 방식 (레디스까지 포함한 한 벌)
 kubectl apply -f google_docs/labs/k8s/sample/

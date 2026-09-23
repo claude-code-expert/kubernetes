@@ -1,0 +1,33 @@
+# 문서 10.3~10.4절 — 디플로이먼트
+# 이미지는 google_docs/labs/k8s-sample-boot/ 에서 빌드해 레지스트리에 올린 것이다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-sample-boot
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: k8s-sample-boot        # service.yml 의 셀렉터와 같아야 한다
+  template:
+    metadata:
+      labels:
+        app: k8s-sample-boot
+    spec:
+      containers:
+        - name: k8s-sample-boot
+          # kind 는 레지스트리 없이 kind load docker-image 로 노드에 직접 넣는다.
+          # 빌드·적재 절차는 같은 디렉터리의 README.md 참조.
+          #
+          # 문서 원문은 레지스트리를 전제로 한다:
+          #   로컬 레지스트리: localhost:5000/demo/k8s-sample-boot:v1
+          #   Docker Hub:     [user-id]/k8s-sample-boot:v1
+          image: k8s-sample-boot:v1
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /hello
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
