@@ -11,6 +11,7 @@ from pathlib import Path
 SRC = Path(__file__).parent
 ROOT = SRC.parent
 OUT = ROOT / "lab-guide.html"
+GH = "https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/"
 
 body = (SRC / "lab-guide.src.html").read_text(encoding="utf-8")
 
@@ -18,7 +19,7 @@ body = (SRC / "lab-guide.src.html").read_text(encoding="utf-8")
 def embed(m):
     rel = m.group(1)
     text = (ROOT / rel).read_text(encoding="utf-8")
-    return (f'<p class="src"><a href="{rel}" target="_blank" rel="noopener">{rel}</a></p>'
+    return (f'<p class="src"><a href="{GH}{rel}" target="_blank" rel="noopener">{rel}</a></p>'
             f'<pre class="file-body">{html.escape(text)}</pre>')
 
 

@@ -95,7 +95,9 @@
         <tr><td>리소스 메트릭 API</td><td>Resource Metrics API · <code>metrics.k8s.io</code></td><td>파드·노드의 CPU·메모리 사용량. metrics-server가 제공한다</td></tr>
         <tr><td>커스텀 메트릭 API</td><td>Custom Metrics API · <code>custom.metrics.k8s.io</code></td><td>쿠버네티스 오브젝트에 붙은 임의 메트릭(예: 파드당 초당 요청 수). 어댑터가 제공한다</td></tr>
         <tr><td>외부 메트릭 API</td><td>External Metrics API · <code>external.metrics.k8s.io</code></td><td>클러스터 밖의 메트릭(예: 메시지 큐 길이). 어댑터가 제공한다</td></tr>
-        <tr><td>어댑터</td><td>Metrics adapter · 예: prometheus-adapter, KEDA</td><td>모니터링 시스템의 값을 커스텀·외부 메트릭 API 형식으로 바꿔 주는 서버</td></tr>
+        <tr><td>어댑터</td><td>Metrics adapter</td><td>모니터링 시스템의 값을 커스텀·외부 메트릭 API 형식으로 바꿔 주는 서버</td></tr>
+        <tr><td>prometheus-adapter</td><td>Prometheus Adapter for Kubernetes Metrics APIs</td><td>프로메테우스에 쌓인 값을 커스텀·외부(·리소스) 메트릭 API로 내놓는 어댑터</td></tr>
+        <tr><td>KEDA</td><td>Kubernetes Event-driven Autoscaling</td><td>메시지 큐 길이 · 들어오는 요청 같은 이벤트 수로 파드를 늘리고 줄이는 도구. HPA에 외부 메트릭을 넣어 주고, 일이 없으면 0개까지 줄인다</td></tr>
         <tr><td>HPA</td><td>Horizontal Pod Autoscaler</td><td>수평 파드 오토스케일러. 메트릭을 보고 파드 개수를 늘리거나 줄인다</td></tr>
         <tr><td>VPA</td><td>Vertical Pod Autoscaler</td><td>수직 파드 오토스케일러. 사용량을 보고 파드의 requests·limits를 조정한다</td></tr>
       </tbody>
@@ -106,17 +108,20 @@
 <ul class="speaker-points">
   <li>책 3.4.2: 리소스·커스텀 메트릭 API를 쿠버네티스의 집계(aggregated) API로 구현해서, API는 그대로 두고 구현체만 바꿀 수 있게 됐다.</li>
   <li>공식 문서: 메트릭 기반 스케일링에는 API 집계 계층이 켜져 있어야 한다. 리소스 메트릭은 보통 metrics-server가, 커스텀·외부 메트릭은 모니터링 벤더가 제공하는 어댑터 API 서버가 제공한다.</li>
-  <li>KEDA는 Kubernetes Event-driven Autoscaling의 약자. 외부 메트릭 API를 제공하는 대표 어댑터다.</li>
+  <li>KEDA는 Kubernetes Event-driven Autoscaling의 약자. 마이크로소프트와 레드햇이 만들었고 CNCF 프로젝트다. HPA를 대체하지 않고, 외부 이벤트 소스(큐 · DB · API)를 보고 HPA에 외부 메트릭을 넣어 준다. HPA만으로는 파드를 0개로 줄일 수 없지만 KEDA는 일이 없으면 0개까지 줄인다(공식 문서 Concepts).</li>
+  <li>prometheus-adapter: 이미 프로메테우스를 돌리는 클러스터에서 metrics-server 대신 리소스 메트릭 API까지 제공할 수도 있다(공식 README).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/" target="_blank" rel="noopener">Kubernetes · API Aggregation Layer</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/" target="_blank" rel="noopener">Kubernetes · Horizontal Pod Autoscaling</a></li>
+<li><a href="https://keda.sh/docs/latest/concepts/" target="_blank" rel="noopener">KEDA · Concepts</a></li>
+<li><a href="https://github.com/kubernetes-sigs/prometheus-adapter" target="_blank" rel="noopener">kubernetes-sigs/prometheus-adapter</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="모니터링 대상 컴포넌트">
+<section class="slide expanded" data-label="모니터링 대상 컴포넌트" data-cap="components">
   <span class="kicker"><span class="n">02</span>WHAT TO WATCH · 책 3.4</span>
   <h1>구성요소마다 <span class="hl">볼 메트릭 하나</span>와 그 값이 나빠질 때 생기는 일</h1>
   <div class="body">
@@ -136,9 +141,10 @@
     </table>
     <div class="callout">모든 구성요소가 자기 메트릭을 프로메테우스 형식으로 직접 제공한다. 컨트롤 플레인이 느려지면 클러스터 전체가, 노드 구성요소가 느려지면 그 노드의 파드가 영향을 받는다.</div>
   </div>
-  <div class="foot"><span>책 3.4: 클러스터와 애플리케이션을 정상 가동하려면 이 모든 컴포넌트를 빠짐없이 모니터링해야 한다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes Metrics Reference</a> · <a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd · Metrics</a> · <a href="lab-guide.html#s5-2" target="_blank" rel="noopener">실습 가이드 05 Grafana 5-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4: 클러스터와 애플리케이션을 정상 가동하려면 이 모든 컴포넌트를 빠짐없이 모니터링해야 한다</li>
   <li>표를 위에서부터 한 행씩 읽는다. 구성요소가 하는 일, 대표 메트릭, 그 값이 나빠지면 사용자에게 어떤 증상으로 나타나는지.</li>
   <li>API 서버: 요청 처리 시간 분포. kubectl 명령, 컨트롤러, kubelet 모두 API 서버를 거치므로 여기가 느리면 모든 것이 느리다.</li>
   <li>etcd: WAL(Write-Ahead Log) fsync 시간 = 쓰기를 디스크에 확정하는 시간. etcd는 확정 뒤에 응답하므로 디스크가 느리면 API 서버가 기다린다. 책 3.5가 클러스터 컴포넌트에서 콕 집어 "etcd 레이턴시"를 꼽는 이유.</li>
@@ -152,7 +158,7 @@
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes · Metrics reference</a></li>
-<li><a href="https://etcd.io/docs/latest/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
+<li><a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
 <li><a href="https://coredns.io/plugins/metrics/" target="_blank" rel="noopener">CoreDNS · prometheus plugin</a></li>
 </ul></details>
 </aside>
@@ -172,12 +178,12 @@
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="cAdvisor">
+<section class="slide" data-label="cAdvisor" data-cap="cadvisor">
   <span class="kicker"><span class="n">02</span>CADVISOR · 책 3.4.1</span>
   <h1>cAdvisor: 컨테이너가 <span class="hl">실제로 얼마나 쓰는지</span> 잰다</h1>
   <div class="body">
@@ -202,21 +208,22 @@ order-api-8556fcb49b-ctm7c   <span class="v">183Mi</span></pre>
     </div>
     <div class="callout">이름이 <b><code>container_</code></b>로 시작하면 cAdvisor에서 온 값이다.</div>
   </div>
-  <div class="foot"><span>책 3.4.1: cAdvisor는 모든 컨테이너 메트릭의 진실 공급원이다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor · prometheus.md</a> · <a href="lab-guide.html#s4-4" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-4 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4.1: cAdvisor는 모든 컨테이너 메트릭의 진실 공급원이다</li>
   <li>출력은 실측이다. 명령은 curl로 프로메테우스 HTTP API를 부르는 형태지만 핵심은 질의문 한 줄이다.</li>
   <li>working_set 은 캐시처럼 커널이 언제든 회수할 수 있는 메모리를 뺀 값이라, 컨테이너가 지금 실제로 필요한 메모리에 가장 가깝다. kubelet의 축출 판단과 OOM 판정도 이 값을 기준으로 한다.</li>
   <li>CPU 예: rate(container_cpu_usage_seconds_total[2m]) 결과가 0.0037이면 초당 3.7밀리코어를 쓰고 있다는 뜻.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/guides/cadvisor/" target="_blank" rel="noopener">Prometheus · Monitoring container metrics using cAdvisor</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="metrics-server">
+<section class="slide" data-label="metrics-server" data-cap="metrics-server">
   <span class="kicker"><span class="n">02</span>METRICS SERVER · 책 3.4.2</span>
   <h1>metrics-server는 <span class="hl">오토스케일링 전용</span>이다</h1>
   <div class="body">
@@ -237,9 +244,10 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>책 3.4.2: 메트릭 서버는 리소스 메트릭 API의 표준 구현체다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>제공 항목: <a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Resource metrics pipeline (CPU · 메모리뿐)</a> · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4.2: 메트릭 서버는 리소스 메트릭 API의 표준 구현체다</li>
   <li>apiservices 출력은 실습 클러스터 실측(2026-09-26). 등록된 메트릭 API는 metrics.k8s.io 하나뿐이다. 커스텀·외부 메트릭 API는 어댑터를 설치해야 생긴다.</li>
   <li>kubectl top 출력은 실측이다.</li>
   <li>metrics-server README Caution: 오토스케일링 목적 전용이며 모니터링 솔루션으로 메트릭을 넘기거나 모니터링의 주 데이터 출처로 쓰면 안 된다. 모니터링에는 kubelet /metrics/resource 를 직접 수집하라고 안내한다.</li>
@@ -277,14 +285,23 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
       <div class="callout">책 3.4.2: 프로메테우스는 커스텀 메트릭 기반 HPA를 쓸 수 있게 한 최초의 커스텀 메트릭 어댑터였다. API가 표준화된 덕분에 CPU·메모리 외에도 큐 크기 같은 값으로 스케일링할 수 있게 됐다.</div>
     </div>
   </div>
-  <div class="foot"><span>API는 표준으로 고정하고, 값을 채우는 구현체만 바꿔 끼운다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>API 그룹: <a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis" target="_blank" rel="noopener">HPA · Support for metrics APIs</a> · HPA 스펙 전체: <a href="https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/" target="_blank" rel="noopener">HorizontalPodAutoscaler (autoscaling/v2) API 레퍼런스</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>코드는 쿠버네티스 공식 HPA 문서의 External 메트릭 예시다. worker_tasks 큐의 대기 메시지가 파드당 평균 30건이 되도록 파드 수를 조절한다.</li>
-  <li>실습 클러스터에는 어댑터가 없어서 custom·external API가 등록돼 있지 않다. 앞 슬라이드의 apiservices 출력이 그 확인이다.</li>
-  <li>어댑터를 쓰면 "CPU는 한가한데 큐가 쌓이는" 서비스도 수요에 맞춰 늘릴 수 있다. CPU만으로 스케일링할 때의 한계를 푸는 방법이다.</li>
+  <li>코드는 쿠버네티스 공식 HPA Walkthrough의 외부 메트릭 예시다. 실습 파일(labs/)에는 없다. 실습 클러스터에는 외부 메트릭을 내놓는 어댑터(KEDA 등)가 없어 실행할 수 없다.</li>
+  <li>뜻: 큐에 처리 대기 중인 작업 30건마다 워커 파드 1개를 둔다(공식 문서: one worker per 30 outstanding tasks).</li>
+  <li>type: External → 클러스터 밖의 값(external.metrics.k8s.io)으로 스케일링. metric.name: queue_messages_ready → 외부 메시지 큐 서비스의 처리 대기 메시지 수. selector.matchLabels: {queue: worker_tasks} → 여러 큐 중 worker_tasks 큐의 값만. target: AverageValue 30 → 파드 1개당 평균 30건이 되도록 파드 수를 맞춘다.</li>
+  <li>계산 예: 대기 메시지 300건이면 300 ÷ 30 = 파드 10개, 60건이면 2개. CPU가 한가해도 큐가 쌓이면 늘리고, 비면 줄인다.</li>
+  <li>"HPA 스펙 일부"인 이유: 이 조각은 HPA 매니페스트의 spec.metrics 목록에 들어가는 한 항목이다. 실제로는 apiVersion: autoscaling/v2 · kind: HorizontalPodAutoscaler · spec.scaleTargetRef(늘릴 디플로이먼트) · minReplicas · maxReplicas와 함께 spec.metrics: 아래에 넣는다. 그리고 queue_messages_ready 메트릭을 실제로 내놓는 어댑터가 클러스터에 있어야 동작한다.</li>
+  <li>공식 문서의 주의: 가능하면 외부 메트릭보다 커스텀 메트릭을 쓴다. 외부 메트릭 API는 어떤 메트릭이든 조회할 수 있게 열려 있어 관리자가 보안을 걸기 어렵다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis" target="_blank" rel="noopener">Kubernetes · HPA · Support for metrics APIs (세 API 그룹)</a></li>
+<li><a href="https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/" target="_blank" rel="noopener">Kubernetes API · HorizontalPodAutoscaler (autoscaling/v2) 스펙 전체</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline (metrics.k8s.io)</a></li>
+<li><a href="https://github.com/kubernetes/metrics" target="_blank" rel="noopener">kubernetes/metrics (세 API 그룹의 타입 정의)</a></li>
+<li><a href="https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md" target="_blank" rel="noopener">설계 문서 · Custom Metrics API</a></li>
+<li><a href="https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md" target="_blank" rel="noopener">설계 문서 · External Metrics API</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/" target="_blank" rel="noopener">Kubernetes · HPA Walkthrough (External metrics)</a></li>
 <li><a href="https://github.com/kubernetes-sigs/prometheus-adapter" target="_blank" rel="noopener">kubernetes-sigs/prometheus-adapter</a></li>
 <li><a href="https://keda.sh/docs/latest/concepts/" target="_blank" rel="noopener">KEDA · Concepts</a></li>
@@ -292,9 +309,9 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="kube-state-metrics">
+<section class="slide expanded" data-label="kube-state-metrics" data-cap="ksm">
   <span class="kicker"><span class="n">02</span>KUBE-STATE-METRICS · 책 3.4.3</span>
-  <h1>kube-state-metrics: 책의 질문을 <span class="hl">메트릭 이름</span>으로 바꾼다</h1>
+  <h1>kube-state-metrics: <span class="hl">오브젝트 상태를 묻는 질문</span>마다 답하는 메트릭이 있다</h1>
   <div class="body">
     <table class="compare" style="table-layout:fixed;font-size:15px">
       <colgroup><col style="width:13%"><col style="width:33%"><col></colgroup>
@@ -309,9 +326,11 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
     </table>
     <div class="callout">order-api 실측: replicas 2, requests.cpu 0.2, Running 1. 전부 <b>매니페스트에 적은 값</b>이다. KSM은 자원을 재지 않는다. 이름이 <b><code>kube_</code></b>로 시작하면 KSM이다.</div>
   </div>
-  <div class="foot"><span>책 3.4.3: kube-state-metrics는 클러스터에 배포된 오브젝트의 상태 파악이 주된 관심사다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · docs/metrics</a> · <a href="lab-guide.html#s4-5" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4.3: kube-state-metrics는 클러스터에 배포된 오브젝트의 상태 파악이 주된 관심사다.</li>
+  <li>메트릭 전체 목록은 공식 저장소 docs/metrics에 리소스 종류별로 있다. 표의 행마다: 파드 → workload/pod-metrics.md, 디플로이먼트 → workload/deployment-metrics.md, 노드 → cluster/node-metrics.md, 잡 → workload/job-metrics.md (아래 참고 자료). 각 문서에 메트릭 이름 · 타입 · 라벨 · 안정성 등급이 표로 있다.</li>
   <li>표의 "책의 질문" 열은 책 3.4.3의 항목을 그대로 옮겼다. 메트릭 이름은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다. 잡 메트릭은 KSM 공식 문서(job-metrics.md)의 이름이다. 실습 클러스터에 잡이 없어 지금은 값이 나오지 않는다.</li>
   <li>"A 대 B"는 두 값을 비교해야 답이 나온다는 뜻이다. spec_replicas 2, replicas_available 1이면 하나가 뜨지 못한 것.</li>
   <li>아래 결과는 실측. replicas: 2, requests.cpu: 200m(=0.2), 파드 두 개가 Running.</li>
@@ -319,7 +338,11 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · Metrics 문서</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/pod-metrics.md" target="_blank" rel="noopener">KSM · Pod 메트릭</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/deployment-metrics.md" target="_blank" rel="noopener">KSM · Deployment 메트릭</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/cluster/node-metrics.md" target="_blank" rel="noopener">KSM · Node 메트릭</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/job-metrics.md" target="_blank" rel="noopener">KSM · Job 메트릭</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
@@ -350,7 +373,7 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="kubectl top vs 프로메테우스">
+<section class="slide" data-label="kubectl top vs 프로메테우스" data-cap="top-vs-prom">
   <span class="kicker"><span class="n">02</span>ANSWER 2 · 같은 값인가</span>
   <h1>kubectl top과 프로메테우스는 <span class="hl">같은 kubelet</span>에서 읽는다</h1>
   <div class="body">
@@ -370,7 +393,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
     </div>
     <div class="callout"><b>값은 사실상 같다.</b> 둘 다 kubelet이 cgroup에서 잰 값을 읽기 때문이다. 1Mi 차이는 읽은 시점의 차이다. 다른 것은 <b>보관</b>이다. 지난 일을 되짚으려면 프로메테우스가 필요하다.</div>
   </div>
-  <div class="foot"><span>질문 ②: kubectl top의 값과 프로메테우스의 값은 같은가</span><span>{{PG}}</span></div>
+  <div class="foot"><span>질문 ②: kubectl top의 값과 프로메테우스의 값은 같은가 · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 · 4-4 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>둘 다 실측이다. 같은 파드, 거의 같은 시각.</li>
@@ -379,7 +402,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
   <li>HPA가 파드를 늘린 뒤 "그때 왜 늘었는지"를 되짚으려면 kubectl get hpa 를 주기적으로 손으로 기록해야 한다. metrics-server는 기록을 남기지 않기 때문이다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
@@ -407,18 +430,25 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>책 3.5: 물리·가상 노드 → 클러스터 컴포넌트 → 클러스터 애드온 → 엔드 유저 애플리케이션</span><span>{{PG}}</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">node-exporter</a> · <a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes</a> · <a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd</a> · <a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.5: 물리·가상 노드 → 클러스터 컴포넌트 → 클러스터 애드온 → 엔드 유저 애플리케이션</li>
   <li>계층 순서와 확인 항목은 책 3.5의 목록을 그대로 따랐다. 메트릭 이름은 각 항목을 실제로 조회할 때 쓰는 이름이다.</li>
   <li>① 노드는 node-exporter, ② 컴포넌트는 각 구성요소 자신, ④ 컨테이너 항목은 cAdvisor, 프레임워크 항목은 앱 계측에서 온다.</li>
   <li>node_cpu_seconds_total 은 모드(idle, user, system 등)별 누적 초라서, 사용률은 1 - rate(idle) 로 계산한다.</li>
   <li>③ 애드온 메트릭은 애드온을 설치해야 생긴다. 실습 클러스터(kind)에는 클러스터 오토스케일러가 없고, 인그레스 컨트롤러 메트릭은 수집 설정을 켜지 않았다. 이름은 각 프로젝트 공식 문서 기준.</li>
   <li>①②④의 메트릭은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다.</li>
+  <li>메트릭 이름 목록은 한 곳에 모여 있지 않고 메트릭을 내놓는 프로젝트마다 공식 문서가 있다(아래 참고 자료). 쿠버네티스 구성요소는 Kubernetes Metrics Reference, etcd는 etcd 문서의 Metrics, 컨테이너는 cAdvisor의 prometheus.md, 오브젝트 상태는 kube-state-metrics의 docs/metrics, 앱은 Spring Boot Metrics. node-exporter는 README에 수집기(collector) 목록만 있고 이름 목록은 없다.</li>
+  <li>이름을 외울 필요는 없다. ① Prometheus Query 입력칸에 앞부분(node_ · container_ · kube_ · etcd_ · apiserver_)을 치면 자동 완성으로 후보가 나온다. ② 입력칸 옆 메트릭 탐색기에서 지금 수집되는 이름을 설명과 함께 검색한다. ③ 대상의 /metrics를 curl로 받아 # HELP 줄을 본다(실습 가이드 4-6).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">prometheus/node_exporter</a></li>
-<li><a href="https://etcd.io/docs/latest/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
+<li><a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes · Metrics Reference (구성요소 메트릭 전체)</a></li>
+<li><a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor · Prometheus metrics</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · docs/metrics</a></li>
+<li><a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html" target="_blank" rel="noopener">Spring Boot · Metrics</a></li>
+<li><a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
 <li><a href="https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/proposals/metrics.md" target="_blank" rel="noopener">Cluster Autoscaler · Metrics</a></li>
 <li><a href="https://kubernetes.github.io/ingress-nginx/user-guide/monitoring/" target="_blank" rel="noopener">ingress-nginx · Monitoring</a></li>
 </ul></details>

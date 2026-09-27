@@ -13,7 +13,7 @@
   <aside class="notes">
 <ul class="speaker-points">
   <li>대시보드는 사람이 볼 때 빠르게 판단하게 해 주고, 알림은 사람이 보지 않을 때 불러낸다. 새벽 3시에는 대시보드를 아무도 보지 않는다.</li>
-  <li>흐름: 무엇에 알림을 거나 → 규칙 → 알림이 전달되는 길 → 규칙과 수신자 연결 → 알림 받기 → 시간이 어떻게 흐르나 → 라우팅 · 억제 · 침묵 → 대시보드 → 자주 막히는 곳.</li>
+  <li>흐름: 무엇에 알림을 거나 → 규칙 → 알림이 전달되는 길 → 규칙과 수신자 연결 → 알림 받기 → 라우팅 · 억제 · 침묵 → 대시보드.</li>
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
 </ul>
 </aside>
@@ -119,72 +119,103 @@
 </aside>
 </section>
 
-<section class="slide expanded" data-label="좋은 알림의 조건">
-  <span class="kicker"><span class="n">06</span>GOOD ALERTS · 책 3.11</span>
-  <h1>책의 네 가지 조언은 <span class="hl">규칙의 어느 칸</span>에 들어가나</h1>
+
+<section class="slide" data-label="규칙은 어디에 넣나">
+  <span class="kicker"><span class="n">06</span>WHERE RULES LIVE</span>
+  <h1>규칙은 <span class="hl">쿠버네티스 리소스(PrometheusRule)</span>로 넣는다</h1>
   <div class="body">
-    <table class="compare" style="table-layout:fixed;font-size:15.5px">
-      <colgroup><col style="width:36%"><col style="width:30%"><col></colgroup>
-      <thead><tr><th>책 3.11의 조언</th><th>설정 위치</th><th>예</th></tr></thead>
-      <tbody>
-        <tr><td>임계 시간은 5분 이상, 5·10·30·60분처럼 표준화</td><td>규칙의 <code>for</code></td><td class="it"><code>for: 2m</code> · <code>for: 3m</code> (짧게 잡은 실습값)</td></tr>
-        <tr><td>플레이북 링크, 지역·앱 소유자·영향 시스템을 함께</td><td>규칙의 <code>annotations</code> · <code>labels</code></td><td class="it"><code>summary</code> · <code>description</code> · <code>runbook_url</code></td></tr>
-        <tr><td>팀 전체가 아니라 문제를 맡을 사람에게</td><td>Alertmanager <code>route</code> · <code>receiver</code></td><td class="it">severity=critical → 당직 수신자</td></tr>
-        <tr><td>완벽한 알림은 없다. 점진적으로 개선</td><td>운영 습관</td><td class="it">울렸는데 아무도 조치하지 않은 알림은 지운다</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">알림 메시지만 보고도 "어디를 봐야 하나"에 시간을 쓰지 않게 만드는 것이 목표다. 대시보드 링크를 annotations에 넣어 두면 대응하는 사람이 바로 연다.</div>
+    <div class="flow" style="grid-template-columns:repeat(4,1fr)">
+      <div class="step-box"><span class="num">① 파일에 적는다</span><b>PrometheusRule YAML</b><p><code>labs/k8s/prometheusrule.yaml</code>. 규칙 4개를 한 파일에</p></div>
+      <div class="step-box"><span class="num">② 클러스터에 넣는다</span><b>kubectl apply</b><p><code>kubectl apply -f labs/k8s/prometheusrule.yaml</code></p></div>
+      <div class="step-box"><span class="num">③ 오퍼레이터가 옮긴다</span><b>Prometheus 규칙 파일로</b><p><code>release: kps</code> 라벨이 붙은 것만 골라 Prometheus에 로드</p></div>
+      <div class="step-box"><span class="num">④ 프로메테우스가 평가</span><b>30초마다</b><p>조건이 맞으면 pending → for를 채우면 firing</p></div>
+    </div>
+    <div class="split a" style="align-items:start">
+      <div class="card"><h3>ServiceMonitor와 같은 방식</h3><p>수집 대상을 ServiceMonitor로 넣었듯(5장), 알림 규칙은 PrometheusRule로 넣는다. Prometheus 설정 파일을 직접 고치지 않는다. 오퍼레이터가 <code>ruleSelector</code>(여기서는 <code>release: kps</code>)에 맞는 것만 고른다.</p></div>
+      <div class="card"><h3>들어갔는지 확인하는 곳</h3><p>Prometheus → Status → <b>Rule health</b>: 그룹 study-app, 규칙 4개 OK<br>Prometheus → <b>Alerts</b>: 규칙별 inactive · pending · firing</p></div>
+    </div>
   </div>
-  <div class="foot"><span>책 3.11: 임계치가 너무 짧으면 오탐 알림이 너무 자주 발생한다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> · <a href="lab-guide.html#s8-2" target="_blank" rel="noopener">실습 가이드 08 알림 8-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>책 3.11 원문 요지: 임계치를 적어도 5분 이상으로. 표준 임계치(5분, 10분, 30분, 1시간)를 정하면 수많은 임계치를 세밀하게 관리할 필요가 없다.</li>
-  <li>책: 알림이 더 큰 그룹으로 전송되면 유저는 노이즈라고 판단해 걸러낼 가능성이 높다. 알림은 실제로 그 문제를 맡아 해결할 사람에게 보낸다.</li>
-  <li>실습 규칙은 발화 과정을 몇 분 안에 보려고 for를 2~3분으로 짧게 잡았다.</li>
+  <li>순서: 파일 작성 → kubectl apply → 오퍼레이터가 Prometheus 파드 안의 규칙 파일로 옮김 → config-reloader가 Prometheus에 다시 읽게 함 → 30초 주기 평가. 적용 후 Rule health에 나타나기까지 1~2분.</li>
+  <li>확인 명령: kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.ruleSelector}' → {"matchLabels":{"release":"kps"}}. 이 라벨이 없으면 규칙이 조용히 무시된다(실습 가이드 11 Q&amp;A).</li>
+  <li>로드 직후 잠깐 state unknown(아직 평가 전)이 보인다. 30초 뒤 inactive.</li>
 </ul>
 </aside>
 </section>
 
-<section class="slide" data-label="규칙 넷">
-  <span class="kicker"><span class="n">06</span>PROMETHEUSRULE</span>
-  <h1>RED 질의에 <span class="hl">임계값과 지속 시간</span>을 붙이면 규칙이 된다</h1>
+<section class="slide" data-label="규칙 한 개 읽기">
+  <span class="kicker"><span class="n">06</span>ANATOMY OF A RULE</span>
+  <h1>규칙 하나 = <span class="hl">질의 + 임계값 + 지속 시간 + 라벨 + 메시지</span></h1>
   <div class="body">
     <div class="split a" style="align-items:start">
-      <pre class="code" style="font-size:12.5px"><span class="k">kind:</span> PrometheusRule
+      <pre class="code" style="font-size:12px"><span class="k">apiVersion:</span> monitoring.coreos.com/v1
+<span class="k">kind:</span> PrometheusRule
 <span class="k">metadata:</span>
   <span class="k">name:</span> study-app-rules
-<span class="hl">  <span class="k">labels:</span> {<span class="k">release:</span> <span class="v">kps</span>}     <span class="c"># Prometheus의 ruleSelector와 맞춘다</span></span><span class="k">spec:</span>
+  <span class="k">namespace:</span> monitoring
+  <span class="k">labels:</span> {<span class="k">release:</span> <span class="v">kps</span>}          <span class="c"># ⓪ 오퍼레이터가 고르는 표시</span>
+<span class="k">spec:</span>
   <span class="k">groups:</span>
   - <span class="k">name:</span> study-app
-    <span class="k">interval:</span> 30s
+    <span class="k">interval:</span> 30s                  <span class="c"># 평가 주기</span>
     <span class="k">rules:</span>
-    - <span class="k">alert:</span> <span class="v">AppHighErrorRate</span>
-      <span class="k">expr:</span> |
+<span class="hl">    - <span class="k">alert:</span> <span class="v">AppHighErrorRate</span>       <span class="c"># ① 이름</span></span>      <span class="k">expr:</span> |                       <span class="c"># ② 질의 (5장 E)</span>
         100 * (
           sum by (job) (rate(…_count{status=~"5.."}[5m]))
           / sum by (job) (rate(…_count[5m]))
-<span class="hl">        ) &gt; <span class="v">5</span></span><span class="hl">      <span class="k">for:</span> <span class="v">2m</span></span>      <span class="k">labels:</span> {<span class="k">severity:</span> warning}
-      <span class="k">annotations:</span>
+<span class="hl">        ) &gt; <span class="v">5</span>                        <span class="c"># ③ 임계값</span></span><span class="hl">      <span class="k">for:</span> <span class="v">2m</span>                       <span class="c"># ④ 지속 시간</span></span>      <span class="k">labels:</span>
+        <span class="k">severity:</span> warning           <span class="c"># ⑤ 누구에게 보낼지</span>
+      <span class="k">annotations:</span>                   <span class="c"># ⑥ 메시지</span>
         <span class="k">summary:</span> "{{ $labels.job }} 에러율 {{ $value }}%"</pre>
       <table class="compare">
-        <thead><tr><th>규칙</th><th>조건 · for · severity</th></tr></thead>
+        <thead><tr><th>칸</th><th>하는 일</th></tr></thead>
         <tbody>
-          <tr><td>① AppTargetDown</td><td><code>up == 0</code> · 1m · critical</td></tr>
-          <tr><td>② AppHighErrorRate</td><td>5xx 비율 &gt; 5% · 2m · warning</td></tr>
-          <tr><td>③ AppHighLatencyP95</td><td>P95 &gt; 0.5초 · 3m · warning</td></tr>
-          <tr><td>④ AppSLOFastBurn</td><td>200ms 초과 비율 &gt; 14.4 × 1% · 2m · critical</td></tr>
+          <tr><td>⓪ release: kps</td><td>이 라벨이 있어야 오퍼레이터가 Prometheus에 올린다</td></tr>
+          <tr><td>① alert</td><td>규칙 이름. Alerts 화면과 알림 메시지의 alertname</td></tr>
+          <tr><td>② expr</td><td>5장에서 쓴 에러율 질의를 그대로 옮기고 ×100(퍼센트)</td></tr>
+          <tr><td>③ &gt; 5</td><td>5%를 넘는 job만 결과에 남는다. 남은 줄 하나 = 알림 하나</td></tr>
+          <tr><td>④ for</td><td>2분 동안 계속 넘어야 firing. 잠깐 튄 것은 거른다</td></tr>
+          <tr><td>⑤ severity</td><td>Alertmanager가 이 값으로 수신자를 고른다(warning → 기본, critical → 당직)</td></tr>
+          <tr><td>⑥ summary</td><td>알림에 찍히는 문장. <code>$labels.job</code> · <code>$value</code>가 채워져 "order-api 에러율 5.6%"가 된다</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> · <a href="lab-guide.html#s8-2" target="_blank" rel="noopener">실습 가이드 08 알림 8-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>프로메테우스 리소스의 ruleSelector 도 {"matchLabels":{"release":"kps"}} 다(실측). ServiceMonitor와 같은 방식으로 라벨로 고른다.</li>
-  <li>expr 의 &gt; 5 가 임계값이자 필터다. 남은 라벨 조합마다 알림 인스턴스가 하나씩 생기므로 sum by (job) 으로 묶는다. 파드별로 묶으면 파드 수만큼 알림이 온다.</li>
-  <li>③과 ④는 둘 다 "느림"을 보지만 뜻이 다르다. ③은 느린 요청이 있다, ④는 이 속도면 SLO를 못 지킨다. 그래서 ③은 warning, ④는 critical.</li>
-  <li>④의 le="0.2" 는 200ms 버킷 경계를 직접 고른다. 그 경계가 버킷 정의에 실제로 있어야 한다.</li>
-  <li>적용 직후 /api/v1/rules 에서 네 규칙이 state=unknown, 30초 뒤 inactive.</li>
+  <li>새 규칙을 만드는 순서: Query 화면에서 질의를 먼저 쳐 보고 값이 맞으면 &gt; 임계값과 for를 붙여 규칙으로 옮긴다.</li>
+  <li>sum by (job)으로 묶은 이유: 남은 라벨 조합마다 알림이 하나씩 생긴다. 파드별로 두면 파드 수만큼 알림이 온다.</li>
+  <li>실측 알림 문장: "order-api 에러율 5.6%" (firing), 해소될 때 "order-api 에러율 5.0%" (resolved). 값은 보낼 때의 값이다.</li>
+  <li>실제 파일의 expr은 http_server_requests_seconds_count 이름을 끝까지 적고 job=~"order-api|journal-api"로 두 앱만 고른다. 슬라이드에서는 줄였다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="규칙 넷">
+  <span class="kicker"><span class="n">06</span>THE FOUR RULES</span>
+  <h1>이 실습의 규칙 넷: <span class="hl">무엇을 보고, 언제, 누구를</span> 부르나</h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
+      <colgroup><col style="width:19%"><col style="width:31%"><col style="width:12%"><col style="width:7%"><col style="width:10%"><col></colgroup>
+      <thead><tr><th>규칙</th><th>질의 (무엇을 보나)</th><th>임계값</th><th>for</th><th>severity</th><th>왜</th></tr></thead>
+      <tbody>
+        <tr><td>① AppTargetDown</td><td class="it"><code>up{job=~"order-api|journal-api"} == 0</code></td><td class="it">0 (수집 실패)</td><td class="it">1m</td><td class="it">critical</td><td class="it">관측이 끊기면 다른 알림이 모두 침묵한다</td></tr>
+        <tr><td>② AppHighErrorRate</td><td class="it">5xx 비율 × 100 (5장 E)</td><td class="it">&gt; 5%</td><td class="it">2m</td><td class="it">warning</td><td class="it">사용자가 겪는 증상. 낮에 본다</td></tr>
+        <tr><td>③ AppHighLatencyP95</td><td class="it"><code>histogram_quantile(0.95, …)</code> (5장 P95)</td><td class="it">&gt; 0.5초</td><td class="it">3m</td><td class="it">warning</td><td class="it">느린 요청이 있다</td></tr>
+        <tr><td>④ AppSLOFastBurn</td><td class="it">200ms 넘는 요청 비율 (<code>le="0.2"</code> 버킷)</td><td class="it">&gt; 14.4%</td><td class="it">2m</td><td class="it">critical</td><td class="it">이 속도면 30일 SLO 예산을 2일에 다 쓴다. 새벽에도 깨운다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">③과 ④는 둘 다 "느림"을 보지만 뜻이 다르다. ③은 느린 요청이 있다, ④는 약속(SLO)을 못 지킨다. 실측에서 ③은 울렸고 ④는 울리지 않았다(200ms 초과 5.6% &lt; 14.4%).</div>
+  </div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> · <a href="lab-guide.html#s8-2" target="_blank" rel="noopener">실습 가이드 08 알림 8-2 섹션 참고</a></span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>세 규칙이 RED 지표(에러 · 지연)이고 하나는 관측 자체의 고장이다. CPU · 메모리 알림은 만들지 않았다(앞 장 "무엇에 알림을 거나").</li>
+  <li>④의 le="0.2"는 200ms 버킷 경계를 직접 고른다. 그 경계가 앱의 버킷 정의에 실제로 있어야 한다.</li>
+  <li>for 값은 발화 과정을 몇 분 안에 보려고 짧게 잡은 실습값이다. 책 3.11은 5분 이상, 5 · 10 · 30 · 60분처럼 표준화하라고 권한다.</li>
 </ul>
 </aside>
 </section>
@@ -213,7 +244,7 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>수신 서버: <a href="labs/k8s/alert-sink.yaml" target="_blank" rel="noopener">labs/k8s/alert-sink.yaml</a> · 값 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>수신 서버: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/alert-sink.yaml" target="_blank" rel="noopener">labs/k8s/alert-sink.yaml</a> · 값 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a> · <a href="lab-guide.html#s8-1" target="_blank" rel="noopener">실습 가이드 08 알림 8-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>웹훅(Webhook): 알림 내용을 JSON으로 지정한 URL에 POST 한다. 모든 알림 연동의 기본 형태라, 외부 계정 없이 전달 경로 전체를 확인하기 좋다.</li>
@@ -245,7 +276,7 @@
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>수신자 설정은 3장 설치 때 값 파일로 이미 들어가 있다. 여기서는 받는 쪽(alert-sink)만 띄운다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>수신자 설정은 3장 설치 때 값 파일로 이미 들어가 있다. 여기서는 받는 쪽(alert-sink)만 띄운다 · <a href="lab-guide.html#s8-1" target="_blank" rel="noopener">실습 가이드 08 알림 8-1 · 8-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 규칙 적용 1~2분 뒤 Rule health에 네 규칙, 모두 health ok · state inactive. 로드 직후 잠깐 state unknown(아직 평가 전)이 보인다.</li>
@@ -287,7 +318,7 @@
     </div>
     <div class="callout">알림 한 통이 말해 주는 것: <b>무엇</b>(alertname) · <b>얼마나 심각</b>(severity) · <b>어디</b>(job) · <b>지금 값</b>(summary). ④ AppSLOFastBurn은 끝까지 오지 않는다. 설계대로다.</div>
   </div>
-  <div class="foot"><span>시각은 UTC(끝의 Z). 한국 시각은 +9시간</span><span>{{PG}}</span></div>
+  <div class="foot"><span>시각은 UTC(끝의 Z). 한국 시각은 +9시간 · <a href="lab-guide.html#s8-3" target="_blank" rel="noopener">실습 가이드 08 알림 8-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측(UTC): 부하 02:03:58 시작 → 02:04:28 두 규칙 pending → 02:06:48 에러율 firing → 02:07:16 수신(group_wait 30초) → 02:07:48 지연 firing → 02:08:16 수신 → 02:09:59 부하 종료 → 02:15:29 모두 inactive → 02:17:16 · 02:18:16 resolved 수신. resolved는 group_interval(5분) 주기에 맞춰 오므로 해소 뒤 최대 5분 늦게 온다. summary 값은 보낼 때의 값이다(5.6% → 5.0%).</li>
@@ -297,23 +328,6 @@
 </aside>
 </section>
 
-
-<section class="slide" data-label="알림 상태 전이 타임라인">
-  <span class="kicker"><span class="n">06</span>HOW IT BEHAVES · 실측</span>
-  <h1>발화는 <span class="hl">for</span>가, 해소는 <span class="warn">rate의 창</span>이 정한다</h1>
-  <div class="body fig">{{FIG:ch03-fig8-alert-timeline.svg}}</div>
-  <div class="foot"><span>원인이 사라져도 rate(…[5m]) 창이 지나갈 때까지 최대 5분 firing이 유지된다. 정상 동작이다</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>실측. 20초 간격으로 /api/v1/rules 를 조회해 상태가 바뀐 시각을 기록했다.</li>
-  <li>부하 시작 → pending 40초: 평가 주기 30초 + rate 창이 값을 잡는 시간.</li>
-  <li>pending → firing: 에러율 2분 18초(for: 2m), 지연 3분 18초(for: 3m). 규칙에 적은 값과 맞는다.</li>
-  <li>부하 종료 → inactive: 5분 5초. rate(…[5m])는 매 순간 직전 5분을 보므로, 부하가 끝난 뒤에도 창 안에 에러가 남아 있는 동안 비율이 임계값을 넘는다. for는 발화 조건이지 해소 조건이 아니다.</li>
-  <li>그림은 같은 절차를 먼저 돌렸을 때의 기록이다. 다시 돌린 실측(실습 가이드 8-3)은 시작→pending 30초, pending→firing은 for 값 그대로(2분 20초 · 3분 20초), 부하 종료→inactive 5분 30초. 해소되면 수신자에게 resolved 알림이 group_interval(5분) 주기에 맞춰 한 번 더 온다.</li>
-  <li>빨리 꺼지게 하려고 창을 [2m]으로 줄이면 트래픽이 적을 때 비율이 요동쳐 오탐이 는다. 보통은 창을 두고 description에 "원인이 사라진 뒤에도 최대 5분간 유지"라고 적는다.</li>
-</ul>
-</aside>
-</section>
 
 <section class="slide" data-label="P95 알림과 SLO 알림">
   <span class="kicker"><span class="n">06</span>SLO BURN RATE</span>
@@ -340,7 +354,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
     </div>
     <div class="callout">느린 요청은 order-api 요청 초당 약 36건 중 2건이다. <b>느리다와 위험하다는 다르다.</b> 사람을 깨우는 것은 ④여야 한다.</div>
   </div>
-  <div class="foot"><span>30일 ÷ 14.4 ≈ 2.08일</span><span>{{PG}}</span></div>
+  <div class="foot"><span>30일 ÷ 14.4 ≈ 2.08일 · <a href="lab-guide.html#s8-4" target="_blank" rel="noopener">실습 가이드 08 알림 8-4 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측. 넷 중 하나가 침묵한 것이 버그가 아니라 설계라는 것을 확인했다.</li>
@@ -353,7 +367,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
 </aside>
 </section>
 
-<section class="slide" data-label="Alertmanager 라우팅">
+<section class="slide" data-label="Alertmanager 라우팅" data-cap="alertmanager">
   <span class="kicker"><span class="n">06</span>ALERTMANAGER · ROUTE</span>
   <h1>Alertmanager는 <span class="hl">묶고, 기다리고, 골라서</span> 보낸다</h1>
   <div class="body">
@@ -387,7 +401,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
       </table>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a> · <a href="lab-guide.html#s8-5" target="_blank" rel="noopener">실습 가이드 08 알림 8-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>값 파일에 alertmanager.config 를 쓰면 차트 기본 설정을 통째로 대체한다. Watchdog 처리와 억제 규칙을 빠뜨리지 않는다.</li>
@@ -401,37 +415,6 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
 </aside>
 </section>
 
-
-<section class="slide" data-label="억제와 침묵" data-cap="silence">
-  <span class="kicker"><span class="n">06</span>INHIBIT vs SILENCE</span>
-  <h1>억제는 <span class="hl">규칙이 자동으로</span>, 침묵은 <span class="hl">사람이 기간을 정해</span> 끈다</h1>
-  <div class="body">
-    <div class="grid2">
-      <div class="card">
-        <span class="tag">억제 · Inhibition</span>
-        <pre class="code" style="font-size:12.5px;margin:10px 0"><span class="c"># 같은 알림을 critical · warning 둘로 넣었을 때</span>
-severity=critical  state=active      inhibitedBy=0건
-severity=warning   state=<span class="v">suppressed</span>  inhibitedBy=<span class="v">1건</span></pre>
-        <p>critical이 울리는 동안 같은 대상의 warning은 보내지 않는다. DB가 죽어 서비스 열 개가 경고를 내도 사람이 볼 것은 하나다.</p>
-      </div>
-      <div class="card">
-        <span class="tag">침묵 · Silence</span>
-        <pre class="code" style="font-size:12.5px;margin:10px 0"><span class="c"># alertname=DemoAlert 에 10분 침묵</span>
-severity=critical  state=<span class="v">suppressed</span>  silencedBy=<span class="v">1건</span>
-severity=warning   state=<span class="v">suppressed</span>  silencedBy=<span class="v">1건</span></pre>
-        <p>계획 작업 중에 알림을 잠시 끈다. critical까지 모두 눌린다. <b>반드시 끝나는 시각이 있다.</b></p>
-      </div>
-    </div>
-    <div class="callout">둘 다 state=suppressed지만 <code>inhibitedBy</code>(규칙)와 <code>silencedBy</code>(사람) 중 어느 쪽이 채워졌는지로 구분한다. "아는 문제니까 꺼 두자"는 침묵이 아니라 규칙이나 문제를 고칠 일이다.</div>
-  </div>
-  <div class="foot"><span>침묵은 Alertmanager UI(9093)의 New Silence 또는 API로 만든다</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>실측. 실제 장애를 기다리지 않고 Alertmanager API(/api/v2/alerts)로 같은 alertname·namespace의 critical·warning 알림을 직접 밀어 넣었다.</li>
-  <li>영구 침묵이 없는 것이 설계 의도다. 계획 작업이 끝나면 지운다.</li>
-</ul>
-</aside>
-</section>
 
 <section class="slide" data-label="대시보드를 코드로" data-cap="dashboard-code">
   <span class="kicker"><span class="n">06</span>DASHBOARD AS CODE</span>
@@ -458,7 +441,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>대시보드: <a href="labs/dashboards/study-red.json" target="_blank" rel="noopener">study-red.json</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>대시보드: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/dashboards/study-red.json" target="_blank" rel="noopener">study-red.json</a> · <a href="lab-guide.html#s9-1" target="_blank" rel="noopener">실습 가이드 09 대시보드 9-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>차트가 넣어 준 기본 대시보드와 같은 방식이다. 폴더 이름은 annotate grafana_folder=스터디 로 정한다(실습 가이드).</li>
@@ -493,59 +476,6 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
   <li>책 3.12.3 세 항목: 알림 피로 주의 / 완벽한 알림은 없으니 점진적으로 개선 / 사람이 즉시 대응할 필요 없는 일시적 문제는 알리지 않고, SLO와 고객 영향 증상에만 알린다.</li>
   <li>severity는 둘이면 충분하다. info 등급 알림은 아무도 보지 않는다. 알림이 아니라 대시보드에 둘 것이다.</li>
   <li>"한 달에 열 번 울렸고 매번 '원래 그래요'였다"면 그 알림은 정보가 아니라 소음이다.</li>
-</ul>
-</aside>
-</section>
-
-<section class="slide expanded" data-label="6장 Q&amp;A: 자주 막히는 곳" data-cap="qa-alert">
-  <span class="kicker"><span class="n">06</span>Q&amp;A · 자주 막히는 곳</span>
-  <h1>알림에서 <span class="hl">자주 막히는 곳</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14px">
-      <colgroup><col style="width:28%"><col style="width:34%"><col></colgroup>
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>Rule health에 규칙이 없다</td><td class="it">PrometheusRule에 <code>release: kps</code> 라벨이 없다</td><td class="it">Prometheus의 <code>ruleSelector</code>와 같은 라벨을 붙인다</td></tr>
-        <tr><td>Alerts는 FIRING인데 수신처에 안 온다</td><td class="it">group_wait 전이다 · 라우트가 "null"로 간다 · 수신자 URL이 틀렸다</td><td class="it">30초 기다린다 · Alertmanager UI의 그룹에서 receiver 확인 · <code>kubectl logs</code>로 Alertmanager 에러 확인</td></tr>
-        <tr><td>고쳤는데 5분 동안 계속 울린다</td><td class="it"><code>rate(…[5m])</code> 창에 에러가 남아 있다</td><td class="it">정상 동작. description에 적어 둔다. 창을 줄이면 오탐이 는다</td></tr>
-        <tr><td>파드마다 알림이 따로 온다</td><td class="it">expr이 파드 라벨을 남긴다</td><td class="it"><code>sum by (job)</code>으로 묶는다 · <code>group_by</code>를 확인한다</td></tr>
-        <tr><td>계획 작업 중 알림이 쏟아진다</td><td class="it">알림은 작업 여부를 모른다</td><td class="it">끝나는 시각을 정한 침묵(Silence)을 건다</td></tr>
-        <tr><td>코드로 넣은 대시보드가 안 보인다</td><td class="it">ConfigMap 라벨이 <code>grafana_dashboard=1</code>이 아니다</td><td class="it">라벨을 붙이고 사이드카 로그에서 <code>Writing …</code>을 확인</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>원인 보는 곳: Rule health · Alerts · Alertmanager UI의 그룹과 Status · alert-sink 로그</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>셋째 행 실측: 부하를 멈춘 뒤 모두 inactive가 되기까지 5분 5초 · 5분 10초 · 5분 30초(세 번 실행).</li>
-  <li>Alertmanager 에러 확인: kubectl -n monitoring logs alertmanager-kps-kube-prometheus-stack-alertmanager-0 -c alertmanager | grep -i notify</li>
-</ul>
-</aside>
-</section>
-
-
-<section class="slide expanded" data-label="6장 체크포인트">
-  <span class="kicker"><span class="n">06</span>CHECKPOINT</span>
-  <h1>알림이 동작한다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
-      <colgroup><col style="width:58%"><col></colgroup>
-      <thead><tr><th>명령 · 화면</th><th>기대값</th></tr></thead>
-      <tbody>
-        <tr><td>Prometheus → Status → Rule health (study-app)</td><td class="it">규칙 4개, 모두 OK</td></tr>
-        <tr><td>부하 없이 Prometheus → Alerts</td><td class="it">study-app 규칙 모두 inactive</td></tr>
-        <tr><td>부하 3~4분 뒤 <code>kubectl -n monitoring logs deploy/alert-sink</code></td><td class="it"><code>[firing] AppHighErrorRate … order-api 에러율 5~6%</code></td></tr>
-        <tr><td>부하 종료 6분 뒤 같은 로그</td><td class="it"><code>[resolved] AppHighErrorRate …</code></td></tr>
-        <tr><td>Grafana → 스터디 → 스터디 — 서비스 RED</td><td class="it">요청 수 · 에러율 · P99 패널에 선</td></tr>
-        <tr><td>Alertmanager → Silences</td><td class="it">active 0 (실습용 침묵 정리)</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">다음 질문: 알림은 "order-api 에러율 6%"까지만 말한다. 그 에러가 <b>어떤 요청에서, 왜</b> 났는지는 어디서 보나?</div>
-  </div>
-  <div class="foot"><span>책 3.11 · 3.12.3 정리</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>메트릭은 얼마나 많이 일어났는지만 안다. 무슨 일이었는지는 로그가 답한다. 다음은 로깅.</li>
 </ul>
 </aside>
 </section>

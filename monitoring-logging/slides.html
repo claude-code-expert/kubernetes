@@ -361,6 +361,8 @@ body.presenter-mode #presenterView{display:flex}
   .capview{position:absolute;inset:0;z-index:6;background:rgba(20,28,27,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px}
   .capview img{max-width:100%;max-height:640px;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);background:#fff}
   .capview[hidden]{display:none}
+  #notes .note-close{margin-left:auto;font:600 12px var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);cursor:pointer}
+  #notes .note-close:hover{color:var(--teal);border-color:var(--teal)}
   .capview .cap-meta{font:600 13px var(--mono);color:#E0EFEB}
 </style>
 </head>
@@ -422,7 +424,7 @@ jq --version</pre>
       </table>
     </div>
   </div>
-  <div class="foot"><span>Docker Desktop: Settings → Resources · OrbStack: Settings → System</span><span>2/104</span></div>
+  <div class="foot"><span>Docker Desktop: Settings → Resources · OrbStack: Settings → System · <a href="lab-guide.html#s0-1" target="_blank" rel="noopener">실습 가이드 00 시작 전에 0-1 섹션 참고</a></span><span>2/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>Homebrew가 없으면 먼저 설치: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</li>
@@ -443,7 +445,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide" data-label="03 오늘의 질문" id="slide-3">
+<section class="slide" data-label="03 오늘의 질문" id="slide-3" data-cap="questions">
   <span class="kicker"><span class="n">00</span>OUR QUESTION</span>
   <h1>"주문이 느려요"라는 제보 한 건을 <span class="hl">끝까지</span> 따라간다</h1>
   <div class="body">
@@ -470,19 +472,19 @@ jq --version</pre>
     </div>
     <div class="callout"><b>메트릭으로 분석하고, 알림으로 확인한 뒤, 로그로 원인을 분석한다.</b></div>
   </div>
-  <div class="foot"><span>메트릭 → 알림 → 로그</span><span>3/104</span></div>
+  <div class="foot"><span>메트릭 → 알림 → 로그</span><span>3/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>1·2칸, 메트릭으로 분석: 실측. 평균 45ms, P50 0.59ms, P99 790ms. uri 라벨로 쪼개자 /api/chaos/slow 가 805ms.</li>
   <li>P99 설명: 100건 중 가장 느린 1건을 빼면 나머지는 모두 이 값 이하. 정확한 계산 방법(히스토그램 버킷 + histogram_quantile)은 5장.</li>
-  <li>3칸, 알림으로 확인: 사람이 대시보드를 보고 있지 않아도 규칙이 불러낸다. AppHighErrorRate 규칙은 labs/k8s/prometheusrule.yaml 에 있다. 식은 5xx 요청 비율 × 100 &gt; 5, for: 2m. 발화 전 조건만 충족된 상태는 pending, 2분을 채우면 firing. 규칙 작성과 실제 발화 과정은 6장.</li>
+  <li>3칸, 알림으로 확인: 사람이 대시보드를 보고 있지 않아도 규칙이 불러낸다. AppHighErrorRate 규칙은 <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> 에 있다. 식은 5xx 요청 비율 × 100 &gt; 5, for: 2m. 발화 전 조건만 충족된 상태는 pending, 2분을 채우면 firing. 규칙 작성과 실제 발화 과정은 6장.</li>
   <li>4칸, 로그로 원인 분석: 알림이 말해 주는 것은 "에러율 5.9%"까지다. 어떤 요청이 왜 실패했는지는 로그가 답한다. 7장.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">91-prometheusrule.yaml (AppHighErrorRate)</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">prometheusrule.yaml (AppHighErrorRate)</a></li>
 <li><a href="https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/" target="_blank" rel="noopener">Prometheus · Alerting rules (pending · firing)</a></li>
-<li><a href="lab-guide.html#p8" target="_blank" rel="noopener">실습 가이드 08 · RED 질의</a></li>
-<li><a href="lab-guide.html#p10" target="_blank" rel="noopener">실습 가이드 10 · 로깅</a></li>
+<li><a href="lab-guide.html#p7" target="_blank" rel="noopener">실습 가이드 07 · PromQL로 RED 읽기</a></li>
+<li><a href="lab-guide.html#p10" target="_blank" rel="noopener">실습 가이드 10 · 로그 모으고 찾기</a></li>
 </ul></details>
 </aside>
 </section>
@@ -587,7 +589,7 @@ jq --version</pre>
   <path d="M1194 722 L1264 722" stroke="#1D5FBF" stroke-width="2.5" fill="none" marker-end="url(#a1b)"/>
 
 </svg><p class="figcap"><b>TSDB</b>(Time Series Database · 시계열 데이터베이스): 값을 측정 시각과 한 쌍으로 묶어 메트릭 이름·라벨별로 시간 순서대로 쌓는 저장소. 프로메테우스에 내장되어 있다.</p></div>
-  <div class="foot"><span>메트릭은 위 줄, 로그는 아래 줄</span><span>4/104</span></div>
+  <div class="foot"><span>메트릭은 위 줄, 로그는 아래 줄</span><span>4/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>위 줄은 메트릭. 프로메테우스가 대상을 찾아가서 긁어 온다(pull). 화살표가 프로메테우스에서 출발하는 이유.</li>
@@ -619,7 +621,7 @@ jq --version</pre>
     </table>
     <div class="callout">최근 2시간치 데이터는 메모리에 있다. 들어온 값을 WAL(Write-Ahead Log · 선행 기록 로그)에 먼저 적어 두기 때문에 재시작해도 복구된다.</div>
   </div>
-  <div class="foot"><span>스크레이프는 가져오는 동작, TSDB는 시간 순 저장소</span><span>5/104</span></div>
+  <div class="foot"><span>스크레이프는 가져오는 동작, TSDB는 시간 순 저장소</span><span>5/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>스크레이프: 공식 용어집에서 타깃은 "어떻게 스크레이프할지를 정의한 대상", 잡은 "같은 목적의 타깃 묶음(예: 복제된 프로세스들)", 인스턴스는 잡 안의 타깃 하나를 가리키는 라벨이다.</li>
@@ -630,7 +632,7 @@ jq --version</pre>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/introduction/glossary/" target="_blank" rel="noopener">Prometheus · Glossary</a></li>
 <li><a href="https://prometheus.io/docs/prometheus/latest/storage/" target="_blank" rel="noopener">Prometheus · Storage</a></li>
-<li><a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml (scrapeInterval · retention)</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml (scrapeInterval · retention)</a></li>
 </ul></details>
 </aside>
 </section>
@@ -650,7 +652,7 @@ jq --version</pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>프로메테우스가 메트릭을 라벨로 다루듯, Loki는 로그를 라벨로 다룬다</span><span>6/104</span></div>
+  <div class="foot"><span>프로메테우스가 메트릭을 라벨로 다루듯, Loki는 로그를 라벨로 다룬다</span><span>6/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>Loki 공식 설명: 프로메테우스에서 영감을 받은 로그 집계 시스템. 로그 라벨의 메타데이터만 색인하고, 실제 로그는 압축해 S3 · GCS · 로컬 파일시스템 같은 저장소에 둔다. 조회 시 색인으로 스트림을 고른 뒤 필요한 청크만 가져온다.</li>
@@ -667,30 +669,111 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="07 지도 용어 ③ 신호 출처와 활용" id="slide-7">
+<section class="slide" data-label="07 지도 용어 ③ 신호 출처와 활용" id="slide-7">
   <span class="kicker"><span class="n">00</span>MAP TERMS · 3/3 · 신호 출처와 활용</span>
   <h1>메트릭을 <span class="hl">제공하는 쪽</span>과 <span class="hl">시각화·알림을 맡는 쪽</span></h1>
-  <div class="body">
-    <table class="compare gloss">
-      <colgroup><col class="c1"><col class="c2"><col></colgroup>
-      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
-      <tbody>
-        <tr class="grp"><td colspan="3">① 메트릭을 제공하는 쪽 (그림 왼쪽 ① 열)</td></tr>
-        <tr><td>node-exporter</td><td>Prometheus Node Exporter</td><td>노드(머신)의 CPU · 메모리 · 디스크 · 네트워크 수치를 프로메테우스 형식으로 제공하는 프로그램</td></tr>
-        <tr><td>cAdvisor</td><td>Container Advisor</td><td>kubelet 안에 들어 있는 컨테이너 자원 사용량 수집기</td></tr>
-        <tr><td>kube-state-metrics</td><td>kube-state-metrics (KSM)</td><td>API 서버에 저장된 오브젝트 상태(레플리카 수, 파드 단계)를 메트릭으로 바꾼다</td></tr>
-        <tr><td>/actuator/prometheus</td><td>Spring Boot Actuator 엔드포인트</td><td>order-api가 자기 메트릭을 프로메테우스 형식으로 보여 주는 주소</td></tr>
-        <tr class="grp"><td colspan="3">② 시각화·알림을 맡는 쪽 (그림 오른쪽 ④ 열)</td></tr>
-        <tr><td>Grafana</td><td>그라파나</td><td>Prometheus · Loki를 데이터 소스로 붙여 대시보드와 조회 화면(Explore)을 만드는 시각화 도구</td></tr>
-        <tr><td>Alertmanager</td><td>Prometheus Alertmanager</td><td>프로메테우스가 보낸 알림을 <b>중복 제거 · 묶기 · 경로 지정</b>해 Slack·메일로 전달. 일시 음소거(silence)도 담당</td></tr>
-        <tr class="grp"><td colspan="3">③ ②가 ①의 데이터를 꺼낼 때 쓰는 질의 언어</td></tr>
-        <tr><td>PromQL · LogQL</td><td>Prometheus Query Language · Log Query Language</td><td>메트릭을 묻는 질의 언어 · Loki 로그를 묻는 질의 언어. 문법이 비슷하다</td></tr>
-      </tbody>
-    </table>
+  <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t10 d10">
+  <title id="t10">메트릭을 제공하는 쪽과 시각화 · 알림을 맡는 쪽</title>
+  <desc id="d10">왼쪽은 메트릭을 제공하는 쪽이다. node-exporter, cAdvisor, kube-state-metrics, 앱의 /actuator/prometheus가 HTTP로 메트릭을 내놓는다. 가운데 Prometheus가 30초마다 긁어 저장하고, Loki는 로그를 저장한다. 오른쪽은 시각화와 알림을 맡는 쪽이다. Alertmanager는 Prometheus가 보낸 알림을 묶어 Slack이나 메일로 보내고, Grafana는 PromQL과 LogQL로 질의해 대시보드를 그린다.</desc>
+  <defs>
+    <marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
+    <marker id="a10t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
+    <marker id="a10y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B5761F"/></marker>
+  </defs>
+  <style>
+    .t{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#24292A}
+    .m{font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;fill:#5A6867}
+    .box{fill:#FFFFFF;stroke:#A7B5AC;stroke-width:2}
+    .teal{fill:#E0EFEB;stroke:#0F766E;stroke-width:2}
+    .yel{fill:#FFF1DE;stroke:#B5761F;stroke-width:2}
+    .blu{fill:#E7F0FF;stroke:#1D5FBF;stroke-width:2}
+    .lane{fill:#F4F7F5;stroke:#D8DDD6;stroke-width:2;stroke-dasharray:8 6}
+  </style>
+
+  <!-- 열 머리 -->
+  <rect class="lane" x="30" y="28" width="500" height="844" rx="14"/>
+  <rect class="lane" x="1070" y="28" width="500" height="844" rx="14"/>
+  <text class="t" x="280" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#0B5A54">① 메트릭을 제공하는 쪽</text>
+  <text class="t" x="800" y="72" font-size="32" font-weight="700" text-anchor="middle">저장</text>
+  <text class="t" x="1320" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#1D5FBF">② 시각화 · 알림을 맡는 쪽</text>
+
+  <!-- ① 제공하는 쪽 -->
+  <rect class="teal" x="60" y="100" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="146" font-size="32" font-weight="700">node-exporter</text>
+  <text class="m" x="84" y="178" font-size="20">Prometheus Node Exporter</text>
+  <text class="t" x="84" y="216" font-size="24">노드(머신)의 CPU · 메모리 · 디스크 ·</text>
+  <text class="t" x="84" y="246" font-size="24">네트워크 수치</text>
+
+  <rect class="teal" x="60" y="290" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="336" font-size="32" font-weight="700">cAdvisor</text>
+  <text class="m" x="84" y="368" font-size="20">Container Advisor · kubelet 안</text>
+  <text class="t" x="84" y="406" font-size="24">컨테이너별 CPU · 메모리 사용량</text>
+  <text class="t" x="84" y="436" font-size="24">(<tspan class="m" font-size="21">container_*</tspan>)</text>
+
+  <rect class="teal" x="60" y="480" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="526" font-size="32" font-weight="700">kube-state-metrics</text>
+  <text class="m" x="84" y="558" font-size="20">KSM</text>
+  <text class="t" x="84" y="596" font-size="24">API 서버의 오브젝트 상태(레플리카 수,</text>
+  <text class="t" x="84" y="626" font-size="24">파드 단계)를 메트릭으로 (<tspan class="m" font-size="21">kube_*</tspan>)</text>
+
+  <rect class="teal" x="60" y="670" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="716" font-size="32" font-weight="700">앱의 /actuator/prometheus</text>
+  <text class="m" x="84" y="748" font-size="20">Spring Boot Actuator 엔드포인트</text>
+  <text class="t" x="84" y="786" font-size="24">order-api가 자기 요청 수 · 에러 ·</text>
+  <text class="t" x="84" y="816" font-size="24">지연을 직접 내놓는 주소</text>
+
+  <!-- 가운데: 저장 -->
+  <rect class="box" x="640" y="250" width="320" height="220" rx="12" style="stroke:#24292A;stroke-width:2.5"/>
+  <text class="t" x="800" y="312" font-size="36" font-weight="700" text-anchor="middle">Prometheus</text>
+  <text class="t" x="800" y="352" font-size="24" text-anchor="middle">30초마다 긁어(pull)</text>
+  <text class="t" x="800" y="382" font-size="24" text-anchor="middle">시계열로 저장</text>
+  <text class="m" x="800" y="428" font-size="20" text-anchor="middle">+ 알림 규칙 평가</text>
+
+  <rect class="box" x="640" y="600" width="320" height="170" rx="12"/>
+  <text class="t" x="800" y="656" font-size="34" font-weight="700" text-anchor="middle">Loki</text>
+  <text class="t" x="800" y="694" font-size="24" text-anchor="middle">로그 저장</text>
+  <text class="m" x="800" y="732" font-size="20" text-anchor="middle">(수집은 Alloy · 7장)</text>
+
+  <!-- ① → Prometheus : pull -->
+  <path d="M500 185 C 570 185, 580 300, 636 320" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <path d="M500 375 C 560 375, 590 350, 636 345" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <path d="M500 565 C 560 565, 590 400, 636 375" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <path d="M500 755 C 580 755, 590 430, 636 405" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <text class="m" x="570" y="140" font-size="20" text-anchor="middle">30초마다</text>
+  <text class="m" x="570" y="162" font-size="20" text-anchor="middle">긁어 감</text>
+
+  <!-- ② 시각화 · 알림 -->
+  <rect class="yel" x="1100" y="110" width="440" height="270" rx="10"/>
+  <text class="t" x="1124" y="158" font-size="34" font-weight="700">Alertmanager</text>
+  <text class="m" x="1124" y="190" font-size="20">Prometheus Alertmanager</text>
+  <text class="t" x="1124" y="232" font-size="24">Prometheus가 보낸 알림을</text>
+  <text class="t" x="1124" y="262" font-size="24">중복 제거 · 묶기 · 경로 지정</text>
+  <text class="t" x="1124" y="292" font-size="24">침묵(silence) · 억제도 담당</text>
+  <text class="t" x="1124" y="344" font-size="24" font-weight="700" style="fill:#8A5813">→ Slack · 메일 · PagerDuty</text>
+
+  <rect class="blu" x="1100" y="470" width="440" height="270" rx="10"/>
+  <text class="t" x="1124" y="518" font-size="34" font-weight="700">Grafana</text>
+  <text class="m" x="1124" y="550" font-size="20">그라파나</text>
+  <text class="t" x="1124" y="592" font-size="24">Prometheus · Loki에 질의해</text>
+  <text class="t" x="1124" y="622" font-size="24">대시보드와 조회 화면(Explore)을</text>
+  <text class="t" x="1124" y="652" font-size="24">그린다</text>
+  <text class="t" x="1124" y="702" font-size="23" style="fill:#5A6867">데이터는 저장하지 않는다</text>
+
+  <!-- Prometheus → Alertmanager : firing 알림 -->
+  <path d="M960 290 L 1096 250" stroke="#B5761F" stroke-width="3" fill="none" marker-end="url(#a10y)"/>
+  <text class="t" x="1020" y="236" font-size="21" text-anchor="middle" style="fill:#8A5813;font-weight:700">firing 알림</text>
+  <!-- Prometheus → Grafana : PromQL -->
+  <path d="M960 430 L 1096 540" stroke="#1D5FBF" stroke-width="3" fill="none" marker-end="url(#a10t)"/>
+  <text class="m" x="1010" y="452" font-size="21" style="fill:#1D5FBF;font-weight:700">PromQL</text>
+  <!-- Loki → Grafana : LogQL -->
+  <path d="M960 685 L 1096 670" stroke="#1D5FBF" stroke-width="3" fill="none" marker-end="url(#a10t)"/>
+  <text class="m" x="1028" y="665" font-size="21" text-anchor="middle" style="fill:#1D5FBF;font-weight:700">LogQL</text>
+</svg>
   </div>
-  <div class="foot"><span>메트릭 제공 → 저장 → 시각화·알림</span><span>7/104</span></div>
+  <div class="foot"><span>메트릭 제공 → 저장 → 시각화·알림</span><span>7/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>설명 순서: 왼쪽은 HTTP로 메트릭을 내놓기만 하고, 프로메테우스가 30초마다 긁어 가 저장한다. 오른쪽은 저장된 것을 PromQL · LogQL로 꺼내 그리고(Grafana), 알림을 사람에게 보낸다(Alertmanager).</li>
   <li>이 슬라이드는 지도에 나온 이름을 한 줄씩만 정의한다. cAdvisor · metrics-server · kube-state-metrics 의 차이는 2장 전체가 그 이야기다.</li>
   <li>Alertmanager 공식 설명: 프로메테우스 같은 클라이언트가 보낸 알림을 중복 제거하고 묶고, 올바른 수신처(이메일, PagerDuty, Slack 등)로 보낸다. 음소거와 억제(inhibition)도 한다(6장).</li>
   <li>Grafana는 저장소가 아니다. 데이터는 Prometheus와 Loki에 있고 Grafana는 질의해서 그린다.</li>
@@ -705,43 +788,18 @@ jq --version</pre>
 </section>
 
 
-<section class="slide expanded" data-label="08 발표 구성" id="slide-8">
-  <span class="kicker"><span class="n">00</span>ROADMAP</span>
-  <h1>1~3장은 <span class="hl">개념</span>, 4~7장은 <span class="hl">따라하기</span></h1>
-  <div class="body">
-    <table class="compare">
-      <thead><tr><th>장</th><th>주제</th><th>책 절</th><th>끝나면 할 수 있는 것</th></tr></thead>
-      <tbody>
-        <tr><td>1장</td><td>이론: 메트릭과 로그, 모니터링 기법</td><td>3.1 ~ 3.3</td><td>USE·RED로 무엇을 볼지 정한다</td></tr>
-        <tr><td>2장</td><td>개념: 쿠버네티스 메트릭은 누가 만드나</td><td>3.4 ~ 3.5</td><td>메트릭 출처 세 곳을 메트릭 이름으로 구분한다</td></tr>
-        <tr><td>3장</td><td>도구와 프로메테우스 구조</td><td>3.6 ~ 3.7 전반</td><td>pull 방식과 스택 구성요소 6개의 역할</td></tr>
-        <tr><td>4장</td><td>설치하고 둘러보기: Prometheus · Grafana</td><td>3.7 후반</td><td>정상 상태(타깃 28/28 up)를 확인하고, 질문별로 화면 · 대시보드를 고른다</td></tr>
-        <tr><td>5장</td><td>앱 연결과 PromQL</td><td>3.12.1 보강</td><td>ServiceMonitor로 앱을 연결하고 RED를 분위수 · 라벨로 읽는다</td></tr>
-        <tr><td>6장</td><td>알림 받기와 대시보드</td><td>3.11 · 3.12.3</td><td>규칙을 만들고 알림이 수신처에 도착 · 해소되는 것을 확인</td></tr>
-        <tr><td>7장</td><td>로그 모으고 찾기: Loki + Alloy</td><td>3.8 ~ 3.10</td><td>로그가 쌓이는지 확인하고 LogQL로 500 에러의 요청을 찾는다</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>모니터링과 로깅 · 발표 구성</span><span>8/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>4~7장은 장마다 설정 → 정상 상태 확인 → 도구 사용법 → 자주 막히는 곳(Q&amp;A) 순서다. 책 순서는 메트릭 → 도구 → 설치 → 로깅 → 알림. 발표는 알림을 로깅 앞으로 당겼다. 알림이 "몇 건"까지만 말해 주는 한계가 로그를 부르는 동기가 되기 때문이다.</li>
-</ul>
-</aside>
-</section>
-
 <!-- ===================================================================
   CHAPTER 1 · 이론 — 메트릭·로그·모니터링 기법 (책 3.1 ~ 3.3)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="09 1장 리드" id="slide-9">
+<section class="slide section-lead" data-label="08 1장 리드" id="slide-8">
   <div class="body">
     <div class="quest">CHAPTER · 01 · 책 3.1 ~ 3.3</div>
     <div class="secnum">01</div>
     <h1>무엇을 재고, <span class="hl">어떤 질문</span>으로 볼 것인가</h1>
     <p class="sub">도구를 설치하기 전에 신호의 종류를 나누고, 신호를 읽는 방법론 두 가지(USE, RED)를 정한다.</p>
   </div>
-  <div class="foot"><span>이론 · 3.1 메트릭 vs 로그 · 3.2 모니터링 기법 · 3.3 모니터링 패턴</span><span>9/104</span></div>
+  <div class="foot"><span>이론 · 3.1 메트릭 vs 로그 · 3.2 모니터링 기법 · 3.3 모니터링 패턴</span><span>8/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.1~3.3은 합쳐 네 쪽 분량이다. 짧지만 뒤의 설계 판단이 전부 여기서 나온다.</li>
@@ -750,7 +808,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="10 1장 용어 ① 신호" id="slide-10">
+<section class="slide expanded" data-label="09 1장 용어 ① 신호" id="slide-9">
   <span class="kicker"><span class="n">01</span>GLOSSARY · 1/2</span>
   <h1>용어 ① <span class="hl">관측 데이터</span>와 관찰 방식</h1>
   <div class="body">
@@ -770,7 +828,7 @@ jq --version</pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>책의 closed-box / open-box는 구글 SRE 책의 black-box / white-box와 같은 구분이다</span><span>10/104</span></div>
+  <div class="foot"><span>책의 closed-box / open-box는 구글 SRE 책의 black-box / white-box와 같은 구분이다</span><span>9/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>이 표는 1장 안에서 처음 나오는 용어만 모았다. 슬라이드 본문에서는 한국어 용어를 쓰고 필요하면 원어를 괄호로 붙인다.</li>
@@ -784,7 +842,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="11 1장 용어 ② 기법과 지표" id="slide-11">
+<section class="slide expanded" data-label="10 1장 용어 ② 기법과 지표" id="slide-10">
   <span class="kicker"><span class="n">01</span>GLOSSARY · 2/2</span>
   <h1>용어 ② <span class="hl">방법론</span>과 지표</h1>
   <div class="body">
@@ -804,7 +862,7 @@ jq --version</pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>USE는 자원을, RED는 서비스를 본다. 골든 시그널은 둘을 합친 것에 가깝다</span><span>11/104</span></div>
+  <div class="foot"><span>USE는 자원을, RED는 서비스를 본다. 골든 시그널은 둘을 합친 것에 가깝다</span><span>10/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>SLO·SLI는 책 3.11 알림 절에 처음 나온다. 1장 뒤쪽의 "사용자가 신경 쓰는 것" 이야기에서 먼저 쓰므로 여기서 정의한다.</li>
@@ -819,7 +877,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide" data-label="12 메트릭 vs 로그" id="slide-12">
+<section class="slide" data-label="11 메트릭 vs 로그" id="slide-11">
   <span class="kicker"><span class="n">01</span>METRICS VS LOGS · 책 3.1</span>
   <h1>메트릭은 <span class="hl">횟수와 수치</span>를, 로그는 <span class="hl">사건의 내용</span>을 알려 준다</h1>
   <div class="body">
@@ -841,7 +899,7 @@ jq --version</pre>
     </div>
     <div class="callout">메트릭으로는 느리다는 사실까지만 알 수 있고, 원인은 앱이 남긴 로그에서 찾는다. <b>메트릭으로 먼저 좁히고, 로그로 확인한다.</b></div>
   </div>
-  <div class="foot"><span>책 3.1: 메트릭과 로그는 서로 보완하지만 용도가 다르다</span><span>12/104</span></div>
+  <div class="foot"><span>책 3.1: 메트릭과 로그는 서로 보완하지만 용도가 다르다</span><span>11/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>왼쪽 메트릭 줄은 order-api가 실제로 내놓는 형식이다. 이름 + 라벨 + 값. 731은 설명용 예시 값.</li>
@@ -855,7 +913,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide" data-label="13 두 신호를 잇는 순서" id="slide-13">
+<section class="slide" data-label="12 두 신호를 잇는 순서" id="slide-12" data-cap="two-signals">
   <span class="kicker"><span class="n">01</span>METRICS THEN LOGS</span>
   <h1>메트릭으로 <span class="hl">시간과 대상</span>을 좁힌 뒤 로그를 본다</h1>
   <div class="body">
@@ -871,21 +929,21 @@ jq --version</pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>메트릭은 어디를 볼지, 로그는 무슨 일이 있었는지 알려 준다</span><span>13/104</span></div>
+  <div class="foot"><span>메트릭은 어디를 볼지, 로그는 무슨 일이 있었는지 알려 준다 · <a href="lab-guide.html#s10-6" target="_blank" rel="noopener">실습 가이드 10 로그 10-6 섹션 참고</a></span><span>12/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.1은 "둘 다 수집하라"에서 멈춘다. 이 슬라이드는 실제로 둘을 어떤 순서로 쓰는지 보강한 것이다.</li>
   <li>22:03~22:06은 에러를 주입한 구간 예시. 시각 자체는 환경마다 다르다.</li>
-  <li>메트릭과 로그를 같은 라벨로 잇는 실습은 실습 가이드 10-7.</li>
+  <li>메트릭과 로그를 같은 라벨로 잇는 실습은 실습 가이드 10-6.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="lab-guide.html#p9" target="_blank" rel="noopener">실습 가이드 09 · 알림</a></li>
+<li><a href="lab-guide.html#p8" target="_blank" rel="noopener">실습 가이드 08 · 알림 받기</a></li>
 <li><a href="https://grafana.com/docs/loki/latest/get-started/labels/" target="_blank" rel="noopener">Grafana Loki · Labels</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="14 폐쇄형 vs 개방형" id="slide-14">
+<section class="slide" data-label="13 폐쇄형 vs 개방형" id="slide-13">
   <span class="kicker"><span class="n">01</span>CLOSED-BOX VS OPEN-BOX · 책 3.2</span>
   <h1>밖에서 <span class="hl">증상</span>을 보고, 안에서 <span class="hl">원인</span>을 본다</h1>
   <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t2 d2">
@@ -957,7 +1015,7 @@ jq --version</pre>
   <text class="t" x="790" y="816" font-size="26" style="fill:#0F766E">앱에 계측 코드가 있어야 보인다</text>
   <text class="t" x="1570" y="870" font-size="20" text-anchor="end" style="fill:#6F7C79">숫자는 설명용 예시 · 731 / 12,408 = 5.9%</text>
 </svg></div>
-  <div class="foot"><span>책의 예: 폐쇄형은 "디스크가 꽉 찼다"를 알려 주고, 개방형은 "왜 꽉 찼을까?"에 답한다</span><span>14/104</span></div>
+  <div class="foot"><span>책의 예: 폐쇄형은 "디스크가 꽉 찼다"를 알려 주고, 개방형은 "왜 꽉 찼을까?"에 답한다</span><span>13/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>폐쇄형(책 3.2): 애플리케이션 밖에서 CPU·메모리·스토리지를 보던 전통적 방식. 인프라 컴포넌트에는 유용하지만 앱이 왜 그렇게 동작하는지 맥락이 없다.</li>
@@ -973,7 +1031,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="15 파드는 VM처럼 지켜볼 수 없다" id="slide-15">
+<section class="slide expanded" data-label="14 파드는 VM처럼 지켜볼 수 없다" id="slide-14">
   <span class="kicker"><span class="n">01</span>WHY K8S IS DIFFERENT · 책 3.3</span>
   <h1>파드는 VM처럼 <span class="hl">고정된 대상</span>으로 모니터링할 수 없다</h1>
   <div class="body">
@@ -989,7 +1047,7 @@ jq --version</pre>
     </table>
     <div class="callout">그래서 쿠버네티스 모니터링에는 두 가지가 필요하다. 대상을 라벨로 찾아 수집하는 것, 값을 시간에 걸쳐 쌓아 두는 별도 저장소. 메트릭은 프로메테우스가, 로그는 Loki가 맡는다.</div>
   </div>
-  <div class="foot"><span>책 3.3: 수명이 짧고 자주 바뀌는 파드에 맞는 모니터링 체계가 필요하다</span><span>15/104</span></div>
+  <div class="foot"><span>책 3.3: 수명이 짧고 자주 바뀌는 파드에 맞는 모니터링 체계가 필요하다</span><span>14/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.3 도입: VM은 모든 상태가 보존되는지 확인하는 식으로 감시하지만, 쿠버네티스는 수명이 짧은 파드에 맞는 체계가 필요하다고만 쓴다. 표는 그 "왜"를 구체화한 것.</li>
@@ -999,12 +1057,12 @@ jq --version</pre>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/" target="_blank" rel="noopener">Kubernetes · Logging Architecture</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="16 USE 방법론" id="slide-16">
+<section class="slide" data-label="15 USE 방법론" id="slide-15" data-cap="use">
   <span class="kicker"><span class="n">01</span>USE METHOD · 책 3.3</span>
   <h1>USE: <span class="hl">모든 자원</span>의 사용률·포화도·에러를 본다</h1>
   <div class="body">
@@ -1016,7 +1074,7 @@ jq --version</pre>
     </div>
     <div class="callout">사용률 100%가 곧 장애는 아니다. <b>포화도가 0보다 커지는 순간</b>부터 요청이 대기열에 쌓이고 지연이 늘어난다. 사용률만 보면 이 시점을 놓친다.</div>
   </div>
-  <div class="foot"><span>책 3.3: 애플리케이션 수준에는 한계가 있어 주로 인프라 모니터링에 쓴다</span><span>16/104</span></div>
+  <div class="foot"><span>책 3.3: 애플리케이션 수준에는 한계가 있어 주로 인프라 모니터링에 쓴다 · <a href="lab-guide.html#s5-2" target="_blank" rel="noopener">실습 가이드 05 Grafana 5-2 섹션 참고</a></span><span>15/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책의 예: 클러스터 노드의 네트워크를 사용률·포화도·에러 수로 보면 병목이나 네트워크 스택 문제를 쉽게 파악할 수 있다.</li>
@@ -1029,9 +1087,9 @@ jq --version</pre>
 <li><a href="https://www.brendangregg.com/usemethod.html" target="_blank" rel="noopener">Brendan Gregg · The USE Method</a></li>
 </ul></details>
 </aside>
-<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/s16.png" alt="캡처 s16.png"><div class="cap-meta">s16.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
+<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/use.png" alt="캡처 use.png"><div class="cap-meta">use.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="17 RED와 골든 시그널" id="slide-17">
+<section class="slide expanded" data-label="16 RED와 골든 시그널" id="slide-16">
   <span class="kicker"><span class="n">01</span>RED &amp; GOLDEN SIGNALS · 책 3.3</span>
   <h1>RED는 골든 시그널에서 <span class="hl">포화도를 뺀</span> 서비스용 방법론이다</h1>
   <div class="body">
@@ -1046,7 +1104,7 @@ jq --version</pre>
     </table>
     <div class="callout">톰 윌키가 2015년에 RED를 만든 이유: "USE는 서비스에는 잘 맞지 않는다. 하드웨어·네트워크·디스크용 방법이다." 모든 마이크로서비스를 같은 세 지표로 재면 대시보드 하나로 모든 서비스를 비교할 수 있다.</div>
   </div>
-  <div class="foot"><span>책 3.3: RED 방법론은 구글의 4대 골든 시그널에 기반한다</span><span>17/104</span></div>
+  <div class="foot"><span>책 3.3: RED 방법론은 구글의 4대 골든 시그널에 기반한다</span><span>16/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책은 프론트엔드 서비스에서 세 가지를 계산하라고 한다. 그 세 질문이 표 오른쪽 열이다. 세 번째 질문(과도하게 사용되고 있나)은 포화도 질문이라 RED가 아니라 USE 쪽에 붙는다.</li>
@@ -1061,7 +1119,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide" data-label="18 USE와 RED를 거는 곳" id="slide-18">
+<section class="slide" data-label="17 USE와 RED를 거는 곳" id="slide-17">
   <span class="kicker"><span class="n">01</span>WHERE TO APPLY</span>
   <h1>사용자가 겪는 문제는 <span class="hl">RED</span>로 발견하고, 원인은 <span class="hl">USE</span>로 찾는다</h1>
   <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t3 d3">
@@ -1149,7 +1207,7 @@ jq --version</pre>
   <text class="t" x="40" y="658" font-size="28" font-weight="700">원인을 찾는 곳</text>
   <text class="t" x="40" y="700" font-size="26" style="fill:#B5761F">= 원인</text>
 </svg><p class="figcap">실행 대기 줄 = <b>run queue</b> · 버려진 패킷 = <b>dropped packets</b><br>스와핑 = <b>swapping</b>(RAM이 부족해 메모리를 디스크로 내려보냄. 느려짐) · OOM 킬 = <b>Out Of Memory kill</b>(메모리 부족으로 강제 종료)</p></div>
-  <div class="foot"><span>책 3.3: 두 방법론은 서로 보완한다. USE는 인프라를, RED는 사용자 경험을 본다</span><span>18/104</span></div>
+  <div class="foot"><span>책 3.3: 두 방법론은 서로 보완한다. USE는 인프라를, RED는 사용자 경험을 본다</span><span>17/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>위 줄: 요청이 지나가는 구간마다 R·E·D 세 숫자를 둔다. 사용자가 실제로 겪는 것이라 "증상"이다.</li>
@@ -1165,7 +1223,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide" data-label="19 평균의 함정" id="slide-19">
+<section class="slide" data-label="18 평균의 함정" id="slide-18" data-cap="mean-trap">
   <span class="kicker"><span class="n">01</span>MEAN VS TAIL</span>
   <h1>평균 45ms는 <span class="warn">빠른 요청도, 느린 요청도 대표하지 못한다</span></h1>
   <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t4 d4">
@@ -1183,7 +1241,7 @@ jq --version</pre>
   <text x="1361" y="794" font-size="28" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#C2414A">느린 요청 무리</text>
   <text x="40" y="858" font-size="22" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#6F7C79">막대 모양은 개략도, 네 수치는 실측값. k6 부하 중 /api/chaos/slow 요청이 초당 2건 섞여 있었다</text>
 </svg></div>
-  <div class="foot"><span>RED의 D(처리 시간)는 평균 대신 P50·P95·P99 분포로 본다</span><span>19/104</span></div>
+  <div class="foot"><span>RED의 D(처리 시간)는 평균 대신 P50·P95·P99 분포로 본다 · <a href="lab-guide.html#s7-3" target="_blank" rel="noopener">실습 가이드 07 RED 7-3 섹션 참고</a></span><span>18/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 요청 절반은 0.59ms 안에 끝나고 상위 1%는 790ms. 1300배 차이. 평균 45ms는 두 무리 사이 빈 곳에 떨어진다.</li>
@@ -1195,12 +1253,12 @@ jq --version</pre>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://sre.google/sre-book/monitoring-distributed-systems/" target="_blank" rel="noopener">Google SRE Book · Worrying About Your Tail</a></li>
 <li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">Prometheus · Histograms and summaries</a></li>
-<li><a href="lab-guide.html#p8" target="_blank" rel="noopener">실습 가이드 08 · RED 질의</a></li>
+<li><a href="lab-guide.html#p7" target="_blank" rel="noopener">실습 가이드 07 · PromQL로 RED 읽기</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="20 1장 정리" id="slide-20">
+<section class="slide expanded" data-label="19 1장 정리" id="slide-19">
   <span class="kicker"><span class="n">01</span>WRAP-UP</span>
   <h1>질문에 따라 <span class="hl">봐야 할 지표</span>가 정해진다</h1>
   <div class="body">
@@ -1215,7 +1273,7 @@ jq --version</pre>
     </table>
     <div class="callout">남은 질문: 쿠버네티스에서 이 메트릭은 <b>어떤 구성요소가 만드는가?</b> <code>kubectl top</code>의 값과 프로메테우스의 값은 같은가?</div>
   </div>
-  <div class="foot"><span>책 3.1~3.3 정리</span><span>20/104</span></div>
+  <div class="foot"><span>책 3.1~3.3 정리</span><span>19/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>1장에서 정한 것: 신호 두 종류(메트릭·로그), 보는 위치 두 가지(폐쇄형·개방형), 질문 틀 두 가지(USE·RED), 그리고 평균 대신 분포.</li>
@@ -1228,14 +1286,14 @@ jq --version</pre>
   CHAPTER 2 · 개념 — 쿠버네티스 메트릭은 누가 만드나 (책 3.4 ~ 3.5)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="21 2장 리드" id="slide-21">
+<section class="slide section-lead" data-label="20 2장 리드" id="slide-20">
   <div class="body">
     <div class="quest">CHAPTER · 02 · 책 3.4 ~ 3.5</div>
     <div class="secnum">02</div>
     <h1>쿠버네티스 메트릭은 <span class="hl">누가 만드는가</span></h1>
     <p class="sub">같은 파드의 메모리를 세 곳이 각각 보고한다. 출처를 구분해 두면 숫자가 서로 어긋날 때 어디가 잘못됐는지 바로 짚을 수 있다.</p>
   </div>
-  <div class="foot"><span>개념 · 3.4 쿠버네티스 메트릭 개요 · 3.5 어떤 메트릭을 모니터링하나?</span><span>21/104</span></div>
+  <div class="foot"><span>개념 · 3.4 쿠버네티스 메트릭 개요 · 3.5 어떤 메트릭을 모니터링하나?</span><span>20/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>1장 끝에서 남긴 두 질문에 답하는 장이다. 이 메트릭은 어떤 구성요소가 만드는가, kubectl top 과 프로메테우스의 값은 같은가.</li>
@@ -1245,7 +1303,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="22 2장 용어 ① 클러스터 구성요소" id="slide-22">
+<section class="slide expanded" data-label="21 2장 용어 ① 클러스터 구성요소" id="slide-21">
   <span class="kicker"><span class="n">02</span>GLOSSARY · 1/3</span>
   <h1>용어 ① <span class="hl">클러스터 구성요소</span></h1>
   <div class="body">
@@ -1265,7 +1323,7 @@ jq --version</pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>컨트롤 플레인 4개 + 노드 구성요소 4개 + 파드</span><span>22/104</span></div>
+  <div class="foot"><span>컨트롤 플레인 4개 + 노드 구성요소 4개 + 파드</span><span>21/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.4는 컨트롤 플레인을 API 서버·etcd·스케줄러·컨트롤러 매니저로, 노드를 kubelet·컨테이너 런타임·kube-proxy·DNS·파드로 나눈다.</li>
@@ -1278,7 +1336,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="23 2장 용어 ② 메트릭 수집기" id="slide-23">
+<section class="slide expanded" data-label="22 2장 용어 ② 메트릭 수집기" id="slide-22">
   <span class="kicker"><span class="n">02</span>GLOSSARY · 2/3</span>
   <h1>용어 ② <span class="hl">메트릭 수집기</span></h1>
   <div class="body">
@@ -1294,7 +1352,7 @@ jq --version</pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>cAdvisor는 사용량을, KSM은 선언된 상태를, metrics-server는 사용량의 최근값을 다룬다</span><span>23/104</span></div>
+  <div class="foot"><span>cAdvisor는 사용량을, KSM은 선언된 상태를, metrics-server는 사용량의 최근값을 다룬다</span><span>22/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.4.1: cAdvisor는 cgroup 트리로 메모리·CPU를, statfs로 디스크를 수집한다. 모든 컨테이너 메트릭의 진실 공급원(source of truth)이다.</li>
@@ -1308,7 +1366,7 @@ jq --version</pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="24 2장 용어 ③ 메트릭 API와 소비자" id="slide-24">
+<section class="slide expanded" data-label="23 2장 용어 ③ 메트릭 API와 소비자" id="slide-23">
   <span class="kicker"><span class="n">02</span>GLOSSARY · 3/3</span>
   <h1>용어 ③ <span class="hl">메트릭 API</span>와 그것을 쓰는 쪽</h1>
   <div class="body">
@@ -1320,28 +1378,33 @@ jq --version</pre>
         <tr><td>리소스 메트릭 API</td><td>Resource Metrics API · <code>metrics.k8s.io</code></td><td>파드·노드의 CPU·메모리 사용량. metrics-server가 제공한다</td></tr>
         <tr><td>커스텀 메트릭 API</td><td>Custom Metrics API · <code>custom.metrics.k8s.io</code></td><td>쿠버네티스 오브젝트에 붙은 임의 메트릭(예: 파드당 초당 요청 수). 어댑터가 제공한다</td></tr>
         <tr><td>외부 메트릭 API</td><td>External Metrics API · <code>external.metrics.k8s.io</code></td><td>클러스터 밖의 메트릭(예: 메시지 큐 길이). 어댑터가 제공한다</td></tr>
-        <tr><td>어댑터</td><td>Metrics adapter · 예: prometheus-adapter, KEDA</td><td>모니터링 시스템의 값을 커스텀·외부 메트릭 API 형식으로 바꿔 주는 서버</td></tr>
+        <tr><td>어댑터</td><td>Metrics adapter</td><td>모니터링 시스템의 값을 커스텀·외부 메트릭 API 형식으로 바꿔 주는 서버</td></tr>
+        <tr><td>prometheus-adapter</td><td>Prometheus Adapter for Kubernetes Metrics APIs</td><td>프로메테우스에 쌓인 값을 커스텀·외부(·리소스) 메트릭 API로 내놓는 어댑터</td></tr>
+        <tr><td>KEDA</td><td>Kubernetes Event-driven Autoscaling</td><td>메시지 큐 길이 · 들어오는 요청 같은 이벤트 수로 파드를 늘리고 줄이는 도구. HPA에 외부 메트릭을 넣어 주고, 일이 없으면 0개까지 줄인다</td></tr>
         <tr><td>HPA</td><td>Horizontal Pod Autoscaler</td><td>수평 파드 오토스케일러. 메트릭을 보고 파드 개수를 늘리거나 줄인다</td></tr>
         <tr><td>VPA</td><td>Vertical Pod Autoscaler</td><td>수직 파드 오토스케일러. 사용량을 보고 파드의 requests·limits를 조정한다</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>세 메트릭 API 모두 API 집계 계층을 통해 API 서버에 붙는다</span><span>24/104</span></div>
+  <div class="foot"><span>세 메트릭 API 모두 API 집계 계층을 통해 API 서버에 붙는다</span><span>23/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.4.2: 리소스·커스텀 메트릭 API를 쿠버네티스의 집계(aggregated) API로 구현해서, API는 그대로 두고 구현체만 바꿀 수 있게 됐다.</li>
   <li>공식 문서: 메트릭 기반 스케일링에는 API 집계 계층이 켜져 있어야 한다. 리소스 메트릭은 보통 metrics-server가, 커스텀·외부 메트릭은 모니터링 벤더가 제공하는 어댑터 API 서버가 제공한다.</li>
-  <li>KEDA는 Kubernetes Event-driven Autoscaling의 약자. 외부 메트릭 API를 제공하는 대표 어댑터다.</li>
+  <li>KEDA는 Kubernetes Event-driven Autoscaling의 약자. 마이크로소프트와 레드햇이 만들었고 CNCF 프로젝트다. HPA를 대체하지 않고, 외부 이벤트 소스(큐 · DB · API)를 보고 HPA에 외부 메트릭을 넣어 준다. HPA만으로는 파드를 0개로 줄일 수 없지만 KEDA는 일이 없으면 0개까지 줄인다(공식 문서 Concepts).</li>
+  <li>prometheus-adapter: 이미 프로메테우스를 돌리는 클러스터에서 metrics-server 대신 리소스 메트릭 API까지 제공할 수도 있다(공식 README).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/" target="_blank" rel="noopener">Kubernetes · API Aggregation Layer</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/" target="_blank" rel="noopener">Kubernetes · Horizontal Pod Autoscaling</a></li>
+<li><a href="https://keda.sh/docs/latest/concepts/" target="_blank" rel="noopener">KEDA · Concepts</a></li>
+<li><a href="https://github.com/kubernetes-sigs/prometheus-adapter" target="_blank" rel="noopener">kubernetes-sigs/prometheus-adapter</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="25 모니터링 대상 컴포넌트" id="slide-25">
+<section class="slide expanded" data-label="24 모니터링 대상 컴포넌트" id="slide-24" data-cap="components">
   <span class="kicker"><span class="n">02</span>WHAT TO WATCH · 책 3.4</span>
   <h1>구성요소마다 <span class="hl">볼 메트릭 하나</span>와 그 값이 나빠질 때 생기는 일</h1>
   <div class="body">
@@ -1361,9 +1424,10 @@ jq --version</pre>
     </table>
     <div class="callout">모든 구성요소가 자기 메트릭을 프로메테우스 형식으로 직접 제공한다. 컨트롤 플레인이 느려지면 클러스터 전체가, 노드 구성요소가 느려지면 그 노드의 파드가 영향을 받는다.</div>
   </div>
-  <div class="foot"><span>책 3.4: 클러스터와 애플리케이션을 정상 가동하려면 이 모든 컴포넌트를 빠짐없이 모니터링해야 한다</span><span>25/104</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes Metrics Reference</a> · <a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd · Metrics</a> · <a href="lab-guide.html#s5-2" target="_blank" rel="noopener">실습 가이드 05 Grafana 5-2 섹션 참고</a></span><span>24/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4: 클러스터와 애플리케이션을 정상 가동하려면 이 모든 컴포넌트를 빠짐없이 모니터링해야 한다</li>
   <li>표를 위에서부터 한 행씩 읽는다. 구성요소가 하는 일, 대표 메트릭, 그 값이 나빠지면 사용자에게 어떤 증상으로 나타나는지.</li>
   <li>API 서버: 요청 처리 시간 분포. kubectl 명령, 컨트롤러, kubelet 모두 API 서버를 거치므로 여기가 느리면 모든 것이 느리다.</li>
   <li>etcd: WAL(Write-Ahead Log) fsync 시간 = 쓰기를 디스크에 확정하는 시간. etcd는 확정 뒤에 응답하므로 디스크가 느리면 API 서버가 기다린다. 책 3.5가 클러스터 컴포넌트에서 콕 집어 "etcd 레이턴시"를 꼽는 이유.</li>
@@ -1377,13 +1441,13 @@ jq --version</pre>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes · Metrics reference</a></li>
-<li><a href="https://etcd.io/docs/latest/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
+<li><a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
 <li><a href="https://coredns.io/plugins/metrics/" target="_blank" rel="noopener">CoreDNS · prometheus plugin</a></li>
 </ul></details>
 </aside>
-<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/s25.png" alt="캡처 s25.png"><div class="cap-meta">s25.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
+<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/components.png" alt="캡처 components.png"><div class="cap-meta">components.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide" data-label="26 세 출처와 두 경로" id="slide-26">
+<section class="slide" data-label="25 세 출처와 두 경로" id="slide-25">
   <span class="kicker"><span class="n">02</span>THREE SOURCES</span>
   <h1>사용량은 <span class="hl">cAdvisor</span>가 재고, <span class="hl">두 길</span>로 나간다</h1>
   <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t6 d6">
@@ -1466,7 +1530,7 @@ jq --version</pre>
   <text class="t" x="30" y="770" font-size="24" font-weight="700">아래: 선언된 상태</text>
   <text class="t" x="30" y="830" font-size="22" style="fill:#5A6867">화살표 = 데이터가 흐르는 방향</text>
 </svg></div>
-  <div class="foot"><span>metrics-server는 새로 재지 않는다. kubelet이 잰 값을 읽어 전달할 뿐이다</span><span>26/104</span></div>
+  <div class="foot"><span>metrics-server는 새로 재지 않는다. kubelet이 잰 값을 읽어 전달할 뿐이다</span><span>25/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>위 경로: metrics-server가 각 kubelet의 /metrics/resource 에서 CPU·메모리를 15초마다(--metric-resolution=15s 기본값) 읽어 메모리에 최근값만 둔다. API 서버의 metrics.k8s.io 로 kubectl top, HPA, VPA가 가져간다.</li>
@@ -1476,12 +1540,12 @@ jq --version</pre>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="27 cAdvisor" id="slide-27">
+<section class="slide" data-label="26 cAdvisor" id="slide-26" data-cap="cadvisor">
   <span class="kicker"><span class="n">02</span>CADVISOR · 책 3.4.1</span>
   <h1>cAdvisor: 컨테이너가 <span class="hl">실제로 얼마나 쓰는지</span> 잰다</h1>
   <div class="body">
@@ -1506,21 +1570,22 @@ order-api-8556fcb49b-ctm7c   <span class="v">183Mi</span></pre>
     </div>
     <div class="callout">이름이 <b><code>container_</code></b>로 시작하면 cAdvisor에서 온 값이다.</div>
   </div>
-  <div class="foot"><span>책 3.4.1: cAdvisor는 모든 컨테이너 메트릭의 진실 공급원이다</span><span>27/104</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor · prometheus.md</a> · <a href="lab-guide.html#s4-4" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-4 섹션 참고</a></span><span>26/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4.1: cAdvisor는 모든 컨테이너 메트릭의 진실 공급원이다</li>
   <li>출력은 실측이다. 명령은 curl로 프로메테우스 HTTP API를 부르는 형태지만 핵심은 질의문 한 줄이다.</li>
   <li>working_set 은 캐시처럼 커널이 언제든 회수할 수 있는 메모리를 뺀 값이라, 컨테이너가 지금 실제로 필요한 메모리에 가장 가깝다. kubelet의 축출 판단과 OOM 판정도 이 값을 기준으로 한다.</li>
   <li>CPU 예: rate(container_cpu_usage_seconds_total[2m]) 결과가 0.0037이면 초당 3.7밀리코어를 쓰고 있다는 뜻.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/guides/cadvisor/" target="_blank" rel="noopener">Prometheus · Monitoring container metrics using cAdvisor</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="28 metrics-server" id="slide-28">
+<section class="slide" data-label="27 metrics-server" id="slide-27" data-cap="metrics-server">
   <span class="kicker"><span class="n">02</span>METRICS SERVER · 책 3.4.2</span>
   <h1>metrics-server는 <span class="hl">오토스케일링 전용</span>이다</h1>
   <div class="body">
@@ -1541,9 +1606,10 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>책 3.4.2: 메트릭 서버는 리소스 메트릭 API의 표준 구현체다</span><span>28/104</span></div>
+  <div class="foot"><span>제공 항목: <a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Resource metrics pipeline (CPU · 메모리뿐)</a> · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 섹션 참고</a></span><span>27/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4.2: 메트릭 서버는 리소스 메트릭 API의 표준 구현체다</li>
   <li>apiservices 출력은 실습 클러스터 실측(2026-09-26). 등록된 메트릭 API는 metrics.k8s.io 하나뿐이다. 커스텀·외부 메트릭 API는 어댑터를 설치해야 생긴다.</li>
   <li>kubectl top 출력은 실측이다.</li>
   <li>metrics-server README Caution: 오토스케일링 목적 전용이며 모니터링 솔루션으로 메트릭을 넘기거나 모니터링의 주 데이터 출처로 쓰면 안 된다. 모니터링에는 kubelet /metrics/resource 를 직접 수집하라고 안내한다.</li>
@@ -1557,7 +1623,7 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="29 커스텀·외부 메트릭 API" id="slide-29">
+<section class="slide expanded" data-label="28 커스텀·외부 메트릭 API" id="slide-28">
   <span class="kicker"><span class="n">02</span>CUSTOM METRICS · 책 3.4.2</span>
   <h1>CPU·메모리 말고 <span class="hl">다른 값</span>으로도 스케일링할 수 있다</h1>
   <div class="body">
@@ -1581,14 +1647,23 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
       <div class="callout">책 3.4.2: 프로메테우스는 커스텀 메트릭 기반 HPA를 쓸 수 있게 한 최초의 커스텀 메트릭 어댑터였다. API가 표준화된 덕분에 CPU·메모리 외에도 큐 크기 같은 값으로 스케일링할 수 있게 됐다.</div>
     </div>
   </div>
-  <div class="foot"><span>API는 표준으로 고정하고, 값을 채우는 구현체만 바꿔 끼운다</span><span>29/104</span></div>
+  <div class="foot"><span>API 그룹: <a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis" target="_blank" rel="noopener">HPA · Support for metrics APIs</a> · HPA 스펙 전체: <a href="https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/" target="_blank" rel="noopener">HorizontalPodAutoscaler (autoscaling/v2) API 레퍼런스</a></span><span>28/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>코드는 쿠버네티스 공식 HPA 문서의 External 메트릭 예시다. worker_tasks 큐의 대기 메시지가 파드당 평균 30건이 되도록 파드 수를 조절한다.</li>
-  <li>실습 클러스터에는 어댑터가 없어서 custom·external API가 등록돼 있지 않다. 앞 슬라이드의 apiservices 출력이 그 확인이다.</li>
-  <li>어댑터를 쓰면 "CPU는 한가한데 큐가 쌓이는" 서비스도 수요에 맞춰 늘릴 수 있다. CPU만으로 스케일링할 때의 한계를 푸는 방법이다.</li>
+  <li>코드는 쿠버네티스 공식 HPA Walkthrough의 외부 메트릭 예시다. 실습 파일(labs/)에는 없다. 실습 클러스터에는 외부 메트릭을 내놓는 어댑터(KEDA 등)가 없어 실행할 수 없다.</li>
+  <li>뜻: 큐에 처리 대기 중인 작업 30건마다 워커 파드 1개를 둔다(공식 문서: one worker per 30 outstanding tasks).</li>
+  <li>type: External → 클러스터 밖의 값(external.metrics.k8s.io)으로 스케일링. metric.name: queue_messages_ready → 외부 메시지 큐 서비스의 처리 대기 메시지 수. selector.matchLabels: {queue: worker_tasks} → 여러 큐 중 worker_tasks 큐의 값만. target: AverageValue 30 → 파드 1개당 평균 30건이 되도록 파드 수를 맞춘다.</li>
+  <li>계산 예: 대기 메시지 300건이면 300 ÷ 30 = 파드 10개, 60건이면 2개. CPU가 한가해도 큐가 쌓이면 늘리고, 비면 줄인다.</li>
+  <li>"HPA 스펙 일부"인 이유: 이 조각은 HPA 매니페스트의 spec.metrics 목록에 들어가는 한 항목이다. 실제로는 apiVersion: autoscaling/v2 · kind: HorizontalPodAutoscaler · spec.scaleTargetRef(늘릴 디플로이먼트) · minReplicas · maxReplicas와 함께 spec.metrics: 아래에 넣는다. 그리고 queue_messages_ready 메트릭을 실제로 내놓는 어댑터가 클러스터에 있어야 동작한다.</li>
+  <li>공식 문서의 주의: 가능하면 외부 메트릭보다 커스텀 메트릭을 쓴다. 외부 메트릭 API는 어떤 메트릭이든 조회할 수 있게 열려 있어 관리자가 보안을 걸기 어렵다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis" target="_blank" rel="noopener">Kubernetes · HPA · Support for metrics APIs (세 API 그룹)</a></li>
+<li><a href="https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/" target="_blank" rel="noopener">Kubernetes API · HorizontalPodAutoscaler (autoscaling/v2) 스펙 전체</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline (metrics.k8s.io)</a></li>
+<li><a href="https://github.com/kubernetes/metrics" target="_blank" rel="noopener">kubernetes/metrics (세 API 그룹의 타입 정의)</a></li>
+<li><a href="https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md" target="_blank" rel="noopener">설계 문서 · Custom Metrics API</a></li>
+<li><a href="https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md" target="_blank" rel="noopener">설계 문서 · External Metrics API</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/" target="_blank" rel="noopener">Kubernetes · HPA Walkthrough (External metrics)</a></li>
 <li><a href="https://github.com/kubernetes-sigs/prometheus-adapter" target="_blank" rel="noopener">kubernetes-sigs/prometheus-adapter</a></li>
 <li><a href="https://keda.sh/docs/latest/concepts/" target="_blank" rel="noopener">KEDA · Concepts</a></li>
@@ -1596,9 +1671,9 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="30 kube-state-metrics" id="slide-30">
+<section class="slide expanded" data-label="29 kube-state-metrics" id="slide-29" data-cap="ksm">
   <span class="kicker"><span class="n">02</span>KUBE-STATE-METRICS · 책 3.4.3</span>
-  <h1>kube-state-metrics: 책의 질문을 <span class="hl">메트릭 이름</span>으로 바꾼다</h1>
+  <h1>kube-state-metrics: <span class="hl">오브젝트 상태를 묻는 질문</span>마다 답하는 메트릭이 있다</h1>
   <div class="body">
     <table class="compare" style="table-layout:fixed;font-size:15px">
       <colgroup><col style="width:13%"><col style="width:33%"><col></colgroup>
@@ -1613,9 +1688,11 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
     </table>
     <div class="callout">order-api 실측: replicas 2, requests.cpu 0.2, Running 1. 전부 <b>매니페스트에 적은 값</b>이다. KSM은 자원을 재지 않는다. 이름이 <b><code>kube_</code></b>로 시작하면 KSM이다.</div>
   </div>
-  <div class="foot"><span>책 3.4.3: kube-state-metrics는 클러스터에 배포된 오브젝트의 상태 파악이 주된 관심사다</span><span>30/104</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · docs/metrics</a> · <a href="lab-guide.html#s4-5" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-5 섹션 참고</a></span><span>29/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.4.3: kube-state-metrics는 클러스터에 배포된 오브젝트의 상태 파악이 주된 관심사다.</li>
+  <li>메트릭 전체 목록은 공식 저장소 docs/metrics에 리소스 종류별로 있다. 표의 행마다: 파드 → workload/pod-metrics.md, 디플로이먼트 → workload/deployment-metrics.md, 노드 → cluster/node-metrics.md, 잡 → workload/job-metrics.md (아래 참고 자료). 각 문서에 메트릭 이름 · 타입 · 라벨 · 안정성 등급이 표로 있다.</li>
   <li>표의 "책의 질문" 열은 책 3.4.3의 항목을 그대로 옮겼다. 메트릭 이름은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다. 잡 메트릭은 KSM 공식 문서(job-metrics.md)의 이름이다. 실습 클러스터에 잡이 없어 지금은 값이 나오지 않는다.</li>
   <li>"A 대 B"는 두 값을 비교해야 답이 나온다는 뜻이다. spec_replicas 2, replicas_available 1이면 하나가 뜨지 못한 것.</li>
   <li>아래 결과는 실측. replicas: 2, requests.cpu: 200m(=0.2), 파드 두 개가 Running.</li>
@@ -1623,12 +1700,16 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · Metrics 문서</a></li>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/pod-metrics.md" target="_blank" rel="noopener">KSM · Pod 메트릭</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/deployment-metrics.md" target="_blank" rel="noopener">KSM · Deployment 메트릭</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/cluster/node-metrics.md" target="_blank" rel="noopener">KSM · Node 메트릭</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/job-metrics.md" target="_blank" rel="noopener">KSM · Job 메트릭</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
-<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/s30.png" alt="캡처 s30.png"><div class="cap-meta">s30.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
+<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/ksm.png" alt="캡처 ksm.png"><div class="cap-meta">ksm.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="31 세 출처 비교" id="slide-31">
+<section class="slide expanded" data-label="30 세 출처 비교" id="slide-30">
   <span class="kicker"><span class="n">02</span>ANSWER 1 · 누가 만드나</span>
   <h1>메트릭 이름의 <span class="hl">앞부분</span>이 출처를 알려 준다</h1>
   <div class="body">
@@ -1644,7 +1725,7 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
     </table>
     <div class="callout">값이 서로 어긋날 때가 진단의 출발점이다. KSM은 replicas 3인데 cAdvisor에 파드가 둘만 보이면 하나가 뜨지 못한 것이다. cAdvisor 메모리가 KSM의 requests를 크게 넘으면 requests를 잘못 잡은 것이다.</div>
   </div>
-  <div class="foot"><span>질문 ①: 쿠버네티스 메트릭은 어떤 구성요소가 만드는가</span><span>31/104</span></div>
+  <div class="foot"><span>질문 ①: 쿠버네티스 메트릭은 어떤 구성요소가 만드는가</span><span>30/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.4는 세 가지(cAdvisor, 메트릭 서버, KSM)만 다룬다. 표에는 실제 대시보드에서 함께 보게 되는 두 출처(앱, node-exporter)를 더했다.</li>
@@ -1654,7 +1735,7 @@ order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="32 kubectl top vs 프로메테우스" id="slide-32">
+<section class="slide" data-label="31 kubectl top vs 프로메테우스" id="slide-31" data-cap="top-vs-prom">
   <span class="kicker"><span class="n">02</span>ANSWER 2 · 같은 값인가</span>
   <h1>kubectl top과 프로메테우스는 <span class="hl">같은 kubelet</span>에서 읽는다</h1>
   <div class="body">
@@ -1674,7 +1755,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
     </div>
     <div class="callout"><b>값은 사실상 같다.</b> 둘 다 kubelet이 cgroup에서 잰 값을 읽기 때문이다. 1Mi 차이는 읽은 시점의 차이다. 다른 것은 <b>보관</b>이다. 지난 일을 되짚으려면 프로메테우스가 필요하다.</div>
   </div>
-  <div class="foot"><span>질문 ②: kubectl top의 값과 프로메테우스의 값은 같은가</span><span>32/104</span></div>
+  <div class="foot"><span>질문 ②: kubectl top의 값과 프로메테우스의 값은 같은가 · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 · 4-4 섹션 참고</a></span><span>31/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>둘 다 실측이다. 같은 파드, 거의 같은 시각.</li>
@@ -1683,12 +1764,12 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
   <li>HPA가 파드를 늘린 뒤 "그때 왜 늘었는지"를 되짚으려면 kubectl get hpa 를 주기적으로 손으로 기록해야 한다. metrics-server는 기록을 남기지 않기 때문이다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+<li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
 </ul></details>
 </aside>
-<button class="cap-btn" type="button">캡처 2 · C</button><div class="capview" hidden data-idx="0"><img src="images/s32.png" alt="캡처 s32.png"><div class="cap-meta">s32.png · 1/2 · C 다음 · Esc 닫기</div></div><div class="capview" hidden data-idx="1"><img src="images/s32-2.png" alt="캡처 s32-2.png"><div class="cap-meta">s32-2.png · 2/2 · C 다음 · Esc 닫기</div></div></section>
+<button class="cap-btn" type="button">캡처 2 · C</button><div class="capview" hidden data-idx="0"><img src="images/top-vs-prom.png" alt="캡처 top-vs-prom.png"><div class="cap-meta">top-vs-prom.png · 1/2 · C 다음 · Esc 닫기</div></div><div class="capview" hidden data-idx="1"><img src="images/top-vs-prom-2.png" alt="캡처 top-vs-prom-2.png"><div class="cap-meta">top-vs-prom-2.png · 2/2 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="33 4계층별 확인 항목" id="slide-33">
+<section class="slide expanded" data-label="32 4계층별 확인 항목" id="slide-32">
   <span class="kicker"><span class="n">02</span>WHAT TO MONITOR · 책 3.5</span>
   <h1>계층별 <span class="hl">확인 항목과 메트릭</span></h1>
   <div class="body">
@@ -1711,25 +1792,32 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>책 3.5: 물리·가상 노드 → 클러스터 컴포넌트 → 클러스터 애드온 → 엔드 유저 애플리케이션</span><span>33/104</span></div>
+  <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">node-exporter</a> · <a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes</a> · <a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd</a> · <a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor</a></span><span>32/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>책 3.5: 물리·가상 노드 → 클러스터 컴포넌트 → 클러스터 애드온 → 엔드 유저 애플리케이션</li>
   <li>계층 순서와 확인 항목은 책 3.5의 목록을 그대로 따랐다. 메트릭 이름은 각 항목을 실제로 조회할 때 쓰는 이름이다.</li>
   <li>① 노드는 node-exporter, ② 컴포넌트는 각 구성요소 자신, ④ 컨테이너 항목은 cAdvisor, 프레임워크 항목은 앱 계측에서 온다.</li>
   <li>node_cpu_seconds_total 은 모드(idle, user, system 등)별 누적 초라서, 사용률은 1 - rate(idle) 로 계산한다.</li>
   <li>③ 애드온 메트릭은 애드온을 설치해야 생긴다. 실습 클러스터(kind)에는 클러스터 오토스케일러가 없고, 인그레스 컨트롤러 메트릭은 수집 설정을 켜지 않았다. 이름은 각 프로젝트 공식 문서 기준.</li>
   <li>①②④의 메트릭은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다.</li>
+  <li>메트릭 이름 목록은 한 곳에 모여 있지 않고 메트릭을 내놓는 프로젝트마다 공식 문서가 있다(아래 참고 자료). 쿠버네티스 구성요소는 Kubernetes Metrics Reference, etcd는 etcd 문서의 Metrics, 컨테이너는 cAdvisor의 prometheus.md, 오브젝트 상태는 kube-state-metrics의 docs/metrics, 앱은 Spring Boot Metrics. node-exporter는 README에 수집기(collector) 목록만 있고 이름 목록은 없다.</li>
+  <li>이름을 외울 필요는 없다. ① Prometheus Query 입력칸에 앞부분(node_ · container_ · kube_ · etcd_ · apiserver_)을 치면 자동 완성으로 후보가 나온다. ② 입력칸 옆 메트릭 탐색기에서 지금 수집되는 이름을 설명과 함께 검색한다. ③ 대상의 /metrics를 curl로 받아 # HELP 줄을 본다(실습 가이드 4-6).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">prometheus/node_exporter</a></li>
-<li><a href="https://etcd.io/docs/latest/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
+<li><a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes · Metrics Reference (구성요소 메트릭 전체)</a></li>
+<li><a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor · Prometheus metrics</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · docs/metrics</a></li>
+<li><a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html" target="_blank" rel="noopener">Spring Boot · Metrics</a></li>
+<li><a href="https://etcd.io/docs/v3.6/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
 <li><a href="https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/proposals/metrics.md" target="_blank" rel="noopener">Cluster Autoscaler · Metrics</a></li>
 <li><a href="https://kubernetes.github.io/ingress-nginx/user-guide/monitoring/" target="_blank" rel="noopener">ingress-nginx · Monitoring</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="34 계층별로 좁혀 가기" id="slide-34">
+<section class="slide expanded" data-label="33 계층별로 좁혀 가기" id="slide-33">
   <span class="kicker"><span class="n">02</span>DRILL DOWN · 책 3.5</span>
   <h1>파드가 Pending일 때 <span class="hl">노드에서 컴포넌트로</span> 좁혀 가는 순서</h1>
   <div class="body">
@@ -1747,7 +1835,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
     </table>
     <div class="callout">노드에 자리가 있는데도 Pending이면 문제는 노드가 아니라 <b>배치를 결정하는 쪽(스케줄러)</b>이나 <b>결정을 기록하는 쪽(API 서버·etcd)</b>에 있다.</div>
   </div>
-  <div class="foot"><span>노드 → 스케줄러 → API 서버·etcd → 이벤트</span><span>34/104</span></div>
+  <div class="foot"><span>노드 → 스케줄러 → API 서버·etcd → 이벤트</span><span>33/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>① 노드에서 "사용률"이 아니라 "requests 합"을 보는 이유: 스케줄러는 실제 사용량이 아니라 requests로 자리를 계산한다. 노드 CPU가 20%만 쓰여도 requests가 꽉 차 있으면 새 파드는 들어가지 못한다.</li>
@@ -1764,7 +1852,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="35 2장 정리" id="slide-35">
+<section class="slide expanded" data-label="34 2장 정리" id="slide-34">
   <span class="kicker"><span class="n">02</span>WRAP-UP</span>
   <h1>같은 파드를 두고 <span class="hl">세 출처가 다른 것</span>을 말한다</h1>
   <div class="body">
@@ -1780,7 +1868,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
     </table>
     <div class="callout">남은 질문: 이 출처들을 한곳에 모으려면 어떤 도구를 골라야 하나? 프로메테우스는 수십 개의 타깃을 어떻게 찾아서 긁어 오나?</div>
   </div>
-  <div class="foot"><span>책 3.4~3.5 정리</span><span>35/104</span></div>
+  <div class="foot"><span>책 3.4~3.5 정리</span><span>34/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>다음은 책 3.6(모니터링 툴)과 3.7 전반(프로메테우스 구조). 프로메테우스가 서비스 디스커버리와 라벨로 타깃을 찾는 방식, kube-prometheus-stack 구성요소를 다룬다.</li>
@@ -1792,14 +1880,14 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
   CHAPTER 3 · 도구와 프로메테우스 구조 (책 3.6 ~ 3.7 전반)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="36 3장 리드" id="slide-36">
+<section class="slide section-lead" data-label="35 3장 리드" id="slide-35">
   <div class="body">
     <div class="quest">CHAPTER · 03 · 책 3.6 ~ 3.7</div>
     <div class="secnum">03</div>
     <h1>메트릭을 모으는 도구와 <span class="hl">프로메테우스의 동작 방식</span></h1>
     <p class="sub">여러 출처의 메트릭을 한곳에 모으는 도구를 비교하고, 프로메테우스가 대상을 찾아 긁어 오고 저장하는 구조를 본다.</p>
   </div>
-  <div class="foot"><span>개념 · 3.6 모니터링 툴 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>36/104</span></div>
+  <div class="foot"><span>개념 · 3.6 모니터링 툴 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>35/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>2장 끝의 두 질문에 답한다. 어떤 도구로 모으나, 프로메테우스는 수십 개의 타깃을 어떻게 찾아서 긁어 오나.</li>
@@ -1808,7 +1896,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="37 3장 용어 ① 도구" id="slide-37">
+<section class="slide expanded" data-label="36 3장 용어 ① 도구" id="slide-36">
   <span class="kicker"><span class="n">03</span>GLOSSARY · 1/2</span>
   <h1>용어 ① <span class="hl">모니터링 도구</span></h1>
   <div class="body">
@@ -1826,7 +1914,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>오픈소스 · 상용 SaaS · 클라우드 관리형</span><span>37/104</span></div>
+  <div class="foot"><span>오픈소스 · 상용 SaaS · 클라우드 관리형</span><span>36/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.6이 소개하는 도구: 프로메테우스, InfluxDB, 데이터독, 시스딕, 클라우드 프로바이더 도구(GCP·Azure·AWS).</li>
@@ -1839,7 +1927,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="38 3장 용어 ② 프로메테우스 구조" id="slide-38">
+<section class="slide expanded" data-label="37 3장 용어 ② 프로메테우스 구조" id="slide-37">
   <span class="kicker"><span class="n">03</span>GLOSSARY · 2/2</span>
   <h1>용어 ② <span class="hl">프로메테우스 구조</span></h1>
   <div class="body">
@@ -1859,7 +1947,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>수집 대상 · 형식 · 발견 · 관리 방식</span><span>38/104</span></div>
+  <div class="foot"><span>수집 대상 · 형식 · 발견 · 관리 방식</span><span>37/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>샘플 정의는 프로메테우스 공식 용어집 기준: float64 값과 밀리초 정밀도 타임스탬프.</li>
@@ -1875,7 +1963,7 @@ order-api-…-ctm7c        <span class="v">183Mi</span></pre>
 </section>
 
 
-<section class="slide" data-label="39 라벨이 쿠버네티스와 같다" id="slide-39" data-cap="labels">
+<section class="slide" data-label="38 라벨이 쿠버네티스와 같다" id="slide-38" data-cap="labels">
   <span class="kicker"><span class="n">03</span>WHY PROMETHEUS · 책 3.7</span>
   <h1>프로메테우스의 라벨에 <span class="hl">쿠버네티스 정보가 그대로</span> 붙는다</h1>
   <div class="body">
@@ -1890,7 +1978,7 @@ container_memory_working_set_bytes{
       <div class="card"><h3>그래서 가능한 질의</h3><p>"apps 네임스페이스 전체", "obs-worker 노드 위의 컨테이너"처럼 라벨로 골라 합친다.</p></div>
     </div>
   </div>
-  <div class="foot"><span>책 3.7: 프로메테우스는 쿠버네티스의 레이블, 서비스 디스커버리, 메타데이터와 잘 맞는 메트릭 모니터링 도구다</span><span>39/104</span></div>
+  <div class="foot"><span>책 3.7: 프로메테우스는 쿠버네티스의 레이블, 서비스 디스커버리, 메타데이터와 잘 맞는 메트릭 모니터링 도구다 · <a href="lab-guide.html#s4-4" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-4 섹션 참고</a></span><span>38/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>라벨 세트는 실습 클러스터 프로메테우스에서 조회한 실제 값이다(2026-09-26). id, name, endpoint, service 라벨은 생략했다.</li>
@@ -1900,11 +1988,12 @@ container_memory_working_set_bytes{
 </aside>
 </section>
 
-<section class="slide" data-label="40 노출 형식과 데이터 모델" id="slide-40">
+<section class="slide" data-label="39 노출 형식과 데이터 모델" id="slide-39">
   <span class="kicker"><span class="n">03</span>DATA MODEL · 책 3.7</span>
   <h1>메트릭은 <span class="hl">사람이 읽을 수 있는 텍스트</span>로 노출된다</h1>
   <div class="body">
     <div class="split" style="grid-template-columns:1.25fr .75fr">
+      <div class="stack">
       <pre class="code" style="font-size:13px"><span class="c"># node-exporter의 /metrics 응답 (실측, 일부)</span>
 <span class="k"># HELP node_cpu_seconds_total Seconds the CPUs spent in each mode.</span>
 <span class="k"># TYPE node_cpu_seconds_total counter</span>
@@ -1913,6 +2002,8 @@ node_cpu_seconds_total{cpu="0",mode="iowait"} <span class="v">59525.98</span>
 node_cpu_seconds_total{cpu="0",mode="irq"}    <span class="v">0</span>
 node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
 <span class="c">...</span></pre>
+      <div class="callout" style="font-size:15px"><code>1.76328028e+06</code> = 1.76328028 × 10⁶ = <b>1,763,280초</b>(약 20일). 값이 크면 지수 표기로 찍힌다. 프로메테우스는 두 표기를 똑같이 읽는다.</div>
+      </div>
       <table class="compare">
         <thead><tr><th>부분</th><th>뜻</th></tr></thead>
         <tbody>
@@ -1925,7 +2016,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
       </table>
     </div>
   </div>
-  <div class="foot"><span># HELP · # TYPE · 이름{라벨} 값</span><span>40/104</span></div>
+  <div class="foot"><span># HELP · # TYPE · 이름{라벨} 값 · node-exporter 수집기 목록: <a href="https://github.com/prometheus/node_exporter#collectors" target="_blank" rel="noopener">node_exporter · Collectors</a> · <a href="lab-guide.html#s4-6" target="_blank" rel="noopener">실습 가이드 04. Prometheus 4-6 섹션 참고</a></span><span>39/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>node-exporter 서비스에 port-forward 한 뒤 curl localhost:9100/metrics 로 받은 실제 응답이다. 책 3.7에 실린 예시와 형식이 같다.</li>
@@ -1938,7 +2029,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="41 메트릭 타입 4종" id="slide-41">
+<section class="slide expanded" data-label="40 메트릭 타입 4종" id="slide-40">
   <span class="kicker"><span class="n">03</span>METRIC TYPES</span>
   <h1>메트릭 타입 4가지와 <span class="hl">각각을 읽는 방법</span></h1>
   <div class="body">
@@ -1954,7 +2045,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
     </table>
     <div class="callout">히스토그램은 파드마다 버킷을 합친 뒤 분위수를 계산할 수 있다. 서머리는 이미 계산된 분위수라 합칠 수 없다. 파드가 여러 개인 쿠버네티스에서는 히스토그램을 쓴다.</div>
   </div>
-  <div class="foot"><span>counter는 rate로, gauge는 그대로, histogram은 histogram_quantile로</span><span>41/104</span></div>
+  <div class="foot"><span>counter는 rate로, gauge는 그대로, histogram은 histogram_quantile로</span><span>40/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>프로메테우스 공식 가이드: 늘기만 하는 값은 counter, 오르내리는 값은 gauge. counter는 rate()로 분석하고, gauge는 상태의 스냅숏이라 rate()를 쓰지 않는다.</li>
@@ -1963,12 +2054,13 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/concepts/metric_types/" target="_blank" rel="noopener">Prometheus · Metric types</a></li>
+<li><a href="https://prometheus.io/docs/tutorials/understanding_metric_types/" target="_blank" rel="noopener">Prometheus · Understanding metric types (tutorial)</a></li>
 <li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">Prometheus · Histograms and summaries</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="42 프로메테우스 아키텍처" id="slide-42">
+<section class="slide" data-label="41 프로메테우스 아키텍처" id="slide-41">
   <span class="kicker"><span class="n">03</span>ARCHITECTURE · 책 그림 3.1</span>
   <h1>프로메테우스 서버 안에서 <span class="hl">다섯 가지 일</span>이 일어난다</h1>
   <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t7 d7">
@@ -2073,7 +2165,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
   <text class="t" x="1110" y="820" font-size="22" style="fill:#5A6867">화살표 = 데이터가 흐르는 방향</text>
   <text class="t" x="1110" y="856" font-size="22" style="fill:#5A6867">점선 = 필요할 때만 쓰는 구성요소</text>
 </svg></div>
-  <div class="foot"><span>① 대상 찾기 → ② 가져오기 → ③ 저장 → ④ 규칙 평가 → ⑤ 질의 응답</span><span>42/104</span></div>
+  <div class="foot"><span>① 대상 찾기 → ② 가져오기 → ③ 저장 → ④ 규칙 평가 → ⑤ 질의 응답</span><span>41/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>① 쿠버네티스 API에서 파드·서비스·엔드포인트 목록을 받아 긁을 대상을 정한다. 파드가 새로 뜨거나 사라지면 목록이 자동으로 바뀐다.</li>
@@ -2089,7 +2181,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
 </aside>
 </section>
 
-<section class="slide" data-label="43 pull 방식의 장단점" id="slide-43">
+<section class="slide" data-label="42 pull 방식의 장단점" id="slide-42">
   <span class="kicker"><span class="n">03</span>PULL MODEL</span>
   <h1>가져오는 방식(pull)은 <span class="hl">대상이 죽었는지</span>를 수집 자체로 안다</h1>
   <div class="body">
@@ -2098,7 +2190,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
         <pre class="code" style="font-size:14px"><span class="c"># 긁기에 성공하면 1, 실패하면 0 (실측)</span>
 up{job="order-api", pod="order-api-…-g247f"}  <span class="v">1</span>
 up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
-        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 응답이 없으면 0이 되므로 "죽었다"와 "한가하다"가 구분된다.</p></div>
+        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 긁기에 실패하면 0이 된다. 요청이 없는 한가한 앱도 <code>/metrics</code>에는 응답하므로 1이다. push 방식에서는 데이터가 안 오면 죽은 건지 한가한 건지 알 수 없다.</p></div>
       </div>
       <div class="stack">
         <div class="card"><h3>대가 ①</h3><p>프로메테우스가 대상에 <b>네트워크로 닿아야</b> 한다. 방화벽·네트워크 정책이 막으면 수집이 안 된다.</p></div>
@@ -2107,7 +2199,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>대상은 메트릭을 보여 주기만 하고, 주기와 목록은 프로메테우스가 정한다</span><span>43/104</span></div>
+  <div class="foot"><span>대상은 메트릭을 보여 주기만 하고, 주기와 목록은 프로메테우스가 정한다</span><span>42/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>up 값은 실습 클러스터에서 조회한 실제 결과다. order-api 파드 두 개 모두 1.</li>
@@ -2121,7 +2213,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="44 쿠버네티스 서비스 디스커버리" id="slide-44">
+<section class="slide expanded" data-label="43 쿠버네티스 서비스 디스커버리" id="slide-43">
   <span class="kicker"><span class="n">03</span>SERVICE DISCOVERY</span>
   <h1>쿠버네티스 API에서 <span class="hl">대상을 찾는 6가지 방법</span></h1>
   <div class="body">
@@ -2139,7 +2231,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">대상을 찾을 때 파드의 네임스페이스·이름·라벨이 <code>__meta_kubernetes_*</code> 라벨로 함께 따라온다. 앞에서 본 <code>namespace</code>·<code>pod</code> 라벨은 여기서 옮겨 붙인 것이다.</div>
   </div>
-  <div class="foot"><span>kubernetes_sd_configs 의 role 값</span><span>44/104</span></div>
+  <div class="foot"><span>kubernetes_sd_configs 의 role 값</span><span>43/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>프로메테우스 공식 설정 문서의 kubernetes_sd_config 역할: endpoints, endpointslice, service, pod, node, ingress.</li>
@@ -2153,7 +2245,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="45 kube-prometheus-stack 구성요소" id="slide-45" data-cap="kps-pods">
+<section class="slide expanded" data-label="44 kube-prometheus-stack 구성요소" id="slide-44" data-cap="kps-pods">
   <span class="kicker"><span class="n">03</span>KUBE-PROMETHEUS-STACK · 책 3.7</span>
   <h1>kube-prometheus-stack 차트 하나로 <span class="hl">6가지 구성요소</span>가 뜬다</h1>
   <div class="body">
@@ -2171,7 +2263,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">node-exporter만 노드 수만큼(DaemonSet) 뜨고 나머지는 하나씩 뜬다. 프로메테우스와 Alertmanager 이름 끝의 <code>-0</code>은 StatefulSet으로 떠 있다는 표시다.</div>
   </div>
-  <div class="foot"><span>kubectl get pods -n monitoring 결과 (파드 접미사는 환경마다 다르다)</span><span>45/104</span></div>
+  <div class="foot"><span>kubectl get pods -n monitoring 결과 (파드 접미사는 환경마다 다르다) · <a href="lab-guide.html#s3-2" target="_blank" rel="noopener">실습 가이드 03 스택 설치 3-2 섹션 참고</a></span><span>44/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>표 왼쪽 두 열은 책 3.7의 구성요소 목록 그대로다. 오른쪽은 실습 클러스터에서 kubectl get pods -n monitoring 으로 본 실제 파드 이름이다. 모두 Running.</li>
@@ -2184,7 +2276,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 <button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/kps-pods.png" alt="캡처 kps-pods.png"><div class="cap-meta">kps-pods.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide" data-label="46 오퍼레이터와 CRD" id="slide-46">
+<section class="slide" data-label="45 오퍼레이터와 CRD" id="slide-45">
   <span class="kicker"><span class="n">03</span>PROMETHEUS OPERATOR</span>
   <h1>수집 설정을 <span class="hl">YAML 리소스로 적으면</span> 오퍼레이터가 설정 파일을 만든다</h1>
   <div class="body">
@@ -2213,7 +2305,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </table>
     </div>
   </div>
-  <div class="foot"><span>ServiceMonitor는 무엇을 긁을지, PrometheusRule은 언제 알릴지 적는다</span><span>46/104</span></div>
+  <div class="foot"><span>ServiceMonitor는 무엇을 긁을지, PrometheusRule은 언제 알릴지 적는다</span><span>45/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.7: 오퍼레이터는 프로메테우스를 쿠버네티스에 네이티브하게 구성하고, 사용자는 쿠버네티스 리소스 정의로 프로메테우스 리소스를 생성·삭제·구성한다.</li>
@@ -2223,12 +2315,12 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus-operator.dev/docs/getting-started/design/" target="_blank" rel="noopener">Prometheus Operator · Design</a></li>
-<li><a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">90-servicemonitors.yaml</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">servicemonitors.yaml</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="47 ServiceMonitor와 Service" id="slide-47">
+<section class="slide" data-label="46 ServiceMonitor와 Service" id="slide-46">
   <span class="kicker"><span class="n">03</span>SERVICEMONITOR · YAML</span>
   <h1>ServiceMonitor는 <span class="hl">세 군데</span>가 맞아야 서비스를 찾는다</h1>
   <div class="body">
@@ -2269,7 +2361,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a></span><span>47/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> · <a href="lab-guide.html#s6-1" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-1 섹션 참고</a></span><span>46/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>① ServiceMonitor 자신의 라벨 release: kps. 프로메테우스 리소스의 serviceMonitorSelector 가 이 라벨을 가진 ServiceMonitor만 읽는다. 실습 클러스터에서 확인한 값: {"matchLabels":{"release":"kps"}}.</li>
@@ -2277,17 +2369,17 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <li>③ endpoints[].port 는 서비스 포트의 "이름"이다. 8080 같은 숫자를 적으면 맞는 포트가 없어 대상이 생기지 않는다.</li>
   <li>셋 중 하나라도 어긋나면 에러 없이 대상이 0개가 된다. 5장에서 일부러 어긋나게 만들어 본다.</li>
   <li>kps는 helm install 때 붙인 릴리스 이름이다. 차트가 serviceMonitorSelector 를 release: 릴리스이름 으로 설정한다.</li>
-  <li>ServiceMonitor 코드는 저장소 파일에서 주석만 발표용으로 바꿨다. Service는 labs/k8s/order-api.yaml 의 일부.</li>
+  <li>ServiceMonitor 코드는 저장소 파일에서 주석만 발표용으로 바꿨다. Service는 <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">labs/k8s/order-api.yaml</a> 의 일부.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">90-servicemonitors.yaml</a></li>
-<li><a href="labs/k8s/order-api.yaml" target="_blank" rel="noopener">10-order-api.yaml</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">servicemonitors.yaml</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a></li>
 <li><a href="https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.ServiceMonitor" target="_blank" rel="noopener">Prometheus Operator · ServiceMonitor API</a></li>
 </ul></details>
 </aside>
 </section>
 
-<section class="slide" data-label="48 오퍼레이터가 만든 수집 설정" id="slide-48">
+<section class="slide" data-label="47 오퍼레이터가 만든 수집 설정" id="slide-47">
   <span class="kicker"><span class="n">03</span>GENERATED CONFIG</span>
   <h1>ServiceMonitor 한 칸이 <span class="hl">수집 설정 한 줄</span>로 바뀐다</h1>
   <div class="body">
@@ -2322,7 +2414,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>생성된 전체 설정은 monitoring 네임스페이스의 시크릿에 압축되어 들어 있다</span><span>48/104</span></div>
+  <div class="foot"><span>생성된 전체 설정은 monitoring 네임스페이스의 시크릿에 압축되어 들어 있다 · <a href="lab-guide.html#s6-3" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-3 섹션 참고</a></span><span>47/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>왼쪽 A~E 한 칸이 오른쪽 같은 글자의 줄로 바뀐다. 오른쪽은 실습 클러스터에서 오퍼레이터가 실제로 만든 설정의 일부다.</li>
@@ -2341,7 +2433,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </section>
 
 
-<section class="slide expanded" data-label="49 3장 정리" id="slide-49">
+<section class="slide expanded" data-label="48 3장 정리" id="slide-48">
   <span class="kicker"><span class="n">03</span>WRAP-UP</span>
   <h1>프로메테우스는 <span class="hl">찾고, 가져오고, 저장하고, 평가한다</span></h1>
   <div class="body">
@@ -2357,7 +2449,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">남은 질문: 이 스택을 실제로 어떻게 설치하고, 설치가 제대로 됐는지는 무엇으로 확인하나?</div>
   </div>
-  <div class="foot"><span>책 3.6~3.7 정리</span><span>49/104</span></div>
+  <div class="foot"><span>책 3.6~3.7 정리</span><span>48/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>다음은 설치 실습. kind 클러스터에 kube-prometheus-stack을 설치하고, 타깃 28개가 모두 up인지 확인하고, 2장에서 본 세 출처를 화면으로 확인한다.</li>
@@ -2369,14 +2461,14 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   CHAPTER 4 · 설치하고 둘러보기 (책 3.7 후반)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="50 4장 리드" id="slide-50">
+<section class="slide section-lead" data-label="49 4장 리드" id="slide-49">
   <div class="body">
     <div class="quest">CHAPTER · 04 · 책 3.7</div>
     <div class="secnum">04</div>
     <h1>스택을 설치하고, <span class="hl">정상인 화면</span>을 읽는다</h1>
     <p class="sub">kube-prometheus-stack을 설치한 뒤 무엇이 보이면 정상인지 확인한다. Prometheus와 Grafana의 화면을 어떤 질문에 어느 메뉴로 답하는지 익힌다.</p>
   </div>
-  <div class="foot"><span>실습 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>50/104</span></div>
+  <div class="foot"><span>실습 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>49/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
@@ -2385,7 +2477,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="51 4장 용어" id="slide-51">
+<section class="slide expanded" data-label="50 4장 용어" id="slide-50">
   <span class="kicker"><span class="n">04</span>GLOSSARY</span>
   <h1>용어 <span class="hl">설치와 확인</span>에 쓰는 것</h1>
   <div class="body">
@@ -2405,7 +2497,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>설치는 Helm, 확인은 port-forward와 up 메트릭</span><span>51/104</span></div>
+  <div class="foot"><span>설치는 Helm, 확인은 port-forward와 up 메트릭</span><span>50/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>설치가 끝났는지는 파드 상태가 아니라 up 메트릭으로 판단한다. 이 장 전체에서 반복한다.</li>
@@ -2417,13 +2509,13 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="52 설치 전 준비: 컨트롤 플레인 메트릭 열기" id="slide-52">
+<section class="slide" data-label="51 설치 전 준비: 컨트롤 플레인 메트릭 열기" id="slide-51">
   <span class="kicker"><span class="n">04</span>BEFORE INSTALL · 클러스터 설정</span>
   <h1>컨트롤 플레인 메트릭은 <span class="hl">클러스터를 만들 때</span> 열어 둔다</h1>
   <div class="body">
     <div class="split a" style="align-items:start">
       <div class="stack">
-        <p class="small"><b>labs/kind-cluster.yaml</b> (일부)</p>
+        <p class="small"><b><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/kind-cluster.yaml" target="_blank" rel="noopener">labs/kind-cluster.yaml</a></b> (일부)</p>
         <pre class="code" style="font-size:13px"><span class="k">kubeadmConfigPatches:</span>
   - |
     <span class="k">kind:</span> ClusterConfiguration
@@ -2449,7 +2541,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/kind-cluster.yaml" target="_blank" rel="noopener">labs/kind-cluster.yaml</a></span><span>52/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/kind-cluster.yaml" target="_blank" rel="noopener">labs/kind-cluster.yaml</a> · <a href="lab-guide.html#s1-1" target="_blank" rel="noopener">실습 가이드 01 클러스터 1-1 섹션 참고</a></span><span>51/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>kubeadmConfigPatches 는 kind가 kubeadm에 넘기는 설정에 덧붙는다. 쿠버네티스 1.37의 kubeadm 설정(v1beta4)은 extraArgs를 이름·값 목록으로 받는다. 예전 문서의 map 형식(bind-address: "0.0.0.0")과 다르다.</li>
@@ -2463,13 +2555,13 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="53 값 파일" id="slide-53">
+<section class="slide" data-label="52 값 파일" id="slide-52">
   <span class="kicker"><span class="n">04</span>BEFORE INSTALL · 값 파일</span>
   <h1>차트 기본값 대신 <span class="hl">보존 기간·저장소·배치</span>를 정한다</h1>
   <div class="body">
     <div class="split a" style="align-items:start">
       <div class="stack">
-        <p class="small"><b>labs/helm/kps-values.yaml</b> (일부)</p>
+        <p class="small"><b><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></b> (일부)</p>
         <pre class="code" style="font-size:13px"><span class="k">prometheus:</span>
   <span class="k">prometheusSpec:</span>
     <span class="k">nodeSelector:</span> {<span class="k">workload:</span> observability}
@@ -2495,7 +2587,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </table>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>53/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a> · <a href="lab-guide.html#s3-1" target="_blank" rel="noopener">실습 가이드 03 스택 설치 3-1 섹션 참고</a></span><span>52/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>값 파일 전체에는 Alertmanager 라우팅 · 수신자(6장), Grafana 대시보드 사이드카(6장), Loki 데이터소스(7장)도 들어 있다. 여기서는 설치와 저장에 관한 줄만 올렸다.</li>
@@ -2510,7 +2602,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="54 따라하기 ① 설치" id="slide-54" data-cap="install">
+<section class="slide expanded" data-label="53 따라하기 ① 설치" id="slide-53" data-cap="install">
   <span class="kicker"><span class="n">04</span>FOLLOW ALONG ① · 설치</span>
   <h1>따라하기 ① <span class="hl">클러스터부터 스택 설치까지</span></h1>
   <div class="body">
@@ -2527,7 +2619,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>설정 파일: <a href="labs/kind-cluster.yaml" target="_blank" rel="noopener">kind-cluster.yaml</a> · <a href="labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a> · <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml</a></span><span>54/104</span></div>
+  <div class="foot"><span>설정 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/kind-cluster.yaml" target="_blank" rel="noopener">kind-cluster.yaml</a> · <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a> · <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml</a> · <a href="lab-guide.html#p1" target="_blank" rel="noopener">실습 가이드 01 클러스터 · 02 앱 · 03 스택 설치 섹션 참고</a></span><span>53/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>이미지 두 개는 미리 빌드해 둔다: docker build -t journal-api:v1 labs/apps/journal-api · docker build -t order-api:v1 labs/apps/order-api. 처음 빌드는 수 분 걸리므로 발표 중에는 생략한다.</li>
@@ -2538,7 +2630,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 <button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/install.png" alt="캡처 install.png"><div class="cap-meta">install.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="55 정상 상태: 타깃 28개" id="slide-55" data-cap="targets">
+<section class="slide expanded" data-label="54 정상 상태: 타깃 28개" id="slide-54" data-cap="targets">
   <span class="kicker"><span class="n">04</span>HEALTHY STATE · 타깃</span>
   <h1>설치 성공의 기준은 <span class="hl">타깃 28개가 모두 up</span>인 것</h1>
   <div class="body">
@@ -2556,7 +2648,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout"><code>count(up)</code> = 28, <code>sum(up)</code> = 28이면 정상. 파드가 Running이어도 타깃이 down이면 그 구성요소의 메트릭은 없다.</div>
   </div>
-  <div class="foot"><span>확인: Status → Target health · 또는 Query에 count(up), sum(up)</span><span>55/104</span></div>
+  <div class="foot"><span>확인: Status → Target health · 또는 Query에 count(up), sum(up) · <a href="lab-guide.html#s3-3" target="_blank" rel="noopener">실습 가이드 03 스택 설치 3-3 섹션 참고</a></span><span>54/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: count(up) 28, sum(up) 28. 앱 두 개를 연결하면(5장) 33이 된다.</li>
@@ -2566,7 +2658,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 <button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/targets.png" alt="캡처 targets.png"><div class="cap-meta">targets.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="56 Prometheus 화면 사용법" id="slide-56" data-cap="prom-ui">
+<section class="slide expanded" data-label="55 Prometheus 화면 사용법" id="slide-55" data-cap="prom-ui">
   <span class="kicker"><span class="n">04</span>HOW TO USE · Prometheus</span>
   <h1>Prometheus 화면은 <span class="hl">질문에 따라 메뉴를 고른다</span></h1>
   <div class="body">
@@ -2583,7 +2675,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>열기: kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 → http://localhost:9090</span><span>56/104</span></div>
+  <div class="foot"><span>열기: port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 → localhost:9090 · <a href="lab-guide.html#s4-1" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-1 · 4-2 섹션 참고</a></span><span>55/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>Query 입력칸은 자동 완성이 된다. 메트릭 이름 앞부분(container_, kube_, node_)만 쳐도 후보가 나온다.</li>
@@ -2596,7 +2688,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="57 따라하기 ② 세 출처" id="slide-57" data-cap="three-sources">
+<section class="slide expanded" data-label="56 따라하기 ② 세 출처" id="slide-56" data-cap="three-sources">
   <span class="kicker"><span class="n">04</span>FOLLOW ALONG ② · 세 출처</span>
   <h1>따라하기 ② <span class="hl">같은 파드를 세 출처로</span> 본다</h1>
   <div class="body">
@@ -2612,7 +2704,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">이름이 <code>container_</code>로 시작하면 cAdvisor, <code>kube_</code>로 시작하면 kube-state-metrics, <code>kubectl top</code>은 metrics-server. 쓰임새: <b>지금 값</b>은 kubectl top, <b>지난 흐름</b>은 cAdvisor, <b>의도와 실제의 차이</b>는 kube-state-metrics.</div>
   </div>
-  <div class="foot"><span>2장의 세 출처를 실제 값으로 확인한다</span><span>57/104</span></div>
+  <div class="foot"><span>2장의 세 출처를 실제 값으로 확인한다 · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 ~ 4-5 섹션 참고</a></span><span>56/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>기준값(실측): cAdvisor 199.1Mi / 156.5Mi, kubectl top 198Mi / 156Mi. 둘 다 kubelet이 cgroup에서 잰 working set을 읽으므로 같다.</li>
@@ -2622,7 +2714,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="58 Grafana 기본 대시보드 사용법" id="slide-58" data-cap="grafana">
+<section class="slide expanded" data-label="57 Grafana 기본 대시보드 사용법" id="slide-57" data-cap="grafana">
   <span class="kicker"><span class="n">04</span>HOW TO USE · Grafana</span>
   <h1>Grafana 기본 대시보드는 <span class="hl">질문별로 하나씩</span> 연다</h1>
   <div class="body">
@@ -2639,7 +2731,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">위 표 순서가 2장의 "앱 → 노드 → 컴포넌트"로 내려가는 순서다. 대시보드를 새로 만들기 전에 이미 있는 것부터 연다.</div>
   </div>
-  <div class="foot"><span>열기: kubectl -n monitoring port-forward svc/kps-grafana 3000:80 → http://localhost:3000 (admin / obs-study)</span><span>58/104</span></div>
+  <div class="foot"><span>열기: kubectl -n monitoring port-forward svc/kps-grafana 3000:80 → http://localhost:3000 (admin / obs-study) · <a href="lab-guide.html#s5-1" target="_blank" rel="noopener">실습 가이드 05 Grafana 5-1 · 5-2 섹션 참고</a></span><span>57/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>차트가 대시보드 20여 개를 기본으로 넣는다. Dashboards 검색칸에 이름 일부를 치면 된다.</li>
@@ -2650,7 +2742,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 <button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/grafana.png" alt="캡처 grafana.png"><div class="cap-meta">grafana.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="59 4장 Q&amp;A: 자주 막히는 곳" id="slide-59" data-cap="qa-install">
+<section class="slide expanded" data-label="58 4장 Q&amp;A: 자주 막히는 곳" id="slide-58" data-cap="qa-install">
   <span class="kicker"><span class="n">04</span>Q&amp;A · 자주 막히는 곳</span>
   <h1>설치에서 <span class="hl">자주 막히는 곳</span> 다섯</h1>
   <div class="body">
@@ -2666,7 +2758,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>원인 보는 곳: Target health의 에러 · kubectl describe · 파드의 lastState.terminated.reason</span><span>59/104</span></div>
+  <div class="foot"><span>원인 보는 곳: Target health의 에러 · kubectl describe · 파드의 lastState.terminated.reason · <a href="lab-guide.html#q-down" target="_blank" rel="noopener">실습 가이드 11 Q&amp;A Q1 ~ Q3 섹션 참고</a></span><span>58/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>다섯 가지 모두 이 자료를 만들면서 실제로 겪은 것이다.</li>
@@ -2678,7 +2770,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 <button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/qa-install.png" alt="캡처 qa-install.png"><div class="cap-meta">qa-install.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="60 4장 체크포인트" id="slide-60">
+<section class="slide expanded" data-label="59 4장 체크포인트" id="slide-59">
   <span class="kicker"><span class="n">04</span>CHECKPOINT</span>
   <h1>설치가 끝났다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
   <div class="body">
@@ -2696,7 +2788,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">다음 질문: 앱은 <code>/actuator/prometheus</code>로 메트릭을 내놓고 있는데 Query에 <code>http_server_requests_seconds_count</code>를 넣으면 결과가 없다. 앱은 어떻게 연결하나?</div>
   </div>
-  <div class="foot"><span>책 3.7 정리</span><span>60/104</span></div>
+  <div class="foot"><span>책 3.7 정리 · <a href="lab-guide.html#p3" target="_blank" rel="noopener">실습 가이드 03 ~ 05 섹션 참고</a></span><span>59/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>앱은 /actuator/prometheus 에 메트릭 357줄을 내놓고 있다(실측). 프로메테우스는 서비스 디스커버리로 찾은 것 중 설정된 것만 긁는다. 5장에서 ServiceMonitor로 연결한다.</li>
@@ -2707,24 +2799,24 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   CHAPTER 5 · 앱을 연결하고 질의하기 (책 3.12.1 보강)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="61 5장 리드" id="slide-61">
+<section class="slide section-lead" data-label="60 5장 리드" id="slide-60">
   <div class="body">
     <div class="quest">CHAPTER · 05 · 책 3.12.1</div>
     <div class="secnum">05</div>
     <h1>앱을 연결하고 <span class="hl">PromQL로 RED를 읽는다</span></h1>
     <p class="sub">앱이 내놓는 메트릭을 ServiceMonitor로 수집 대상에 올리고, 요청률 · 에러율 · 지연을 PromQL로 뽑는다. 평균 대신 분위수로 보고, 라벨로 쪼개 원인을 좁히는 법을 익힌다.</p>
   </div>
-  <div class="foot"><span>실습 · 책 3.12.1: 애플리케이션의 사용률, 에러 수, 실행 시간도 모니터링한다</span><span>61/104</span></div>
+  <div class="foot"><span>실습 · 책 3.12.1: 애플리케이션의 사용률, 에러 수, 실행 시간도 모니터링한다</span><span>60/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
   <li>RED는 애플리케이션만 답할 수 있다. 밖에서는 요청이 성공했는지 실패했는지 알 수 없기 때문에 앱을 계측해야 한다.</li>
-  <li>흐름: 앱이 메트릭을 내놓는 방법 → ServiceMonitor로 연결 → PromQL 패턴 네 가지 → 부하를 넣고 RED 계산 → 결과 읽는 법 → 자주 막히는 곳.</li>
+  <li>흐름: 앱이 메트릭을 내놓는 방법 → ServiceMonitor로 연결 → PromQL 패턴 네 가지 → 부하를 넣고 RED 계산 → 결과 읽는 법.</li>
 </ul>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="62 5장 용어" id="slide-62">
+<section class="slide expanded" data-label="61 5장 용어" id="slide-61">
   <span class="kicker"><span class="n">05</span>GLOSSARY</span>
   <h1>용어 <span class="hl">계측과 질의</span></h1>
   <div class="body">
@@ -2744,7 +2836,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>앱은 계측 라이브러리로 내놓고, 프로메테우스는 PromQL로 계산한다</span><span>62/104</span></div>
+  <div class="foot"><span>앱은 계측 라이브러리로 내놓고, 프로메테우스는 PromQL로 계산한다</span><span>61/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>order-api는 Micrometer가 HTTP 메트릭을 자동으로 만든다. journal-api(Node)는 prom-client로 같은 이름의 메트릭을 직접 만든다.</li>
@@ -2757,7 +2849,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="63 앱이 메트릭을 내놓는 방법" id="slide-63" data-cap="app-metrics">
+<section class="slide" data-label="62 앱이 메트릭을 내놓는 방법" id="slide-62" data-cap="app-metrics">
   <span class="kicker"><span class="n">05</span>INSTRUMENTATION</span>
   <h1>앱은 <span class="hl">HTTP 엔드포인트</span>로 메트릭을 내놓는다</h1>
   <div class="body">
@@ -2790,22 +2882,23 @@ curl -s localhost:18082/actuator/prometheus \
     </div>
     <div class="callout"><b>메트릭 이름은 코드가 아니라 엔드포인트에서 확인한다.</b> 코드의 <code>orders.created</code>는 <code>orders_total</code>로 나온다. <code>_created</code>가 OpenMetrics 예약 접미사라 라이브러리가 떼어 낸다.</div>
   </div>
-  <div class="foot"><span>두 앱이 같은 이름을 쓰도록 맞춰 두면 질의 하나로 두 앱을 함께 본다</span><span>63/104</span></div>
+  <div class="foot"><span>코드: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a> · 메트릭 목록: <a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html" target="_blank" rel="noopener">Spring Boot · Metrics</a> · <a href="https://github.com/siimon/prom-client" target="_blank" rel="noopener">prom-client</a> · <a href="lab-guide.html#s2-5" target="_blank" rel="noopener">실습 가이드 02 앱 2-5 섹션 참고</a></span><span>62/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>두 앱이 같은 이름을 쓰도록 맞춰 두면 질의 하나로 두 앱을 함께 본다</li>
   <li>노출 이름은 port-forward 한 order-api에서 /actuator/prometheus 를 받아 # TYPE 줄로 확인한 실측이다. 메트릭 줄 357개.</li>
   <li>이름을 지을 때 _total · _created · _bucket · _sum · _count 는 피한다. 라이브러리가 붙이거나 떼는 접미사다.</li>
   <li>journal-api는 order-api와 같은 이름 · 같은 라벨(method · uri · status)로 히스토그램을 직접 만든다. 그래서 뒤의 RED 질의 하나가 두 앱을 함께 다룬다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a></li>
-<li><a href="labs/apps/journal-api/src/server.ts" target="_blank" rel="noopener">journal-api server.ts</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/journal-api/src/server.ts" target="_blank" rel="noopener">journal-api server.ts</a></li>
 <li><a href="https://prometheus.io/docs/practices/naming/" target="_blank" rel="noopener">Prometheus · Metric and label naming</a></li>
 </ul></details>
 </aside>
 <button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/app-metrics.png" alt="캡처 app-metrics.png"><div class="cap-meta">app-metrics.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide" data-label="64 ServiceMonitor로 연결하는 법" id="slide-64">
+<section class="slide" data-label="63 ServiceMonitor로 연결하는 법" id="slide-63">
   <span class="kicker"><span class="n">05</span>HOW TO CONNECT · ServiceMonitor</span>
   <h1>ServiceMonitor에는 <span class="hl">세 가지를 맞춘다</span></h1>
   <div class="body">
@@ -2834,7 +2927,7 @@ curl -s localhost:18082/actuator/prometheus \
     </div>
     <div class="callout">셋이 맞으면 오퍼레이터가 수집 설정을 만들고, 1~2분 뒤 Target health에 <code>serviceMonitor/apps/order-api/0</code>이 나타난다. 하나라도 어긋나면 에러 없이 타깃이 생기지 않는다.</div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> (order-api · journal-api 두 개)</span><span>64/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> (order-api · journal-api 두 개) · <a href="lab-guide.html#s6-1" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-1 섹션 참고</a></span><span>63/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>확인 명령: ① kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}' ③ kubectl -n apps get svc order-api -o jsonpath='{.spec.ports}'</li>
@@ -2849,7 +2942,7 @@ curl -s localhost:18082/actuator/prometheus \
 </aside>
 </section>
 
-<section class="slide expanded" data-label="65 따라하기 ① 앱 연결" id="slide-65" data-cap="connect">
+<section class="slide expanded" data-label="64 따라하기 ① 앱 연결" id="slide-64" data-cap="connect">
   <span class="kicker"><span class="n">05</span>FOLLOW ALONG ① · 연결</span>
   <h1>따라하기 ① <span class="hl">두 앱을 수집 대상에 올린다</span></h1>
   <div class="body">
@@ -2859,7 +2952,7 @@ curl -s localhost:18082/actuator/prometheus \
       <tbody>
         <tr><td>1</td><td><code>kubectl apply -f labs/k8s/servicemonitors.yaml</code></td><td class="it">order-api · journal-api created</td></tr>
         <tr><td>2</td><td><code>kubectl get servicemonitor -A -l release=kps | grep -E 'apps|journal'</code></td><td class="it">두 개가 목록에 있다</td></tr>
-        <tr><td>3</td><td>1~2분 뒤 Status → Target health, 검색 <code>api</code></td><td class="it">order-api 2/2 up · journal-api 3/3 up</td></tr>
+        <tr><td>3</td><td>1~2분 기다린 뒤 브라우저 localhost:9090 → Status → Target health, 오른쪽 위 검색칸에 <code>api</code> (apiserver 줄은 무시)</td><td class="it">order-api 2/2 up · journal-api 3/3 up</td></tr>
         <tr><td>4</td><td>Query: <code>count(up)</code> · <code>sum(up)</code></td><td class="it">33 · 33 (28 + 앱 파드 5)</td></tr>
         <tr><td>5</td><td>Query: <code>http_server_requests_seconds_count</code> (Table)</td><td class="it">job="order-api" · job="journal-api" 줄들</td></tr>
         <tr><td>6</td><td>Status → Configuration, 검색 <code>order-api</code></td><td class="it"><code>job_name: serviceMonitor/apps/order-api/0</code></td></tr>
@@ -2867,16 +2960,20 @@ curl -s localhost:18082/actuator/prometheus \
     </table>
     <div class="callout">타깃 하나 = 파드 하나. order-api를 3개로 늘리면 타깃도 자동으로 3개가 된다. 서비스 디스커버리가 엔드포인트를 따라가기 때문이다.</div>
   </div>
-  <div class="foot"><span>job 라벨 값은 Service 이름에서 온다(order-api · journal-api)</span><span>65/104</span></div>
+  <div class="foot"><span>job 라벨 값은 Service 이름에서 온다(order-api · journal-api) · <a href="lab-guide.html#s6-2" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-2 섹션 참고</a></span><span>64/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 적용 2분 뒤 두 앱 타깃 5개가 up, count(up) 33.</li>
+  <li>3번 순서: ServiceMonitor를 만들면 오퍼레이터가 수집 설정을 새로 만들고 Prometheus가 다시 읽는다. 1~2분 걸리므로 바로 보면 목록에 아직 없다. 브라우저 localhost:9090(port-forward 필요) → Status → Target health → 오른쪽 위 검색칸에 api. 기본 타깃 28개 중 앱 묶음만 남긴다.</li>
+  <li>판정: serviceMonitor/apps/order-api/0 2/2 up, serviceMonitor/journal/journal-api/0 3/3 up. 묶음 이름 옆 숫자가 파드 수와 같으면 성공.</li>
+  <li>검색 api에는 serviceMonitor/monitoring/kps-kube-prometheus-stack-apiserver/0 도 걸린다. 이름의 apiserver 때문이다. 쿠버네티스 API 서버 타깃이라 무시한다.</li>
+  <li>앱 묶음이 아예 안 보이면 라벨 · 셀렉터 · 포트 이름 중 하나가 어긋난 것이다(앞 슬라이드의 세 가지). 에러 없이 타깃만 생기지 않는다.</li>
   <li>6번 설정에는 role: endpoints, namespaces: [apps], metrics_path: /actuator/prometheus, 서비스 라벨과 포트 이름으로 keep 하는 relabel 규칙이 들어 있다(3장 슬라이드와 같은 모양).</li>
 </ul>
 </aside>
-</section>
+<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/connect.png" alt="캡처 connect.png"><div class="cap-meta">connect.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide expanded" data-label="66 PromQL 기본 패턴" id="slide-66">
+<section class="slide expanded" data-label="65 PromQL 기본 패턴" id="slide-65">
   <span class="kicker"><span class="n">05</span>HOW TO QUERY · PromQL</span>
   <h1>PromQL은 <span class="hl">네 가지 모양</span>만 알면 대부분 읽힌다</h1>
   <div class="body">
@@ -2892,12 +2989,12 @@ curl -s localhost:18082/actuator/prometheus \
     </table>
     <div class="callout">읽는 순서는 안쪽부터: 고르고 → 초당으로 바꾸고 → 앱 단위로 합치고 → 나누거나 분위수를 구한다. 5장의 RED 질의가 모두 이 순서다.</div>
   </div>
-  <div class="foot"><span>[5m]: 최근 5분의 샘플로 계산한다. 수집 주기(30초)의 4배 이상으로 둔다</span><span>66/104</span></div>
+  <div class="foot"><span>[5m]: 최근 5분의 샘플로 계산한다. 수집 주기(30초)의 4배 이상으로 둔다 · <a href="lab-guide.html#s7-2" target="_blank" rel="noopener">실습 가이드 07 RED 7-2 섹션 참고</a></span><span>65/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>rate 창을 수집 주기와 비슷하게 잡으면(예: [30s]) 샘플이 1~2개뿐이라 값이 튀거나 비어 나온다. 수집 주기의 4배 이상이 흔한 권장이다.</li>
   <li>sum by 에 없는 라벨은 사라진다. 나중에 어느 파드인지 보려면 by (job, pod) 처럼 남긴다.</li>
-  <li>histogram_quantile 은 버킷 경계 사이를 선형 보간해 추정한다. 경계가 앱의 실제 지연 분포에 맞아야 값이 의미가 있다(Q&amp;A).</li>
+  <li>histogram_quantile 은 버킷 경계 사이를 선형 보간해 추정한다. 경계가 앱의 실제 지연 분포에 맞아야 값이 의미가 있다(실습 가이드 11 Q&amp;A).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/prometheus/latest/querying/basics/" target="_blank" rel="noopener">PromQL · Querying basics</a></li>
@@ -2906,7 +3003,7 @@ curl -s localhost:18082/actuator/prometheus \
 </aside>
 </section>
 
-<section class="slide expanded" data-label="67 따라하기 ② 부하와 RED" id="slide-67" data-cap="red">
+<section class="slide expanded" data-label="66 따라하기 ② 부하와 RED" id="slide-66" data-cap="red">
   <span class="kicker"><span class="n">05</span>FOLLOW ALONG ② · RED</span>
   <h1>따라하기 ② <span class="hl">부하를 넣고 RED를 뽑는다</span></h1>
   <div class="body">
@@ -2923,7 +3020,7 @@ curl -s localhost:18082/actuator/prometheus \
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>…_count · …_sum · …_bucket = http_server_requests_seconds_*</span><span>67/104</span></div>
+  <div class="foot"><span>…_count · …_sum · …_bucket = http_server_requests_seconds_* · <a href="lab-guide.html#s7-1" target="_blank" rel="noopener">실습 가이드 07 RED 7-1 · 7-2 섹션 참고</a></span><span>66/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>기준값은 모두 실측이다. 라이브 값은 부하 시점에 따라 조금씩 다르다.</li>
@@ -2936,12 +3033,12 @@ curl -s localhost:18082/actuator/prometheus \
   <li>끝나면 k6는 Ctrl-C.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/k6/k6-red.js" target="_blank" rel="noopener">k6-red.js</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k6/k6-red.js" target="_blank" rel="noopener">k6-red.js</a></li>
 </ul></details>
 </aside>
-</section>
+<button class="cap-btn" type="button">캡처 1 · C</button><div class="capview" hidden data-idx="0"><img src="images/red.png" alt="캡처 red.png"><div class="cap-meta">red.png · 1/1 · C 다음 · Esc 닫기</div></div></section>
 
-<section class="slide" data-label="68 결과 읽는 법: 평균 대신 분위수, 그다음 쪼개기" id="slide-68" data-cap="p99-uri">
+<section class="slide" data-label="67 결과 읽는 법: 평균 대신 분위수, 그다음 쪼개기" id="slide-67" data-cap="p99-uri">
   <span class="kicker"><span class="n">05</span>HOW TO READ</span>
   <h1>평균 대신 <span class="hl">분위수</span>를 보고, 튀면 <span class="hl">라벨로 쪼갠다</span></h1>
   <div class="body">
@@ -2965,7 +3062,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </div>
     </div>
   </div>
-  <div class="foot"><span>Graph 탭에서 uri별 선을 그리면 /api/chaos/slow 하나만 위로 뜬다</span><span>68/104</span></div>
+  <div class="foot"><span>Graph 탭에서 uri별 선을 그리면 /api/chaos/slow 하나만 위로 뜬다 · <a href="lab-guide.html#s7-3" target="_blank" rel="noopener">실습 가이드 07 RED 7-3 섹션 참고</a></span><span>67/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측값. 1장 "오늘의 질문"의 ①②가 이 두 단계다: 무엇이 이상한가(P99) → 어디에서 발생했나(uri).</li>
@@ -2974,80 +3071,29 @@ P99    0.789   <span class="c"># 789ms</span>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="69 5장 Q&amp;A: 자주 막히는 곳" id="slide-69" data-cap="qa-query">
-  <span class="kicker"><span class="n">05</span>Q&amp;A · 자주 막히는 곳</span>
-  <h1>연결과 질의에서 <span class="hl">자주 막히는 곳</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14px">
-      <colgroup><col style="width:28%"><col style="width:34%"><col></colgroup>
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>ServiceMonitor는 있는데 타깃이 안 생긴다</td><td class="it">① release 라벨 없음 · ② Service 라벨 불일치 · ③ 포트를 숫자로 적음</td><td class="it">앞 장의 확인 명령 세 개. 생성된 설정에 job이 있는지 Status → Configuration에서 본다</td></tr>
-        <tr><td>패널이 No data, 질의 결과 없음</td><td class="it">코드의 이름으로 질의했다(<code>orders_created_total</code>)</td><td class="it">엔드포인트의 <code># TYPE</code> 줄에서 실제 이름(<code>orders_total</code>)을 확인</td></tr>
-        <tr><td>에러가 없는 앱이 표에서 사라진다</td><td class="it">5xx 시계열이 없으면 나눗셈 결과가 "없음"이지 0이 아니다</td><td class="it">뒤에 <code>or (sum by (job) (rate(…_count[5m])) * 0)</code>를 붙여 0으로 채운다</td></tr>
-        <tr><td>P50이 평균보다 수십 배 크다</td><td class="it">버킷 경계가 앱 지연보다 훨씬 크다. 보간이 만든 값</td><td class="it">버킷 경계를 앱의 실제 지연 분포(ms 단위)에 맞춘다</td></tr>
-        <tr><td>시계열 수가 계속 는다</td><td class="it">값이 끝없는 라벨(사용자 ID · 요청 ID · 실제 경로)</td><td class="it">라벨은 경로 템플릿 · 상태 코드처럼 값이 정해진 것만</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>세 가지 모두 에러 메시지 없이 조용히 생긴다. 확인 명령이 답이다</span><span>69/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>모두 이 자료를 만들며 실제로 겪었다. 1행: release 라벨 없이 만들면 1분 뒤에도 order-api 타깃 0건, 생성된 설정에서 grep 결과 0. 포트를 "8080"으로 바꾸면 1~2분 뒤 타깃이 사라진다.</li>
-  <li>2행: "분당 주문 수" 대시보드 패널이 sum(rate(orders_created_total[5m])) 로 적혀 있어 No data였다.</li>
-  <li>4행 실측: 버킷을 [0.05, 0.1, 0.2, 0.5, 1]로 두자 1ms대 요청이 모두 첫 버킷에 들어가 P50 25ms(평균 1.03ms). 경계를 0.5ms부터 촘촘히 두자 P50 1.09ms.</li>
-  <li>5행: 앱 두 개를 연결하자 버킷 시계열만 order-api 592개, journal-api 156개가 생겼다. 경계 하나를 더하면 경로 · 상태 코드 · 파드 조합 수만큼 는다.</li>
-</ul>
-</aside>
-</section>
-
-<section class="slide expanded" data-label="70 5장 체크포인트" id="slide-70">
-  <span class="kicker"><span class="n">05</span>CHECKPOINT</span>
-  <h1>앱 연결이 끝났다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
-      <colgroup><col style="width:62%"><col></colgroup>
-      <thead><tr><th>명령 · 질의</th><th>기대값</th></tr></thead>
-      <tbody>
-        <tr><td><code>kubectl get servicemonitor -A -l release=kps</code></td><td class="it">order-api · journal-api가 목록에 있다</td></tr>
-        <tr><td>Query: <code>count(up)</code> · <code>sum(up)</code></td><td class="it">33 · 33</td></tr>
-        <tr><td><code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">order-api · journal-api 두 줄</td></tr>
-        <tr><td><code>histogram_quantile(0.99, sum by (job, le) (rate(…_bucket[5m])))</code></td><td class="it">두 줄, 부하 중 order-api ≈ 0.79</td></tr>
-        <tr><td><code>histogram_quantile(0.99, sum by (uri, le) (rate(…_bucket{job="order-api"}[5m])))</code></td><td class="it">/api/chaos/slow만 0.8 근처</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">다음 질문: 지금은 질의를 칠 때만 값을 본다. 아무도 화면을 보고 있지 않을 때 에러율이 5%를 넘으면 어떻게 알 수 있나?</div>
-  </div>
-  <div class="foot"><span>책 3.12.1: 애플리케이션의 사용률, 에러 수, 실행 시간도 모니터링한다</span><span>70/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>다음은 알림. 여기서 쓴 RED 질의에 임계값과 지속 시간을 붙여 규칙으로 만들고, 알림이 수신처까지 도착하는 것을 확인한다.</li>
-</ul>
-</aside>
-</section>
 <!-- ===================================================================
   CHAPTER 6 · 알림 받기와 대시보드 (책 3.11 · 3.12.3)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="71 6장 리드" id="slide-71">
+<section class="slide section-lead" data-label="68 6장 리드" id="slide-68">
   <div class="body">
     <div class="quest">CHAPTER · 06 · 책 3.11 · 3.12.3</div>
     <div class="secnum">06</div>
     <h1>규칙을 만들고, <span class="hl">알림을 실제로 받는다</span></h1>
     <p class="sub">RED 질의에 임계값과 지속 시간을 붙여 알림 규칙을 만든다. Alertmanager가 알림을 묶어 수신처로 보내고, 해소되면 다시 알리는 것까지 확인한다. 대시보드는 코드로 넣는다.</p>
   </div>
-  <div class="foot"><span>개념 + 실습 · 3.11 알림 · 3.12.3 알림 모범 사례</span><span>71/104</span></div>
+  <div class="foot"><span>개념 + 실습 · 3.11 알림 · 3.12.3 알림 모범 사례</span><span>68/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>대시보드는 사람이 볼 때 빠르게 판단하게 해 주고, 알림은 사람이 보지 않을 때 불러낸다. 새벽 3시에는 대시보드를 아무도 보지 않는다.</li>
-  <li>흐름: 무엇에 알림을 거나 → 규칙 → 알림이 전달되는 길 → 규칙과 수신자 연결 → 알림 받기 → 시간이 어떻게 흐르나 → 라우팅 · 억제 · 침묵 → 대시보드 → 자주 막히는 곳.</li>
+  <li>흐름: 무엇에 알림을 거나 → 규칙 → 알림이 전달되는 길 → 규칙과 수신자 연결 → 알림 받기 → 라우팅 · 억제 · 침묵 → 대시보드.</li>
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
 </ul>
 </aside>
 </section>
 
 
-<section class="slide expanded" data-label="72 6장 용어 ① 알림 규칙" id="slide-72">
+<section class="slide expanded" data-label="69 6장 용어 ① 알림 규칙" id="slide-69">
   <span class="kicker"><span class="n">06</span>GLOSSARY · 1/2</span>
   <h1>용어 ① <span class="hl">알림 규칙</span></h1>
   <div class="body">
@@ -3067,7 +3113,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>inactive → pending → firing → inactive</span><span>72/104</span></div>
+  <div class="foot"><span>inactive → pending → firing → inactive</span><span>69/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>프로메테우스 공식 문서: 알림 규칙의 조건이 처음 성립하면 pending이 되고, for 기간 동안 계속 성립하면 firing이 된다.</li>
@@ -3078,7 +3124,7 @@ P99    0.789   <span class="c"># 789ms</span>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="73 6장 용어 ② Alertmanager와 SLO" id="slide-73">
+<section class="slide expanded" data-label="70 6장 용어 ② Alertmanager와 SLO" id="slide-70">
   <span class="kicker"><span class="n">06</span>GLOSSARY · 2/2</span>
   <h1>용어 ② <span class="hl">Alertmanager와 SLO</span></h1>
   <div class="body">
@@ -3097,7 +3143,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>프로메테우스는 조건을 판단하고, Alertmanager는 누구에게 어떻게 보낼지 정한다</span><span>73/104</span></div>
+  <div class="foot"><span>프로메테우스는 조건을 판단하고, Alertmanager는 누구에게 어떻게 보낼지 정한다</span><span>70/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>SLO(Service Level Objective)는 1장 용어표에서 정의했다. 오차 예산과 소진 속도는 그 SLO에서 나오는 값이다.</li>
@@ -3110,7 +3156,7 @@ P99    0.789   <span class="c"># 789ms</span>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="74 무엇에 알림을 거나" id="slide-74">
+<section class="slide expanded" data-label="71 무엇에 알림을 거나" id="slide-71">
   <span class="kicker"><span class="n">06</span>WHAT TO ALERT · 책 3.11</span>
   <h1>사람이 <span class="hl">지금 무언가 할 수 있을 때</span>만 알림을 보낸다</h1>
   <div class="body">
@@ -3133,7 +3179,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>책 3.11: 유저는 SLO에 영향을 미치는 이벤트만 알림 받고 싶을 것이다</span><span>74/104</span></div>
+  <div class="foot"><span>책 3.11: 유저는 SLO에 영향을 미치는 이벤트만 알림 받고 싶을 것이다</span><span>71/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.11: 파드가 실패할 때마다 알림을 보내면 받는 사람이 무감각해진다. 쿠버네티스의 핵심은 컨테이너 상태를 자동으로 확인하고 재시작하는 기능이다.</li>
@@ -3146,77 +3192,108 @@ P99    0.789   <span class="c"># 789ms</span>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="75 좋은 알림의 조건" id="slide-75">
-  <span class="kicker"><span class="n">06</span>GOOD ALERTS · 책 3.11</span>
-  <h1>책의 네 가지 조언은 <span class="hl">규칙의 어느 칸</span>에 들어가나</h1>
+
+<section class="slide" data-label="72 규칙은 어디에 넣나" id="slide-72">
+  <span class="kicker"><span class="n">06</span>WHERE RULES LIVE</span>
+  <h1>규칙은 <span class="hl">쿠버네티스 리소스(PrometheusRule)</span>로 넣는다</h1>
   <div class="body">
-    <table class="compare" style="table-layout:fixed;font-size:15.5px">
-      <colgroup><col style="width:36%"><col style="width:30%"><col></colgroup>
-      <thead><tr><th>책 3.11의 조언</th><th>설정 위치</th><th>예</th></tr></thead>
-      <tbody>
-        <tr><td>임계 시간은 5분 이상, 5·10·30·60분처럼 표준화</td><td>규칙의 <code>for</code></td><td class="it"><code>for: 2m</code> · <code>for: 3m</code> (짧게 잡은 실습값)</td></tr>
-        <tr><td>플레이북 링크, 지역·앱 소유자·영향 시스템을 함께</td><td>규칙의 <code>annotations</code> · <code>labels</code></td><td class="it"><code>summary</code> · <code>description</code> · <code>runbook_url</code></td></tr>
-        <tr><td>팀 전체가 아니라 문제를 맡을 사람에게</td><td>Alertmanager <code>route</code> · <code>receiver</code></td><td class="it">severity=critical → 당직 수신자</td></tr>
-        <tr><td>완벽한 알림은 없다. 점진적으로 개선</td><td>운영 습관</td><td class="it">울렸는데 아무도 조치하지 않은 알림은 지운다</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">알림 메시지만 보고도 "어디를 봐야 하나"에 시간을 쓰지 않게 만드는 것이 목표다. 대시보드 링크를 annotations에 넣어 두면 대응하는 사람이 바로 연다.</div>
+    <div class="flow" style="grid-template-columns:repeat(4,1fr)">
+      <div class="step-box"><span class="num">① 파일에 적는다</span><b>PrometheusRule YAML</b><p><code>labs/k8s/prometheusrule.yaml</code>. 규칙 4개를 한 파일에</p></div>
+      <div class="step-box"><span class="num">② 클러스터에 넣는다</span><b>kubectl apply</b><p><code>kubectl apply -f labs/k8s/prometheusrule.yaml</code></p></div>
+      <div class="step-box"><span class="num">③ 오퍼레이터가 옮긴다</span><b>Prometheus 규칙 파일로</b><p><code>release: kps</code> 라벨이 붙은 것만 골라 Prometheus에 로드</p></div>
+      <div class="step-box"><span class="num">④ 프로메테우스가 평가</span><b>30초마다</b><p>조건이 맞으면 pending → for를 채우면 firing</p></div>
+    </div>
+    <div class="split a" style="align-items:start">
+      <div class="card"><h3>ServiceMonitor와 같은 방식</h3><p>수집 대상을 ServiceMonitor로 넣었듯(5장), 알림 규칙은 PrometheusRule로 넣는다. Prometheus 설정 파일을 직접 고치지 않는다. 오퍼레이터가 <code>ruleSelector</code>(여기서는 <code>release: kps</code>)에 맞는 것만 고른다.</p></div>
+      <div class="card"><h3>들어갔는지 확인하는 곳</h3><p>Prometheus → Status → <b>Rule health</b>: 그룹 study-app, 규칙 4개 OK<br>Prometheus → <b>Alerts</b>: 규칙별 inactive · pending · firing</p></div>
+    </div>
   </div>
-  <div class="foot"><span>책 3.11: 임계치가 너무 짧으면 오탐 알림이 너무 자주 발생한다</span><span>75/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> · <a href="lab-guide.html#s8-2" target="_blank" rel="noopener">실습 가이드 08 알림 8-2 섹션 참고</a></span><span>72/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>책 3.11 원문 요지: 임계치를 적어도 5분 이상으로. 표준 임계치(5분, 10분, 30분, 1시간)를 정하면 수많은 임계치를 세밀하게 관리할 필요가 없다.</li>
-  <li>책: 알림이 더 큰 그룹으로 전송되면 유저는 노이즈라고 판단해 걸러낼 가능성이 높다. 알림은 실제로 그 문제를 맡아 해결할 사람에게 보낸다.</li>
-  <li>실습 규칙은 발화 과정을 몇 분 안에 보려고 for를 2~3분으로 짧게 잡았다.</li>
+  <li>순서: 파일 작성 → kubectl apply → 오퍼레이터가 Prometheus 파드 안의 규칙 파일로 옮김 → config-reloader가 Prometheus에 다시 읽게 함 → 30초 주기 평가. 적용 후 Rule health에 나타나기까지 1~2분.</li>
+  <li>확인 명령: kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.ruleSelector}' → {"matchLabels":{"release":"kps"}}. 이 라벨이 없으면 규칙이 조용히 무시된다(실습 가이드 11 Q&amp;A).</li>
+  <li>로드 직후 잠깐 state unknown(아직 평가 전)이 보인다. 30초 뒤 inactive.</li>
 </ul>
 </aside>
 </section>
 
-<section class="slide" data-label="76 규칙 넷" id="slide-76">
-  <span class="kicker"><span class="n">06</span>PROMETHEUSRULE</span>
-  <h1>RED 질의에 <span class="hl">임계값과 지속 시간</span>을 붙이면 규칙이 된다</h1>
+<section class="slide" data-label="73 규칙 한 개 읽기" id="slide-73">
+  <span class="kicker"><span class="n">06</span>ANATOMY OF A RULE</span>
+  <h1>규칙 하나 = <span class="hl">질의 + 임계값 + 지속 시간 + 라벨 + 메시지</span></h1>
   <div class="body">
     <div class="split a" style="align-items:start">
-      <pre class="code" style="font-size:12.5px"><span class="k">kind:</span> PrometheusRule
+      <pre class="code" style="font-size:12px"><span class="k">apiVersion:</span> monitoring.coreos.com/v1
+<span class="k">kind:</span> PrometheusRule
 <span class="k">metadata:</span>
   <span class="k">name:</span> study-app-rules
-<span class="hl">  <span class="k">labels:</span> {<span class="k">release:</span> <span class="v">kps</span>}     <span class="c"># Prometheus의 ruleSelector와 맞춘다</span></span><span class="k">spec:</span>
+  <span class="k">namespace:</span> monitoring
+  <span class="k">labels:</span> {<span class="k">release:</span> <span class="v">kps</span>}          <span class="c"># ⓪ 오퍼레이터가 고르는 표시</span>
+<span class="k">spec:</span>
   <span class="k">groups:</span>
   - <span class="k">name:</span> study-app
-    <span class="k">interval:</span> 30s
+    <span class="k">interval:</span> 30s                  <span class="c"># 평가 주기</span>
     <span class="k">rules:</span>
-    - <span class="k">alert:</span> <span class="v">AppHighErrorRate</span>
-      <span class="k">expr:</span> |
+<span class="hl">    - <span class="k">alert:</span> <span class="v">AppHighErrorRate</span>       <span class="c"># ① 이름</span></span>      <span class="k">expr:</span> |                       <span class="c"># ② 질의 (5장 E)</span>
         100 * (
           sum by (job) (rate(…_count{status=~"5.."}[5m]))
           / sum by (job) (rate(…_count[5m]))
-<span class="hl">        ) &gt; <span class="v">5</span></span><span class="hl">      <span class="k">for:</span> <span class="v">2m</span></span>      <span class="k">labels:</span> {<span class="k">severity:</span> warning}
-      <span class="k">annotations:</span>
+<span class="hl">        ) &gt; <span class="v">5</span>                        <span class="c"># ③ 임계값</span></span><span class="hl">      <span class="k">for:</span> <span class="v">2m</span>                       <span class="c"># ④ 지속 시간</span></span>      <span class="k">labels:</span>
+        <span class="k">severity:</span> warning           <span class="c"># ⑤ 누구에게 보낼지</span>
+      <span class="k">annotations:</span>                   <span class="c"># ⑥ 메시지</span>
         <span class="k">summary:</span> "{{ $labels.job }} 에러율 {{ $value }}%"</pre>
       <table class="compare">
-        <thead><tr><th>규칙</th><th>조건 · for · severity</th></tr></thead>
+        <thead><tr><th>칸</th><th>하는 일</th></tr></thead>
         <tbody>
-          <tr><td>① AppTargetDown</td><td><code>up == 0</code> · 1m · critical</td></tr>
-          <tr><td>② AppHighErrorRate</td><td>5xx 비율 &gt; 5% · 2m · warning</td></tr>
-          <tr><td>③ AppHighLatencyP95</td><td>P95 &gt; 0.5초 · 3m · warning</td></tr>
-          <tr><td>④ AppSLOFastBurn</td><td>200ms 초과 비율 &gt; 14.4 × 1% · 2m · critical</td></tr>
+          <tr><td>⓪ release: kps</td><td>이 라벨이 있어야 오퍼레이터가 Prometheus에 올린다</td></tr>
+          <tr><td>① alert</td><td>규칙 이름. Alerts 화면과 알림 메시지의 alertname</td></tr>
+          <tr><td>② expr</td><td>5장에서 쓴 에러율 질의를 그대로 옮기고 ×100(퍼센트)</td></tr>
+          <tr><td>③ &gt; 5</td><td>5%를 넘는 job만 결과에 남는다. 남은 줄 하나 = 알림 하나</td></tr>
+          <tr><td>④ for</td><td>2분 동안 계속 넘어야 firing. 잠깐 튄 것은 거른다</td></tr>
+          <tr><td>⑤ severity</td><td>Alertmanager가 이 값으로 수신자를 고른다(warning → 기본, critical → 당직)</td></tr>
+          <tr><td>⑥ summary</td><td>알림에 찍히는 문장. <code>$labels.job</code> · <code>$value</code>가 채워져 "order-api 에러율 5.6%"가 된다</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a></span><span>76/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> · <a href="lab-guide.html#s8-2" target="_blank" rel="noopener">실습 가이드 08 알림 8-2 섹션 참고</a></span><span>73/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>프로메테우스 리소스의 ruleSelector 도 {"matchLabels":{"release":"kps"}} 다(실측). ServiceMonitor와 같은 방식으로 라벨로 고른다.</li>
-  <li>expr 의 &gt; 5 가 임계값이자 필터다. 남은 라벨 조합마다 알림 인스턴스가 하나씩 생기므로 sum by (job) 으로 묶는다. 파드별로 묶으면 파드 수만큼 알림이 온다.</li>
-  <li>③과 ④는 둘 다 "느림"을 보지만 뜻이 다르다. ③은 느린 요청이 있다, ④는 이 속도면 SLO를 못 지킨다. 그래서 ③은 warning, ④는 critical.</li>
-  <li>④의 le="0.2" 는 200ms 버킷 경계를 직접 고른다. 그 경계가 버킷 정의에 실제로 있어야 한다.</li>
-  <li>적용 직후 /api/v1/rules 에서 네 규칙이 state=unknown, 30초 뒤 inactive.</li>
+  <li>새 규칙을 만드는 순서: Query 화면에서 질의를 먼저 쳐 보고 값이 맞으면 &gt; 임계값과 for를 붙여 규칙으로 옮긴다.</li>
+  <li>sum by (job)으로 묶은 이유: 남은 라벨 조합마다 알림이 하나씩 생긴다. 파드별로 두면 파드 수만큼 알림이 온다.</li>
+  <li>실측 알림 문장: "order-api 에러율 5.6%" (firing), 해소될 때 "order-api 에러율 5.0%" (resolved). 값은 보낼 때의 값이다.</li>
+  <li>실제 파일의 expr은 http_server_requests_seconds_count 이름을 끝까지 적고 job=~"order-api|journal-api"로 두 앱만 고른다. 슬라이드에서는 줄였다.</li>
 </ul>
 </aside>
 </section>
 
-<section class="slide" data-label="77 알림이 전달되는 길" id="slide-77">
+<section class="slide expanded" data-label="74 규칙 넷" id="slide-74">
+  <span class="kicker"><span class="n">06</span>THE FOUR RULES</span>
+  <h1>이 실습의 규칙 넷: <span class="hl">무엇을 보고, 언제, 누구를</span> 부르나</h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
+      <colgroup><col style="width:19%"><col style="width:31%"><col style="width:12%"><col style="width:7%"><col style="width:10%"><col></colgroup>
+      <thead><tr><th>규칙</th><th>질의 (무엇을 보나)</th><th>임계값</th><th>for</th><th>severity</th><th>왜</th></tr></thead>
+      <tbody>
+        <tr><td>① AppTargetDown</td><td class="it"><code>up{job=~"order-api|journal-api"} == 0</code></td><td class="it">0 (수집 실패)</td><td class="it">1m</td><td class="it">critical</td><td class="it">관측이 끊기면 다른 알림이 모두 침묵한다</td></tr>
+        <tr><td>② AppHighErrorRate</td><td class="it">5xx 비율 × 100 (5장 E)</td><td class="it">&gt; 5%</td><td class="it">2m</td><td class="it">warning</td><td class="it">사용자가 겪는 증상. 낮에 본다</td></tr>
+        <tr><td>③ AppHighLatencyP95</td><td class="it"><code>histogram_quantile(0.95, …)</code> (5장 P95)</td><td class="it">&gt; 0.5초</td><td class="it">3m</td><td class="it">warning</td><td class="it">느린 요청이 있다</td></tr>
+        <tr><td>④ AppSLOFastBurn</td><td class="it">200ms 넘는 요청 비율 (<code>le="0.2"</code> 버킷)</td><td class="it">&gt; 14.4%</td><td class="it">2m</td><td class="it">critical</td><td class="it">이 속도면 30일 SLO 예산을 2일에 다 쓴다. 새벽에도 깨운다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">③과 ④는 둘 다 "느림"을 보지만 뜻이 다르다. ③은 느린 요청이 있다, ④는 약속(SLO)을 못 지킨다. 실측에서 ③은 울렸고 ④는 울리지 않았다(200ms 초과 5.6% &lt; 14.4%).</div>
+  </div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">labs/k8s/prometheusrule.yaml</a> · <a href="lab-guide.html#s8-2" target="_blank" rel="noopener">실습 가이드 08 알림 8-2 섹션 참고</a></span><span>74/93</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>세 규칙이 RED 지표(에러 · 지연)이고 하나는 관측 자체의 고장이다. CPU · 메모리 알림은 만들지 않았다(앞 장 "무엇에 알림을 거나").</li>
+  <li>④의 le="0.2"는 200ms 버킷 경계를 직접 고른다. 그 경계가 앱의 버킷 정의에 실제로 있어야 한다.</li>
+  <li>for 값은 발화 과정을 몇 분 안에 보려고 짧게 잡은 실습값이다. 책 3.11은 5분 이상, 5 · 10 · 30 · 60분처럼 표준화하라고 권한다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide" data-label="75 알림이 전달되는 길" id="slide-75">
   <span class="kicker"><span class="n">06</span>ALERT PATH</span>
   <h1>프로메테우스는 <span class="hl">판단</span>하고, Alertmanager는 <span class="hl">전달</span>한다</h1>
   <div class="body">
@@ -3240,7 +3317,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </div>
     </div>
   </div>
-  <div class="foot"><span>수신 서버: <a href="labs/k8s/alert-sink.yaml" target="_blank" rel="noopener">labs/k8s/alert-sink.yaml</a> · 값 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>77/104</span></div>
+  <div class="foot"><span>수신 서버: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/alert-sink.yaml" target="_blank" rel="noopener">labs/k8s/alert-sink.yaml</a> · 값 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a> · <a href="lab-guide.html#s8-1" target="_blank" rel="noopener">실습 가이드 08 알림 8-1 섹션 참고</a></span><span>75/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>웹훅(Webhook): 알림 내용을 JSON으로 지정한 URL에 POST 한다. 모든 알림 연동의 기본 형태라, 외부 계정 없이 전달 경로 전체를 확인하기 좋다.</li>
@@ -3255,7 +3332,7 @@ P99    0.789   <span class="c"># 789ms</span>
 </section>
 
 
-<section class="slide expanded" data-label="78 따라하기 ① 규칙과 수신자 연결" id="slide-78" data-cap="alert-setup">
+<section class="slide expanded" data-label="76 따라하기 ① 규칙과 수신자 연결" id="slide-76" data-cap="alert-setup">
   <span class="kicker"><span class="n">06</span>FOLLOW ALONG ① · 준비</span>
   <h1>따라하기 ① <span class="hl">수신자를 띄우고 규칙을 넣는다</span></h1>
   <div class="body">
@@ -3272,7 +3349,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>수신자 설정은 3장 설치 때 값 파일로 이미 들어가 있다. 여기서는 받는 쪽(alert-sink)만 띄운다</span><span>78/104</span></div>
+  <div class="foot"><span>수신자 설정은 3장 설치 때 값 파일로 이미 들어가 있다. 여기서는 받는 쪽(alert-sink)만 띄운다 · <a href="lab-guide.html#s8-1" target="_blank" rel="noopener">실습 가이드 08 알림 8-1 · 8-2 섹션 참고</a></span><span>76/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 규칙 적용 1~2분 뒤 Rule health에 네 규칙, 모두 health ok · state inactive. 로드 직후 잠깐 state unknown(아직 평가 전)이 보인다.</li>
@@ -3282,7 +3359,7 @@ P99    0.789   <span class="c"># 789ms</span>
 </section>
 
 
-<section class="slide expanded" data-label="79 따라하기 ② 알림 받기" id="slide-79" data-cap="alert-received">
+<section class="slide expanded" data-label="77 따라하기 ② 알림 받기" id="slide-77" data-cap="alert-received">
   <span class="kicker"><span class="n">06</span>FOLLOW ALONG ② · 받기</span>
   <h1>따라하기 ② <span class="hl">부하를 넣고 알림이 도착하는지</span> 본다</h1>
   <div class="body">
@@ -3314,7 +3391,7 @@ P99    0.789   <span class="c"># 789ms</span>
     </div>
     <div class="callout">알림 한 통이 말해 주는 것: <b>무엇</b>(alertname) · <b>얼마나 심각</b>(severity) · <b>어디</b>(job) · <b>지금 값</b>(summary). ④ AppSLOFastBurn은 끝까지 오지 않는다. 설계대로다.</div>
   </div>
-  <div class="foot"><span>시각은 UTC(끝의 Z). 한국 시각은 +9시간</span><span>79/104</span></div>
+  <div class="foot"><span>시각은 UTC(끝의 Z). 한국 시각은 +9시간 · <a href="lab-guide.html#s8-3" target="_blank" rel="noopener">실습 가이드 08 알림 8-3 섹션 참고</a></span><span>77/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측(UTC): 부하 02:03:58 시작 → 02:04:28 두 규칙 pending → 02:06:48 에러율 firing → 02:07:16 수신(group_wait 30초) → 02:07:48 지연 firing → 02:08:16 수신 → 02:09:59 부하 종료 → 02:15:29 모두 inactive → 02:17:16 · 02:18:16 resolved 수신. resolved는 group_interval(5분) 주기에 맞춰 오므로 해소 뒤 최대 5분 늦게 온다. summary 값은 보낼 때의 값이다(5.6% → 5.0%).</li>
@@ -3325,29 +3402,7 @@ P99    0.789   <span class="c"># 789ms</span>
 </section>
 
 
-<section class="slide" data-label="80 알림 상태 전이 타임라인" id="slide-80">
-  <span class="kicker"><span class="n">06</span>HOW IT BEHAVES · 실측</span>
-  <h1>발화는 <span class="hl">for</span>가, 해소는 <span class="warn">rate의 창</span>이 정한다</h1>
-  <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t8 d8">
-  <title id="t8">알림 상태 전이 타임라인</title>
-  <desc id="d8">부하를 건 뒤 40초 만에 pending, 에러율 알림은 for 2분을 채워 firing, 지연 알림은 for 3분을 채워 firing. 부하를 끝낸 뒤에도 rate 5분 창 때문에 5분 5초 동안 firing이 유지됐다.</desc>
-  <rect width="1600" height="900" fill="#FFFFFF"/>
-  <line x1="170" y1="120" x2="1514" y2="120" stroke="#A7B5AC" stroke-width="2"/><line x1="170" y1="112" x2="170" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="170" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:00</text><line x1="394" y1="112" x2="394" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="394" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:02</text><line x1="618" y1="112" x2="618" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="618" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:04</text><line x1="842" y1="112" x2="842" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="842" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:06</text><line x1="1066" y1="112" x2="1066" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="1066" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:08</text><line x1="1290" y1="112" x2="1290" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="1290" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:10</text><line x1="1514" y1="112" x2="1514" y2="128" stroke="#A7B5AC" stroke-width="2"/><text x="1514" y="100" font-size="21" font-weight="400" text-anchor="middle" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#6F7C79">22:12</text><text x="30" y="186" font-size="26" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#24292A">부하</text><rect x="207" y="158" width="633" height="44" fill="#E7F0FF" stroke="#1D5FBF" stroke-width="2" rx="4"/><text x="221" y="188" font-size="21" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#1D5FBF">에러 · 지연 주입 (k6)</text><text x="30" y="282" font-size="25" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#24292A">에러율 ②</text><rect x="282" y="250" width="258" height="50" fill="#FFF1DE" stroke="#B5761F" stroke-width="2" rx="4"/><rect x="540" y="250" width="870" height="50" fill="#FCE4E6" stroke="#C2414A" stroke-width="2" rx="4"/><text x="294" y="283" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#8A5813">pending</text><text x="552" y="283" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#C2414A">firing</text><text x="30" y="372" font-size="25" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#24292A">지연 ③</text><rect x="282" y="340" width="370" height="50" fill="#FFF1DE" stroke="#B5761F" stroke-width="2" rx="4"/><rect x="652" y="340" width="758" height="50" fill="#FCE4E6" stroke="#C2414A" stroke-width="2" rx="4"/><text x="294" y="373" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#8A5813">pending</text><text x="664" y="373" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#C2414A">firing</text><line x1="207" y1="140" x2="207" y2="420" stroke="#1D5FBF" stroke-width="2" stroke-dasharray="8 6"/><line x1="840" y1="140" x2="840" y2="420" stroke="#1D5FBF" stroke-width="2" stroke-dasharray="8 6"/><line x1="1409" y1="140" x2="1409" y2="420" stroke="#0F766E" stroke-width="2" stroke-dasharray="8 6"/><text x="840" y="450" font-size="21" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#1D5FBF">부하 종료 22:05:59</text><text x="1409" y="450" font-size="21" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#0F766E">inactive 22:11:04</text><path d="M207 518 L207 530 L282 530 L282 518" stroke="#1D5FBF" stroke-width="2.5" fill="none"/><text x="245" y="564" font-size="25" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#1D5FBF">40초</text><text x="245" y="596" font-size="21" font-weight="400" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">평가 주기(30초) + rate 계산</text><path d="M282 628 L282 640 L540 640 L540 628" stroke="#B5761F" stroke-width="2.5" fill="none"/><text x="411" y="674" font-size="25" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#B5761F">2분 18초</text><text x="411" y="706" font-size="21" font-weight="400" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">② 규칙의 for: 2m</text><path d="M282 738 L282 750 L652 750 L652 738" stroke="#B5761F" stroke-width="2.5" fill="none"/><text x="467" y="784" font-size="25" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#B5761F">3분 18초</text><text x="467" y="816" font-size="21" font-weight="400" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">③ 규칙의 for: 3m</text><path d="M840 628 L840 640 L1409 640 L1409 628" stroke="#C2414A" stroke-width="2.5" fill="none"/><text x="1125" y="674" font-size="25" font-weight="700" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#C2414A">5분 5초</text><text x="1125" y="706" font-size="21" font-weight="400" text-anchor="middle" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">rate(…[5m]) 의 창 길이</text><text x="1570" y="870" font-size="20" font-weight="400" text-anchor="end" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#6F7C79">시각은 실측 관찰 로그(20초 간격 조회)</text>
-</svg></div>
-  <div class="foot"><span>원인이 사라져도 rate(…[5m]) 창이 지나갈 때까지 최대 5분 firing이 유지된다. 정상 동작이다</span><span>80/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>실측. 20초 간격으로 /api/v1/rules 를 조회해 상태가 바뀐 시각을 기록했다.</li>
-  <li>부하 시작 → pending 40초: 평가 주기 30초 + rate 창이 값을 잡는 시간.</li>
-  <li>pending → firing: 에러율 2분 18초(for: 2m), 지연 3분 18초(for: 3m). 규칙에 적은 값과 맞는다.</li>
-  <li>부하 종료 → inactive: 5분 5초. rate(…[5m])는 매 순간 직전 5분을 보므로, 부하가 끝난 뒤에도 창 안에 에러가 남아 있는 동안 비율이 임계값을 넘는다. for는 발화 조건이지 해소 조건이 아니다.</li>
-  <li>그림은 같은 절차를 먼저 돌렸을 때의 기록이다. 다시 돌린 실측(실습 가이드 8-3)은 시작→pending 30초, pending→firing은 for 값 그대로(2분 20초 · 3분 20초), 부하 종료→inactive 5분 30초. 해소되면 수신자에게 resolved 알림이 group_interval(5분) 주기에 맞춰 한 번 더 온다.</li>
-  <li>빨리 꺼지게 하려고 창을 [2m]으로 줄이면 트래픽이 적을 때 비율이 요동쳐 오탐이 는다. 보통은 창을 두고 description에 "원인이 사라진 뒤에도 최대 5분간 유지"라고 적는다.</li>
-</ul>
-</aside>
-</section>
-
-<section class="slide" data-label="81 P95 알림과 SLO 알림" id="slide-81">
+<section class="slide" data-label="78 P95 알림과 SLO 알림" id="slide-78">
   <span class="kicker"><span class="n">06</span>SLO BURN RATE</span>
   <h1>P95 알림은 울렸는데 <span class="hl">SLO 알림은 울리지 않았다</span></h1>
   <div class="body">
@@ -3372,7 +3427,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
     </div>
     <div class="callout">느린 요청은 order-api 요청 초당 약 36건 중 2건이다. <b>느리다와 위험하다는 다르다.</b> 사람을 깨우는 것은 ④여야 한다.</div>
   </div>
-  <div class="foot"><span>30일 ÷ 14.4 ≈ 2.08일</span><span>81/104</span></div>
+  <div class="foot"><span>30일 ÷ 14.4 ≈ 2.08일 · <a href="lab-guide.html#s8-4" target="_blank" rel="noopener">실습 가이드 08 알림 8-4 섹션 참고</a></span><span>78/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측. 넷 중 하나가 침묵한 것이 버그가 아니라 설계라는 것을 확인했다.</li>
@@ -3385,7 +3440,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
 </aside>
 </section>
 
-<section class="slide" data-label="82 Alertmanager 라우팅" id="slide-82">
+<section class="slide" data-label="79 Alertmanager 라우팅" id="slide-79" data-cap="alertmanager">
   <span class="kicker"><span class="n">06</span>ALERTMANAGER · ROUTE</span>
   <h1>Alertmanager는 <span class="hl">묶고, 기다리고, 골라서</span> 보낸다</h1>
   <div class="body">
@@ -3419,7 +3474,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
       </table>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>82/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a> · <a href="lab-guide.html#s8-5" target="_blank" rel="noopener">실습 가이드 08 알림 8-5 섹션 참고</a></span><span>79/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>값 파일에 alertmanager.config 를 쓰면 차트 기본 설정을 통째로 대체한다. Watchdog 처리와 억제 규칙을 빠뜨리지 않는다.</li>
@@ -3434,38 +3489,7 @@ order-api  <span class="v">5.63%</span>   <span class="c">(임계 14.4%)</span><
 </section>
 
 
-<section class="slide" data-label="83 억제와 침묵" id="slide-83" data-cap="silence">
-  <span class="kicker"><span class="n">06</span>INHIBIT vs SILENCE</span>
-  <h1>억제는 <span class="hl">규칙이 자동으로</span>, 침묵은 <span class="hl">사람이 기간을 정해</span> 끈다</h1>
-  <div class="body">
-    <div class="grid2">
-      <div class="card">
-        <span class="tag">억제 · Inhibition</span>
-        <pre class="code" style="font-size:12.5px;margin:10px 0"><span class="c"># 같은 알림을 critical · warning 둘로 넣었을 때</span>
-severity=critical  state=active      inhibitedBy=0건
-severity=warning   state=<span class="v">suppressed</span>  inhibitedBy=<span class="v">1건</span></pre>
-        <p>critical이 울리는 동안 같은 대상의 warning은 보내지 않는다. DB가 죽어 서비스 열 개가 경고를 내도 사람이 볼 것은 하나다.</p>
-      </div>
-      <div class="card">
-        <span class="tag">침묵 · Silence</span>
-        <pre class="code" style="font-size:12.5px;margin:10px 0"><span class="c"># alertname=DemoAlert 에 10분 침묵</span>
-severity=critical  state=<span class="v">suppressed</span>  silencedBy=<span class="v">1건</span>
-severity=warning   state=<span class="v">suppressed</span>  silencedBy=<span class="v">1건</span></pre>
-        <p>계획 작업 중에 알림을 잠시 끈다. critical까지 모두 눌린다. <b>반드시 끝나는 시각이 있다.</b></p>
-      </div>
-    </div>
-    <div class="callout">둘 다 state=suppressed지만 <code>inhibitedBy</code>(규칙)와 <code>silencedBy</code>(사람) 중 어느 쪽이 채워졌는지로 구분한다. "아는 문제니까 꺼 두자"는 침묵이 아니라 규칙이나 문제를 고칠 일이다.</div>
-  </div>
-  <div class="foot"><span>침묵은 Alertmanager UI(9093)의 New Silence 또는 API로 만든다</span><span>83/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>실측. 실제 장애를 기다리지 않고 Alertmanager API(/api/v2/alerts)로 같은 alertname·namespace의 critical·warning 알림을 직접 밀어 넣었다.</li>
-  <li>영구 침묵이 없는 것이 설계 의도다. 계획 작업이 끝나면 지운다.</li>
-</ul>
-</aside>
-</section>
-
-<section class="slide" data-label="84 대시보드를 코드로" id="slide-84" data-cap="dashboard-code">
+<section class="slide" data-label="80 대시보드를 코드로" id="slide-80" data-cap="dashboard-code">
   <span class="kicker"><span class="n">06</span>DASHBOARD AS CODE</span>
   <h1>대시보드는 UI가 아니라 <span class="hl">ConfigMap</span>으로 넣는다</h1>
   <div class="body">
@@ -3490,7 +3514,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>대시보드: <a href="labs/dashboards/study-red.json" target="_blank" rel="noopener">study-red.json</a></span><span>84/104</span></div>
+  <div class="foot"><span>대시보드: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/dashboards/study-red.json" target="_blank" rel="noopener">study-red.json</a> · <a href="lab-guide.html#s9-1" target="_blank" rel="noopener">실습 가이드 09 대시보드 9-1 섹션 참고</a></span><span>80/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>차트가 넣어 준 기본 대시보드와 같은 방식이다. 폴더 이름은 annotate grafana_folder=스터디 로 정한다(실습 가이드).</li>
@@ -3499,7 +3523,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="85 알림 피로 줄이기" id="slide-85">
+<section class="slide expanded" data-label="81 알림 피로 줄이기" id="slide-81">
   <span class="kicker"><span class="n">06</span>ALERT FATIGUE · 책 3.12.3</span>
   <h1>하루 스무 번 울리는 알림은 <span class="warn">울리지 않는 것과 같다</span></h1>
   <div class="body">
@@ -3519,7 +3543,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
       <div class="card yellow"><h3>warning</h3><p>업무 시간에 보면 되는 것. 에러율 5% 초과, P95 500ms 초과</p></div>
     </div>
   </div>
-  <div class="foot"><span>책 3.12.3: 알림 피로는 담당자와 프로세스 모두에게 안 좋은 영향을 끼친다. 완벽한 알림은 없다</span><span>85/104</span></div>
+  <div class="foot"><span>책 3.12.3: 알림 피로는 담당자와 프로세스 모두에게 안 좋은 영향을 끼친다. 완벽한 알림은 없다</span><span>81/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.12.3 세 항목: 알림 피로 주의 / 완벽한 알림은 없으니 점진적으로 개선 / 사람이 즉시 대응할 필요 없는 일시적 문제는 알리지 않고, SLO와 고객 영향 증상에만 알린다.</li>
@@ -3529,82 +3553,29 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="86 6장 Q&amp;A: 자주 막히는 곳" id="slide-86" data-cap="qa-alert">
-  <span class="kicker"><span class="n">06</span>Q&amp;A · 자주 막히는 곳</span>
-  <h1>알림에서 <span class="hl">자주 막히는 곳</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14px">
-      <colgroup><col style="width:28%"><col style="width:34%"><col></colgroup>
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>Rule health에 규칙이 없다</td><td class="it">PrometheusRule에 <code>release: kps</code> 라벨이 없다</td><td class="it">Prometheus의 <code>ruleSelector</code>와 같은 라벨을 붙인다</td></tr>
-        <tr><td>Alerts는 FIRING인데 수신처에 안 온다</td><td class="it">group_wait 전이다 · 라우트가 "null"로 간다 · 수신자 URL이 틀렸다</td><td class="it">30초 기다린다 · Alertmanager UI의 그룹에서 receiver 확인 · <code>kubectl logs</code>로 Alertmanager 에러 확인</td></tr>
-        <tr><td>고쳤는데 5분 동안 계속 울린다</td><td class="it"><code>rate(…[5m])</code> 창에 에러가 남아 있다</td><td class="it">정상 동작. description에 적어 둔다. 창을 줄이면 오탐이 는다</td></tr>
-        <tr><td>파드마다 알림이 따로 온다</td><td class="it">expr이 파드 라벨을 남긴다</td><td class="it"><code>sum by (job)</code>으로 묶는다 · <code>group_by</code>를 확인한다</td></tr>
-        <tr><td>계획 작업 중 알림이 쏟아진다</td><td class="it">알림은 작업 여부를 모른다</td><td class="it">끝나는 시각을 정한 침묵(Silence)을 건다</td></tr>
-        <tr><td>코드로 넣은 대시보드가 안 보인다</td><td class="it">ConfigMap 라벨이 <code>grafana_dashboard=1</code>이 아니다</td><td class="it">라벨을 붙이고 사이드카 로그에서 <code>Writing …</code>을 확인</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>원인 보는 곳: Rule health · Alerts · Alertmanager UI의 그룹과 Status · alert-sink 로그</span><span>86/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>셋째 행 실측: 부하를 멈춘 뒤 모두 inactive가 되기까지 5분 5초 · 5분 10초 · 5분 30초(세 번 실행).</li>
-  <li>Alertmanager 에러 확인: kubectl -n monitoring logs alertmanager-kps-kube-prometheus-stack-alertmanager-0 -c alertmanager | grep -i notify</li>
-</ul>
-</aside>
-</section>
-
-
-<section class="slide expanded" data-label="87 6장 체크포인트" id="slide-87">
-  <span class="kicker"><span class="n">06</span>CHECKPOINT</span>
-  <h1>알림이 동작한다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
-      <colgroup><col style="width:58%"><col></colgroup>
-      <thead><tr><th>명령 · 화면</th><th>기대값</th></tr></thead>
-      <tbody>
-        <tr><td>Prometheus → Status → Rule health (study-app)</td><td class="it">규칙 4개, 모두 OK</td></tr>
-        <tr><td>부하 없이 Prometheus → Alerts</td><td class="it">study-app 규칙 모두 inactive</td></tr>
-        <tr><td>부하 3~4분 뒤 <code>kubectl -n monitoring logs deploy/alert-sink</code></td><td class="it"><code>[firing] AppHighErrorRate … order-api 에러율 5~6%</code></td></tr>
-        <tr><td>부하 종료 6분 뒤 같은 로그</td><td class="it"><code>[resolved] AppHighErrorRate …</code></td></tr>
-        <tr><td>Grafana → 스터디 → 스터디 — 서비스 RED</td><td class="it">요청 수 · 에러율 · P99 패널에 선</td></tr>
-        <tr><td>Alertmanager → Silences</td><td class="it">active 0 (실습용 침묵 정리)</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">다음 질문: 알림은 "order-api 에러율 6%"까지만 말한다. 그 에러가 <b>어떤 요청에서, 왜</b> 났는지는 어디서 보나?</div>
-  </div>
-  <div class="foot"><span>책 3.11 · 3.12.3 정리</span><span>87/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>메트릭은 얼마나 많이 일어났는지만 안다. 무슨 일이었는지는 로그가 답한다. 다음은 로깅.</li>
-</ul>
-</aside>
-</section>
-
 <!-- ===================================================================
   CHAPTER 7 · 로그 모으고 찾기: Loki + Alloy (책 3.8 ~ 3.10)
 =================================================================== -->
 
-<section class="slide section-lead" data-label="88 7장 리드" id="slide-88">
+<section class="slide section-lead" data-label="82 7장 리드" id="slide-82">
   <div class="body">
     <div class="quest">CHAPTER · 07 · 책 3.8 ~ 3.10</div>
     <div class="secnum">07</div>
     <h1>로그를 모으고, <span class="hl">LogQL로 원인을 찾는다</span></h1>
     <p class="sub">파드 로그를 Alloy로 모아 Loki에 쌓는다. 로그가 쌓이는지 확인하고, LogQL로 좁히고 거르고 꺼내는 법을 익힌다. 메트릭에서 본 에러를 같은 시각의 로그로 이어서 확인한다.</p>
   </div>
-  <div class="foot"><span>개념 + 실습 · 3.8 로깅 개요 · 3.9 로깅 도구 · 3.10 로키를 이용한 로깅</span><span>88/104</span></div>
+  <div class="foot"><span>개념 + 실습 · 3.8 로깅 개요 · 3.9 로깅 도구 · 3.10 로키를 이용한 로깅</span><span>82/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>6장 끝의 질문: 알림은 "에러율 6%"까지만 말한다. 어떤 요청에서 왜 났는지는 로그가 답한다.</li>
-  <li>흐름: 무엇을 로깅하나 → 어떻게 모으나 → 도구 → 라벨과 본문 → 앱이 로그를 남기게 하기 → 설치하고 쌓이는지 확인 → LogQL 사용법 → 메트릭에서 로그로 → 자주 막히는 곳.</li>
+  <li>흐름: 무엇을 로깅하나 → 어떻게 모으나 → 도구 → 앱이 로그를 남기게 하기 → 설치하고 쌓이는지 확인 → LogQL 사용법.</li>
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
 </ul>
 </aside>
 </section>
 
 
-<section class="slide expanded" data-label="89 7장 용어 ① 로그 수집" id="slide-89">
+<section class="slide expanded" data-label="83 7장 용어 ① 로그 수집" id="slide-83">
   <span class="kicker"><span class="n">07</span>GLOSSARY · 1/2</span>
   <h1>용어 ① <span class="hl">로그 수집과 저장</span></h1>
   <div class="body">
@@ -3623,7 +3594,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>앱은 stdout으로 찍고, 수집·보관은 플랫폼이 맡는다</span><span>89/104</span></div>
+  <div class="foot"><span>앱은 stdout으로 찍고, 수집·보관은 플랫폼이 맡는다</span><span>83/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>로그 스트림, stdout·stderr, Alloy, Loki는 3번 슬라이드 뒤의 지도 용어 표에서 정의했다.</li>
@@ -3635,7 +3606,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="90 7장 용어 ② LogQL" id="slide-90">
+<section class="slide expanded" data-label="84 7장 용어 ② LogQL" id="slide-84">
   <span class="kicker"><span class="n">07</span>GLOSSARY · 2/2</span>
   <h1>용어 ② <span class="hl">LogQL</span></h1>
   <div class="body">
@@ -3652,7 +3623,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>셀렉터로 좁히고 → 필터로 거르고 → 파서로 꺼낸다</span><span>90/104</span></div>
+  <div class="foot"><span>셀렉터로 좁히고 → 필터로 거르고 → 파서로 꺼낸다</span><span>84/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>LogQL(Log Query Language)은 PromQL과 문법이 비슷하다. 라벨 셀렉터와 rate · count_over_time 같은 집계 함수 이름이 같다. 다른 점은 세는 대상이 샘플이 아니라 로그 줄이라는 것.</li>
@@ -3664,7 +3635,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="91 무엇을 로깅할 것인가" id="slide-91">
+<section class="slide expanded" data-label="85 무엇을 로깅할 것인가" id="slide-85">
   <span class="kicker"><span class="n">07</span>WHAT TO LOG · 책 3.8</span>
   <h1>전부 로깅하면 <span class="warn">찾기 어렵고 비싸다</span></h1>
   <div class="body">
@@ -3680,7 +3651,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
     </table>
     <div class="callout">프로브 로그만으로도 양이 크다. readiness 5초 · liveness 10초 간격이면 파드 둘에서 시간당 2,000줄이 넘는다.</div>
   </div>
-  <div class="foot"><span>책 3.8: 노이즈가 너무 많아 문제를 빠르게 찾기 힘들어지고, 과도한 리소스가 소모되어 비용이 많이 든다</span><span>91/104</span></div>
+  <div class="foot"><span>책 3.8: 노이즈가 너무 많아 문제를 빠르게 찾기 힘들어지고, 과도한 리소스가 소모되어 비용이 많이 든다</span><span>85/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.8: 디버그 로그는 필요악이라 정답은 없다. 환경을 알수록 어떤 노이즈를 걸러야 할지 감을 잡게 된다. 엔드 유저 관점에서는 30~45일이면 충분하다.</li>
@@ -3691,7 +3662,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="92 수집 대상 4가지" id="slide-92">
+<section class="slide expanded" data-label="86 수집 대상 4가지" id="slide-86">
   <span class="kicker"><span class="n">07</span>LOG SOURCES · 책 3.8</span>
   <h1>클러스터에서 모을 로그는 <span class="hl">네 종류</span>다</h1>
   <div class="body">
@@ -3707,7 +3678,7 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
     </table>
     <div class="callout">컨트롤러 매니저 로그는 이벤트로는 원인이 안 보일 때 쓴다. 책의 예: LoadBalancer 타입 서비스가 대기 상태로 멈춰 있을 때 이유는 컨트롤러 매니저 로그에 있다.</div>
   </div>
-  <div class="foot"><span>책 3.8: 감사 로그는 로깅 시스템을 처음 가동하면 폭발적으로 쌓일 가능성이 높다</span><span>92/104</span></div>
+  <div class="foot"><span>책 3.8: 감사 로그는 로깅 시스템을 처음 가동하면 폭발적으로 쌓일 가능성이 높다</span><span>86/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책은 노드 로그의 예로 도커 데몬을 든다. 현재 쿠버네티스 노드의 런타임은 containerd다.</li>
@@ -3721,36 +3692,8 @@ Writing /tmp/dashboards/스터디/<span class="v">study-red.json</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="93 stdout과 사이드카" id="slide-93">
-  <span class="kicker"><span class="n">07</span>STDOUT vs SIDECAR · 책 3.8 · 3.12.2</span>
-  <h1>앱은 <span class="hl">stdout으로</span> 찍고 수집은 노드마다 하나가 맡는다</h1>
-  <div class="body">
-    <div class="grid2">
-      <div class="card teal">
-        <span class="tag">권장 · stdout + DaemonSet</span>
-        <h3>앱은 어디에 저장되는지 몰라도 된다</h3>
-        <p>컨테이너 런타임이 stdout을 노드 파일로 받아 두고, 노드마다 하나씩 뜬 수집기가 읽어 간다. 앱을 몇 개 띄우든 수집기 수는 노드 수와 같다.</p>
-      </div>
-      <div class="card yellow">
-        <span class="tag yellow">예외 · 사이드카</span>
-        <h3>앱이 파일에만 쓸 때</h3>
-        <p>같은 파드에 전달기 컨테이너를 붙여 파일을 읽어 옮긴다. 앱을 고칠 수 없을 때 쓴다. 파드마다 컨테이너가 하나씩 늘고 메모리도 그만큼 든다.</p>
-      </div>
-    </div>
-    <div class="callout">컨테이너 안의 파일에 로그를 쓰면 파드가 사라질 때 함께 사라진다. 볼륨을 붙이면 노드에 묶이고 수집기가 파일 위치와 형식을 알아야 한다.</div>
-  </div>
-  <div class="foot"><span>책 3.12.2: 사이드카 로그 전달기는 리소스를 많이 소비하므로 사용을 제한하고, 데몬셋과 STDOUT을 쓰자</span><span>93/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>책 3.8: 애플리케이션 로그는 STDOUT으로 보내는 것을 권장한다. 로깅이 일관되고 모니터링 데몬셋이 직접 수집할 수 있다.</li>
-</ul>
-<details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/#sidecar-container-with-logging-agent" target="_blank" rel="noopener">Kubernetes · Sidecar container with a logging agent</a></li>
-</ul></details>
-</aside>
-</section>
 
-<section class="slide" data-label="94 kubectl logs가 멈추는 곳" id="slide-94" data-cap="kubectl-logs">
+<section class="slide" data-label="87 kubectl logs가 멈추는 곳" id="slide-87" data-cap="kubectl-logs">
   <span class="kicker"><span class="n">07</span>WHY A LOG STORE</span>
   <h1>파드가 지워지면 <span class="warn">kubectl logs도 끝</span>이다</h1>
   <div class="body">
@@ -3780,7 +3723,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </div>
     <div class="callout"><code>kubectl logs</code>는 파드에 붙어 있는 기능이지 로그 저장소가 아니다. 노드·파드와 수명이 분리된 별도 저장소가 필요하다.</div>
   </div>
-  <div class="foot"><span>정리: kubectl delete namespace demo</span><span>94/104</span></div>
+  <div class="foot"><span>정리: kubectl delete namespace demo · <a href="lab-guide.html#s10-1" target="_blank" rel="noopener">실습 가이드 10 로그 10-1 섹션 참고</a></span><span>87/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측. 30초 동안 JSON 로그를 찍다가 에러로 끝나는 파드를 만들었다.</li>
@@ -3790,7 +3733,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="95 로깅 도구" id="slide-95">
+<section class="slide expanded" data-label="88 로깅 도구" id="slide-88">
   <span class="kicker"><span class="n">07</span>LOGGING TOOLS · 책 3.9</span>
   <h1>로깅 도구는 <span class="hl">무엇을 색인하나</span>로 비용이 갈린다</h1>
   <div class="body">
@@ -3806,7 +3749,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </table>
     <div class="callout">책 3.9: 로그 중앙화 도구는 운영 비용 절감 차원에서 호스티드 서비스도 검토한다. 직접 호스팅하면 며칠은 괜찮아도 환경이 커질수록 관리에 막대한 시간이 든다.</div>
   </div>
-  <div class="foot"><span>책 3.9: 데몬셋으로 실행할 수 있는지, STDOUT을 못 쓰는 앱을 위해 사이드카로도 쓸 수 있는지 살핀다</span><span>95/104</span></div>
+  <div class="foot"><span>책 3.9: 데몬셋으로 실행할 수 있는지, STDOUT을 못 쓰는 앱을 위해 사이드카로도 쓸 수 있는지 살핀다</span><span>88/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>책 3.9가 꼽는 도구: 로키, 일래스틱 스택, 데이터독, 수모 로직, 시스딕, 클라우드 프로바이더 서비스.</li>
@@ -3820,26 +3763,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="96 라벨과 본문" id="slide-96">
-  <span class="kicker"><span class="n">07</span>LOKI · LABELS vs BODY</span>
-  <h1>Loki에서 <span class="hl">라벨 조합 하나 = 스트림 하나</span>다</h1>
-  <div class="body fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t9 d9">
-  <title id="t9">라벨과 로그 본문</title>
-  <desc id="d9">왼쪽: 라벨을 namespace, app, pod로 두고 path를 본문에 두면 journal-api 스트림은 파드 수만큼 3개다. 오른쪽: path를 라벨로 올리면 요청 60건이 스트림 66개를 만든다.</desc>
-  <rect width="1600" height="900" fill="#FFFFFF"/>
-  <line x1="800" y1="40" x2="800" y2="860" stroke="#D8DDD6" stroke-width="2"/><text x="40" y="70" font-size="30" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#0B5A54">라벨은 적게, 값이 자주 바뀌는 것은 본문에</text><text x="40" y="112" font-size="22" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">라벨: namespace · app · pod</text><rect x="40" y="150" width="720" height="170" rx="8" fill="#E0EFEB" stroke="#0F766E" stroke-width="2"/><text x="62" y="186" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#0B5A54">스트림 1  {app="journal-api", pod="…-fxs5p"}</text><rect x="62" y="202" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="223" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=2","status":200 …}</text><rect x="62" y="238" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="259" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=20","status":200 …}</text><rect x="62" y="274" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="295" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=32","status":200 …}</text><rect x="40" y="340" width="720" height="170" rx="8" fill="#E0EFEB" stroke="#0F766E" stroke-width="2"/><text x="62" y="376" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#0B5A54">스트림 2  {app="journal-api", pod="…-k2m9d"}</text><rect x="62" y="392" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="413" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=2","status":200 …}</text><rect x="62" y="428" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="449" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=20","status":200 …}</text><rect x="62" y="464" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="485" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=32","status":200 …}</text><rect x="40" y="530" width="720" height="170" rx="8" fill="#E0EFEB" stroke="#0F766E" stroke-width="2"/><text x="62" y="566" font-size="20" font-weight="700" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#0B5A54">스트림 3  {app="journal-api", pod="…-q7wzt"}</text><rect x="62" y="582" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="603" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=2","status":200 …}</text><rect x="62" y="618" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="639" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=20","status":200 …}</text><rect x="62" y="654" width="676" height="30" rx="4" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="1"/><text x="76" y="675" font-size="17" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">{"path":"/api/entries?req=32","status":200 …}</text><text x="40" y="760" font-size="32" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#0B5A54">journal-api 스트림 3개</text><text x="40" y="800" font-size="24" font-weight="400" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">path는 본문 안. 질의할 때 | json 으로 꺼낸다</text><text x="840" y="70" font-size="30" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#C2414A">path를 라벨로 올리면</text><text x="840" y="112" font-size="22" font-weight="400" text-anchor="start" style="font-family:'SFMono-Regular',Consolas,monospace;fill:#5A6867">라벨: namespace · app · pod · path · status</text><rect x="840" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="902" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="964" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1026" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1088" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1150" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1212" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1274" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1336" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1398" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1460" y="150" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="840" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="902" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="964" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1026" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1088" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1150" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1212" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1274" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1336" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1398" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1460" y="212" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="840" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="902" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="964" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1026" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1088" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1150" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1212" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1274" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1336" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1398" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1460" y="274" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="840" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="902" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="964" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1026" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1088" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1150" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1212" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1274" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1336" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1398" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1460" y="336" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="840" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="902" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="964" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1026" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1088" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1150" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1212" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1274" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1336" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1398" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1460" y="398" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="840" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="902" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="964" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1026" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1088" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1150" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1212" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1274" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1336" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1398" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><rect x="1460" y="460" width="50" height="50" rx="4" fill="#FCE4E6" stroke="#C2414A" stroke-width="1.5"/><text x="840" y="560" font-size="32" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#C2414A">요청 60건 → 스트림 66개</text><text x="840" y="600" font-size="24" font-weight="400" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">라벨 조합 하나 = 스트림 하나</text><text x="840" y="636" font-size="24" font-weight="400" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#5A6867">스트림마다 인덱스 항목과 청크가 따로 생긴다</text><text x="840" y="700" font-size="24" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#C2414A">실서비스라면 하루 수십만 스트림</text><text x="840" y="736" font-size="24" font-weight="700" text-anchor="start" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#C2414A">→ Loki 인제스터 메모리 고갈</text><text x="1570" y="870" font-size="20" font-weight="400" text-anchor="end" style="font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;fill:#6F7C79">스트림 수는 실측(요청 60건 전송)</text>
-</svg></div>
-  <div class="foot"><span>라벨로 범위를 좁히고, 본문은 질의할 때 파서로 꺼낸다</span><span>96/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>Loki는 프로메테우스처럼 라벨로 대상을 고른다. 다른 점은 본문을 색인하지 않는다는 것. 그래서 싸고, 대신 본문 검색은 고른 스트림을 전부 읽는다.</li>
-  <li>오른쪽 숫자는 실측: path·status를 라벨로 올린 뒤 서로 다른 경로로 60번 요청하자 journal-api 스트림이 3개에서 66개가 됐다. 다시 돌린 실측(실습 가이드 10-6)은 1 → 61. 요청마다 스트림이 하나씩 는다는 점은 같다.</li>
-  <li>왼쪽 스트림 안의 로그 줄은 모양을 보여 주는 예시다.</li>
-</ul>
-</aside>
-</section>
-
-<section class="slide" data-label="97 앱이 로그를 남기게 하는 법" id="slide-97" data-cap="app-logs">
+<section class="slide" data-label="89 앱이 로그를 남기게 하는 법" id="slide-89" data-cap="app-logs">
   <span class="kicker"><span class="n">07</span>HOW TO · 앱 로그</span>
   <h1>앱이 <span class="hl">요청마다 stdout에 한 줄</span> 남기게 한다</h1>
   <div class="body">
@@ -3864,19 +3788,19 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>수집기는 앱이 쓴 줄만 모은다. 요청 로그는 앱이 켜야 생긴다</span><span>97/104</span></div>
+  <div class="foot"><span>수집기는 앱이 쓴 줄만 모은다. 요청 로그는 앱이 켜야 생긴다 · <a href="lab-guide.html#s10-2" target="_blank" rel="noopener">실습 가이드 10 로그 10-2 섹션 참고</a></span><span>89/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측. 두 앱 모두 기본 상태에서는 기동할 때만 로그를 남긴다. 요청 로그를 켜야 Loki에서 찾을 것이 생긴다.</li>
   <li>JSON 한 줄(journal-api)은 | json 파서로, 정해진 자리의 텍스트(order-api)는 | pattern 파서로 필드를 꺼낸다. 새로 만드는 앱이면 JSON이 다루기 쉽다.</li>
   <li>journal-api: 계측 미들웨어에 로그 한 줄을 더했다. 프로브 경로(/healthz · /readyz · /metrics)는 걸러 낸다. path는 원본 그대로 남긴다. 라벨이 아니라 본문이므로 값의 가짓수가 문제되지 않는다.</li>
-  <li>order-api: 이미지를 다시 만들지 않고 환경 변수만으로 켰다. 남의 앱을 다룰 때 쓰는 방식. 톰캣은 경로별 제외가 없어 프로브 요청까지 모두 남는다. ROTATE=false가 빠지면 로그가 조용히 사라진다(Q&amp;A).</li>
-  <li>전체 매니페스트: labs/k8s/order-api.yaml</li>
+  <li>order-api: 이미지를 다시 만들지 않고 환경 변수만으로 켰다. 남의 앱을 다룰 때 쓰는 방식. 톰캣은 경로별 제외가 없어 프로브 요청까지 모두 남는다. ROTATE=false가 빠지면 로그가 조용히 사라진다(실습 가이드 11 Q&amp;A Q7).</li>
+  <li>전체 매니페스트: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">labs/k8s/order-api.yaml</a></li>
 </ul>
 </aside>
 </section>
 
-<section class="slide" data-label="98 Loki·Alloy 설치" id="slide-98">
+<section class="slide" data-label="90 Loki·Alloy 설치" id="slide-90">
   <span class="kicker"><span class="n">07</span>BEFORE INSTALL · 값 파일</span>
   <h1>Loki는 <span class="hl">저장</span>, Alloy는 <span class="hl">파드 로그를 읽어 보내는</span> 파이프라인</h1>
   <div class="body">
@@ -3914,7 +3838,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/helm/loki-values.yaml" target="_blank" rel="noopener">loki-values.yaml</a> · <a href="labs/helm/alloy-values.yaml" target="_blank" rel="noopener">alloy-values.yaml</a></span><span>98/104</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/loki-values.yaml" target="_blank" rel="noopener">loki-values.yaml</a> · <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/alloy-values.yaml" target="_blank" rel="noopener">alloy-values.yaml</a> · <a href="lab-guide.html#s10-3" target="_blank" rel="noopener">실습 가이드 10 로그 10-3 섹션 참고</a></span><span>90/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>설치 명령: helm upgrade --install loki grafana/loki -n logging --create-namespace --version 7.3.0 -f labs/helm/loki-values.yaml --wait / helm upgrade --install alloy grafana/alloy -n logging --version 1.12.1 -f labs/helm/alloy-values.yaml --wait</li>
@@ -3922,13 +3846,13 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
   <li>replication_factor 기본값 3이면 단일 인스턴스가 기동하지 못한다.</li>
   <li>loki.source.kubernetes 는 쿠버네티스 API로 로그를 읽는다. 호스트의 /var/log 를 마운트하는 방식과 달리 특권 컨테이너가 필요 없다.</li>
   <li>두 앱의 라벨 규칙이 다르다(journal-api는 app, order-api는 app.kubernetes.io/name). regex="(.+)" 규칙 두 개로 둘 중 있는 쪽을 app 라벨로 모은다. source_labels 두 개를 separator로 이으면 둘 다 있는 파드에서 값이 붙어 버린다.</li>
-  <li>라벨로 올리는 것은 namespace · pod · container · app 넷뿐이다. 값의 가짓수가 정해진 것만 라벨로 둔다(앞 장 "라벨과 본문").</li>
+  <li>라벨로 올리는 것은 namespace · pod · container · app 넷뿐이다. 값의 가짓수가 정해진 것만 라벨로 둔다.</li>
   <li>retention_period 72h는 실습용. 운영은 30~45일.</li>
 </ul>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="99 따라하기 ① 설치와 로그 도착 확인" id="slide-99" data-cap="logs-arrive">
+<section class="slide expanded" data-label="91 따라하기 ① 설치와 로그 도착 확인" id="slide-91" data-cap="logs-arrive">
   <span class="kicker"><span class="n">07</span>FOLLOW ALONG ① · 설치 · 확인</span>
   <h1>따라하기 ① <span class="hl">설치하고, 로그가 쌓이는지</span> 본다</h1>
   <div class="body">
@@ -3946,7 +3870,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </table>
     <div class="callout">라벨이 보이고, 줄이 흐르고, 앱별 줄 수가 0보다 크면 수집 → 저장 → 조회가 모두 동작한다.</div>
   </div>
-  <div class="foot"><span>Grafana의 Loki 데이터소스는 kps-values.yaml의 additionalDataSources로 미리 넣어 두었다</span><span>99/104</span></div>
+  <div class="foot"><span>Grafana의 Loki 데이터소스는 kps-values.yaml의 additionalDataSources로 미리 넣어 두었다 · <a href="lab-guide.html#s10-3" target="_blank" rel="noopener">실습 가이드 10 로그 10-3 · 10-4 섹션 참고</a></span><span>91/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 두 차트 설치 각각 1분 안쪽. alloy는 데몬셋인데 워커 두 대에만 뜬다. 컨트롤 플레인의 테인트를 견디는 toleration을 넣지 않았기 때문이다. 컨트롤 플레인 파드 로그까지 모으려면 toleration을 더한다.</li>
@@ -3956,7 +3880,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
 </section>
 
 
-<section class="slide expanded" data-label="100 LogQL 사용법" id="slide-100">
+<section class="slide expanded" data-label="92 LogQL 사용법" id="slide-92">
   <span class="kicker"><span class="n">07</span>HOW TO QUERY · LogQL</span>
   <h1>LogQL은 <span class="hl">좁히고 → 거르고 → 꺼내고 → 센다</span></h1>
   <div class="body">
@@ -3972,12 +3896,12 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </table>
     <div class="callout">PromQL과 모양이 같다: <code>{라벨}</code>로 고르고, <code>[5m]</code> 창으로 세고, <code>sum by</code>로 묶는다. 다른 점은 ②③, 본문을 거르고 꺼내는 단계가 있다는 것이다.</div>
   </div>
-  <div class="foot"><span>Grafana Explore → Loki → Code 모드에 입력. 로그 질의는 줄 목록, 세기 질의는 그래프로 나온다</span><span>100/104</span></div>
+  <div class="foot"><span>Grafana Explore → Loki → Code 모드에 입력. 로그 질의는 줄 목록, 세기 질의는 그래프로 나온다 · <a href="lab-guide.html#s10-5" target="_blank" rel="noopener">실습 가이드 10 로그 10-5 섹션 참고</a></span><span>92/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>① 없이 본문 검색만 할 수는 없다. Loki는 라벨로 스트림을 고른 뒤 그 안의 덩어리(chunk)만 연다. 좁힐수록 빠르다.</li>
   <li>pattern의 &lt;_&gt;는 "자리는 있지만 이름은 필요 없음", &lt;status&gt;처럼 이름을 주면 그 자리 값이 필드가 된다.</li>
-  <li>파서 뒤의 | __error__="" 는 파싱에 실패한 줄을 뺀다. 형식이 섞인 로그에서 세기 질의가 실패하지 않게 한다(Q&amp;A).</li>
+  <li>파서 뒤의 | __error__="" 는 파싱에 실패한 줄을 뺀다. 형식이 섞인 로그에서 세기 질의가 실패하지 않게 한다(실습 가이드 11 Q&amp;A Q8).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://grafana.com/docs/loki/latest/query/" target="_blank" rel="noopener">Loki · LogQL</a></li>
@@ -3987,7 +3911,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
 </section>
 
 
-<section class="slide expanded" data-label="101 따라하기 ② LogQL로 500 찾기" id="slide-101" data-cap="logql">
+<section class="slide expanded" data-label="93 따라하기 ② LogQL로 500 찾기" id="slide-93" data-cap="logql">
   <span class="kicker"><span class="n">07</span>FOLLOW ALONG ② · LogQL</span>
   <h1>따라하기 ② <span class="hl">500 에러가 어느 요청인지</span> 로그에서 찾는다</h1>
   <div class="body">
@@ -4002,110 +3926,23 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
         <tr><td>5</td><td><code>sum by (app) (count_over_time({namespace=~"journal|apps"} | json | __error__="" [5m]))</code></td><td class="it">JSON으로 파싱되는 줄은 journal-api만(9084)</td></tr>
       </tbody>
     </table>
-    <div class="callout">1장 "오늘의 질문"의 ④칸이 이것이다: 메트릭이 "에러율 6%"라고 말하면, 로그는 "그 요청은 <code>GET /api/chaos/error?rate=0.7</code>이었다"고 말한다.</div>
   </div>
-  <div class="foot"><span>3번의 `…`에는 2번의 pattern을 그대로 넣는다</span><span>101/104</span></div>
+  <div class="foot"><span>3번의 `…`에는 2번의 pattern을 그대로 넣는다 · <a href="lab-guide.html#s10-5" target="_blank" rel="noopener">실습 가이드 10 로그 10-5 섹션 참고</a></span><span>93/93</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측(k6 부하 중 5분 구간). 2번의 200 + 500 = 10749, order-api 전체 줄 수 10750과 거의 같다. 패턴이 맞지 않는 줄(기동 로그 등)은 status 라벨 없이 따로 묶이는데 이번 창에는 없었다.</li>
-  <li>5번의 order-api 줄은 JSON이 아니라서 | __error__="" 에 걸러진다. 이 필터 없이 세면 질의 전체가 JSONParserErr로 실패한다(Q&amp;A).</li>
+  <li>5번의 order-api 줄은 JSON이 아니라서 | __error__="" 에 걸러진다. 이 필터 없이 세면 질의 전체가 JSONParserErr로 실패한다(실습 가이드 11 Q&amp;A Q8).</li>
 </ul>
 </aside>
 </section>
 
-
-<section class="slide" data-label="102 메트릭에서 로그로 넘어가기" id="slide-102" data-cap="metrics-logs">
-  <span class="kicker"><span class="n">07</span>METRICS → LOGS</span>
-  <h1>메트릭으로 <span class="hl">언제 · 어디</span>를 잡고, 같은 라벨의 <span class="hl">로그</span>로 넘어간다</h1>
-  <div class="body">
-    <div class="split a" style="align-items:start">
-      <div class="stack">
-        <pre class="code" style="font-size:13px"><span class="c"># 같은 5분, order-api의 500</span>
-<span class="c"># 로그 (Loki)</span>
-sum(count_over_time({namespace="apps", app="order-api"}
-  |~ " 500 " [5m]))                      <span class="c">→</span> <span class="v">634</span>
-<span class="c"># 메트릭 (Prometheus)</span>
-sum(increase(http_server_requests_seconds_count{
-  job="order-api", status=~"5.."}[5m]))  <span class="c">→</span> <span class="v">633.4</span></pre>
-        <div class="card"><h3>두 값이 거의 같다</h3><p>같은 요청을 한쪽은 카운터로, 한쪽은 줄로 셌다. 메트릭 값의 소수점은 <code>increase()</code>가 30초 간격 샘플로 5분 창을 추정(외삽)해서 붙는다.</p></div>
-      </div>
-      <div class="stack">
-        <div class="card"><h3>Explore Split</h3><p>Explore 오른쪽 위 <b>Split</b>으로 화면을 둘로 나눈다. 왼쪽 Prometheus에 에러율, 오른쪽 Loki에 500 줄. 시간 범위가 함께 움직인다.</p></div>
-        <div class="card"><h3>대시보드 로그 패널</h3><p>스터디 · 서비스 RED 맨 아래 패널이 같은 시각의 에러 로그를 보여 준다. 위쪽 그래프에서 "5xx가 늘었다"를 보고 내려와 "무엇이었나"를 읽는다.</p></div>
-        <div class="callout" style="font-size:16px">둘을 잇는 것은 같은 라벨(namespace · app · pod)이다. 수집 설정에서 라벨 이름을 맞춰 둔 이유다.</div>
-      </div>
-    </div>
-  </div>
-  <div class="foot"><span>메트릭은 추세와 비율에, 로그는 개별 사건에 정확하다</span><span>102/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>실측(실습 가이드 10-6). 다른 실행에서는 632 · 632.2, 처음 돌렸을 때는 로그 208 · 메트릭 249.8로 20% 벌어졌다. 부하가 5분 창을 고르게 채우면 거의 같아지고, 부하가 창 중간에 시작 · 종료되면 외삽 때문에 벌어진다. 맞추려 하지 않는다.</li>
-  <li>Grafana 데이터소스는 이름이 아니라 uid로 참조한다(Prometheus uid=prometheus, Loki uid=loki). 대시보드 JSON이 uid를 박아 두므로 이름을 바꿔도 패널이 깨지지 않는다.</li>
-  <li>책 3.10은 Grafana 화면에서 데이터소스를 손으로 추가한다(URL http://loki:3100). 값 파일로 넣어 두면 Grafana를 다시 설치해도 남는다.</li>
-</ul>
-</aside>
-</section>
-
-
-<section class="slide expanded" data-label="103 7장 Q&amp;A: 자주 막히는 곳" id="slide-103" data-cap="qa-logs">
-  <span class="kicker"><span class="n">07</span>Q&amp;A · 자주 막히는 곳</span>
-  <h1>로그에서 <span class="hl">자주 막히는 곳</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14px">
-      <colgroup><col style="width:28%"><col style="width:34%"><col></colgroup>
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>Loki에 앱 로그가 하나도 없다</td><td class="it">앱이 요청 로그를 찍지 않는다</td><td class="it"><code>kubectl logs</code>로 먼저 확인. 앱에서 요청 로그를 켠다</td></tr>
-        <tr><td>order-api 액세스 로그가 조용히 사라졌다</td><td class="it"><code>SERVER_TOMCAT_ACCESSLOG_ROTATE=false</code>가 빠졌다. 톰캣이 <code>/dev/stdout.날짜</code>에 쓰려다 실패</td><td class="it">환경 변수를 되살린다. 에러가 남지 않으니 로그 줄 수로 확인</td></tr>
-        <tr><td>세기 질의가 <code>pipeline error: 'JSONParserErr'</code></td><td class="it">JSON이 아닌 줄이 섞였다</td><td class="it">파서 바로 뒤에 <code>| __error__=""</code></td></tr>
-        <tr><td>스트림 수가 요청 수만큼 는다</td><td class="it">path · 사용자 ID처럼 값이 끝없는 필드를 라벨로 올렸다</td><td class="it">라벨은 namespace · app · pod만. 나머지는 본문에서 파서로 꺼낸다</td></tr>
-        <tr><td>지운 라벨이 Label browser에 계속 보인다</td><td class="it"><code>/labels</code>는 보존 기간(72시간) 안의 모든 라벨을 돌려준다</td><td class="it">현재 상태는 series API(<code>/loki/api/v1/series</code>)로 본다</td></tr>
-        <tr><td>컨트롤 플레인 파드 로그가 없다</td><td class="it">Alloy 데몬셋이 워커에만 떴다(테인트)</td><td class="it">필요하면 Alloy에 toleration을 더한다</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>원인 보는 곳: kubectl logs · Alloy 로그 · Explore의 Label browser · series API</span><span>103/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>ROTATE 실측: 환경 변수를 지우고 요청 5번을 보내자 로그에는 스프링 초기화 메시지 세 줄만 남았다. 되살리자 액세스 로그가 다시 찍혔다.</li>
-  <li>라벨 폭발 실측: path · status를 라벨로 올리는 단계를 Alloy에 넣고 서로 다른 경로로 60번 요청하자 journal-api 스트림이 1 → 61(다른 실행에서는 3 → 66). 실서비스처럼 /api/orders/12345 같은 ID가 경로에 들어가면 하루에 수십만 스트림이 되고 Loki 인제스터가 메모리를 다 쓴다.</li>
-  <li>JSON 파서 실측 에러: pipeline error: 'JSONParserErr' for series: '{__error__="JSONParserErr", __error_details__="Value looks like object, but can't find closing '}' symbol", app="order-api", …}'. 에러 메시지가 해결 방법(| __error__="")까지 알려 준다.</li>
-</ul>
-</aside>
-</section>
-
-
-<section class="slide expanded" data-label="104 7장 체크포인트" id="slide-104">
-  <span class="kicker"><span class="n">07</span>CHECKPOINT</span>
-  <h1>로그 수집이 동작한다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
-      <colgroup><col style="width:60%"><col></colgroup>
-      <thead><tr><th>명령 · 질의</th><th>기대값</th></tr></thead>
-      <tbody>
-        <tr><td><code>kubectl -n logging get pods</code></td><td class="it">Running 4 (loki 1 · gateway 1 · alloy 2)</td></tr>
-        <tr><td>Explore → Loki → Label browser</td><td class="it">namespace · app · pod · container</td></tr>
-        <tr><td><code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))</code></td><td class="it">journal-api · order-api 둘 다 0보다 크다</td></tr>
-        <tr><td><code>{namespace="apps", app="order-api"} |~ " 500 "</code> (부하 중)</td><td class="it"><code>/api/chaos/error</code> 줄이 나온다</td></tr>
-        <tr><td><code>{namespace="journal", app="journal-api"} | json | __error__=""</code></td><td class="it">필드 method · path · status · durationMs</td></tr>
-        <tr><td>Grafana → 스터디 — 서비스 RED 맨 아래 로그 패널</td><td class="it">에러 · 500 줄이 보인다</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>책 3.8~3.10 정리</span><span>104/104</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>여기까지 오면 1장 "오늘의 질문" 네 칸을 모두 도구로 답할 수 있다: 메트릭으로 이상을 찾고(P99), 라벨로 좁히고(uri), 알림으로 받고, 로그로 원인을 본다.</li>
-</ul>
-</aside>
-</section>
 
 
 </div></main>
 <div class="progress" id="progress" style="width: 0%;"></div>
 <div class="counter" id="counter">01 / 72</div>
 <div class="slidetitle" id="slidetitle">01 표지</div>
-<div id="notes"><div class="note-toolbar"><div class="note-title">SPEAKER NOTES</div><div class="note-tools" data-note-tools=""></div></div><div id="notesContent"></div></div>
+<div id="notes"><div class="note-toolbar"><div class="note-title">SPEAKER NOTES</div><div class="note-tools" data-note-tools=""></div><button type="button" class="note-close" title="노트 닫기 (N 또는 Esc)" onclick="document.getElementById('notes').classList.remove('on')">닫기 ✕</button></div><div id="notesContent"></div></div>
 <div id="help"><div class="helpbox"><h3>발표 조작</h3><div class="helpgrid"><code>→ Space</code><span>다음 슬라이드</span><code>←</code><span>이전 슬라이드</span><code>F</code><span>전체 화면</span><code>P</code><span>발표자 화면 열기</span><code>N</code><span>발표자 노트 토글</span><code>Home / End</code><span>처음 / 마지막</span><code>H</code><span>도움말 닫기</span></div></div></div>
 <div id="presenterView" aria-label="발표자 화면">
   <header class="presenter-topbar">
@@ -4315,7 +4152,7 @@ sum(increase(http_server_requests_seconds_count{
   editor.addEventListener('click',e=>e.stopPropagation());
   editor.addEventListener('keydown',e=>{
     e.stopPropagation();
-    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!e.isComposing){e.preventDefault();saveEditedNote()}
+    if((e.ctrlKey||e.metaKey)&&(e.code==='KeyS'||e.key.toLowerCase()==='s')&&!e.isComposing){e.preventDefault();saveEditedNote()}
   });
   addEventListener('beforeunload',e=>{
     if((editor.open&&editorText.value!==editorOriginal)||storageFailed){e.preventDefault();e.returnValue=''}
@@ -4405,6 +4242,7 @@ sum(increase(http_server_requests_seconds_count{
     notesPeer=presenterWindow;
     if(!presenterWindow){alert('발표자 화면 팝업이 차단되었습니다. 주소창 오른쪽에서 이 파일의 팝업을 허용해 주세요.');return}
     presenterWindow.focus();
+    notes.classList.remove('on');
     setTimeout(()=>sendPresenterState(),300);
   }
   addEventListener('message',e=>{
@@ -4436,15 +4274,15 @@ sum(increase(http_server_requests_seconds_count{
   addEventListener('resize',fit);fit();
   addEventListener('keydown',e=>{
     if(editor.open||e.isComposing||e.target.closest('textarea,input,[contenteditable="true"]'))return;
-    if(e.key.toLowerCase()==='h'){help.classList.toggle('on');return}
+    if((e.code==='KeyH'||e.key.toLowerCase()==='h')){help.classList.toggle('on');return}
     if(e.key==='Escape'){
       help.classList.remove('on');notes.classList.remove('on');clearSharedSelection();
       if(presenterWindow&&!presenterWindow.closed)presenterWindow.postMessage({type:'k8s-deck-clear-selection'},'*');
       return;
     }
-    if(e.key.toLowerCase()==='p'){openPresenter();return}
-    if(e.key.toLowerCase()==='n'){notes.classList.toggle('on');return}
-    if(e.key.toLowerCase()==='f'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();return}
+    if((e.code==='KeyP'||e.key.toLowerCase()==='p')){openPresenter();return}
+    if((e.code==='KeyN'||e.key.toLowerCase()==='n')){if(presenterWindow&&!presenterWindow.closed){notes.classList.remove('on');presenterWindow.focus();return}notes.classList.toggle('on');return}
+    if((e.code==='KeyF'||e.key.toLowerCase()==='f')){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();return}
     if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();next()}
     if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();prev()}
     if(e.key==='Home'){go(0)}if(e.key==='End'){go(total-1)}
@@ -4616,7 +4454,7 @@ sum(increase(http_server_requests_seconds_count{
       if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();sendCommand('prev')}
       if(e.key==='Home'){e.preventDefault();sendCommand('first')}
       if(e.key==='End'){e.preventDefault();sendCommand('last')}
-      if(e.key.toLowerCase()==='p'&&openerAvailable())window.opener.focus();
+      if((e.code==='KeyP'||e.key.toLowerCase()==='p')&&openerAvailable())window.opener.focus();
     });
     addEventListener('message',e=>{
       const data=e.data||{};
@@ -4659,7 +4497,7 @@ sum(increase(http_server_requests_seconds_count{
   document.addEventListener('keydown',function(e){
     if(e.target.closest&&e.target.closest('[contenteditable],textarea,input'))return;
     var s=cur(); if(!s)return;
-    if(e.key.toLowerCase()==='c'&&!e.metaKey&&!e.ctrlKey){cycle(s);e.preventDefault();}
+    if((e.code==='KeyC'||e.key.toLowerCase()==='c')&&!e.metaKey&&!e.ctrlKey){cycle(s);e.preventDefault();}
     else if(e.key==='Escape'&&s.querySelector('.capview:not([hidden])')){closeAll();e.stopPropagation();}
     else if(/^(Arrow|Page|Home|End| )/.test(e.key)||e.key===' '){closeAll();}
   },true);

@@ -70,6 +70,8 @@ EXTRA_CSS = """<style id="ch03-styles">
   .capview{position:absolute;inset:0;z-index:6;background:rgba(20,28,27,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px}
   .capview img{max-width:100%;max-height:640px;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);background:#fff}
   .capview[hidden]{display:none}
+  #notes .note-close{margin-left:auto;font:600 12px var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);cursor:pointer}
+  #notes .note-close:hover{color:var(--teal);border-color:var(--teal)}
   .capview .cap-meta{font:600 13px var(--mono);color:#E0EFEB}
 </style>
 """
@@ -79,6 +81,19 @@ CLICK_NEXT = "if(Date.now()<suppressClickUntil||e.target.closest('#notes,button,
 assert CLICK_NEXT in tail, "template click handler changed"
 tail = tail.replace(CLICK_NEXT, "});")
 tail = tail.replace("k8s-ch09-notes-v1", "k8s-ch03-notes-v1")
+# 발표자 화면(P)을 열면 메인 창의 노트 영역은 닫는다. 노트는 발표자 창에서 본다.
+# 발표자 창이 열려 있는 동안 N은 메인에 노트를 띄우지 않고 발표자 창을 앞으로 가져온다.
+P_OLD = "presenterWindow.focus();\n    setTimeout(()=>sendPresenterState(),300);"
+assert P_OLD in tail, "openPresenter changed"
+tail = tail.replace(P_OLD, "presenterWindow.focus();\n    notes.classList.remove('on');\n    setTimeout(()=>sendPresenterState(),300);")
+N_OLD = "if(e.key.toLowerCase()==='n'){notes.classList.toggle('on');return}"
+assert N_OLD in tail, "N key handler changed"
+tail = tail.replace(N_OLD, "if(e.key.toLowerCase()==='n'){if(presenterWindow&&!presenterWindow.closed){notes.classList.remove('on');presenterWindow.focus();return}notes.classList.toggle('on');return}")
+# 노트 영역에 닫기 버튼
+T_OLD = '<div class="note-tools" data-note-tools=""></div></div>'
+assert T_OLD in tail, "notes toolbar changed"
+tail = tail.replace(T_OLD, '<div class="note-tools" data-note-tools=""></div><button type="button" class="note-close" title="노트 닫기 (N 또는 Esc)" onclick="document.getElementById(\'notes\').classList.remove(\'on\')">닫기 ✕</button></div>')
+
 tail = tail.replace("kubernetes-ch09-story-slides-mesh-expanded.html",
                     "kubernetes-ch03-monitoring-logging.html")
 
@@ -144,13 +159,16 @@ CAP_JS = """<script>
   document.addEventListener('keydown',function(e){
     if(e.target.closest&&e.target.closest('[contenteditable],textarea,input'))return;
     var s=cur(); if(!s)return;
-    if(e.key.toLowerCase()==='c'&&!e.metaKey&&!e.ctrlKey){cycle(s);e.preventDefault();}
+    if((e.code==='KeyC'||e.key.toLowerCase()==='c')&&!e.metaKey&&!e.ctrlKey){cycle(s);e.preventDefault();}
     else if(e.key==='Escape'&&s.querySelector('.capview:not([hidden])')){closeAll();e.stopPropagation();}
     else if(/^(Arrow|Page|Home|End| )/.test(e.key)||e.key===' '){closeAll();}
   },true);
 })();
 </script>
 """
+
+# 한글 자판에서도 단축키가 먹도록 물리 키 위치(e.code)로도 비교한다. P가 ㅔ · ㅖ로 들어와도 KeyP다.
+tail = re.sub(r"e\.key\.toLowerCase\(\)==='([a-z])'", lambda m: "(e.code==='Key%s'||e.key.toLowerCase()==='%s')" % (m.group(1).upper(), m.group(1)), tail)
 tail = tail.replace("</body>", CAP_JS + "</body>", 1)
 OUT.write_text(head + "\n" + "".join(out) + "\n" + tail, encoding="utf-8")
 print(f"captures attached: {caps_total}")

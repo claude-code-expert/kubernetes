@@ -57,7 +57,7 @@
   <div class="body">
     <div class="split a" style="align-items:start">
       <div class="stack">
-        <p class="small"><b>labs/kind-cluster.yaml</b> (일부)</p>
+        <p class="small"><b><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/kind-cluster.yaml" target="_blank" rel="noopener">labs/kind-cluster.yaml</a></b> (일부)</p>
         <pre class="code" style="font-size:13px"><span class="k">kubeadmConfigPatches:</span>
   - |
     <span class="k">kind:</span> ClusterConfiguration
@@ -83,7 +83,7 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/kind-cluster.yaml" target="_blank" rel="noopener">labs/kind-cluster.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/kind-cluster.yaml" target="_blank" rel="noopener">labs/kind-cluster.yaml</a> · <a href="lab-guide.html#s1-1" target="_blank" rel="noopener">실습 가이드 01 클러스터 1-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>kubeadmConfigPatches 는 kind가 kubeadm에 넘기는 설정에 덧붙는다. 쿠버네티스 1.37의 kubeadm 설정(v1beta4)은 extraArgs를 이름·값 목록으로 받는다. 예전 문서의 map 형식(bind-address: "0.0.0.0")과 다르다.</li>
@@ -103,7 +103,7 @@
   <div class="body">
     <div class="split a" style="align-items:start">
       <div class="stack">
-        <p class="small"><b>labs/helm/kps-values.yaml</b> (일부)</p>
+        <p class="small"><b><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></b> (일부)</p>
         <pre class="code" style="font-size:13px"><span class="k">prometheus:</span>
   <span class="k">prometheusSpec:</span>
     <span class="k">nodeSelector:</span> {<span class="k">workload:</span> observability}
@@ -129,7 +129,7 @@
       </table>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a> · <a href="lab-guide.html#s3-1" target="_blank" rel="noopener">실습 가이드 03 스택 설치 3-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>값 파일 전체에는 Alertmanager 라우팅 · 수신자(6장), Grafana 대시보드 사이드카(6장), Loki 데이터소스(7장)도 들어 있다. 여기서는 설치와 저장에 관한 줄만 올렸다.</li>
@@ -161,7 +161,7 @@
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>설정 파일: <a href="labs/kind-cluster.yaml" target="_blank" rel="noopener">kind-cluster.yaml</a> · <a href="labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a> · <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>설정 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/kind-cluster.yaml" target="_blank" rel="noopener">kind-cluster.yaml</a> · <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a> · <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml</a> · <a href="lab-guide.html#p1" target="_blank" rel="noopener">실습 가이드 01 클러스터 · 02 앱 · 03 스택 설치 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>이미지 두 개는 미리 빌드해 둔다: docker build -t journal-api:v1 labs/apps/journal-api · docker build -t order-api:v1 labs/apps/order-api. 처음 빌드는 수 분 걸리므로 발표 중에는 생략한다.</li>
@@ -190,7 +190,7 @@
     </table>
     <div class="callout"><code>count(up)</code> = 28, <code>sum(up)</code> = 28이면 정상. 파드가 Running이어도 타깃이 down이면 그 구성요소의 메트릭은 없다.</div>
   </div>
-  <div class="foot"><span>확인: Status → Target health · 또는 Query에 count(up), sum(up)</span><span>{{PG}}</span></div>
+  <div class="foot"><span>확인: Status → Target health · 또는 Query에 count(up), sum(up) · <a href="lab-guide.html#s3-3" target="_blank" rel="noopener">실습 가이드 03 스택 설치 3-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: count(up) 28, sum(up) 28. 앱 두 개를 연결하면(5장) 33이 된다.</li>
@@ -217,7 +217,7 @@
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>열기: kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 → http://localhost:9090</span><span>{{PG}}</span></div>
+  <div class="foot"><span>열기: port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 → localhost:9090 · <a href="lab-guide.html#s4-1" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-1 · 4-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>Query 입력칸은 자동 완성이 된다. 메트릭 이름 앞부분(container_, kube_, node_)만 쳐도 후보가 나온다.</li>
@@ -246,7 +246,7 @@
     </table>
     <div class="callout">이름이 <code>container_</code>로 시작하면 cAdvisor, <code>kube_</code>로 시작하면 kube-state-metrics, <code>kubectl top</code>은 metrics-server. 쓰임새: <b>지금 값</b>은 kubectl top, <b>지난 흐름</b>은 cAdvisor, <b>의도와 실제의 차이</b>는 kube-state-metrics.</div>
   </div>
-  <div class="foot"><span>2장의 세 출처를 실제 값으로 확인한다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>2장의 세 출처를 실제 값으로 확인한다 · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 ~ 4-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>기준값(실측): cAdvisor 199.1Mi / 156.5Mi, kubectl top 198Mi / 156Mi. 둘 다 kubelet이 cgroup에서 잰 working set을 읽으므로 같다.</li>
@@ -273,7 +273,7 @@
     </table>
     <div class="callout">위 표 순서가 2장의 "앱 → 노드 → 컴포넌트"로 내려가는 순서다. 대시보드를 새로 만들기 전에 이미 있는 것부터 연다.</div>
   </div>
-  <div class="foot"><span>열기: kubectl -n monitoring port-forward svc/kps-grafana 3000:80 → http://localhost:3000 (admin / obs-study)</span><span>{{PG}}</span></div>
+  <div class="foot"><span>열기: kubectl -n monitoring port-forward svc/kps-grafana 3000:80 → http://localhost:3000 (admin / obs-study) · <a href="lab-guide.html#s5-1" target="_blank" rel="noopener">실습 가이드 05 Grafana 5-1 · 5-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>차트가 대시보드 20여 개를 기본으로 넣는다. Dashboards 검색칸에 이름 일부를 치면 된다.</li>
@@ -300,7 +300,7 @@
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>원인 보는 곳: Target health의 에러 · kubectl describe · 파드의 lastState.terminated.reason</span><span>{{PG}}</span></div>
+  <div class="foot"><span>원인 보는 곳: Target health의 에러 · kubectl describe · 파드의 lastState.terminated.reason · <a href="lab-guide.html#q-down" target="_blank" rel="noopener">실습 가이드 11 Q&amp;A Q1 ~ Q3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>다섯 가지 모두 이 자료를 만들면서 실제로 겪은 것이다.</li>
@@ -330,7 +330,7 @@
     </table>
     <div class="callout">다음 질문: 앱은 <code>/actuator/prometheus</code>로 메트릭을 내놓고 있는데 Query에 <code>http_server_requests_seconds_count</code>를 넣으면 결과가 없다. 앱은 어떻게 연결하나?</div>
   </div>
-  <div class="foot"><span>책 3.7 정리</span><span>{{PG}}</span></div>
+  <div class="foot"><span>책 3.7 정리 · <a href="lab-guide.html#p3" target="_blank" rel="noopener">실습 가이드 03 ~ 05 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>앱은 /actuator/prometheus 에 메트릭 357줄을 내놓고 있다(실측). 프로메테우스는 서비스 디스커버리로 찾은 것 중 설정된 것만 긁는다. 5장에서 ServiceMonitor로 연결한다.</li>

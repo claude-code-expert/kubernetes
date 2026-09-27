@@ -14,7 +14,7 @@
 <ul class="speaker-points">
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
   <li>RED는 애플리케이션만 답할 수 있다. 밖에서는 요청이 성공했는지 실패했는지 알 수 없기 때문에 앱을 계측해야 한다.</li>
-  <li>흐름: 앱이 메트릭을 내놓는 방법 → ServiceMonitor로 연결 → PromQL 패턴 네 가지 → 부하를 넣고 RED 계산 → 결과 읽는 법 → 자주 막히는 곳.</li>
+  <li>흐름: 앱이 메트릭을 내놓는 방법 → ServiceMonitor로 연결 → PromQL 패턴 네 가지 → 부하를 넣고 RED 계산 → 결과 읽는 법.</li>
 </ul>
 </aside>
 </section>
@@ -85,16 +85,17 @@ curl -s localhost:18082/actuator/prometheus \
     </div>
     <div class="callout"><b>메트릭 이름은 코드가 아니라 엔드포인트에서 확인한다.</b> 코드의 <code>orders.created</code>는 <code>orders_total</code>로 나온다. <code>_created</code>가 OpenMetrics 예약 접미사라 라이브러리가 떼어 낸다.</div>
   </div>
-  <div class="foot"><span>두 앱이 같은 이름을 쓰도록 맞춰 두면 질의 하나로 두 앱을 함께 본다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>코드: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a> · 메트릭 목록: <a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html" target="_blank" rel="noopener">Spring Boot · Metrics</a> · <a href="https://github.com/siimon/prom-client" target="_blank" rel="noopener">prom-client</a> · <a href="lab-guide.html#s2-5" target="_blank" rel="noopener">실습 가이드 02 앱 2-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
+  <li>두 앱이 같은 이름을 쓰도록 맞춰 두면 질의 하나로 두 앱을 함께 본다</li>
   <li>노출 이름은 port-forward 한 order-api에서 /actuator/prometheus 를 받아 # TYPE 줄로 확인한 실측이다. 메트릭 줄 357개.</li>
   <li>이름을 지을 때 _total · _created · _bucket · _sum · _count 는 피한다. 라이브러리가 붙이거나 떼는 접미사다.</li>
   <li>journal-api는 order-api와 같은 이름 · 같은 라벨(method · uri · status)로 히스토그램을 직접 만든다. 그래서 뒤의 RED 질의 하나가 두 앱을 함께 다룬다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a></li>
-<li><a href="labs/apps/journal-api/src/server.ts" target="_blank" rel="noopener">journal-api server.ts</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/journal-api/src/server.ts" target="_blank" rel="noopener">journal-api server.ts</a></li>
 <li><a href="https://prometheus.io/docs/practices/naming/" target="_blank" rel="noopener">Prometheus · Metric and label naming</a></li>
 </ul></details>
 </aside>
@@ -129,7 +130,7 @@ curl -s localhost:18082/actuator/prometheus \
     </div>
     <div class="callout">셋이 맞으면 오퍼레이터가 수집 설정을 만들고, 1~2분 뒤 Target health에 <code>serviceMonitor/apps/order-api/0</code>이 나타난다. 하나라도 어긋나면 에러 없이 타깃이 생기지 않는다.</div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> (order-api · journal-api 두 개)</span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> (order-api · journal-api 두 개) · <a href="lab-guide.html#s6-1" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>확인 명령: ① kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}' ③ kubectl -n apps get svc order-api -o jsonpath='{.spec.ports}'</li>
@@ -154,7 +155,7 @@ curl -s localhost:18082/actuator/prometheus \
       <tbody>
         <tr><td>1</td><td><code>kubectl apply -f labs/k8s/servicemonitors.yaml</code></td><td class="it">order-api · journal-api created</td></tr>
         <tr><td>2</td><td><code>kubectl get servicemonitor -A -l release=kps | grep -E 'apps|journal'</code></td><td class="it">두 개가 목록에 있다</td></tr>
-        <tr><td>3</td><td>1~2분 뒤 Status → Target health, 검색 <code>api</code></td><td class="it">order-api 2/2 up · journal-api 3/3 up</td></tr>
+        <tr><td>3</td><td>1~2분 기다린 뒤 브라우저 localhost:9090 → Status → Target health, 오른쪽 위 검색칸에 <code>api</code> (apiserver 줄은 무시)</td><td class="it">order-api 2/2 up · journal-api 3/3 up</td></tr>
         <tr><td>4</td><td>Query: <code>count(up)</code> · <code>sum(up)</code></td><td class="it">33 · 33 (28 + 앱 파드 5)</td></tr>
         <tr><td>5</td><td>Query: <code>http_server_requests_seconds_count</code> (Table)</td><td class="it">job="order-api" · job="journal-api" 줄들</td></tr>
         <tr><td>6</td><td>Status → Configuration, 검색 <code>order-api</code></td><td class="it"><code>job_name: serviceMonitor/apps/order-api/0</code></td></tr>
@@ -162,10 +163,14 @@ curl -s localhost:18082/actuator/prometheus \
     </table>
     <div class="callout">타깃 하나 = 파드 하나. order-api를 3개로 늘리면 타깃도 자동으로 3개가 된다. 서비스 디스커버리가 엔드포인트를 따라가기 때문이다.</div>
   </div>
-  <div class="foot"><span>job 라벨 값은 Service 이름에서 온다(order-api · journal-api)</span><span>{{PG}}</span></div>
+  <div class="foot"><span>job 라벨 값은 Service 이름에서 온다(order-api · journal-api) · <a href="lab-guide.html#s6-2" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 적용 2분 뒤 두 앱 타깃 5개가 up, count(up) 33.</li>
+  <li>3번 순서: ServiceMonitor를 만들면 오퍼레이터가 수집 설정을 새로 만들고 Prometheus가 다시 읽는다. 1~2분 걸리므로 바로 보면 목록에 아직 없다. 브라우저 localhost:9090(port-forward 필요) → Status → Target health → 오른쪽 위 검색칸에 api. 기본 타깃 28개 중 앱 묶음만 남긴다.</li>
+  <li>판정: serviceMonitor/apps/order-api/0 2/2 up, serviceMonitor/journal/journal-api/0 3/3 up. 묶음 이름 옆 숫자가 파드 수와 같으면 성공.</li>
+  <li>검색 api에는 serviceMonitor/monitoring/kps-kube-prometheus-stack-apiserver/0 도 걸린다. 이름의 apiserver 때문이다. 쿠버네티스 API 서버 타깃이라 무시한다.</li>
+  <li>앱 묶음이 아예 안 보이면 라벨 · 셀렉터 · 포트 이름 중 하나가 어긋난 것이다(앞 슬라이드의 세 가지). 에러 없이 타깃만 생기지 않는다.</li>
   <li>6번 설정에는 role: endpoints, namespaces: [apps], metrics_path: /actuator/prometheus, 서비스 라벨과 포트 이름으로 keep 하는 relabel 규칙이 들어 있다(3장 슬라이드와 같은 모양).</li>
 </ul>
 </aside>
@@ -187,12 +192,12 @@ curl -s localhost:18082/actuator/prometheus \
     </table>
     <div class="callout">읽는 순서는 안쪽부터: 고르고 → 초당으로 바꾸고 → 앱 단위로 합치고 → 나누거나 분위수를 구한다. 5장의 RED 질의가 모두 이 순서다.</div>
   </div>
-  <div class="foot"><span>[5m]: 최근 5분의 샘플로 계산한다. 수집 주기(30초)의 4배 이상으로 둔다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>[5m]: 최근 5분의 샘플로 계산한다. 수집 주기(30초)의 4배 이상으로 둔다 · <a href="lab-guide.html#s7-2" target="_blank" rel="noopener">실습 가이드 07 RED 7-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>rate 창을 수집 주기와 비슷하게 잡으면(예: [30s]) 샘플이 1~2개뿐이라 값이 튀거나 비어 나온다. 수집 주기의 4배 이상이 흔한 권장이다.</li>
   <li>sum by 에 없는 라벨은 사라진다. 나중에 어느 파드인지 보려면 by (job, pod) 처럼 남긴다.</li>
-  <li>histogram_quantile 은 버킷 경계 사이를 선형 보간해 추정한다. 경계가 앱의 실제 지연 분포에 맞아야 값이 의미가 있다(Q&amp;A).</li>
+  <li>histogram_quantile 은 버킷 경계 사이를 선형 보간해 추정한다. 경계가 앱의 실제 지연 분포에 맞아야 값이 의미가 있다(실습 가이드 11 Q&amp;A).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/prometheus/latest/querying/basics/" target="_blank" rel="noopener">PromQL · Querying basics</a></li>
@@ -218,7 +223,7 @@ curl -s localhost:18082/actuator/prometheus \
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>…_count · …_sum · …_bucket = http_server_requests_seconds_*</span><span>{{PG}}</span></div>
+  <div class="foot"><span>…_count · …_sum · …_bucket = http_server_requests_seconds_* · <a href="lab-guide.html#s7-1" target="_blank" rel="noopener">실습 가이드 07 RED 7-1 · 7-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>기준값은 모두 실측이다. 라이브 값은 부하 시점에 따라 조금씩 다르다.</li>
@@ -231,7 +236,7 @@ curl -s localhost:18082/actuator/prometheus \
   <li>끝나면 k6는 Ctrl-C.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/k6/k6-red.js" target="_blank" rel="noopener">k6-red.js</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k6/k6-red.js" target="_blank" rel="noopener">k6-red.js</a></li>
 </ul></details>
 </aside>
 </section>
@@ -260,7 +265,7 @@ P99    0.789   <span class="c"># 789ms</span>
       </div>
     </div>
   </div>
-  <div class="foot"><span>Graph 탭에서 uri별 선을 그리면 /api/chaos/slow 하나만 위로 뜬다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>Graph 탭에서 uri별 선을 그리면 /api/chaos/slow 하나만 위로 뜬다 · <a href="lab-guide.html#s7-3" target="_blank" rel="noopener">실습 가이드 07 RED 7-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측값. 1장 "오늘의 질문"의 ①②가 이 두 단계다: 무엇이 이상한가(P99) → 어디에서 발생했나(uri).</li>
@@ -269,54 +274,3 @@ P99    0.789   <span class="c"># 789ms</span>
 </aside>
 </section>
 
-<section class="slide expanded" data-label="5장 Q&amp;A: 자주 막히는 곳" data-cap="qa-query">
-  <span class="kicker"><span class="n">05</span>Q&amp;A · 자주 막히는 곳</span>
-  <h1>연결과 질의에서 <span class="hl">자주 막히는 곳</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14px">
-      <colgroup><col style="width:28%"><col style="width:34%"><col></colgroup>
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>ServiceMonitor는 있는데 타깃이 안 생긴다</td><td class="it">① release 라벨 없음 · ② Service 라벨 불일치 · ③ 포트를 숫자로 적음</td><td class="it">앞 장의 확인 명령 세 개. 생성된 설정에 job이 있는지 Status → Configuration에서 본다</td></tr>
-        <tr><td>패널이 No data, 질의 결과 없음</td><td class="it">코드의 이름으로 질의했다(<code>orders_created_total</code>)</td><td class="it">엔드포인트의 <code># TYPE</code> 줄에서 실제 이름(<code>orders_total</code>)을 확인</td></tr>
-        <tr><td>에러가 없는 앱이 표에서 사라진다</td><td class="it">5xx 시계열이 없으면 나눗셈 결과가 "없음"이지 0이 아니다</td><td class="it">뒤에 <code>or (sum by (job) (rate(…_count[5m])) * 0)</code>를 붙여 0으로 채운다</td></tr>
-        <tr><td>P50이 평균보다 수십 배 크다</td><td class="it">버킷 경계가 앱 지연보다 훨씬 크다. 보간이 만든 값</td><td class="it">버킷 경계를 앱의 실제 지연 분포(ms 단위)에 맞춘다</td></tr>
-        <tr><td>시계열 수가 계속 는다</td><td class="it">값이 끝없는 라벨(사용자 ID · 요청 ID · 실제 경로)</td><td class="it">라벨은 경로 템플릿 · 상태 코드처럼 값이 정해진 것만</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>세 가지 모두 에러 메시지 없이 조용히 생긴다. 확인 명령이 답이다</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>모두 이 자료를 만들며 실제로 겪었다. 1행: release 라벨 없이 만들면 1분 뒤에도 order-api 타깃 0건, 생성된 설정에서 grep 결과 0. 포트를 "8080"으로 바꾸면 1~2분 뒤 타깃이 사라진다.</li>
-  <li>2행: "분당 주문 수" 대시보드 패널이 sum(rate(orders_created_total[5m])) 로 적혀 있어 No data였다.</li>
-  <li>4행 실측: 버킷을 [0.05, 0.1, 0.2, 0.5, 1]로 두자 1ms대 요청이 모두 첫 버킷에 들어가 P50 25ms(평균 1.03ms). 경계를 0.5ms부터 촘촘히 두자 P50 1.09ms.</li>
-  <li>5행: 앱 두 개를 연결하자 버킷 시계열만 order-api 592개, journal-api 156개가 생겼다. 경계 하나를 더하면 경로 · 상태 코드 · 파드 조합 수만큼 는다.</li>
-</ul>
-</aside>
-</section>
-
-<section class="slide expanded" data-label="5장 체크포인트">
-  <span class="kicker"><span class="n">05</span>CHECKPOINT</span>
-  <h1>앱 연결이 끝났다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
-      <colgroup><col style="width:62%"><col></colgroup>
-      <thead><tr><th>명령 · 질의</th><th>기대값</th></tr></thead>
-      <tbody>
-        <tr><td><code>kubectl get servicemonitor -A -l release=kps</code></td><td class="it">order-api · journal-api가 목록에 있다</td></tr>
-        <tr><td>Query: <code>count(up)</code> · <code>sum(up)</code></td><td class="it">33 · 33</td></tr>
-        <tr><td><code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">order-api · journal-api 두 줄</td></tr>
-        <tr><td><code>histogram_quantile(0.99, sum by (job, le) (rate(…_bucket[5m])))</code></td><td class="it">두 줄, 부하 중 order-api ≈ 0.79</td></tr>
-        <tr><td><code>histogram_quantile(0.99, sum by (uri, le) (rate(…_bucket{job="order-api"}[5m])))</code></td><td class="it">/api/chaos/slow만 0.8 근처</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">다음 질문: 지금은 질의를 칠 때만 값을 본다. 아무도 화면을 보고 있지 않을 때 에러율이 5%를 넘으면 어떻게 알 수 있나?</div>
-  </div>
-  <div class="foot"><span>책 3.12.1: 애플리케이션의 사용률, 에러 수, 실행 시간도 모니터링한다</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>다음은 알림. 여기서 쓴 RED 질의에 임계값과 지속 시간을 붙여 규칙으로 만들고, 알림이 수신처까지 도착하는 것을 확인한다.</li>
-</ul>
-</aside>
-</section>

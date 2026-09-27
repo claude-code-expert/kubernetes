@@ -13,7 +13,7 @@
   <aside class="notes">
 <ul class="speaker-points">
   <li>6장 끝의 질문: 알림은 "에러율 6%"까지만 말한다. 어떤 요청에서 왜 났는지는 로그가 답한다.</li>
-  <li>흐름: 무엇을 로깅하나 → 어떻게 모으나 → 도구 → 라벨과 본문 → 앱이 로그를 남기게 하기 → 설치하고 쌓이는지 확인 → LogQL 사용법 → 메트릭에서 로그로 → 자주 막히는 곳.</li>
+  <li>흐름: 무엇을 로깅하나 → 어떻게 모으나 → 도구 → 앱이 로그를 남기게 하기 → 설치하고 쌓이는지 확인 → LogQL 사용법.</li>
   <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
 </ul>
 </aside>
@@ -137,34 +137,6 @@
 </aside>
 </section>
 
-<section class="slide" data-label="stdout과 사이드카">
-  <span class="kicker"><span class="n">07</span>STDOUT vs SIDECAR · 책 3.8 · 3.12.2</span>
-  <h1>앱은 <span class="hl">stdout으로</span> 찍고 수집은 노드마다 하나가 맡는다</h1>
-  <div class="body">
-    <div class="grid2">
-      <div class="card teal">
-        <span class="tag">권장 · stdout + DaemonSet</span>
-        <h3>앱은 어디에 저장되는지 몰라도 된다</h3>
-        <p>컨테이너 런타임이 stdout을 노드 파일로 받아 두고, 노드마다 하나씩 뜬 수집기가 읽어 간다. 앱을 몇 개 띄우든 수집기 수는 노드 수와 같다.</p>
-      </div>
-      <div class="card yellow">
-        <span class="tag yellow">예외 · 사이드카</span>
-        <h3>앱이 파일에만 쓸 때</h3>
-        <p>같은 파드에 전달기 컨테이너를 붙여 파일을 읽어 옮긴다. 앱을 고칠 수 없을 때 쓴다. 파드마다 컨테이너가 하나씩 늘고 메모리도 그만큼 든다.</p>
-      </div>
-    </div>
-    <div class="callout">컨테이너 안의 파일에 로그를 쓰면 파드가 사라질 때 함께 사라진다. 볼륨을 붙이면 노드에 묶이고 수집기가 파일 위치와 형식을 알아야 한다.</div>
-  </div>
-  <div class="foot"><span>책 3.12.2: 사이드카 로그 전달기는 리소스를 많이 소비하므로 사용을 제한하고, 데몬셋과 STDOUT을 쓰자</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>책 3.8: 애플리케이션 로그는 STDOUT으로 보내는 것을 권장한다. 로깅이 일관되고 모니터링 데몬셋이 직접 수집할 수 있다.</li>
-</ul>
-<details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/#sidecar-container-with-logging-agent" target="_blank" rel="noopener">Kubernetes · Sidecar container with a logging agent</a></li>
-</ul></details>
-</aside>
-</section>
 
 <section class="slide" data-label="kubectl logs가 멈추는 곳" data-cap="kubectl-logs">
   <span class="kicker"><span class="n">07</span>WHY A LOG STORE</span>
@@ -196,7 +168,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </div>
     <div class="callout"><code>kubectl logs</code>는 파드에 붙어 있는 기능이지 로그 저장소가 아니다. 노드·파드와 수명이 분리된 별도 저장소가 필요하다.</div>
   </div>
-  <div class="foot"><span>정리: kubectl delete namespace demo</span><span>{{PG}}</span></div>
+  <div class="foot"><span>정리: kubectl delete namespace demo · <a href="lab-guide.html#s10-1" target="_blank" rel="noopener">실습 가이드 10 로그 10-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측. 30초 동안 JSON 로그를 찍다가 에러로 끝나는 파드를 만들었다.</li>
@@ -236,20 +208,6 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
 </aside>
 </section>
 
-<section class="slide" data-label="라벨과 본문">
-  <span class="kicker"><span class="n">07</span>LOKI · LABELS vs BODY</span>
-  <h1>Loki에서 <span class="hl">라벨 조합 하나 = 스트림 하나</span>다</h1>
-  <div class="body fig">{{FIG:ch03-fig9-stream-labels.svg}}</div>
-  <div class="foot"><span>라벨로 범위를 좁히고, 본문은 질의할 때 파서로 꺼낸다</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>Loki는 프로메테우스처럼 라벨로 대상을 고른다. 다른 점은 본문을 색인하지 않는다는 것. 그래서 싸고, 대신 본문 검색은 고른 스트림을 전부 읽는다.</li>
-  <li>오른쪽 숫자는 실측: path·status를 라벨로 올린 뒤 서로 다른 경로로 60번 요청하자 journal-api 스트림이 3개에서 66개가 됐다. 다시 돌린 실측(실습 가이드 10-6)은 1 → 61. 요청마다 스트림이 하나씩 는다는 점은 같다.</li>
-  <li>왼쪽 스트림 안의 로그 줄은 모양을 보여 주는 예시다.</li>
-</ul>
-</aside>
-</section>
-
 <section class="slide" data-label="앱이 로그를 남기게 하는 법" data-cap="app-logs">
   <span class="kicker"><span class="n">07</span>HOW TO · 앱 로그</span>
   <h1>앱이 <span class="hl">요청마다 stdout에 한 줄</span> 남기게 한다</h1>
@@ -275,14 +233,14 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>수집기는 앱이 쓴 줄만 모은다. 요청 로그는 앱이 켜야 생긴다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>수집기는 앱이 쓴 줄만 모은다. 요청 로그는 앱이 켜야 생긴다 · <a href="lab-guide.html#s10-2" target="_blank" rel="noopener">실습 가이드 10 로그 10-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측. 두 앱 모두 기본 상태에서는 기동할 때만 로그를 남긴다. 요청 로그를 켜야 Loki에서 찾을 것이 생긴다.</li>
   <li>JSON 한 줄(journal-api)은 | json 파서로, 정해진 자리의 텍스트(order-api)는 | pattern 파서로 필드를 꺼낸다. 새로 만드는 앱이면 JSON이 다루기 쉽다.</li>
   <li>journal-api: 계측 미들웨어에 로그 한 줄을 더했다. 프로브 경로(/healthz · /readyz · /metrics)는 걸러 낸다. path는 원본 그대로 남긴다. 라벨이 아니라 본문이므로 값의 가짓수가 문제되지 않는다.</li>
-  <li>order-api: 이미지를 다시 만들지 않고 환경 변수만으로 켰다. 남의 앱을 다룰 때 쓰는 방식. 톰캣은 경로별 제외가 없어 프로브 요청까지 모두 남는다. ROTATE=false가 빠지면 로그가 조용히 사라진다(Q&amp;A).</li>
-  <li>전체 매니페스트: labs/k8s/order-api.yaml</li>
+  <li>order-api: 이미지를 다시 만들지 않고 환경 변수만으로 켰다. 남의 앱을 다룰 때 쓰는 방식. 톰캣은 경로별 제외가 없어 프로브 요청까지 모두 남는다. ROTATE=false가 빠지면 로그가 조용히 사라진다(실습 가이드 11 Q&amp;A Q7).</li>
+  <li>전체 매니페스트: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">labs/k8s/order-api.yaml</a></li>
 </ul>
 </aside>
 </section>
@@ -325,7 +283,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/helm/loki-values.yaml" target="_blank" rel="noopener">loki-values.yaml</a> · <a href="labs/helm/alloy-values.yaml" target="_blank" rel="noopener">alloy-values.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/loki-values.yaml" target="_blank" rel="noopener">loki-values.yaml</a> · <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/helm/alloy-values.yaml" target="_blank" rel="noopener">alloy-values.yaml</a> · <a href="lab-guide.html#s10-3" target="_blank" rel="noopener">실습 가이드 10 로그 10-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>설치 명령: helm upgrade --install loki grafana/loki -n logging --create-namespace --version 7.3.0 -f labs/helm/loki-values.yaml --wait / helm upgrade --install alloy grafana/alloy -n logging --version 1.12.1 -f labs/helm/alloy-values.yaml --wait</li>
@@ -333,7 +291,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
   <li>replication_factor 기본값 3이면 단일 인스턴스가 기동하지 못한다.</li>
   <li>loki.source.kubernetes 는 쿠버네티스 API로 로그를 읽는다. 호스트의 /var/log 를 마운트하는 방식과 달리 특권 컨테이너가 필요 없다.</li>
   <li>두 앱의 라벨 규칙이 다르다(journal-api는 app, order-api는 app.kubernetes.io/name). regex="(.+)" 규칙 두 개로 둘 중 있는 쪽을 app 라벨로 모은다. source_labels 두 개를 separator로 이으면 둘 다 있는 파드에서 값이 붙어 버린다.</li>
-  <li>라벨로 올리는 것은 namespace · pod · container · app 넷뿐이다. 값의 가짓수가 정해진 것만 라벨로 둔다(앞 장 "라벨과 본문").</li>
+  <li>라벨로 올리는 것은 namespace · pod · container · app 넷뿐이다. 값의 가짓수가 정해진 것만 라벨로 둔다.</li>
   <li>retention_period 72h는 실습용. 운영은 30~45일.</li>
 </ul>
 </aside>
@@ -357,7 +315,7 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </table>
     <div class="callout">라벨이 보이고, 줄이 흐르고, 앱별 줄 수가 0보다 크면 수집 → 저장 → 조회가 모두 동작한다.</div>
   </div>
-  <div class="foot"><span>Grafana의 Loki 데이터소스는 kps-values.yaml의 additionalDataSources로 미리 넣어 두었다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>Grafana의 Loki 데이터소스는 kps-values.yaml의 additionalDataSources로 미리 넣어 두었다 · <a href="lab-guide.html#s10-3" target="_blank" rel="noopener">실습 가이드 10 로그 10-3 · 10-4 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측: 두 차트 설치 각각 1분 안쪽. alloy는 데몬셋인데 워커 두 대에만 뜬다. 컨트롤 플레인의 테인트를 견디는 toleration을 넣지 않았기 때문이다. 컨트롤 플레인 파드 로그까지 모으려면 toleration을 더한다.</li>
@@ -383,12 +341,12 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
     </table>
     <div class="callout">PromQL과 모양이 같다: <code>{라벨}</code>로 고르고, <code>[5m]</code> 창으로 세고, <code>sum by</code>로 묶는다. 다른 점은 ②③, 본문을 거르고 꺼내는 단계가 있다는 것이다.</div>
   </div>
-  <div class="foot"><span>Grafana Explore → Loki → Code 모드에 입력. 로그 질의는 줄 목록, 세기 질의는 그래프로 나온다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>Grafana Explore → Loki → Code 모드에 입력. 로그 질의는 줄 목록, 세기 질의는 그래프로 나온다 · <a href="lab-guide.html#s10-5" target="_blank" rel="noopener">실습 가이드 10 로그 10-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>① 없이 본문 검색만 할 수는 없다. Loki는 라벨로 스트림을 고른 뒤 그 안의 덩어리(chunk)만 연다. 좁힐수록 빠르다.</li>
   <li>pattern의 &lt;_&gt;는 "자리는 있지만 이름은 필요 없음", &lt;status&gt;처럼 이름을 주면 그 자리 값이 필드가 된다.</li>
-  <li>파서 뒤의 | __error__="" 는 파싱에 실패한 줄을 뺀다. 형식이 섞인 로그에서 세기 질의가 실패하지 않게 한다(Q&amp;A).</li>
+  <li>파서 뒤의 | __error__="" 는 파싱에 실패한 줄을 뺀다. 형식이 섞인 로그에서 세기 질의가 실패하지 않게 한다(실습 가이드 11 Q&amp;A Q8).</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://grafana.com/docs/loki/latest/query/" target="_blank" rel="noopener">Loki · LogQL</a></li>
@@ -413,101 +371,14 @@ error: ... pods "noisy" <span class="v">not found</span></pre>
         <tr><td>5</td><td><code>sum by (app) (count_over_time({namespace=~"journal|apps"} | json | __error__="" [5m]))</code></td><td class="it">JSON으로 파싱되는 줄은 journal-api만(9084)</td></tr>
       </tbody>
     </table>
-    <div class="callout">1장 "오늘의 질문"의 ④칸이 이것이다: 메트릭이 "에러율 6%"라고 말하면, 로그는 "그 요청은 <code>GET /api/chaos/error?rate=0.7</code>이었다"고 말한다.</div>
   </div>
-  <div class="foot"><span>3번의 `…`에는 2번의 pattern을 그대로 넣는다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>3번의 `…`에는 2번의 pattern을 그대로 넣는다 · <a href="lab-guide.html#s10-5" target="_blank" rel="noopener">실습 가이드 10 로그 10-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>실측(k6 부하 중 5분 구간). 2번의 200 + 500 = 10749, order-api 전체 줄 수 10750과 거의 같다. 패턴이 맞지 않는 줄(기동 로그 등)은 status 라벨 없이 따로 묶이는데 이번 창에는 없었다.</li>
-  <li>5번의 order-api 줄은 JSON이 아니라서 | __error__="" 에 걸러진다. 이 필터 없이 세면 질의 전체가 JSONParserErr로 실패한다(Q&amp;A).</li>
+  <li>5번의 order-api 줄은 JSON이 아니라서 | __error__="" 에 걸러진다. 이 필터 없이 세면 질의 전체가 JSONParserErr로 실패한다(실습 가이드 11 Q&amp;A Q8).</li>
 </ul>
 </aside>
 </section>
 
-
-<section class="slide" data-label="메트릭에서 로그로 넘어가기" data-cap="metrics-logs">
-  <span class="kicker"><span class="n">07</span>METRICS → LOGS</span>
-  <h1>메트릭으로 <span class="hl">언제 · 어디</span>를 잡고, 같은 라벨의 <span class="hl">로그</span>로 넘어간다</h1>
-  <div class="body">
-    <div class="split a" style="align-items:start">
-      <div class="stack">
-        <pre class="code" style="font-size:13px"><span class="c"># 같은 5분, order-api의 500</span>
-<span class="c"># 로그 (Loki)</span>
-sum(count_over_time({namespace="apps", app="order-api"}
-  |~ " 500 " [5m]))                      <span class="c">→</span> <span class="v">634</span>
-<span class="c"># 메트릭 (Prometheus)</span>
-sum(increase(http_server_requests_seconds_count{
-  job="order-api", status=~"5.."}[5m]))  <span class="c">→</span> <span class="v">633.4</span></pre>
-        <div class="card"><h3>두 값이 거의 같다</h3><p>같은 요청을 한쪽은 카운터로, 한쪽은 줄로 셌다. 메트릭 값의 소수점은 <code>increase()</code>가 30초 간격 샘플로 5분 창을 추정(외삽)해서 붙는다.</p></div>
-      </div>
-      <div class="stack">
-        <div class="card"><h3>Explore Split</h3><p>Explore 오른쪽 위 <b>Split</b>으로 화면을 둘로 나눈다. 왼쪽 Prometheus에 에러율, 오른쪽 Loki에 500 줄. 시간 범위가 함께 움직인다.</p></div>
-        <div class="card"><h3>대시보드 로그 패널</h3><p>스터디 · 서비스 RED 맨 아래 패널이 같은 시각의 에러 로그를 보여 준다. 위쪽 그래프에서 "5xx가 늘었다"를 보고 내려와 "무엇이었나"를 읽는다.</p></div>
-        <div class="callout" style="font-size:16px">둘을 잇는 것은 같은 라벨(namespace · app · pod)이다. 수집 설정에서 라벨 이름을 맞춰 둔 이유다.</div>
-      </div>
-    </div>
-  </div>
-  <div class="foot"><span>메트릭은 추세와 비율에, 로그는 개별 사건에 정확하다</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>실측(실습 가이드 10-6). 다른 실행에서는 632 · 632.2, 처음 돌렸을 때는 로그 208 · 메트릭 249.8로 20% 벌어졌다. 부하가 5분 창을 고르게 채우면 거의 같아지고, 부하가 창 중간에 시작 · 종료되면 외삽 때문에 벌어진다. 맞추려 하지 않는다.</li>
-  <li>Grafana 데이터소스는 이름이 아니라 uid로 참조한다(Prometheus uid=prometheus, Loki uid=loki). 대시보드 JSON이 uid를 박아 두므로 이름을 바꿔도 패널이 깨지지 않는다.</li>
-  <li>책 3.10은 Grafana 화면에서 데이터소스를 손으로 추가한다(URL http://loki:3100). 값 파일로 넣어 두면 Grafana를 다시 설치해도 남는다.</li>
-</ul>
-</aside>
-</section>
-
-
-<section class="slide expanded" data-label="7장 Q&amp;A: 자주 막히는 곳" data-cap="qa-logs">
-  <span class="kicker"><span class="n">07</span>Q&amp;A · 자주 막히는 곳</span>
-  <h1>로그에서 <span class="hl">자주 막히는 곳</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14px">
-      <colgroup><col style="width:28%"><col style="width:34%"><col></colgroup>
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>Loki에 앱 로그가 하나도 없다</td><td class="it">앱이 요청 로그를 찍지 않는다</td><td class="it"><code>kubectl logs</code>로 먼저 확인. 앱에서 요청 로그를 켠다</td></tr>
-        <tr><td>order-api 액세스 로그가 조용히 사라졌다</td><td class="it"><code>SERVER_TOMCAT_ACCESSLOG_ROTATE=false</code>가 빠졌다. 톰캣이 <code>/dev/stdout.날짜</code>에 쓰려다 실패</td><td class="it">환경 변수를 되살린다. 에러가 남지 않으니 로그 줄 수로 확인</td></tr>
-        <tr><td>세기 질의가 <code>pipeline error: 'JSONParserErr'</code></td><td class="it">JSON이 아닌 줄이 섞였다</td><td class="it">파서 바로 뒤에 <code>| __error__=""</code></td></tr>
-        <tr><td>스트림 수가 요청 수만큼 는다</td><td class="it">path · 사용자 ID처럼 값이 끝없는 필드를 라벨로 올렸다</td><td class="it">라벨은 namespace · app · pod만. 나머지는 본문에서 파서로 꺼낸다</td></tr>
-        <tr><td>지운 라벨이 Label browser에 계속 보인다</td><td class="it"><code>/labels</code>는 보존 기간(72시간) 안의 모든 라벨을 돌려준다</td><td class="it">현재 상태는 series API(<code>/loki/api/v1/series</code>)로 본다</td></tr>
-        <tr><td>컨트롤 플레인 파드 로그가 없다</td><td class="it">Alloy 데몬셋이 워커에만 떴다(테인트)</td><td class="it">필요하면 Alloy에 toleration을 더한다</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>원인 보는 곳: kubectl logs · Alloy 로그 · Explore의 Label browser · series API</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>ROTATE 실측: 환경 변수를 지우고 요청 5번을 보내자 로그에는 스프링 초기화 메시지 세 줄만 남았다. 되살리자 액세스 로그가 다시 찍혔다.</li>
-  <li>라벨 폭발 실측: path · status를 라벨로 올리는 단계를 Alloy에 넣고 서로 다른 경로로 60번 요청하자 journal-api 스트림이 1 → 61(다른 실행에서는 3 → 66). 실서비스처럼 /api/orders/12345 같은 ID가 경로에 들어가면 하루에 수십만 스트림이 되고 Loki 인제스터가 메모리를 다 쓴다.</li>
-  <li>JSON 파서 실측 에러: pipeline error: 'JSONParserErr' for series: '{__error__="JSONParserErr", __error_details__="Value looks like object, but can't find closing '}' symbol", app="order-api", …}'. 에러 메시지가 해결 방법(| __error__="")까지 알려 준다.</li>
-</ul>
-</aside>
-</section>
-
-
-<section class="slide expanded" data-label="7장 체크포인트">
-  <span class="kicker"><span class="n">07</span>CHECKPOINT</span>
-  <h1>로그 수집이 동작한다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
-  <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
-      <colgroup><col style="width:60%"><col></colgroup>
-      <thead><tr><th>명령 · 질의</th><th>기대값</th></tr></thead>
-      <tbody>
-        <tr><td><code>kubectl -n logging get pods</code></td><td class="it">Running 4 (loki 1 · gateway 1 · alloy 2)</td></tr>
-        <tr><td>Explore → Loki → Label browser</td><td class="it">namespace · app · pod · container</td></tr>
-        <tr><td><code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))</code></td><td class="it">journal-api · order-api 둘 다 0보다 크다</td></tr>
-        <tr><td><code>{namespace="apps", app="order-api"} |~ " 500 "</code> (부하 중)</td><td class="it"><code>/api/chaos/error</code> 줄이 나온다</td></tr>
-        <tr><td><code>{namespace="journal", app="journal-api"} | json | __error__=""</code></td><td class="it">필드 method · path · status · durationMs</td></tr>
-        <tr><td>Grafana → 스터디 — 서비스 RED 맨 아래 로그 패널</td><td class="it">에러 · 500 줄이 보인다</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="foot"><span>책 3.8~3.10 정리</span><span>{{PG}}</span></div>
-  <aside class="notes">
-<ul class="speaker-points">
-  <li>여기까지 오면 1장 "오늘의 질문" 네 칸을 모두 도구로 답할 수 있다: 메트릭으로 이상을 찾고(P99), 라벨로 좁히고(uri), 알림으로 받고, 로그로 원인을 본다.</li>
-</ul>
-</aside>
-</section>
 

@@ -101,7 +101,7 @@ container_memory_working_set_bytes{
       <div class="card"><h3>그래서 가능한 질의</h3><p>"apps 네임스페이스 전체", "obs-worker 노드 위의 컨테이너"처럼 라벨로 골라 합친다.</p></div>
     </div>
   </div>
-  <div class="foot"><span>책 3.7: 프로메테우스는 쿠버네티스의 레이블, 서비스 디스커버리, 메타데이터와 잘 맞는 메트릭 모니터링 도구다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>책 3.7: 프로메테우스는 쿠버네티스의 레이블, 서비스 디스커버리, 메타데이터와 잘 맞는 메트릭 모니터링 도구다 · <a href="lab-guide.html#s4-4" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-4 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>라벨 세트는 실습 클러스터 프로메테우스에서 조회한 실제 값이다(2026-09-26). id, name, endpoint, service 라벨은 생략했다.</li>
@@ -116,6 +116,7 @@ container_memory_working_set_bytes{
   <h1>메트릭은 <span class="hl">사람이 읽을 수 있는 텍스트</span>로 노출된다</h1>
   <div class="body">
     <div class="split" style="grid-template-columns:1.25fr .75fr">
+      <div class="stack">
       <pre class="code" style="font-size:13px"><span class="c"># node-exporter의 /metrics 응답 (실측, 일부)</span>
 <span class="k"># HELP node_cpu_seconds_total Seconds the CPUs spent in each mode.</span>
 <span class="k"># TYPE node_cpu_seconds_total counter</span>
@@ -124,6 +125,8 @@ node_cpu_seconds_total{cpu="0",mode="iowait"} <span class="v">59525.98</span>
 node_cpu_seconds_total{cpu="0",mode="irq"}    <span class="v">0</span>
 node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
 <span class="c">...</span></pre>
+      <div class="callout" style="font-size:15px"><code>1.76328028e+06</code> = 1.76328028 × 10⁶ = <b>1,763,280초</b>(약 20일). 값이 크면 지수 표기로 찍힌다. 프로메테우스는 두 표기를 똑같이 읽는다.</div>
+      </div>
       <table class="compare">
         <thead><tr><th>부분</th><th>뜻</th></tr></thead>
         <tbody>
@@ -136,7 +139,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
       </table>
     </div>
   </div>
-  <div class="foot"><span># HELP · # TYPE · 이름{라벨} 값</span><span>{{PG}}</span></div>
+  <div class="foot"><span># HELP · # TYPE · 이름{라벨} 값 · node-exporter 수집기 목록: <a href="https://github.com/prometheus/node_exporter#collectors" target="_blank" rel="noopener">node_exporter · Collectors</a> · <a href="lab-guide.html#s4-6" target="_blank" rel="noopener">실습 가이드 04. Prometheus 4-6 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>node-exporter 서비스에 port-forward 한 뒤 curl localhost:9100/metrics 로 받은 실제 응답이다. 책 3.7에 실린 예시와 형식이 같다.</li>
@@ -174,6 +177,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/concepts/metric_types/" target="_blank" rel="noopener">Prometheus · Metric types</a></li>
+<li><a href="https://prometheus.io/docs/tutorials/understanding_metric_types/" target="_blank" rel="noopener">Prometheus · Understanding metric types (tutorial)</a></li>
 <li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">Prometheus · Histograms and summaries</a></li>
 </ul></details>
 </aside>
@@ -208,7 +212,7 @@ node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
         <pre class="code" style="font-size:14px"><span class="c"># 긁기에 성공하면 1, 실패하면 0 (실측)</span>
 up{job="order-api", pod="order-api-…-g247f"}  <span class="v">1</span>
 up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
-        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 응답이 없으면 0이 되므로 "죽었다"와 "한가하다"가 구분된다.</p></div>
+        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 긁기에 실패하면 0이 된다. 요청이 없는 한가한 앱도 <code>/metrics</code>에는 응답하므로 1이다. push 방식에서는 데이터가 안 오면 죽은 건지 한가한 건지 알 수 없다.</p></div>
       </div>
       <div class="stack">
         <div class="card"><h3>대가 ①</h3><p>프로메테우스가 대상에 <b>네트워크로 닿아야</b> 한다. 방화벽·네트워크 정책이 막으면 수집이 안 된다.</p></div>
@@ -281,7 +285,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
     </table>
     <div class="callout">node-exporter만 노드 수만큼(DaemonSet) 뜨고 나머지는 하나씩 뜬다. 프로메테우스와 Alertmanager 이름 끝의 <code>-0</code>은 StatefulSet으로 떠 있다는 표시다.</div>
   </div>
-  <div class="foot"><span>kubectl get pods -n monitoring 결과 (파드 접미사는 환경마다 다르다)</span><span>{{PG}}</span></div>
+  <div class="foot"><span>kubectl get pods -n monitoring 결과 (파드 접미사는 환경마다 다르다) · <a href="lab-guide.html#s3-2" target="_blank" rel="noopener">실습 가이드 03 스택 설치 3-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>표 왼쪽 두 열은 책 3.7의 구성요소 목록 그대로다. 오른쪽은 실습 클러스터에서 kubectl get pods -n monitoring 으로 본 실제 파드 이름이다. 모두 Running.</li>
@@ -333,7 +337,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus-operator.dev/docs/getting-started/design/" target="_blank" rel="noopener">Prometheus Operator · Design</a></li>
-<li><a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">90-servicemonitors.yaml</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">servicemonitors.yaml</a></li>
 </ul></details>
 </aside>
 </section>
@@ -379,7 +383,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>전체 파일: <a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> · <a href="lab-guide.html#s6-1" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>① ServiceMonitor 자신의 라벨 release: kps. 프로메테우스 리소스의 serviceMonitorSelector 가 이 라벨을 가진 ServiceMonitor만 읽는다. 실습 클러스터에서 확인한 값: {"matchLabels":{"release":"kps"}}.</li>
@@ -387,11 +391,11 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <li>③ endpoints[].port 는 서비스 포트의 "이름"이다. 8080 같은 숫자를 적으면 맞는 포트가 없어 대상이 생기지 않는다.</li>
   <li>셋 중 하나라도 어긋나면 에러 없이 대상이 0개가 된다. 5장에서 일부러 어긋나게 만들어 본다.</li>
   <li>kps는 helm install 때 붙인 릴리스 이름이다. 차트가 serviceMonitorSelector 를 release: 릴리스이름 으로 설정한다.</li>
-  <li>ServiceMonitor 코드는 저장소 파일에서 주석만 발표용으로 바꿨다. Service는 labs/k8s/order-api.yaml 의 일부.</li>
+  <li>ServiceMonitor 코드는 저장소 파일에서 주석만 발표용으로 바꿨다. Service는 <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">labs/k8s/order-api.yaml</a> 의 일부.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
-<li><a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">90-servicemonitors.yaml</a></li>
-<li><a href="labs/k8s/order-api.yaml" target="_blank" rel="noopener">10-order-api.yaml</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">servicemonitors.yaml</a></li>
+<li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a></li>
 <li><a href="https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.ServiceMonitor" target="_blank" rel="noopener">Prometheus Operator · ServiceMonitor API</a></li>
 </ul></details>
 </aside>
@@ -432,7 +436,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       </div>
     </div>
   </div>
-  <div class="foot"><span>생성된 전체 설정은 monitoring 네임스페이스의 시크릿에 압축되어 들어 있다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>생성된 전체 설정은 monitoring 네임스페이스의 시크릿에 압축되어 들어 있다 · <a href="lab-guide.html#s6-3" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>왼쪽 A~E 한 칸이 오른쪽 같은 글자의 줄로 바뀐다. 오른쪽은 실습 클러스터에서 오퍼레이터가 실제로 만든 설정의 일부다.</li>

@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t10 d10">
+  <title id="t10">메트릭을 제공하는 쪽과 시각화 · 알림을 맡는 쪽</title>
+  <desc id="d10">왼쪽은 메트릭을 제공하는 쪽이다. node-exporter, cAdvisor, kube-state-metrics, 앱의 /actuator/prometheus가 HTTP로 메트릭을 내놓는다. 가운데 Prometheus가 30초마다 긁어 저장하고, Loki는 로그를 저장한다. 오른쪽은 시각화와 알림을 맡는 쪽이다. Alertmanager는 Prometheus가 보낸 알림을 묶어 Slack이나 메일로 보내고, Grafana는 PromQL과 LogQL로 질의해 대시보드를 그린다.</desc>
+  <defs>
+    <marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
+    <marker id="a10t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
+    <marker id="a10y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B5761F"/></marker>
+  </defs>
+  <style>
+    .t{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#24292A}
+    .m{font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;fill:#5A6867}
+    .box{fill:#FFFFFF;stroke:#A7B5AC;stroke-width:2}
+    .teal{fill:#E0EFEB;stroke:#0F766E;stroke-width:2}
+    .yel{fill:#FFF1DE;stroke:#B5761F;stroke-width:2}
+    .blu{fill:#E7F0FF;stroke:#1D5FBF;stroke-width:2}
+    .lane{fill:#F4F7F5;stroke:#D8DDD6;stroke-width:2;stroke-dasharray:8 6}
+  </style>
+
+  <!-- 열 머리 -->
+  <rect class="lane" x="30" y="28" width="500" height="844" rx="14"/>
+  <rect class="lane" x="1070" y="28" width="500" height="844" rx="14"/>
+  <text class="t" x="280" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#0B5A54">① 메트릭을 제공하는 쪽</text>
+  <text class="t" x="800" y="72" font-size="32" font-weight="700" text-anchor="middle">저장</text>
+  <text class="t" x="1320" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#1D5FBF">② 시각화 · 알림을 맡는 쪽</text>
+
+  <!-- ① 제공하는 쪽 -->
+  <rect class="teal" x="60" y="100" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="146" font-size="32" font-weight="700">node-exporter</text>
+  <text class="m" x="84" y="178" font-size="20">Prometheus Node Exporter</text>
+  <text class="t" x="84" y="216" font-size="24">노드(머신)의 CPU · 메모리 · 디스크 ·</text>
+  <text class="t" x="84" y="246" font-size="24">네트워크 수치</text>
+
+  <rect class="teal" x="60" y="290" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="336" font-size="32" font-weight="700">cAdvisor</text>
+  <text class="m" x="84" y="368" font-size="20">Container Advisor · kubelet 안</text>
+  <text class="t" x="84" y="406" font-size="24">컨테이너별 CPU · 메모리 사용량</text>
+  <text class="t" x="84" y="436" font-size="24">(<tspan class="m" font-size="21">container_*</tspan>)</text>
+
+  <rect class="teal" x="60" y="480" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="526" font-size="32" font-weight="700">kube-state-metrics</text>
+  <text class="m" x="84" y="558" font-size="20">KSM</text>
+  <text class="t" x="84" y="596" font-size="24">API 서버의 오브젝트 상태(레플리카 수,</text>
+  <text class="t" x="84" y="626" font-size="24">파드 단계)를 메트릭으로 (<tspan class="m" font-size="21">kube_*</tspan>)</text>
+
+  <rect class="teal" x="60" y="670" width="440" height="170" rx="10"/>
+  <text class="t" x="84" y="716" font-size="32" font-weight="700">앱의 /actuator/prometheus</text>
+  <text class="m" x="84" y="748" font-size="20">Spring Boot Actuator 엔드포인트</text>
+  <text class="t" x="84" y="786" font-size="24">order-api가 자기 요청 수 · 에러 ·</text>
+  <text class="t" x="84" y="816" font-size="24">지연을 직접 내놓는 주소</text>
+
+  <!-- 가운데: 저장 -->
+  <rect class="box" x="640" y="250" width="320" height="220" rx="12" style="stroke:#24292A;stroke-width:2.5"/>
+  <text class="t" x="800" y="312" font-size="36" font-weight="700" text-anchor="middle">Prometheus</text>
+  <text class="t" x="800" y="352" font-size="24" text-anchor="middle">30초마다 긁어(pull)</text>
+  <text class="t" x="800" y="382" font-size="24" text-anchor="middle">시계열로 저장</text>
+  <text class="m" x="800" y="428" font-size="20" text-anchor="middle">+ 알림 규칙 평가</text>
+
+  <rect class="box" x="640" y="600" width="320" height="170" rx="12"/>
+  <text class="t" x="800" y="656" font-size="34" font-weight="700" text-anchor="middle">Loki</text>
+  <text class="t" x="800" y="694" font-size="24" text-anchor="middle">로그 저장</text>
+  <text class="m" x="800" y="732" font-size="20" text-anchor="middle">(수집은 Alloy · 7장)</text>
+
+  <!-- ① → Prometheus : pull -->
+  <path d="M500 185 C 570 185, 580 300, 636 320" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <path d="M500 375 C 560 375, 590 350, 636 345" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <path d="M500 565 C 560 565, 590 400, 636 375" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <path d="M500 755 C 580 755, 590 430, 636 405" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
+  <text class="m" x="570" y="140" font-size="20" text-anchor="middle">30초마다</text>
+  <text class="m" x="570" y="162" font-size="20" text-anchor="middle">긁어 감</text>
+
+  <!-- ② 시각화 · 알림 -->
+  <rect class="yel" x="1100" y="110" width="440" height="270" rx="10"/>
+  <text class="t" x="1124" y="158" font-size="34" font-weight="700">Alertmanager</text>
+  <text class="m" x="1124" y="190" font-size="20">Prometheus Alertmanager</text>
+  <text class="t" x="1124" y="232" font-size="24">Prometheus가 보낸 알림을</text>
+  <text class="t" x="1124" y="262" font-size="24">중복 제거 · 묶기 · 경로 지정</text>
+  <text class="t" x="1124" y="292" font-size="24">침묵(silence) · 억제도 담당</text>
+  <text class="t" x="1124" y="344" font-size="24" font-weight="700" style="fill:#8A5813">→ Slack · 메일 · PagerDuty</text>
+
+  <rect class="blu" x="1100" y="470" width="440" height="270" rx="10"/>
+  <text class="t" x="1124" y="518" font-size="34" font-weight="700">Grafana</text>
+  <text class="m" x="1124" y="550" font-size="20">그라파나</text>
+  <text class="t" x="1124" y="592" font-size="24">Prometheus · Loki에 질의해</text>
+  <text class="t" x="1124" y="622" font-size="24">대시보드와 조회 화면(Explore)을</text>
+  <text class="t" x="1124" y="652" font-size="24">그린다</text>
+  <text class="t" x="1124" y="702" font-size="23" style="fill:#5A6867">데이터는 저장하지 않는다</text>
+
+  <!-- Prometheus → Alertmanager : firing 알림 -->
+  <path d="M960 290 L 1096 250" stroke="#B5761F" stroke-width="3" fill="none" marker-end="url(#a10y)"/>
+  <text class="t" x="1020" y="236" font-size="21" text-anchor="middle" style="fill:#8A5813;font-weight:700">firing 알림</text>
+  <!-- Prometheus → Grafana : PromQL -->
+  <path d="M960 430 L 1096 540" stroke="#1D5FBF" stroke-width="3" fill="none" marker-end="url(#a10t)"/>
+  <text class="m" x="1010" y="452" font-size="21" style="fill:#1D5FBF;font-weight:700">PromQL</text>
+  <!-- Loki → Grafana : LogQL -->
+  <path d="M960 685 L 1096 670" stroke="#1D5FBF" stroke-width="3" fill="none" marker-end="url(#a10t)"/>
+  <text class="m" x="1028" y="665" font-size="21" text-anchor="middle" style="fill:#1D5FBF;font-weight:700">LogQL</text>
+</svg>
