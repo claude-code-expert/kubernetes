@@ -1,0 +1,81 @@
+# 알림 수신 서버. Alertmanager 가 보내는 웹훅(JSON)을 받아 한 줄씩 로그로 찍는다.
+# 실제 운영이라면 이 자리에 Slack · PagerDuty · 메일이 온다. 실습에서는 외부 계정 없이
+# "알림이 정말 도착했는가"를 kubectl logs 로 확인하려고 쓴다.
+#   kubectl apply -f labs/k8s/alert-sink.yaml
+#   kubectl -n monitoring logs deploy/alert-sink -f
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-sink
+  namespace: monitoring
+data:
+  sink.py: |
+    import json, sys
+    from datetime import datetime, timezone
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            now = datetime.now(timezone.utc).strftime("%H:%M:%SZ")   # UTC
+            for a in body.get("alerts", []):
+                l, n = a.get("labels", {}), a.get("annotations", {})
+                print(f'{now} [{a.get("status")}] {l.get("alertname")} '
+                      f'severity={l.get("severity")} job={l.get("job", "-")} '
+                      f'receiver={body.get("receiver")} | {n.get("summary", "")}', flush=True)
+            self.send_response(200); self.end_headers()
+        def log_message(self, *args):   # 접속 기록은 찍지 않는다
+            pass
+
+    print("alert-sink listening on :8080", flush=True)
+    HTTPServer(("", 8080), H).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-sink
+  namespace: monitoring
+  labels:
+    app: alert-sink
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-sink
+  template:
+    metadata:
+      labels:
+        app: alert-sink
+    spec:
+      nodeSelector:
+        workload: observability
+      containers:
+        - name: sink
+          image: python:3.13-alpine
+          command: ["python", "-u", "/app/sink.py"]
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 64Mi}
+          volumeMounts:
+            - name: app
+              mountPath: /app
+      volumes:
+        - name: app
+          configMap:
+            name: alert-sink
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-sink
+  namespace: monitoring
+spec:
+  selector:
+    app: alert-sink
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

@@ -1,0 +1,24 @@
+# [kubectl logs 한계 실험용] JSON 로그 30줄을 1초 간격으로 찍고, 마지막에 error 한 줄을 남기고 죽는 파드.
+#   kubectl create namespace demo
+#   kubectl -n demo apply -f labs/k8s/noisy-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: noisy
+spec:
+  restartPolicy: Never
+  containers:
+    - name: c
+      image: alpine:3.22
+      resources: {requests: {cpu: 10m, memory: 16Mi}}
+      command:
+        - sh
+        - -c
+        - |
+          i=0
+          while [ $i -lt 30 ]; do
+            echo "{\"level\":\"info\",\"msg\":\"작업 $i\"}"
+            i=$((i+1)); sleep 1
+          done
+          echo '{"level":"error","msg":"마지막에 터졌다"}'
+          exit 1

@@ -1,0 +1,594 @@
+<!-- ===================================================================
+  OPENING
+=================================================================== -->
+
+<section class="slide cover active" data-label="표지">
+  <div class="cover-kicker">KUBERNETES BEST PRACTICES · CHAPTER 3</div>
+  <h1>메트릭으로 <span class="hl">이상을 찾고</span>,<br>로그로 <span class="hl">원인을 찾는다</span></h1>
+  <p class="cover-sub">쿠버네티스에서 메트릭과 로그를 모으고, 보고, 알림으로 받는 방법.</p>
+  <div class="cover-info">
+    <div class="cover-meta"><span>『쿠버네티스 창시자에게 배우는 모범 사례 2판』 3장 · 77~104쪽</span><span>실습 따라하기 lab-guide.html · 설정 파일 labs/</span></div>
+    <div class="cover-meta"><span>실습 준비물: Docker · kind · kubectl · Helm · k6 · jq (설치는 다음 장)</span></div>
+  </div>
+  <div class="foot"><span>Chapter 3 · 모니터링과 로깅</span><span>2026</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3장은 이론 10개 절 + 설치 2개 절(3.7 프로메테우스, 3.10 로키). 책의 설치 절차는 2024년 기준이라 지금 그대로 치면 안 되는 부분이 있다. 4장과 7장에서 짚는다.</li>
+  <li>실습 명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다. 값은 실행할 때마다 조금씩 다르다.</li>
+  <li>긴 YAML은 슬라이드에 다 싣지 않는다. 핵심 줄만 보여주고 GitHub 링크를 눌러 전체를 연다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide" data-label="실습 환경 준비">
+  <span class="kicker"><span class="n">00</span>SETUP</span>
+  <h1>실습 전에 <span class="hl">도구 6개</span>를 설치한다</h1>
+  <div class="body">
+    <div class="split" style="grid-template-columns:1.25fr .75fr;align-items:start">
+      <div class="stack">
+        <pre class="code" style="font-size:12.5px"><span class="c"># macOS · Homebrew (없으면 먼저 설치: brew.sh)</span>
+brew install --cask docker          <span class="c"># 또는 --cask orbstack</span>
+brew install kind helm kubernetes-cli k6 jq
+
+<span class="c"># 설치 확인: 여섯 줄 모두 버전이 나오면 된다</span>
+docker version --format 'Client {{.Client.Version}} / Server {{.Server.Version}}'
+kind version
+kubectl version --client
+helm version --short
+k6 version
+jq --version</pre>
+        <div class="warning" style="font-size:15px"><b>Docker 자원:</b> 메모리 8GiB · CPU 4코어 · 디스크 40GiB 이상. 기본값(2~4GiB)이면 프로메테우스 스택 설치 때 Pending · OOMKilled가 난다.</div>
+      </div>
+      <table class="compare" style="table-layout:fixed;font-size:14px">
+        <colgroup><col style="width:46%"><col></colgroup>
+        <thead><tr><th>도구 · 쓰는 곳</th><th>확인 명령</th></tr></thead>
+        <tbody>
+          <tr><td>Docker<br><span style="font:400 13px var(--sans);color:var(--muted)">kind 노드 · 이미지 빌드</span></td><td><code>docker version</code><br><span style="font:400 13px var(--sans);color:var(--muted)">Server 부분까지 나와야 한다</span></td></tr>
+          <tr><td>kind<br><span style="font:400 13px var(--sans);color:var(--muted)">로컬 클러스터</span></td><td><code>kind version</code></td></tr>
+          <tr><td>kubectl<br><span style="font:400 13px var(--sans);color:var(--muted)">클러스터 조작</span></td><td><code>kubectl version --client</code></td></tr>
+          <tr><td>Helm<br><span style="font:400 13px var(--sans);color:var(--muted)">스택 · Loki · Alloy 설치</span></td><td><code>helm version</code></td></tr>
+          <tr><td>k6<br><span style="font:400 13px var(--sans);color:var(--muted)">부하 생성</span></td><td><code>k6 version</code></td></tr>
+          <tr><td>jq<br><span style="font:400 13px var(--sans);color:var(--muted)">API 응답(JSON) 읽기</span></td><td><code>jq --version</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>Docker Desktop: Settings → Resources · OrbStack: Settings → System</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>Homebrew가 없으면 먼저 설치: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</li>
+  <li>실측 버전: Docker 29.2.1 · kind v0.33.0 · kubectl v1.37.0 · Helm v4.2.4 · k6 v2.2.0. 자세한 출력은 실습 가이드 0-1.</li>
+  <li>docker version 에서 Server 부분이 에러면 Docker 데몬(Docker Desktop · OrbStack)이 꺼져 있는 것이다.</li>
+  <li>JDK는 필요 없다. 두 앱 모두 Dockerfile 안에서 빌드한다(order-api는 JDK 21 이미지 안에서 Gradle이 돈다).</li>
+  <li>jq는 프로메테우스 · Loki · Alertmanager HTTP API가 돌려주는 JSON에서 필요한 값만 뽑는 데 쓴다. macOS 15 이상은 /usr/bin/jq 가 이미 있다.</li>
+  <li>노트북 메모리가 빠듯해 6GiB 미만만 줄 수 있으면 kind 설정에서 워커 노드를 1개로 줄인다.</li>
+  <li>Linux · Windows(WSL2)는 아래 각 도구의 공식 설치 문서를 따른다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kind.sigs.k8s.io/docs/user/quick-start/#installation" target="_blank" rel="noopener">kind · Installation</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/tools/" target="_blank" rel="noopener">Kubernetes · Install Tools</a></li>
+<li><a href="https://helm.sh/docs/intro/install/" target="_blank" rel="noopener">Helm · Installing Helm</a></li>
+<li><a href="https://grafana.com/docs/k6/latest/set-up/install-k6/" target="_blank" rel="noopener">k6 · Install</a></li>
+<li><a href="https://jqlang.org/download/" target="_blank" rel="noopener">jq · Download</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="오늘의 질문">
+  <span class="kicker"><span class="n">00</span>OUR QUESTION</span>
+  <h1>"주문이 느려요"라는 제보 한 건을 <span class="hl">끝까지</span> 따라간다</h1>
+  <div class="body">
+    <div class="flow f4">
+      <div class="step-box teal"><span class="num">1 · 메트릭으로 분석</span><b>얼마나 느린가</b><p>P99 790ms.<br>평균 45ms만 보면 멀쩡해 보였다</p></div>
+      <div class="arrow-h"></div>
+      <div class="step-box teal"><span class="num">2 · 메트릭으로 분석</span><b>무엇이 느린가</b><p>URI별로 나눠 보니<br>/api/chaos/slow만 805ms</p></div>
+      <div class="arrow-h"></div>
+      <div class="step-box yellow"><span class="num">3 · 알림으로 확인</span><b>사람이 안 봐도 알린다</b><p>AppHighErrorRate 발화<br>"order-api 에러율 5.9%"</p></div>
+      <div class="arrow-h"></div>
+      <div class="step-box blue"><span class="num">4 · 로그로 원인 분석</span><b>그 에러는 무엇이었나</b><p>알림이 난 시각의 로그에서<br>실패한 요청을 찾는다</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="tag">P99 · 99th PERCENTILE</span>
+        <h3>가장 느린 1% 요청의 경계값</h3>
+        <p>요청 100건을 빠른 순으로 줄 세웠을 때 99번째 요청의 응답 시간. "P99 790ms"는 <b>99%는 790ms 안에 끝났고, 가장 느린 1%는 그보다 오래 걸렸다</b>는 뜻이다. 평균이 가리는 느린 요청을 드러낸다.</p>
+      </div>
+      <div class="card yellow">
+        <span class="tag yellow">ALERT · FIRING</span>
+        <h3>AppHighErrorRate가 "발화"했다</h3>
+        <p>AppHighErrorRate는 우리가 정의한 <b>알림 규칙의 이름</b>이다. 조건은 "5xx(서버 오류) 응답 비율이 5%를 넘는 상태가 2분 이상 지속". 조건이 충족되면 규칙이 <b>firing(발화)</b> 상태가 되고 Alertmanager가 담당자에게 알림을 보낸다.</p>
+      </div>
+    </div>
+    <div class="callout"><b>메트릭으로 분석하고, 알림으로 확인한 뒤, 로그로 원인을 분석한다.</b></div>
+  </div>
+  <div class="foot"><span>메트릭 → 알림 → 로그</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>1·2칸, 메트릭으로 분석: 실측. 평균 45ms, P50 0.59ms, P99 790ms. uri 라벨로 쪼개자 /api/chaos/slow 가 805ms.</li>
+  <li>P99 설명: 100건 중 가장 느린 1건을 빼면 나머지는 모두 이 값 이하. 정확한 계산 방법(히스토그램 버킷 + histogram_quantile)은 5장.</li>
+  <li>3칸, 알림으로 확인: 사람이 대시보드를 보고 있지 않아도 규칙이 불러낸다. AppHighErrorRate 규칙은 labs/k8s/prometheusrule.yaml 에 있다. 식은 5xx 요청 비율 × 100 &gt; 5, for: 2m. 발화 전 조건만 충족된 상태는 pending, 2분을 채우면 firing. 규칙 작성과 실제 발화 과정은 6장.</li>
+  <li>4칸, 로그로 원인 분석: 알림이 말해 주는 것은 "에러율 5.9%"까지다. 어떤 요청이 왜 실패했는지는 로그가 답한다. 7장.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="labs/k8s/prometheusrule.yaml" target="_blank" rel="noopener">91-prometheusrule.yaml (AppHighErrorRate)</a></li>
+<li><a href="https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/" target="_blank" rel="noopener">Prometheus · Alerting rules (pending · firing)</a></li>
+<li><a href="lab-guide.html#p8" target="_blank" rel="noopener">실습 가이드 08 · RED 질의</a></li>
+<li><a href="lab-guide.html#p10" target="_blank" rel="noopener">실습 가이드 10 · 로깅</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="전체 지도">
+  <span class="kicker"><span class="n">00</span>MAP</span>
+  <h1>메트릭과 로그는 <span class="hl">수집 경로</span>가 다르고, 보는 화면은 하나다</h1>
+  <div class="body fig">{{FIG:ch03-fig1-pipeline.svg}}<p class="figcap"><b>TSDB</b>(Time Series Database · 시계열 데이터베이스): 값을 측정 시각과 한 쌍으로 묶어 메트릭 이름·라벨별로 시간 순서대로 쌓는 저장소. 프로메테우스에 내장되어 있다.</p></div>
+  <div class="foot"><span>메트릭은 위 줄, 로그는 아래 줄</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>위 줄은 메트릭. 프로메테우스가 대상을 찾아가서 긁어 온다(pull). 화살표가 프로메테우스에서 출발하는 이유.</li>
+  <li>아래 줄은 로그. 컨테이너가 stdout 으로 쓴 줄을 Alloy 가 따라 읽어 Loki 로 보낸다.</li>
+  <li>저장소가 둘로 갈리지만 보는 화면은 Grafana 하나. 같은 시각의 숫자와 로그를 나란히 놓는 것이 7장의 끝이다.</li>
+  <li>책 그림 3.1은 프로메테우스 → 알림매니저 → 슬랙/페이저듀티까지만 그린다. 로그 줄은 이 발표에서 덧붙인 것.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/observability/" target="_blank" rel="noopener">Kubernetes · Observability</a></li>
+<li><a href="https://prometheus.io/docs/introduction/overview/" target="_blank" rel="noopener">Prometheus · Overview</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="지도 용어 ① 메트릭 수집·저장">
+  <span class="kicker"><span class="n">00</span>MAP TERMS · 1/3 · 메트릭 수집과 저장</span>
+  <h1>프로메테우스는 대상에서 <span class="hl">메트릭을 가져와</span> 시간 순으로 저장한다</h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>스크레이프</td><td>Scrape (직역: 긁어 오기)</td><td>프로메테우스가 대상의 HTTP 주소(<code>/metrics</code> 등)에 주기적으로 요청해 <b>그 순간의 메트릭 값을 읽어 가는 동작</b>. 실습 주기는 30초</td></tr>
+        <tr><td>풀 방식</td><td>Pull model</td><td>수집기가 대상에 <b>요청해서 가져온다</b>. 반대는 대상이 수집기로 밀어 넣는 푸시(Push) 방식</td></tr>
+        <tr><td>타깃</td><td>Target</td><td>스크레이프할 대상 하나(주소 + 경로). 쿠버네티스에서는 라벨로 자동 발견한다. 같은 목적의 타깃 묶음은 잡(Job)</td></tr>
+        <tr><td>Prometheus</td><td>프로메테우스 · CNCF(Cloud Native Computing Foundation) 졸업 프로젝트</td><td>메트릭을 <b>수집 · 저장 · 질의</b>하고 알림 규칙을 평가하는 모니터링 시스템</td></tr>
+        <tr><td>TSDB</td><td>Time Series Database · 시계열 데이터베이스</td><td>(시각, 값) 쌍을 메트릭 이름 + 라벨별로 저장하는 DB. 프로메테우스는 자기 로컬 디스크에 <b>2시간 단위 블록</b>으로 쌓고, 보존 기한(실습: 3일 또는 4GB)이 지나면 지운다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">최근 2시간치 데이터는 메모리에 있다. 들어온 값을 WAL(Write-Ahead Log · 선행 기록 로그)에 먼저 적어 두기 때문에 재시작해도 복구된다.</div>
+  </div>
+  <div class="foot"><span>스크레이프는 가져오는 동작, TSDB는 시간 순 저장소</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>스크레이프: 공식 용어집에서 타깃은 "어떻게 스크레이프할지를 정의한 대상", 잡은 "같은 목적의 타깃 묶음(예: 복제된 프로세스들)", 인스턴스는 잡 안의 타깃 하나를 가리키는 라벨이다.</li>
+  <li>풀 방식이라 대상은 메트릭을 HTTP로 "보여 주기만" 하면 된다. 수집 주기와 대상 목록은 프로메테우스 쪽이 정한다. 대상이 죽으면 스크레이프 실패 자체가 신호(up == 0)가 된다. 자세한 내용은 3장.</li>
+  <li>TSDB 공식 문서: 들어온 샘플은 2시간 블록으로 묶이고 블록마다 chunks 디렉터리, 메타데이터, 인덱스 파일을 갖는다. 현재 블록은 메모리에 있고 WAL로 보호된다. 작은 블록은 백그라운드에서 더 큰 블록으로 합쳐진다(compaction).</li>
+  <li>보존 기한을 안 정하면 기본 15일. 실습 values 에서는 retention 3d, retentionSize 4GB 로 줄였다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/introduction/glossary/" target="_blank" rel="noopener">Prometheus · Glossary</a></li>
+<li><a href="https://prometheus.io/docs/prometheus/latest/storage/" target="_blank" rel="noopener">Prometheus · Storage</a></li>
+<li><a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml (scrapeInterval · retention)</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="지도 용어 ② 로그 수집·저장">
+  <span class="kicker"><span class="n">00</span>MAP TERMS · 2/3 · 로그 수집과 저장</span>
+  <h1>Alloy가 로그를 <span class="hl">수집해 보내고</span>, Loki가 <span class="hl">저장하고 조회</span>한다</h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>stdout · stderr</td><td>Standard output · Standard error (표준 출력 · 표준 에러)</td><td>프로그램이 출력을 내보내는 기본 통로. 컨테이너가 여기로 쓴 줄을 런타임이 노드의 <code>/var/log/pods</code> 아래 파일로 남긴다</td></tr>
+        <tr><td>Alloy</td><td>Grafana Alloy · 그라파나 랩스의 수집 에이전트</td><td>OpenTelemetry Collector 배포판에 프로메테우스 파이프라인을 내장한 수집기. <b>파드 로그를 읽어 라벨을 붙이고 Loki로 보낸다</b></td></tr>
+        <tr><td>Loki</td><td>Grafana Loki · 로그 집계 시스템</td><td>로그를 저장하고 조회한다. <b>로그 본문은 색인하지 않고 라벨만 색인</b>하며, 본문은 압축 덩어리(chunk)로 저장한다. 색인이 작아 저장 비용이 낮다</td></tr>
+        <tr><td>로그 스트림</td><td>Log stream</td><td>라벨이 모두 같은 로그 줄의 묶음. Loki는 먼저 라벨로 스트림을 고르고, 그 안의 로그만 검색한다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>프로메테우스가 메트릭을 라벨로 다루듯, Loki는 로그를 라벨로 다룬다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>Loki 공식 설명: 프로메테우스에서 영감을 받은 로그 집계 시스템. 로그 라벨의 메타데이터만 색인하고, 실제 로그는 압축해 S3 · GCS · 로컬 파일시스템 같은 저장소에 둔다. 조회 시 색인으로 스트림을 고른 뒤 필요한 청크만 가져온다.</li>
+  <li>그래서 라벨은 값의 종류가 적은 것(namespace, app)만 써야 한다. 요청 경로처럼 값이 끝없이 늘어나는 필드를 라벨로 올리면 스트림 수가 폭발한다. 7장에서 실패를 재현한다.</li>
+  <li>Alloy: 컴포넌트를 이어 파이프라인을 만든다. 이 실습의 흐름은 discovery.kubernetes(파드 찾기) → loki.source.kubernetes(로그 읽기) → loki.write(Loki로 전송). 7장에서 설정을 본다.</li>
+  <li>책 3.10은 Promtail + loki-stack 차트로 설치한다. 둘 다 지금은 쓰지 않는다. 7장 정정 슬라이드에서 다룬다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://grafana.com/docs/loki/latest/get-started/overview/" target="_blank" rel="noopener">Grafana Loki · Overview</a></li>
+<li><a href="https://grafana.com/docs/loki/latest/get-started/labels/" target="_blank" rel="noopener">Grafana Loki · Labels</a></li>
+<li><a href="https://grafana.com/docs/alloy/latest/introduction/" target="_blank" rel="noopener">Grafana Alloy · Introduction</a></li>
+<li><a href="https://grafana.com/docs/alloy/latest/set-up/migrate/from-promtail/" target="_blank" rel="noopener">Migrate from Promtail to Alloy</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="지도 용어 ③ 신호 출처와 활용">
+  <span class="kicker"><span class="n">00</span>MAP TERMS · 3/3 · 신호 출처와 활용</span>
+  <h1>메트릭을 <span class="hl">제공하는 쪽</span>과 <span class="hl">시각화·알림을 맡는 쪽</span></h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="3">① 메트릭을 제공하는 쪽 (그림 왼쪽 ① 열)</td></tr>
+        <tr><td>node-exporter</td><td>Prometheus Node Exporter</td><td>노드(머신)의 CPU · 메모리 · 디스크 · 네트워크 수치를 프로메테우스 형식으로 제공하는 프로그램</td></tr>
+        <tr><td>cAdvisor</td><td>Container Advisor</td><td>kubelet 안에 들어 있는 컨테이너 자원 사용량 수집기</td></tr>
+        <tr><td>kube-state-metrics</td><td>kube-state-metrics (KSM)</td><td>API 서버에 저장된 오브젝트 상태(레플리카 수, 파드 단계)를 메트릭으로 바꾼다</td></tr>
+        <tr><td>/actuator/prometheus</td><td>Spring Boot Actuator 엔드포인트</td><td>order-api가 자기 메트릭을 프로메테우스 형식으로 보여 주는 주소</td></tr>
+        <tr class="grp"><td colspan="3">② 시각화·알림을 맡는 쪽 (그림 오른쪽 ④ 열)</td></tr>
+        <tr><td>Grafana</td><td>그라파나</td><td>Prometheus · Loki를 데이터 소스로 붙여 대시보드와 조회 화면(Explore)을 만드는 시각화 도구</td></tr>
+        <tr><td>Alertmanager</td><td>Prometheus Alertmanager</td><td>프로메테우스가 보낸 알림을 <b>중복 제거 · 묶기 · 경로 지정</b>해 Slack·메일로 전달. 일시 음소거(silence)도 담당</td></tr>
+        <tr class="grp"><td colspan="3">③ ②가 ①의 데이터를 꺼낼 때 쓰는 질의 언어</td></tr>
+        <tr><td>PromQL · LogQL</td><td>Prometheus Query Language · Log Query Language</td><td>메트릭을 묻는 질의 언어 · Loki 로그를 묻는 질의 언어. 문법이 비슷하다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>메트릭 제공 → 저장 → 시각화·알림</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>이 슬라이드는 지도에 나온 이름을 한 줄씩만 정의한다. cAdvisor · metrics-server · kube-state-metrics 의 차이는 2장 전체가 그 이야기다.</li>
+  <li>Alertmanager 공식 설명: 프로메테우스 같은 클라이언트가 보낸 알림을 중복 제거하고 묶고, 올바른 수신처(이메일, PagerDuty, Slack 등)로 보낸다. 음소거와 억제(inhibition)도 한다(6장).</li>
+  <li>Grafana는 저장소가 아니다. 데이터는 Prometheus와 Loki에 있고 Grafana는 질의해서 그린다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">prometheus/node_exporter</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics" target="_blank" rel="noopener">kubernetes/kube-state-metrics</a></li>
+<li><a href="https://prometheus.io/docs/alerting/latest/alertmanager/" target="_blank" rel="noopener">Prometheus · Alertmanager</a></li>
+<li><a href="https://grafana.com/docs/loki/latest/query/" target="_blank" rel="noopener">Grafana Loki · LogQL</a></li>
+</ul></details>
+</aside>
+</section>
+
+
+<section class="slide expanded" data-label="발표 구성">
+  <span class="kicker"><span class="n">00</span>ROADMAP</span>
+  <h1>1~3장은 <span class="hl">개념</span>, 4~7장은 <span class="hl">따라하기</span></h1>
+  <div class="body">
+    <table class="compare">
+      <thead><tr><th>장</th><th>주제</th><th>책 절</th><th>끝나면 할 수 있는 것</th></tr></thead>
+      <tbody>
+        <tr><td>1장</td><td>이론: 메트릭과 로그, 모니터링 기법</td><td>3.1 ~ 3.3</td><td>USE·RED로 무엇을 볼지 정한다</td></tr>
+        <tr><td>2장</td><td>개념: 쿠버네티스 메트릭은 누가 만드나</td><td>3.4 ~ 3.5</td><td>메트릭 출처 세 곳을 메트릭 이름으로 구분한다</td></tr>
+        <tr><td>3장</td><td>도구와 프로메테우스 구조</td><td>3.6 ~ 3.7 전반</td><td>pull 방식과 스택 구성요소 6개의 역할</td></tr>
+        <tr><td>4장</td><td>설치하고 둘러보기: Prometheus · Grafana</td><td>3.7 후반</td><td>정상 상태(타깃 28/28 up)를 확인하고, 질문별로 화면 · 대시보드를 고른다</td></tr>
+        <tr><td>5장</td><td>앱 연결과 PromQL</td><td>3.12.1 보강</td><td>ServiceMonitor로 앱을 연결하고 RED를 분위수 · 라벨로 읽는다</td></tr>
+        <tr><td>6장</td><td>알림 받기와 대시보드</td><td>3.11 · 3.12.3</td><td>규칙을 만들고 알림이 수신처에 도착 · 해소되는 것을 확인</td></tr>
+        <tr><td>7장</td><td>로그 모으고 찾기: Loki + Alloy</td><td>3.8 ~ 3.10</td><td>로그가 쌓이는지 확인하고 LogQL로 500 에러의 요청을 찾는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>모니터링과 로깅 · 발표 구성</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>4~7장은 장마다 설정 → 정상 상태 확인 → 도구 사용법 → 자주 막히는 곳(Q&amp;A) 순서다. 책 순서는 메트릭 → 도구 → 설치 → 로깅 → 알림. 발표는 알림을 로깅 앞으로 당겼다. 알림이 "몇 건"까지만 말해 주는 한계가 로그를 부르는 동기가 되기 때문이다.</li>
+</ul>
+</aside>
+</section>
+
+<!-- ===================================================================
+  CHAPTER 1 · 이론 — 메트릭·로그·모니터링 기법 (책 3.1 ~ 3.3)
+=================================================================== -->
+
+<section class="slide section-lead" data-label="1장 리드">
+  <div class="body">
+    <div class="quest">CHAPTER · 01 · 책 3.1 ~ 3.3</div>
+    <div class="secnum">01</div>
+    <h1>무엇을 재고, <span class="hl">어떤 질문</span>으로 볼 것인가</h1>
+    <p class="sub">도구를 설치하기 전에 신호의 종류를 나누고, 신호를 읽는 방법론 두 가지(USE, RED)를 정한다.</p>
+  </div>
+  <div class="foot"><span>이론 · 3.1 메트릭 vs 로그 · 3.2 모니터링 기법 · 3.3 모니터링 패턴</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.1~3.3은 합쳐 네 쪽 분량이다. 짧지만 뒤의 설계 판단이 전부 여기서 나온다.</li>
+  <li>책에 없는 보강 두 가지: 평균이 분포를 가리는 문제(구글 SRE 책), 파드 환경에서 순간값만으로 부족한 이유.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="1장 용어 ① 신호">
+  <span class="kicker"><span class="n">01</span>GLOSSARY · 1/2</span>
+  <h1>용어 ① <span class="hl">관측 데이터</span>와 관찰 방식</h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>신호</td><td>Signal · 텔레메트리(Telemetry)</td><td>시스템 상태를 알려 주려고 밖으로 내보내는 데이터. 메트릭·로그·트레이스 세 종류</td></tr>
+        <tr><td>메트릭</td><td>Metric</td><td>정해진 시점마다 잰 수치. 예: 요청 수 누계 12,408</td></tr>
+        <tr><td>로그</td><td>Log</td><td>실행 중 일어난 사건 하나를 적은 텍스트 줄</td></tr>
+        <tr><td>시계열</td><td>Time series</td><td>같은 이름·같은 라벨의 값을 시간 순으로 늘어놓은 것</td></tr>
+        <tr><td>라벨</td><td>Label</td><td>메트릭에 붙는 키=값 쌍. 값을 나눠 볼 기준이 된다. 예: <code>uri="/api/orders"</code></td></tr>
+        <tr><td>트레이스</td><td>Trace</td><td>요청 하나가 서비스들을 거친 경로와 구간별 시간</td></tr>
+        <tr><td>관측 가능성</td><td>Observability</td><td>밖으로 나온 신호만으로 내부 상태를 추론할 수 있는 정도</td></tr>
+        <tr><td>폐쇄형 모니터링</td><td>Closed-box (SRE: Black-box)</td><td>밖에서 사용자처럼 요청을 보내 겉으로 보이는 동작만 확인</td></tr>
+        <tr><td>개방형 모니터링</td><td>Open-box (SRE: White-box)</td><td>시스템이 내놓는 내부 수치(요청·에러·지연)로 원인을 추적</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>책의 closed-box / open-box는 구글 SRE 책의 black-box / white-box와 같은 구분이다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>이 표는 1장 안에서 처음 나오는 용어만 모았다. 슬라이드 본문에서는 한국어 용어를 쓰고 필요하면 원어를 괄호로 붙인다.</li>
+  <li>트레이스는 책 3장이 다루지 않는다. 쿠버네티스 Observability 문서가 메트릭·로그·트레이스를 세 신호로 묶기 때문에 이름만 짚고 넘어간다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/observability/" target="_blank" rel="noopener">Kubernetes · Observability</a></li>
+<li><a href="https://prometheus.io/docs/concepts/data_model/" target="_blank" rel="noopener">Prometheus · Data model</a></li>
+<li><a href="https://sre.google/sre-book/monitoring-distributed-systems/" target="_blank" rel="noopener">Google SRE Book · Monitoring Distributed Systems</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="1장 용어 ② 기법과 지표">
+  <span class="kicker"><span class="n">01</span>GLOSSARY · 2/2</span>
+  <h1>용어 ② <span class="hl">방법론</span>과 지표</h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>USE</td><td>Utilization · Saturation · Errors</td><td>자원마다 사용률·포화도·에러 수를 본다. 브렌던 그레그 제안, 인프라용</td></tr>
+        <tr><td>RED</td><td>Rate · Errors · Duration</td><td>서비스마다 처리율·에러 수·처리 시간을 본다. 톰 윌키가 2015년 제안, 서비스용</td></tr>
+        <tr><td>골든 시그널</td><td>Four Golden Signals</td><td>레이턴시·트래픽·에러·포화도 네 가지. 구글 SRE 책에서 제시</td></tr>
+        <tr><td>SRE</td><td>Site Reliability Engineering</td><td>사이트 신뢰성 엔지니어링. 운영을 소프트웨어 공학으로 다루는 방법론</td></tr>
+        <tr><td>SLO</td><td>Service Level Objective</td><td>서비스 수준 목표. "요청의 99%가 300ms 안에" 같은 약속</td></tr>
+        <tr><td>SLI</td><td>Service Level Indicator</td><td>서비스 수준 지표. SLO 달성 여부를 판정하려고 재는 값. 예: 300ms 안에 끝난 요청 비율</td></tr>
+        <tr><td>레이턴시</td><td>Latency</td><td>요청 하나를 처리하는 데 걸린 시간(지연 시간)</td></tr>
+        <tr><td>백분위수</td><td>Percentile · P50 / P95 / P99</td><td>P는 Percentile(백분위수). P99 = 가장 느린 1%를 뺀 나머지가 모두 이 값 이하. P50은 중앙값</td></tr>
+        <tr><td>히스토그램</td><td>Histogram</td><td>값을 구간(버킷)별로 측정한 분포. 백분위수를 계산하는 데 쓴다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>USE는 자원을, RED는 서비스를 본다. 골든 시그널은 둘을 합친 것에 가깝다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>SLO·SLI는 책 3.11 알림 절에 처음 나온다. 1장 뒤쪽의 "사용자가 신경 쓰는 것" 이야기에서 먼저 쓰므로 여기서 정의한다.</li>
+  <li>P99 정의를 정확히: 100건 중 가장 느린 1건을 빼면 나머지 99건은 모두 이 값 이하.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://www.brendangregg.com/usemethod.html" target="_blank" rel="noopener">Brendan Gregg · The USE Method</a></li>
+<li><a href="https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/" target="_blank" rel="noopener">Grafana Labs · The RED Method</a></li>
+<li><a href="https://sre.google/sre-book/service-level-objectives/" target="_blank" rel="noopener">Google SRE Book · Service Level Objectives</a></li>
+<li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">Prometheus · Histograms and summaries</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="메트릭 vs 로그">
+  <span class="kicker"><span class="n">01</span>METRICS VS LOGS · 책 3.1</span>
+  <h1>메트릭은 <span class="hl">횟수와 수치</span>를, 로그는 <span class="hl">사건의 내용</span>을 알려 준다</h1>
+  <div class="body">
+    <div class="grid2">
+      <div class="card teal">
+        <span class="tag">METRIC</span>
+        <h3>정해진 기간에 측정한 수치</h3>
+        <pre class="code" style="font-size:13.5px;margin:10px 0">http_server_requests_seconds_count{
+  uri="/api/orders", status="500"} <span class="v">731</span></pre>
+        <p>크기가 작아 오래 보관하고 빠르게 집계할 수 있다. 대신 개별 요청의 정보는 숫자로 합쳐지면서 사라진다.</p>
+      </div>
+      <div class="card blue">
+        <span class="tag blue">LOG</span>
+        <h3>실행 중 일어난 사건의 기록</h3>
+        <pre class="code" style="font-size:13.5px;margin:10px 0">10.244.1.1 - - [05/Sep/2026:13:52:10 +0000]
+  "GET <span class="v">/api/chaos/error</span> HTTP/1.1" <span class="v">500</span> 15 3</pre>
+        <p>요청마다 어느 경로가 언제, 몇 ms 걸려 실패했는지 남는다. 대신 양이 많아 저장 비용이 크고, 개수를 세려면 전부 읽어야 한다.</p>
+      </div>
+    </div>
+    <div class="callout">메트릭으로는 느리다는 사실까지만 알 수 있고, 원인은 앱이 남긴 로그에서 찾는다. <b>메트릭으로 먼저 좁히고, 로그로 확인한다.</b></div>
+  </div>
+  <div class="foot"><span>책 3.1: 메트릭과 로그는 서로 보완하지만 용도가 다르다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>왼쪽 메트릭 줄은 order-api가 실제로 내놓는 형식이다. 이름 + 라벨 + 값. 731은 설명용 예시 값.</li>
+  <li>오른쪽 로그는 order-api 톰캣 액세스 로그 형식 그대로다. 필드 순서: 클라이언트 IP, 시각, 요청 줄, 상태 코드, 응답 바이트, 처리 시간(ms). 값은 예시다. /api/chaos/error 는 예외 없이 500과 {"failed":true} 를 돌려준다.</li>
+  <li>메트릭은 "지금 에러율이 몇 %인가", 로그는 "그 에러가 정확히 무엇이었나"에 답한다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/" target="_blank" rel="noopener">Kubernetes · Logging Architecture</a></li>
+<li><a href="https://prometheus.io/docs/instrumenting/exposition_formats/" target="_blank" rel="noopener">Prometheus · Exposition formats</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="두 신호를 잇는 순서">
+  <span class="kicker"><span class="n">01</span>METRICS THEN LOGS</span>
+  <h1>메트릭으로 <span class="hl">시간과 대상</span>을 좁힌 뒤 로그를 본다</h1>
+  <div class="body">
+    <div class="split b">
+      <div class="stack">
+        <div class="card"><h3>① 메트릭으로 이상을 발견한다</h3><p>에러율이 5.9%로 올랐다. 언제부터인지, 어느 앱의 어느 uri인지 라벨로 나눠 본다.</p></div>
+        <div class="card"><h3>② 같은 시간·라벨로 로그를 조회한다</h3><p>시간 범위(22:03~22:06)와 라벨(<code>namespace=apps</code>, <code>app=order-api</code>)을 로그 조회 조건에 그대로 쓴다.</p></div>
+        <div class="card"><h3>③ 로그에서 원인을 확인한다</h3><p>좁혀진 수백 줄에서 어느 경로가 어떤 상태 코드로, 몇 ms 만에 실패했는지 확인한다.</p></div>
+      </div>
+      <div class="stack">
+        <div class="warning"><b>순서를 거꾸로 하면:</b> 로그부터 뒤지면 하루 수백만 줄을 grep으로 훑게 된다. 무엇을 찾는지 모르면 검색이 끝나지 않는다.</div>
+        <div class="callout">이렇게 이어 보려면 <b>메트릭과 로그가 같은 라벨 이름</b>(namespace, pod, app)을 써야 한다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>메트릭은 어디를 볼지, 로그는 무슨 일이 있었는지 알려 준다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.1은 "둘 다 수집하라"에서 멈춘다. 이 슬라이드는 실제로 둘을 어떤 순서로 쓰는지 보강한 것이다.</li>
+  <li>22:03~22:06은 에러를 주입한 구간 예시. 시각 자체는 환경마다 다르다.</li>
+  <li>메트릭과 로그를 같은 라벨로 잇는 실습은 실습 가이드 10-7.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="lab-guide.html#p9" target="_blank" rel="noopener">실습 가이드 09 · 알림</a></li>
+<li><a href="https://grafana.com/docs/loki/latest/get-started/labels/" target="_blank" rel="noopener">Grafana Loki · Labels</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="폐쇄형 vs 개방형">
+  <span class="kicker"><span class="n">01</span>CLOSED-BOX VS OPEN-BOX · 책 3.2</span>
+  <h1>밖에서 <span class="hl">증상</span>을 보고, 안에서 <span class="hl">원인</span>을 본다</h1>
+  <div class="body fig">{{FIG:ch03-fig2-closed-open.svg}}</div>
+  <div class="foot"><span>책의 예: 폐쇄형은 "디스크가 꽉 찼다"를 알려 주고, 개방형은 "왜 꽉 찼을까?"에 답한다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>폐쇄형(책 3.2): 애플리케이션 밖에서 CPU·메모리·스토리지를 보던 전통적 방식. 인프라 컴포넌트에는 유용하지만 앱이 왜 그렇게 동작하는지 맥락이 없다.</li>
+  <li>그림 왼쪽: 점검기(Prober)가 합성 요청(Synthetic request, 실제 사용자 요청이 아니라 점검용으로 만들어 보내는 요청)을 보내 응답 코드와 시간만 본다. 프로메테우스 생태계에서는 Blackbox Exporter가 이 역할을 한다.</li>
+  <li>책의 폐쇄형 예: 파드를 하나 스케줄해 보는 테스트가 성공하면 스케줄러와 서비스 디스커버리는 정상이라고 판단한다.</li>
+  <li>개방형(책 3.2): 총 HTTP 요청 수, 500 에러 횟수, 요청 레이턴시 같은 앱 내부 상태. "왜"에 대한 단서가 된다.</li>
+  <li>구글 SRE 책의 정의: 블랙박스는 "사용자가 보듯이 겉으로 드러난 동작을 시험", 화이트박스는 "시스템 내부가 노출하는 메트릭 기반". 블랙박스는 지금 일어나는 문제(증상)를, 화이트박스는 곧 터질 문제와 원인을 잡는다.</li>
+  <li>그림 오른쪽 숫자: 731/12,408 = 5.9%. 앞 슬라이드의 에러율과 맞춰 둔 설명용 값.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://sre.google/sre-book/monitoring-distributed-systems/" target="_blank" rel="noopener">Google SRE Book · Black-box vs White-box</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="파드는 VM처럼 지켜볼 수 없다">
+  <span class="kicker"><span class="n">01</span>WHY K8S IS DIFFERENT · 책 3.3</span>
+  <h1>파드는 VM처럼 <span class="hl">고정된 대상</span>으로 모니터링할 수 없다</h1>
+  <div class="body">
+    <table class="compare">
+      <thead><tr><th>항목</th><th>24/7 가동 VM</th><th>쿠버네티스 파드</th></tr></thead>
+      <tbody>
+        <tr><td>수명</td><td>몇 달~몇 년</td><td>배포·축소·장애 때마다 교체. 수명이 짧다(transient)</td></tr>
+        <tr><td>주소·이름</td><td>고정 IP · 호스트명</td><td>교체될 때마다 새 IP · 새 접미사(<code>order-api-7c9…-x2kqp</code>)</td></tr>
+        <tr><td>감시 대상 등록</td><td>사람이 목록에 적는다</td><td>API 서버에서 <b>라벨로 자동으로 찾는다</b>(서비스 디스커버리)</td></tr>
+        <tr><td>기록</td><td>호스트 디스크에 남는다</td><td>파드가 지워지면 그 컨테이너 로그도 노드에서 지워진다</td></tr>
+        <tr><td>kubectl top</td><td>해당 없음</td><td>metrics-server는 메모리에 있는 <b>최근값</b>만 보여 준다. 한 시간 전 값은 없다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">그래서 쿠버네티스 모니터링에는 두 가지가 필요하다. 대상을 라벨로 찾아 수집하는 것, 값을 시간에 걸쳐 쌓아 두는 별도 저장소. 메트릭은 프로메테우스가, 로그는 Loki가 맡는다.</div>
+  </div>
+  <div class="foot"><span>책 3.3: 수명이 짧고 자주 바뀌는 파드에 맞는 모니터링 체계가 필요하다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.3 도입: VM은 모든 상태가 보존되는지 확인하는 식으로 감시하지만, 쿠버네티스는 수명이 짧은 파드에 맞는 체계가 필요하다고만 쓴다. 표는 그 "왜"를 구체화한 것.</li>
+  <li>로그 행(공식 문서): kubelet은 재시작 시 종료된 컨테이너 하나의 로그만 남기고, 파드가 축출(evict)되면 그 컨테이너와 로그도 함께 지워진다. 그래서 클러스터 수준 로깅은 노드·파드와 수명이 분리된 별도 백엔드가 필요하다.</li>
+  <li>kubectl top 행(공식 문서): 리소스 메트릭 파이프라인은 kubectl top 과 오토스케일러용의 제한된 메트릭만 제공한다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/" target="_blank" rel="noopener">Kubernetes · Logging Architecture</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
+<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="USE 방법론">
+  <span class="kicker"><span class="n">01</span>USE METHOD · 책 3.3</span>
+  <h1>USE: <span class="hl">모든 자원</span>의 사용률·포화도·에러를 본다</h1>
+  <div class="body">
+    <div class="quote">"For every resource, check utilization, saturation, and errors." <span class="muted" style="font-size:16px">— Brendan Gregg</span></div>
+    <div class="grid3">
+      <div class="card yellow"><span class="tag yellow">U · UTILIZATION</span><h3>사용률</h3><p>자원이 일을 처리하느라 바빴던 시간의 평균 비율. 예: CPU 70%, 링크 대역폭의 40%.</p></div>
+      <div class="card yellow"><span class="tag yellow">S · SATURATION</span><h3>포화도</h3><p>처리하지 못하고 쌓여 있는 작업의 양. 주로 대기열(queue) 길이로 나타난다.</p></div>
+      <div class="card yellow"><span class="tag yellow">E · ERRORS</span><h3>에러 수</h3><p>에러 이벤트 횟수. 해석이 쉬워서 먼저 확인하면 시간이 절약된다.</p></div>
+    </div>
+    <div class="callout">사용률 100%가 곧 장애는 아니다. <b>포화도가 0보다 커지는 순간</b>부터 요청이 대기열에 쌓이고 지연이 늘어난다. 사용률만 보면 이 시점을 놓친다.</div>
+  </div>
+  <div class="foot"><span>책 3.3: 애플리케이션 수준에는 한계가 있어 주로 인프라 모니터링에 쓴다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책의 예: 클러스터 노드의 네트워크를 사용률·포화도·에러 수로 보면 병목이나 네트워크 스택 문제를 쉽게 파악할 수 있다.</li>
+  <li>그레그 원문 정의. 자원(resource): CPU·디스크·버스 등 서버의 물리 구성요소. 사용률: 자원이 작업을 처리하느라 바빴던 평균 시간. 포화도: 처리하지 못해 쌓인(대개 큐잉된) 추가 작업의 정도. 에러: 에러 이벤트 수.</li>
+  <li>그레그는 에러를 먼저 보는 것을 "보통 더 빠르고 해석이 쉬워서" 권하는 최적화로 적는다.</li>
+  <li>네트워크 예: 사용률 = 송수신 처리량 / 최대 대역폭, 포화도 = dropped · overruns 같은 NIC·OS 이벤트.</li>
+  <li>이 개념을 노드 메트릭 이름으로 바꾸는 것은 4장 PromQL에서 한다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://www.brendangregg.com/usemethod.html" target="_blank" rel="noopener">Brendan Gregg · The USE Method</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="RED와 골든 시그널">
+  <span class="kicker"><span class="n">01</span>RED &amp; GOLDEN SIGNALS · 책 3.3</span>
+  <h1>RED는 골든 시그널에서 <span class="hl">포화도를 뺀</span> 서비스용 방법론이다</h1>
+  <div class="body">
+    <table class="compare">
+      <thead><tr><th>골든 시그널</th><th>구글 SRE 책 정의</th><th>RED</th><th>책의 프론트엔드 질문</th></tr></thead>
+      <tbody>
+        <tr><td>트래픽 Traffic</td><td>시스템에 들어오는 요청량. 서비스 특성에 맞는 지표로 잰다(HTTP면 초당 요청 수)</td><td>R · Rate<br>초당 요청 수</td><td>얼마나 많은 요청을 처리하고 있나?</td></tr>
+        <tr><td>에러 Errors</td><td>실패한 요청의 비율. 명시적(HTTP 500), 암묵적(200인데 내용이 틀림), 정책상 실패 모두</td><td>E · Errors<br>실패한 요청 수</td><td>사용자는 500 에러를 얼마나 받고 있나?</td></tr>
+        <tr><td>레이턴시 Latency</td><td>요청 처리에 걸린 시간. <b>성공한 요청과 실패한 요청의 시간을 나눠</b> 본다</td><td>D · Duration<br>걸린 시간(분포)</td><td>(책에 해당 질문 없음)</td></tr>
+        <tr><td>포화도 Saturation</td><td>서비스 자원이 한계에 얼마나 가까운지. 가장 부족한 자원을 기준으로 본다</td><td>없음 → USE가 맡는다</td><td>요청 때문에 서비스가 과도하게 사용되고 있나?</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">톰 윌키가 2015년에 RED를 만든 이유: "USE는 서비스에는 잘 맞지 않는다. 하드웨어·네트워크·디스크용 방법이다." 모든 마이크로서비스를 같은 세 지표로 재면 대시보드 하나로 모든 서비스를 비교할 수 있다.</div>
+  </div>
+  <div class="foot"><span>책 3.3: RED 방법론은 구글의 4대 골든 시그널에 기반한다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책은 프론트엔드 서비스에서 세 가지를 계산하라고 한다. 그 세 질문이 표 오른쪽 열이다. 세 번째 질문(과도하게 사용되고 있나)은 포화도 질문이라 RED가 아니라 USE 쪽에 붙는다.</li>
+  <li>레이턴시에서 성공/실패를 나누는 이유(SRE 책): 빠르게 실패하는 500이 평균 지연을 끌어내려 "빨라졌다"고 착각하게 만든다. 느린 에러는 빠른 에러보다 더 나쁘다.</li>
+  <li>에러의 "정책상 실패" 예: 응답 1초를 넘기면 실패로 친다는 약속이 있다면 1.2초짜리 200도 에러.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://sre.google/sre-book/monitoring-distributed-systems/" target="_blank" rel="noopener">Google SRE Book · The Four Golden Signals</a></li>
+<li><a href="https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/" target="_blank" rel="noopener">Grafana Labs · The RED Method</a></li>
+<li><a href="https://prometheus.io/docs/practices/instrumentation/" target="_blank" rel="noopener">Prometheus · Instrumentation (online-serving systems)</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="USE와 RED를 거는 곳">
+  <span class="kicker"><span class="n">01</span>WHERE TO APPLY</span>
+  <h1>사용자가 겪는 문제는 <span class="hl">RED</span>로 발견하고, 원인은 <span class="hl">USE</span>로 찾는다</h1>
+  <div class="body fig">{{FIG:ch03-fig3-use-red.svg}}<p class="figcap">실행 대기 줄 = <b>run queue</b> · 버려진 패킷 = <b>dropped packets</b><br>스와핑 = <b>swapping</b>(RAM이 부족해 메모리를 디스크로 내려보냄. 느려짐) · OOM 킬 = <b>Out Of Memory kill</b>(메모리 부족으로 강제 종료)</p></div>
+  <div class="foot"><span>책 3.3: 두 방법론은 서로 보완한다. USE는 인프라를, RED는 사용자 경험을 본다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>위 줄: 요청이 지나가는 구간마다 R·E·D 세 숫자를 둔다. 사용자가 실제로 겪는 것이라 "증상"이다.</li>
+  <li>아래 줄: 그 요청을 실어 나르는 노드의 네 자원마다 U·S·E. 증상이 보였을 때 원인을 찾으러 내려가는 곳이다.</li>
+  <li>스와핑: RAM이 모자라면 운영체제가 당장 안 쓰는 메모리 페이지를 디스크의 스왑 영역으로 내려보내고, 다시 필요하면 읽어 올린다. 디스크는 RAM보다 훨씬 느리므로 스왑이 잦으면 응답 지연이 크게 는다. 사용률만 보면 "95% 사용 중"으로 끝나지만 스왑이 일어나면 이미 메모리가 넘쳐 일이 밀리고 있다는 뜻이라 포화도(S)로 본다. 스왑도 부족하거나 꺼져 있으면 커널이 프로세스를 강제 종료한다(OOM 킬). 쿠버네티스 노드는 전통적으로 스왑을 끄고 운영해서, 파드 메모리 부족은 OOM 킬(컨테이너 재시작)로 먼저 드러나는 경우가 많다.</li>
+  <li>프로메테우스 공식 가이드(The Zen of Prometheus): 사용자가 신경 쓰는 지표(지연·가용성)를 먼저 재고, CPU 포화 같은 내부 지표는 원인 추적과 용량 계획용으로 둔다. 알림 가이드도 "사용자에게 보이는 지연·에러에만 사람을 깨운다"고 적는다. 6장의 출발점이다.</li>
+  <li>구글 SRE 책의 표현: 모니터링은 "무엇이 망가졌나(증상)와 왜 망가졌나(원인)" 두 질문에 답해야 한다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/practices/the_zen/" target="_blank" rel="noopener">Prometheus · The Zen of Prometheus</a></li>
+<li><a href="https://prometheus.io/docs/practices/alerting/" target="_blank" rel="noopener">Prometheus · Alerting</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="평균의 함정">
+  <span class="kicker"><span class="n">01</span>MEAN VS TAIL</span>
+  <h1>평균 45ms는 <span class="warn">빠른 요청도, 느린 요청도 대표하지 못한다</span></h1>
+  <div class="body fig">{{FIG:ch03-fig4-mean-vs-tail.svg}}</div>
+  <div class="foot"><span>RED의 D(처리 시간)는 평균 대신 P50·P95·P99 분포로 본다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>실측: 요청 절반은 0.59ms 안에 끝나고 상위 1%는 790ms. 1300배 차이. 평균 45ms는 두 무리 사이 빈 곳에 떨어진다.</li>
+  <li>이 부하에는 800ms짜리 /api/chaos/slow 요청이 초당 2건 섞여 있었다. 평균이 그것을 삼켰다.</li>
+  <li>구글 SRE 책: 평균 지연만 보면 느린 꼬리가 가려진다. 지연을 구간(버킷)별 요청 수로 모아 히스토그램으로 보라.</li>
+  <li>백분위수는 히스토그램 버킷에서 계산한다. 프로메테우스 공식 문서: 여러 파드의 요약(summary) 분위수를 평균 내는 것은 통계적으로 틀렸고, 히스토그램을 합친 뒤 histogram_quantile 로 계산해야 한다. 계산은 5장에서 직접 한다.</li>
+  <li>막대 모양은 개략도다. 네 개의 숫자만 실측값이다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://sre.google/sre-book/monitoring-distributed-systems/" target="_blank" rel="noopener">Google SRE Book · Worrying About Your Tail</a></li>
+<li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">Prometheus · Histograms and summaries</a></li>
+<li><a href="lab-guide.html#p8" target="_blank" rel="noopener">실습 가이드 08 · RED 질의</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="1장 정리">
+  <span class="kicker"><span class="n">01</span>WRAP-UP</span>
+  <h1>질문에 따라 <span class="hl">봐야 할 지표</span>가 정해진다</h1>
+  <div class="body">
+    <table class="compare">
+      <thead><tr><th>질문</th><th>신호</th><th>방법론</th></tr></thead>
+      <tbody>
+        <tr><td>사용자가 지금 문제를 겪고 있나?</td><td>메트릭 · 폐쇄형 점검</td><td>RED · 골든 시그널</td></tr>
+        <tr><td>모든 요청이 느린가, 일부만 느린가?</td><td>메트릭 · 히스토그램</td><td>P50 / P95 / P99</td></tr>
+        <tr><td>어느 자원이 먼저 한계에 도달하나?</td><td>메트릭 · 노드·컨테이너</td><td>USE</td></tr>
+        <tr><td>그 에러는 정확히 무엇이었나?</td><td>로그</td><td>메트릭으로 범위를 좁힌 뒤 조회</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">남은 질문: 쿠버네티스에서 이 메트릭은 <b>어떤 구성요소가 만드는가?</b> <code>kubectl top</code>의 값과 프로메테우스의 값은 같은가?</div>
+  </div>
+  <div class="foot"><span>책 3.1~3.3 정리</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>1장에서 정한 것: 신호 두 종류(메트릭·로그), 보는 위치 두 가지(폐쇄형·개방형), 질문 틀 두 가지(USE·RED), 그리고 평균 대신 분포.</li>
+  <li>2장으로 넘어가는 질문: "지금 클러스터에서 나오는 메트릭은 대체 누가 만들어 낸 것인가."</li>
+</ul>
+</aside>
+</section>

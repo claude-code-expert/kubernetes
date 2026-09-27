@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t3 d3">
+  <title id="t3">RED는 요청 경로에, USE는 자원에 건다</title>
+  <desc id="d3">사용자에서 인그레스, order-api, 데이터베이스로 가는 요청 경로의 각 구간에 RED를 걸고, 그 요청을 실어 나르는 노드의 CPU, 메모리, 디스크, 네트워크에 USE를 건다.</desc>
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
+  </defs>
+  <style>
+    .t{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#24292A}
+    .h{font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;font-size:28px;font-weight:700}
+    .svc{fill:#FFFFFF;stroke:#A7B5AC;stroke-width:2}
+    .red{fill:#E0EFEB;stroke:#0F766E;stroke-width:2}
+    .use{fill:#FFF1DE;stroke:#B5761F;stroke-width:2}
+    .r{font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;font-size:25px;fill:#0B5A54}
+    .u{font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;font-size:24px;fill:#6B4410}
+    .k{font-family:'SFMono-Regular',Consolas,monospace;font-weight:700}
+  </style>
+  <rect width="1600" height="900" fill="#FFFFFF"/>
+
+  <text class="h" x="40" y="54" style="fill:#0F766E">RED · 요청이 지나가는 구간마다</text>
+
+  <rect class="svc" x="40" y="84" width="220" height="100" rx="8"/>
+  <text class="t" x="150" y="146" font-size="32" font-weight="700" text-anchor="middle">사용자</text>
+  <rect class="svc" x="370" y="84" width="340" height="100" rx="8"/>
+  <text class="t" x="540" y="146" font-size="32" font-weight="700" text-anchor="middle">Ingress</text>
+  <rect class="svc" x="800" y="84" width="340" height="100" rx="8"/>
+  <text class="t" x="970" y="146" font-size="32" font-weight="700" text-anchor="middle">order-api</text>
+  <rect class="svc" x="1230" y="84" width="340" height="100" rx="8"/>
+  <text class="t" x="1400" y="146" font-size="32" font-weight="700" text-anchor="middle">데이터베이스</text>
+  <path d="M264 134 L364 134" stroke="#0F766E" stroke-width="3" fill="none" marker-end="url(#a3)"/>
+  <path d="M714 134 L794 134" stroke="#0F766E" stroke-width="3" fill="none" marker-end="url(#a3)"/>
+  <path d="M1144 134 L1224 134" stroke="#0F766E" stroke-width="3" fill="none" marker-end="url(#a3)"/>
+
+  <rect class="red" x="370" y="200" width="340" height="150" rx="8"/>
+  <text class="r" x="394" y="244"><tspan class="k">R</tspan> 초당 요청 수</text>
+  <text class="r" x="394" y="286"><tspan class="k">E</tspan> 실패한 요청 수</text>
+  <text class="r" x="394" y="328"><tspan class="k">D</tspan> 걸린 시간 분포</text>
+  <rect class="red" x="800" y="200" width="340" height="150" rx="8"/>
+  <text class="r" x="824" y="244"><tspan class="k">R</tspan> 초당 요청 수</text>
+  <text class="r" x="824" y="286"><tspan class="k">E</tspan> 실패한 요청 수</text>
+  <text class="r" x="824" y="328"><tspan class="k">D</tspan> 걸린 시간 분포</text>
+  <rect class="red" x="1230" y="200" width="340" height="150" rx="8"/>
+  <text class="r" x="1254" y="244"><tspan class="k">R</tspan> 초당 질의 수</text>
+  <text class="r" x="1254" y="286"><tspan class="k">E</tspan> 실패한 질의 수</text>
+  <text class="r" x="1254" y="328"><tspan class="k">D</tspan> 걸린 시간 분포</text>
+
+  <text class="t" x="40" y="252" font-size="28" font-weight="700">사용자가</text>
+  <text class="t" x="40" y="290" font-size="28" font-weight="700">겪는 것</text>
+  <text class="t" x="40" y="330" font-size="26" style="fill:#0F766E">= 증상</text>
+
+  <line x1="30" y1="400" x2="1570" y2="400" stroke="#D8DDD6" stroke-width="2" stroke-dasharray="8 8"/>
+  <path d="M970 354 L970 488" stroke="#B5761F" stroke-width="2.5" stroke-dasharray="7 6" fill="none"/>
+
+  <text class="h" x="40" y="454" style="fill:#B5761F">USE · 요청을 처리하는 자원마다</text>
+
+  <rect x="370" y="492" width="1200" height="340" rx="10" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="2" stroke-dasharray="10 6"/>
+  <text class="t" x="394" y="534" font-size="24" style="fill:#5A6867">노드: order-api 파드가 올라간 머신</text>
+
+  <rect class="use" x="394" y="556" width="276" height="250" rx="8"/>
+  <text class="t" x="418" y="604" font-size="32" font-weight="700" style="fill:#8A5813">CPU</text>
+  <text class="u" x="418" y="656"><tspan class="k">U</tspan> 바쁜 시간 비율</text>
+  <text class="u" x="418" y="702"><tspan class="k">S</tspan> 실행 대기 줄</text>
+  <text class="u" x="418" y="748"><tspan class="k">E</tspan> 하드웨어 오류</text>
+
+  <rect class="use" x="686" y="556" width="276" height="250" rx="8"/>
+  <text class="t" x="710" y="604" font-size="32" font-weight="700" style="fill:#8A5813">메모리</text>
+  <text class="u" x="710" y="656"><tspan class="k">U</tspan> 사용 중 비율</text>
+  <text class="u" x="710" y="702"><tspan class="k">S</tspan> 스와핑 · OOM 킬</text>
+  <text class="u" x="710" y="748"><tspan class="k">E</tspan> 할당 실패</text>
+
+  <rect class="use" x="978" y="556" width="276" height="250" rx="8"/>
+  <text class="t" x="1002" y="604" font-size="32" font-weight="700" style="fill:#8A5813">디스크</text>
+  <text class="u" x="1002" y="656"><tspan class="k">U</tspan> I/O 바쁜 시간</text>
+  <text class="u" x="1002" y="702"><tspan class="k">S</tspan> I/O 대기 줄</text>
+  <text class="u" x="1002" y="748"><tspan class="k">E</tspan> 장치 오류</text>
+
+  <rect class="use" x="1270" y="556" width="276" height="250" rx="8"/>
+  <text class="t" x="1294" y="604" font-size="32" font-weight="700" style="fill:#8A5813">네트워크</text>
+  <text class="u" x="1294" y="656"><tspan class="k">U</tspan> 처리량 / 대역폭</text>
+  <text class="u" x="1294" y="702"><tspan class="k">S</tspan> 버려진 패킷</text>
+  <text class="u" x="1294" y="748"><tspan class="k">E</tspan> 인터페이스 오류</text>
+
+  <text class="t" x="40" y="620" font-size="28" font-weight="700">증상이 보이면</text>
+  <text class="t" x="40" y="658" font-size="28" font-weight="700">원인을 찾는 곳</text>
+  <text class="t" x="40" y="700" font-size="26" style="fill:#B5761F">= 원인</text>
+</svg>

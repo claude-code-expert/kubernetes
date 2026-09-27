@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t6 d6">
+  <title id="t6">쿠버네티스 메트릭의 세 출처와 두 경로</title>
+  <desc id="d6">kubelet 안의 cAdvisor가 잰 사용량은 두 길로 나간다. metrics-server가 최근값만 읽어 API 서버의 metrics.k8s.io로 kubectl top과 HPA에 준다. 프로메테우스는 같은 kubelet을 30초마다 긁어 시계열로 쌓는다. kube-state-metrics는 API 서버의 오브젝트 상태를 읽어 메트릭으로 바꾸고 프로메테우스가 긁어 간다.</desc>
+  <defs>
+    <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
+    <marker id="a6t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
+    <marker id="a6y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B5761F"/></marker>
+  </defs>
+  <style>
+    .t{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#24292A}
+    .m{font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;fill:#5A6867}
+    .box{fill:#FFFFFF;stroke:#A7B5AC;stroke-width:2}
+    .teal{fill:#E0EFEB;stroke:#0F766E;stroke-width:2}
+    .yel{fill:#FFF1DE;stroke:#B5761F;stroke-width:2}
+    .blu{fill:#E7F0FF;stroke:#1D5FBF;stroke-width:2}
+  </style>
+  <rect width="1600" height="900" fill="#FFFFFF"/>
+
+  <!-- node -->
+  <rect x="30" y="200" width="400" height="420" rx="12" fill="#FFFFFF" stroke="#A7B5AC" stroke-width="2" stroke-dasharray="10 6"/>
+  <text class="t" x="54" y="244" font-size="26" style="fill:#5A6867">워커 노드</text>
+  <rect class="blu" x="54" y="270" width="352" height="200" rx="8"/>
+  <text class="t" x="78" y="318" font-size="32" font-weight="700">kubelet</text>
+  <rect class="teal" x="78" y="340" width="304" height="110" rx="6"/>
+  <text class="t" x="98" y="384" font-size="28" font-weight="700" style="fill:#0B5A54">① cAdvisor</text>
+  <text class="t" x="98" y="424" font-size="23" style="fill:#0B5A54">cgroup에서 실제 사용량</text>
+  <rect class="box" x="54" y="496" width="352" height="96" rx="8"/>
+  <text class="t" x="78" y="540" font-size="26" font-weight="700">파드 order-api</text>
+  <text class="t" x="78" y="574" font-size="22" style="fill:#5A6867">메모리 174Mi 사용 중</text>
+
+  <!-- metrics-server path (top) -->
+  <rect class="yel" x="560" y="60" width="330" height="150" rx="8"/>
+  <text class="t" x="584" y="108" font-size="30" font-weight="700" style="fill:#8A5813">② metrics-server</text>
+  <text class="t" x="584" y="148" font-size="23" style="fill:#6B4410">15초마다 CPU·메모리만</text>
+  <text class="t" x="584" y="182" font-size="23" style="fill:#6B4410">최근값 하나를 메모리에</text>
+  <path d="M300 266 L300 136 L554 136" stroke="#B5761F" stroke-width="2.5" fill="none" marker-end="url(#a6y)"/>
+  <text class="m" x="312" y="124" font-size="19" style="fill:#8A5813">/metrics/resource</text>
+
+  <rect class="box" x="1010" y="60" width="270" height="150" rx="8"/>
+  <text class="t" x="1034" y="108" font-size="28" font-weight="700">API 서버</text>
+  <text class="m" x="1034" y="148" font-size="20">metrics.k8s.io</text>
+  <text class="t" x="1034" y="182" font-size="21" style="fill:#5A6867">Resource Metrics API</text>
+  <path d="M894 136 L1004 136" stroke="#B5761F" stroke-width="2.5" fill="none" marker-end="url(#a6y)"/>
+
+  <rect class="yel" x="1360" y="60" width="210" height="150" rx="8"/>
+  <text class="t" x="1382" y="108" font-size="26" font-weight="700" style="fill:#8A5813">kubectl top</text>
+  <text class="t" x="1382" y="148" font-size="26" font-weight="700" style="fill:#8A5813">HPA · VPA</text>
+  <text class="t" x="1382" y="186" font-size="21" style="fill:#6B4410">지금 값만 본다</text>
+  <path d="M1284 136 L1354 136" stroke="#B5761F" stroke-width="2.5" fill="none" marker-end="url(#a6y)"/>
+
+  <!-- prometheus path (middle) -->
+  <rect class="teal" x="1010" y="330" width="560" height="190" rx="8"/>
+  <text class="t" x="1034" y="382" font-size="32" font-weight="700" style="fill:#0B5A54">Prometheus</text>
+  <text class="t" x="1034" y="426" font-size="24" style="fill:#0B5A54">30초마다 긁어 시계열로 쌓는다</text>
+  <text class="t" x="1034" y="464" font-size="24" style="fill:#0B5A54">3일치 보존 → 과거를 되짚을 수 있다</text>
+  <text class="t" x="1034" y="500" font-size="22" style="fill:#0B5A54">대시보드 · 알림</text>
+  <path d="M436 400 L1004 400" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a6t)"/>
+  <text class="m" x="560" y="388" font-size="20" style="fill:#0B5A54">/metrics/cadvisor 를 긁어 감</text>
+
+  <!-- KSM path (bottom) -->
+  <rect class="box" x="560" y="660" width="330" height="170" rx="8"/>
+  <text class="t" x="584" y="708" font-size="28" font-weight="700">③ kube-state-metrics</text>
+  <text class="t" x="584" y="750" font-size="23" style="fill:#5A6867">API 서버의 오브젝트를</text>
+  <text class="t" x="584" y="786" font-size="23" style="fill:#5A6867">메트릭으로 옮긴다</text>
+  <text class="t" x="584" y="818" font-size="21" style="fill:#5A6867">replicas 2 · requests 384Mi</text>
+
+  <rect class="box" x="1010" y="680" width="270" height="130" rx="8"/>
+  <text class="t" x="1034" y="728" font-size="28" font-weight="700">API 서버</text>
+  <text class="t" x="1034" y="768" font-size="22" style="fill:#5A6867">Deployment · Pod · Node</text>
+  <path d="M1004 744 L896 744" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a6)"/>
+  <text class="m" x="910" y="730" font-size="19">watch</text>
+
+  <path d="M894 700 C 960 640, 1100 600, 1200 526" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a6t)"/>
+  <text class="m" x="1180" y="600" font-size="19" style="fill:#0B5A54">/metrics 를 긁어 감</text>
+
+  <text class="t" x="30" y="690" font-size="24" font-weight="700" style="fill:#B5761F">위: 지금 값</text>
+  <text class="t" x="30" y="730" font-size="24" font-weight="700" style="fill:#0F766E">가운데: 쌓인 기록</text>
+  <text class="t" x="30" y="770" font-size="24" font-weight="700">아래: 선언된 상태</text>
+  <text class="t" x="30" y="830" font-size="22" style="fill:#5A6867">화살표 = 데이터가 흐르는 방향</text>
+</svg>

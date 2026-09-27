@@ -1,0 +1,485 @@
+
+<!-- ===================================================================
+  CHAPTER 2 · 개념 — 쿠버네티스 메트릭은 누가 만드나 (책 3.4 ~ 3.5)
+=================================================================== -->
+
+<section class="slide section-lead" data-label="2장 리드">
+  <div class="body">
+    <div class="quest">CHAPTER · 02 · 책 3.4 ~ 3.5</div>
+    <div class="secnum">02</div>
+    <h1>쿠버네티스 메트릭은 <span class="hl">누가 만드는가</span></h1>
+    <p class="sub">같은 파드의 메모리를 세 곳이 각각 보고한다. 출처를 구분해 두면 숫자가 서로 어긋날 때 어디가 잘못됐는지 바로 짚을 수 있다.</p>
+  </div>
+  <div class="foot"><span>개념 · 3.4 쿠버네티스 메트릭 개요 · 3.5 어떤 메트릭을 모니터링하나?</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>1장 끝에서 남긴 두 질문에 답하는 장이다. 이 메트릭은 어떤 구성요소가 만드는가, kubectl top 과 프로메테우스의 값은 같은가.</li>
+  <li>책 3.4는 cAdvisor, 메트릭 서버, kube-state-metrics 세 가지를 소개한다. 여기서는 말로 구분하지 않고 실제 메트릭 이름과 실측값으로 구분한다.</li>
+  <li>책 3.5는 무엇을 모니터링할지 4계층으로 나눈다. 계층마다 실제 메트릭 이름을 붙인다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="2장 용어 ① 클러스터 구성요소">
+  <span class="kicker"><span class="n">02</span>GLOSSARY · 1/3</span>
+  <h1>용어 ① <span class="hl">클러스터 구성요소</span></h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>컨트롤 플레인</td><td>Control plane</td><td>클러스터 전체를 관리하는 구성요소 묶음. API 서버·etcd·스케줄러·컨트롤러 매니저</td></tr>
+        <tr><td>API 서버</td><td>kube-apiserver</td><td>모든 요청(kubectl, 컨트롤러, kubelet)이 거치는 입구. 오브젝트를 읽고 쓴다</td></tr>
+        <tr><td>etcd</td><td>etcd (분산 키-값 저장소)</td><td>클러스터의 모든 오브젝트 상태를 저장하는 데이터베이스</td></tr>
+        <tr><td>스케줄러</td><td>kube-scheduler</td><td>새 파드를 어느 노드에 놓을지 고른다. 기준은 요청량(requests)이다</td></tr>
+        <tr><td>컨트롤러 매니저</td><td>kube-controller-manager</td><td>선언된 상태(예: replicas 3)와 실제 상태를 비교해 맞춘다</td></tr>
+        <tr><td>kubelet</td><td>kubelet (노드 에이전트)</td><td>각 노드에서 파드를 실행·감시하는 에이전트. 안에 cAdvisor가 들어 있다</td></tr>
+        <tr><td>컨테이너 런타임</td><td>Container runtime</td><td>kubelet의 지시를 받아 컨테이너를 실제로 만들고 실행한다</td></tr>
+        <tr><td>kube-proxy</td><td>kube-proxy</td><td>서비스 주소로 온 트래픽을 뒤의 파드로 보내는 규칙을 노드에 설정한다</td></tr>
+        <tr><td>CoreDNS</td><td>CoreDNS</td><td>클러스터 안의 DNS. 서비스 이름을 IP로 바꿔 준다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>컨트롤 플레인 4개 + 노드 구성요소 4개 + 파드</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.4는 컨트롤 플레인을 API 서버·etcd·스케줄러·컨트롤러 매니저로, 노드를 kubelet·컨테이너 런타임·kube-proxy·DNS·파드로 나눈다.</li>
+  <li>스케줄러의 기준이 requests라는 점을 짚어 둔다. 노드 자리 계산이 실제 사용량이 아니라 requests 합으로 이루어진다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/overview/components/" target="_blank" rel="noopener">Kubernetes · Components</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/administer-cluster/coredns/" target="_blank" rel="noopener">Kubernetes · Using CoreDNS</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="2장 용어 ② 메트릭 수집기">
+  <span class="kicker"><span class="n">02</span>GLOSSARY · 2/3</span>
+  <h1>용어 ② <span class="hl">메트릭 수집기</span></h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>cAdvisor</td><td>Container Advisor</td><td>kubelet 안에 내장된 수집기. 노드의 컨테이너별 CPU·메모리·디스크·네트워크 사용량을 잰다</td></tr>
+        <tr><td>cgroup</td><td>Control group (리눅스 커널 기능)</td><td>프로세스 묶음마다 CPU·메모리·I/O를 제한하고 사용량을 기록하는 커널 기능. 컨테이너 격리의 기반</td></tr>
+        <tr><td>statfs</td><td>statfs (리눅스 시스템 콜)</td><td>파일시스템의 전체·남은 용량을 묻는 커널 호출. cAdvisor가 디스크 사용량을 잴 때 쓴다</td></tr>
+        <tr><td>metrics-server</td><td>Kubernetes Metrics Server</td><td>각 kubelet에서 CPU·메모리 최근값을 모아 API 서버로 제공한다. 기록은 남기지 않는다</td></tr>
+        <tr><td>kube-state-metrics</td><td>kube-state-metrics (KSM)</td><td>API 서버의 오브젝트 상태(replicas, 파드 단계 등)를 읽어 메트릭으로 바꾼다. 사용량은 재지 않는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>cAdvisor는 사용량을, KSM은 선언된 상태를, metrics-server는 사용량의 최근값을 다룬다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.4.1: cAdvisor는 cgroup 트리로 메모리·CPU를, statfs로 디스크를 수집한다. 모든 컨테이너 메트릭의 진실 공급원(source of truth)이다.</li>
+  <li>kube-state-metrics 공식 설명: API 서버를 지켜보며 오브젝트 상태에 대한 메트릭을 만든다. 개별 쿠버네티스 컴포넌트의 건강이 아니라 오브젝트의 상태에 초점을 둔다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/google/cadvisor" target="_blank" rel="noopener">google/cadvisor</a></li>
+<li><a href="https://github.com/kubernetes-sigs/metrics-server" target="_blank" rel="noopener">kubernetes-sigs/metrics-server</a></li>
+<li><a href="https://github.com/kubernetes/kube-state-metrics" target="_blank" rel="noopener">kubernetes/kube-state-metrics</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="2장 용어 ③ 메트릭 API와 소비자">
+  <span class="kicker"><span class="n">02</span>GLOSSARY · 3/3</span>
+  <h1>용어 ③ <span class="hl">메트릭 API</span>와 그것을 쓰는 쪽</h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>API 집계 계층</td><td>API Aggregation Layer · APIService</td><td>외부 서버가 제공하는 API를 쿠버네티스 API의 일부처럼 붙이는 구조. APIService 오브젝트로 등록한다</td></tr>
+        <tr><td>리소스 메트릭 API</td><td>Resource Metrics API · <code>metrics.k8s.io</code></td><td>파드·노드의 CPU·메모리 사용량. metrics-server가 제공한다</td></tr>
+        <tr><td>커스텀 메트릭 API</td><td>Custom Metrics API · <code>custom.metrics.k8s.io</code></td><td>쿠버네티스 오브젝트에 붙은 임의 메트릭(예: 파드당 초당 요청 수). 어댑터가 제공한다</td></tr>
+        <tr><td>외부 메트릭 API</td><td>External Metrics API · <code>external.metrics.k8s.io</code></td><td>클러스터 밖의 메트릭(예: 메시지 큐 길이). 어댑터가 제공한다</td></tr>
+        <tr><td>어댑터</td><td>Metrics adapter · 예: prometheus-adapter, KEDA</td><td>모니터링 시스템의 값을 커스텀·외부 메트릭 API 형식으로 바꿔 주는 서버</td></tr>
+        <tr><td>HPA</td><td>Horizontal Pod Autoscaler</td><td>수평 파드 오토스케일러. 메트릭을 보고 파드 개수를 늘리거나 줄인다</td></tr>
+        <tr><td>VPA</td><td>Vertical Pod Autoscaler</td><td>수직 파드 오토스케일러. 사용량을 보고 파드의 requests·limits를 조정한다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>세 메트릭 API 모두 API 집계 계층을 통해 API 서버에 붙는다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.4.2: 리소스·커스텀 메트릭 API를 쿠버네티스의 집계(aggregated) API로 구현해서, API는 그대로 두고 구현체만 바꿀 수 있게 됐다.</li>
+  <li>공식 문서: 메트릭 기반 스케일링에는 API 집계 계층이 켜져 있어야 한다. 리소스 메트릭은 보통 metrics-server가, 커스텀·외부 메트릭은 모니터링 벤더가 제공하는 어댑터 API 서버가 제공한다.</li>
+  <li>KEDA는 Kubernetes Event-driven Autoscaling의 약자. 외부 메트릭 API를 제공하는 대표 어댑터다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/" target="_blank" rel="noopener">Kubernetes · API Aggregation Layer</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/" target="_blank" rel="noopener">Kubernetes · Horizontal Pod Autoscaling</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="모니터링 대상 컴포넌트">
+  <span class="kicker"><span class="n">02</span>WHAT TO WATCH · 책 3.4</span>
+  <h1>구성요소마다 <span class="hl">볼 메트릭 하나</span>와 그 값이 나빠질 때 생기는 일</h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:11%"><col style="width:15%"><col style="width:35%"><col></colgroup>
+      <thead><tr><th>위치</th><th>구성요소</th><th>대표 메트릭</th><th>이 값이 나빠지면</th></tr></thead>
+      <tbody>
+        <tr><td>컨트롤 플레인</td><td>API 서버</td><td><code>apiserver_request_duration_seconds</code></td><td>API 요청 처리가 느려져 kubectl·컨트롤러가 모두 느려진다</td></tr>
+        <tr><td>컨트롤 플레인</td><td>etcd</td><td><code>etcd_disk_wal_fsync_duration_seconds</code></td><td>디스크 쓰기 확정이 늦어져 API 서버 전체가 느려진다</td></tr>
+        <tr><td>컨트롤 플레인</td><td>스케줄러</td><td><code>scheduler_pending_pods</code></td><td>노드를 배정받지 못한 파드가 쌓인다</td></tr>
+        <tr><td>컨트롤 플레인</td><td>컨트롤러 매니저</td><td><code>workqueue_depth</code></td><td>처리 대기 작업이 쌓여 replicas 변경 같은 반영이 늦어진다</td></tr>
+        <tr><td>노드</td><td>kubelet (cAdvisor)</td><td><code>container_memory_working_set_bytes</code></td><td>컨테이너 메모리가 limit에 닿으면 OOM 킬로 재시작된다</td></tr>
+        <tr><td>노드</td><td>kube-proxy</td><td><code>kubeproxy_sync_proxy_rules_duration_seconds</code></td><td>서비스 규칙 갱신이 늦어져 새 파드로 트래픽이 늦게 간다</td></tr>
+        <tr><td>노드</td><td>CoreDNS</td><td><code>coredns_dns_request_duration_seconds</code></td><td>이름 조회가 느려져 서비스 간 호출 전체가 느려진다</td></tr>
+        <tr><td>노드</td><td>파드 (앱)</td><td><code>http_server_requests_seconds</code></td><td>사용자 요청의 처리율·에러·지연(RED)이 나빠진다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">모든 구성요소가 자기 메트릭을 프로메테우스 형식으로 직접 제공한다. 컨트롤 플레인이 느려지면 클러스터 전체가, 노드 구성요소가 느려지면 그 노드의 파드가 영향을 받는다.</div>
+  </div>
+  <div class="foot"><span>책 3.4: 클러스터와 애플리케이션을 정상 가동하려면 이 모든 컴포넌트를 빠짐없이 모니터링해야 한다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>표를 위에서부터 한 행씩 읽는다. 구성요소가 하는 일, 대표 메트릭, 그 값이 나빠지면 사용자에게 어떤 증상으로 나타나는지.</li>
+  <li>API 서버: 요청 처리 시간 분포. kubectl 명령, 컨트롤러, kubelet 모두 API 서버를 거치므로 여기가 느리면 모든 것이 느리다.</li>
+  <li>etcd: WAL(Write-Ahead Log) fsync 시간 = 쓰기를 디스크에 확정하는 시간. etcd는 확정 뒤에 응답하므로 디스크가 느리면 API 서버가 기다린다. 책 3.5가 클러스터 컴포넌트에서 콕 집어 "etcd 레이턴시"를 꼽는 이유.</li>
+  <li>스케줄러: 아직 노드를 못 받은 파드 수. 계속 0보다 크면 노드에 자리가 없거나 스케줄러에 문제가 있다.</li>
+  <li>컨트롤러 매니저: 컨트롤러별 작업 큐 길이. 쌓이면 "replicas 3으로 바꿨는데 파드가 늦게 뜬다" 같은 증상이 된다.</li>
+  <li>kubelet: 안에 든 cAdvisor가 컨테이너 사용량을 낸다. working set 메모리가 limit에 닿으면 커널이 컨테이너를 죽인다.</li>
+  <li>kube-proxy: 서비스 → 파드 규칙(iptables 등)을 다시 쓰는 데 걸리는 시간. 늦어지면 새로 뜬 파드로 트래픽이 늦게 간다.</li>
+  <li>CoreDNS: DNS 응답 시간. 서비스끼리는 이름으로 부르므로 여기가 느리면 모든 호출 앞에 지연이 붙는다.</li>
+  <li>파드(앱): 앱이 직접 내는 메트릭. order-api는 http_server_requests_seconds 로 RED를 계산한다.</li>
+  <li>표의 메트릭 이름은 모두 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다(2026-09-26).</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/reference/instrumentation/metrics/" target="_blank" rel="noopener">Kubernetes · Metrics reference</a></li>
+<li><a href="https://etcd.io/docs/latest/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
+<li><a href="https://coredns.io/plugins/metrics/" target="_blank" rel="noopener">CoreDNS · prometheus plugin</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="세 출처와 두 경로">
+  <span class="kicker"><span class="n">02</span>THREE SOURCES</span>
+  <h1>사용량은 <span class="hl">cAdvisor</span>가 재고, <span class="hl">두 길</span>로 나간다</h1>
+  <div class="body fig">{{FIG:ch03-fig6-three-sources.svg}}</div>
+  <div class="foot"><span>metrics-server는 새로 재지 않는다. kubelet이 잰 값을 읽어 전달할 뿐이다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>위 경로: metrics-server가 각 kubelet의 /metrics/resource 에서 CPU·메모리를 15초마다(--metric-resolution=15s 기본값) 읽어 메모리에 최근값만 둔다. API 서버의 metrics.k8s.io 로 kubectl top, HPA, VPA가 가져간다.</li>
+  <li>가운데 경로: 프로메테우스가 같은 kubelet의 /metrics/cadvisor 를 30초마다 긁어 시계열로 쌓는다. 실습 클러스터의 kubelet 수집 잡은 노드당 /metrics, /metrics/cadvisor, /metrics/probes 세 개라서 타깃이 9개다.</li>
+  <li>아래 경로: kube-state-metrics가 API 서버를 watch 하고 오브젝트 상태를 /metrics 로 내놓으면 프로메테우스가 긁는다.</li>
+  <li>화살표는 데이터가 흐르는 방향이다. 실제 요청은 반대 방향(읽는 쪽이 찾아가서 가져감)이다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Kubernetes · Resource metrics pipeline</a></li>
+<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="cAdvisor">
+  <span class="kicker"><span class="n">02</span>CADVISOR · 책 3.4.1</span>
+  <h1>cAdvisor: 컨테이너가 <span class="hl">실제로 얼마나 쓰는지</span> 잰다</h1>
+  <div class="body">
+    <div class="split b">
+      <div class="stack">
+        <pre class="code" style="font-size:14px"><span class="c"># 프로메테우스에 order-api 메모리를 묻는다</span>
+container_memory_working_set_bytes{
+  namespace="apps", container="order-api"}</pre>
+        <pre class="code" style="font-size:14px"><span class="c"># 결과</span>
+order-api-8556fcb49b-7gv2m   <span class="v">174Mi</span>
+order-api-8556fcb49b-ctm7c   <span class="v">183Mi</span></pre>
+        <p class="small">파드 접미사와 값은 환경마다 다르다.</p>
+      </div>
+      <table class="compare">
+        <thead><tr><th>메트릭</th><th>뜻</th></tr></thead>
+        <tbody>
+          <tr><td>container_memory_<br>working_set_bytes</td><td>지금 실제로 붙잡고 있는 메모리. OOM 킬 판정에 쓰이는 값</td></tr>
+          <tr><td>container_cpu_<br>usage_seconds_total</td><td>CPU를 쓴 누적 초. <code>rate()</code>로 감싸야 초당 사용량(코어)이 된다</td></tr>
+          <tr><td>container_network_<br>receive_bytes_total</td><td>받은 네트워크 바이트 누적</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">이름이 <b><code>container_</code></b>로 시작하면 cAdvisor에서 온 값이다.</div>
+  </div>
+  <div class="foot"><span>책 3.4.1: cAdvisor는 모든 컨테이너 메트릭의 진실 공급원이다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>출력은 실측이다. 명령은 curl로 프로메테우스 HTTP API를 부르는 형태지만 핵심은 질의문 한 줄이다.</li>
+  <li>working_set 은 캐시처럼 커널이 언제든 회수할 수 있는 메모리를 뺀 값이라, 컨테이너가 지금 실제로 필요한 메모리에 가장 가깝다. kubelet의 축출 판단과 OOM 판정도 이 값을 기준으로 한다.</li>
+  <li>CPU 예: rate(container_cpu_usage_seconds_total[2m]) 결과가 0.0037이면 초당 3.7밀리코어를 쓰고 있다는 뜻.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/guides/cadvisor/" target="_blank" rel="noopener">Prometheus · Monitoring container metrics using cAdvisor</a></li>
+<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="metrics-server">
+  <span class="kicker"><span class="n">02</span>METRICS SERVER · 책 3.4.2</span>
+  <h1>metrics-server는 <span class="hl">오토스케일링 전용</span>이다</h1>
+  <div class="body">
+    <div class="split a">
+      <div class="stack">
+        <pre class="code" style="font-size:14px"><span class="c"># 등록된 메트릭 API 확인</span>
+kubectl get apiservices | grep metrics</pre>
+        <pre class="code" style="font-size:13px"><span class="c"># 결과</span>
+v1beta1.metrics.k8s.io  kube-system/metrics-server  <span class="v">True</span></pre>
+        <pre class="code" style="font-size:14px">kubectl top pod -n apps</pre>
+        <pre class="code" style="font-size:13px">NAME                        CPU(cores)  MEMORY(bytes)
+order-api-8556fcb49b-7gv2m  5m          <span class="v">174Mi</span>
+order-api-8556fcb49b-ctm7c  4m          <span class="v">182Mi</span></pre>
+      </div>
+      <div class="stack">
+        <div class="card"><h3>하는 일</h3><p>각 kubelet에서 CPU·메모리를 15초마다 읽어 <b>최근값 하나만</b> 메모리에 둔다. 이를 <code>metrics.k8s.io</code>로 제공한다.</p></div>
+        <div class="card"><h3>쓰는 쪽</h3><p>HPA · VPA · <code>kubectl top</code>. 공식 README는 "모니터링 데이터의 출처로 쓰지 말라"고 적는다.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>책 3.4.2: 메트릭 서버는 리소스 메트릭 API의 표준 구현체다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>apiservices 출력은 실습 클러스터 실측(2026-09-26). 등록된 메트릭 API는 metrics.k8s.io 하나뿐이다. 커스텀·외부 메트릭 API는 어댑터를 설치해야 생긴다.</li>
+  <li>kubectl top 출력은 실측이다.</li>
+  <li>metrics-server README Caution: 오토스케일링 목적 전용이며 모니터링 솔루션으로 메트릭을 넘기거나 모니터링의 주 데이터 출처로 쓰면 안 된다. 모니터링에는 kubelet /metrics/resource 를 직접 수집하라고 안내한다.</li>
+  <li>기본 수집 주기는 --metric-resolution=15s. 최소 10초.</li>
+  <li>프로메테우스 타깃 목록에 metrics-server는 없다. 둘은 서로 독립된 경로다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/kubernetes-sigs/metrics-server#readme" target="_blank" rel="noopener">metrics-server README (Caution)</a></li>
+<li><a href="https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/" target="_blank" rel="noopener">Kubernetes · kube-scheduler</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="커스텀·외부 메트릭 API">
+  <span class="kicker"><span class="n">02</span>CUSTOM METRICS · 책 3.4.2</span>
+  <h1>CPU·메모리 말고 <span class="hl">다른 값</span>으로도 스케일링할 수 있다</h1>
+  <div class="body">
+    <table class="compare">
+      <thead><tr><th>API 그룹</th><th>무엇을 담나</th><th>누가 제공하나</th><th>HPA에서 쓰는 예</th></tr></thead>
+      <tbody>
+        <tr><td>metrics.k8s.io</td><td>파드·노드의 CPU·메모리</td><td>metrics-server</td><td>CPU 사용률 70% 유지</td></tr>
+        <tr><td>custom.metrics.k8s.io</td><td>쿠버네티스 오브젝트에 붙은 메트릭</td><td>어댑터(prometheus-adapter 등)</td><td>파드당 초당 요청 수 100 유지</td></tr>
+        <tr><td>external.metrics.k8s.io</td><td>클러스터 밖의 메트릭</td><td>어댑터(KEDA 등)</td><td>메시지 큐 대기 건수 30 유지</td></tr>
+      </tbody>
+    </table>
+    <div class="split a">
+      <pre class="code" style="font-size:14px"><span class="c"># HPA 스펙 일부: 외부 메트릭(큐 길이)으로 스케일링</span>
+<span class="k">- type:</span> External
+  <span class="k">external:</span>
+    <span class="k">metric:</span>
+      <span class="k">name:</span> <span class="v">queue_messages_ready</span>
+      <span class="k">selector:</span>
+        <span class="k">matchLabels:</span> {<span class="k">queue:</span> <span class="v">worker_tasks</span>}
+    <span class="k">target:</span> {<span class="k">type:</span> AverageValue, <span class="k">averageValue:</span> <span class="v">30</span>}</pre>
+      <div class="callout">책 3.4.2: 프로메테우스는 커스텀 메트릭 기반 HPA를 쓸 수 있게 한 최초의 커스텀 메트릭 어댑터였다. API가 표준화된 덕분에 CPU·메모리 외에도 큐 크기 같은 값으로 스케일링할 수 있게 됐다.</div>
+    </div>
+  </div>
+  <div class="foot"><span>API는 표준으로 고정하고, 값을 채우는 구현체만 바꿔 끼운다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>코드는 쿠버네티스 공식 HPA 문서의 External 메트릭 예시다. worker_tasks 큐의 대기 메시지가 파드당 평균 30건이 되도록 파드 수를 조절한다.</li>
+  <li>실습 클러스터에는 어댑터가 없어서 custom·external API가 등록돼 있지 않다. 앞 슬라이드의 apiservices 출력이 그 확인이다.</li>
+  <li>어댑터를 쓰면 "CPU는 한가한데 큐가 쌓이는" 서비스도 수요에 맞춰 늘릴 수 있다. CPU만으로 스케일링할 때의 한계를 푸는 방법이다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/" target="_blank" rel="noopener">Kubernetes · HPA Walkthrough (External metrics)</a></li>
+<li><a href="https://github.com/kubernetes-sigs/prometheus-adapter" target="_blank" rel="noopener">kubernetes-sigs/prometheus-adapter</a></li>
+<li><a href="https://keda.sh/docs/latest/concepts/" target="_blank" rel="noopener">KEDA · Concepts</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="kube-state-metrics">
+  <span class="kicker"><span class="n">02</span>KUBE-STATE-METRICS · 책 3.4.3</span>
+  <h1>kube-state-metrics: 책의 질문을 <span class="hl">메트릭 이름</span>으로 바꾼다</h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:13%"><col style="width:33%"><col></colgroup>
+      <thead><tr><th>대상</th><th>책의 질문</th><th>메트릭</th></tr></thead>
+      <tbody>
+        <tr><td>파드</td><td>몇 개 배포됐나? 대기 상태는 몇 개인가?</td><td><code>kube_pod_info</code> · <code>kube_pod_status_phase{phase="Pending"}</code></td></tr>
+        <tr><td>디플로이먼트</td><td>의도한 개수 대비 몇 개가 실행 중인가?</td><td><code>kube_deployment_spec_replicas</code> 대 <code>kube_deployment_status_replicas_available</code></td></tr>
+        <tr><td>디플로이먼트</td><td>업데이트가 끝났나?</td><td><code>kube_deployment_metadata_generation</code> 대 <code>kube_deployment_status_observed_generation</code></td></tr>
+        <tr><td>노드</td><td>상태는? 할당 가능한 CPU는? 스케줄 불가 노드는?</td><td><code>kube_node_status_condition</code> · <code>kube_node_status_allocatable</code> · <code>kube_node_spec_unschedulable</code></td></tr>
+        <tr><td>잡</td><td>언제 시작·완료됐나? 몇 개 실패했나?</td><td><code>kube_job_status_start_time</code> · <code>kube_job_status_completion_time</code> · <code>kube_job_status_failed</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout">order-api 실측: replicas 2, requests.cpu 0.2, Running 1. 전부 <b>매니페스트에 적은 값</b>이다. KSM은 자원을 재지 않는다. 이름이 <b><code>kube_</code></b>로 시작하면 KSM이다.</div>
+  </div>
+  <div class="foot"><span>책 3.4.3: kube-state-metrics는 클러스터에 배포된 오브젝트의 상태 파악이 주된 관심사다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>표의 "책의 질문" 열은 책 3.4.3의 항목을 그대로 옮겼다. 메트릭 이름은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다. 잡 메트릭은 KSM 공식 문서(job-metrics.md)의 이름이다. 실습 클러스터에 잡이 없어 지금은 값이 나오지 않는다.</li>
+  <li>"A 대 B"는 두 값을 비교해야 답이 나온다는 뜻이다. spec_replicas 2, replicas_available 1이면 하나가 뜨지 못한 것.</li>
+  <li>아래 결과는 실측. replicas: 2, requests.cpu: 200m(=0.2), 파드 두 개가 Running.</li>
+  <li>KSM 공식 설명: metrics-server는 최근값만 메모리에 두는 코어 메트릭 파이프라인이고, KSM은 오브젝트 상태의 스냅숏 전체를 메모리에 두고 프로메테우스 같은 모니터링 시스템에 새 메트릭을 제공한다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/kubernetes/kube-state-metrics/tree/main/docs/metrics" target="_blank" rel="noopener">kube-state-metrics · Metrics 문서</a></li>
+<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="세 출처 비교">
+  <span class="kicker"><span class="n">02</span>ANSWER 1 · 누가 만드나</span>
+  <h1>메트릭 이름의 <span class="hl">앞부분</span>이 출처를 알려 준다</h1>
+  <div class="body">
+    <table class="compare">
+      <thead><tr><th>출처</th><th>무엇을 말하나</th><th>어디서 읽나</th><th>이름</th><th>보관</th><th>쓰는 쪽</th></tr></thead>
+      <tbody>
+        <tr><td>cAdvisor</td><td>실제로 얼마나 쓰나</td><td>cgroup</td><td><code>container_</code></td><td>프로메테우스에 시계열</td><td>대시보드 · 알림</td></tr>
+        <tr><td>metrics-server</td><td>CPU·메모리 최근값</td><td>kubelet</td><td>(메트릭 이름 없음, API 객체)</td><td>최근값 하나</td><td>kubectl top · HPA · VPA</td></tr>
+        <tr><td>kube-state-metrics</td><td>무엇이라고 선언돼 있나</td><td>API 서버</td><td><code>kube_</code></td><td>프로메테우스에 시계열</td><td>대시보드 · 알림</td></tr>
+        <tr><td>애플리케이션</td><td>앱이 무슨 일을 했나</td><td>앱 코드(계측)</td><td>앱마다 다름 (<code>http_server_</code>)</td><td>프로메테우스에 시계열</td><td>RED 대시보드 · 알림</td></tr>
+        <tr><td>node-exporter</td><td>노드(머신) 자원</td><td>리눅스 커널</td><td><code>node_</code></td><td>프로메테우스에 시계열</td><td>USE 대시보드 · 알림</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">값이 서로 어긋날 때가 진단의 출발점이다. KSM은 replicas 3인데 cAdvisor에 파드가 둘만 보이면 하나가 뜨지 못한 것이다. cAdvisor 메모리가 KSM의 requests를 크게 넘으면 requests를 잘못 잡은 것이다.</div>
+  </div>
+  <div class="foot"><span>질문 ①: 쿠버네티스 메트릭은 어떤 구성요소가 만드는가</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.4는 세 가지(cAdvisor, 메트릭 서버, KSM)만 다룬다. 표에는 실제 대시보드에서 함께 보게 되는 두 출처(앱, node-exporter)를 더했다.</li>
+  <li>metrics-server는 프로메테우스 형식 메트릭을 내놓는 게 아니라 API 객체(PodMetrics, NodeMetrics)를 돌려준다. 그래서 이름 접두어가 없다.</li>
+  <li>requests 대비 실제 사용률은 cAdvisor 값을 KSM 값으로 나눠야 나온다. HPA가 하는 계산이 이것이다. 어느 한 출처만으로는 만들 수 없다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide" data-label="kubectl top vs 프로메테우스">
+  <span class="kicker"><span class="n">02</span>ANSWER 2 · 같은 값인가</span>
+  <h1>kubectl top과 프로메테우스는 <span class="hl">같은 kubelet</span>에서 읽는다</h1>
+  <div class="body">
+    <div class="grid2">
+      <div class="card yellow">
+        <span class="tag yellow">KUBECTL TOP · metrics-server</span>
+        <pre class="code" style="font-size:14px;margin:10px 0">order-api-…-7gv2m   5m   <span class="v">174Mi</span>
+order-api-…-ctm7c   4m   <span class="v">182Mi</span></pre>
+        <p>15초마다 읽은 최근값 하나. 한 시간 전 값은 물어볼 곳이 없다.</p>
+      </div>
+      <div class="card teal">
+        <span class="tag">PROMETHEUS · cAdvisor</span>
+        <pre class="code" style="font-size:14px;margin:10px 0">order-api-…-7gv2m        <span class="v">174Mi</span>
+order-api-…-ctm7c        <span class="v">183Mi</span></pre>
+        <p>30초마다 긁어 3일치를 쌓는다. 어제 같은 시각과 비교할 수 있다.</p>
+      </div>
+    </div>
+    <div class="callout"><b>값은 사실상 같다.</b> 둘 다 kubelet이 cgroup에서 잰 값을 읽기 때문이다. 1Mi 차이는 읽은 시점의 차이다. 다른 것은 <b>보관</b>이다. 지난 일을 되짚으려면 프로메테우스가 필요하다.</div>
+  </div>
+  <div class="foot"><span>질문 ②: kubectl top의 값과 프로메테우스의 값은 같은가</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>둘 다 실측이다. 같은 파드, 거의 같은 시각.</li>
+  <li>발표 전날(2026-09-26) 실습 클러스터에서 다시 재 보니 두 값이 238Mi · 248Mi로 정확히 같았다. 파드 이름과 값은 재배포마다 달라진다.</li>
+  <li>차이가 크게 나면 의심할 것: metrics-server가 오래된 값을 들고 있는지(kubectl top 이 멈춰 있는지), 프로메테우스 질의가 다른 컨테이너(예: 사이드카)까지 합치고 있는지.</li>
+  <li>HPA가 파드를 늘린 뒤 "그때 왜 늘었는지"를 되짚으려면 kubectl get hpa 를 주기적으로 손으로 기록해야 한다. metrics-server는 기록을 남기지 않기 때문이다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="lab-guide.html#p5" target="_blank" rel="noopener">실습 가이드 05 · 세 출처</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="4계층별 확인 항목">
+  <span class="kicker"><span class="n">02</span>WHAT TO MONITOR · 책 3.5</span>
+  <h1>계층별 <span class="hl">확인 항목과 메트릭</span></h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:17%"><col style="width:30%"><col></colgroup>
+      <thead><tr><th>계층</th><th>확인 항목</th><th>메트릭 이름</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="4">① 노드</td><td class="it">CPU 사용률</td><td><code>node_cpu_seconds_total</code></td></tr>
+        <tr><td class="it">메모리 여유</td><td><code>node_memory_MemAvailable_bytes</code></td></tr>
+        <tr><td class="it">네트워크 송수신량</td><td><code>node_network_receive_bytes_total</code> · <code>node_network_transmit_bytes_total</code></td></tr>
+        <tr><td class="it">디스크 여유 공간</td><td><code>node_filesystem_avail_bytes</code></td></tr>
+        <tr><td rowspan="2">② 클러스터 컴포넌트</td><td class="it">etcd 디스크 쓰기 지연</td><td><code>etcd_disk_wal_fsync_duration_seconds</code></td></tr>
+        <tr><td class="it">API 서버 요청 지연</td><td><code>apiserver_request_duration_seconds</code></td></tr>
+        <tr><td rowspan="2">③ 클러스터 애드온</td><td class="it">클러스터 오토스케일러: 배치 못 한 파드</td><td><code>cluster_autoscaler_unschedulable_pods_count</code></td></tr>
+        <tr><td class="it">인그레스 컨트롤러: 요청 수</td><td><code>nginx_ingress_controller_requests</code> (ingress-nginx)</td></tr>
+        <tr><td rowspan="4">④ 애플리케이션</td><td class="it">컨테이너 메모리</td><td><code>container_memory_working_set_bytes</code></td></tr>
+        <tr><td class="it">컨테이너 CPU</td><td><code>container_cpu_usage_seconds_total</code></td></tr>
+        <tr><td class="it">컨테이너 네트워크 에러</td><td><code>container_network_receive_errors_total</code></td></tr>
+        <tr><td class="it">프레임워크 메트릭 (요청 수·지연)</td><td><code>http_server_requests_seconds</code> (Spring Boot)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>책 3.5: 물리·가상 노드 → 클러스터 컴포넌트 → 클러스터 애드온 → 엔드 유저 애플리케이션</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>계층 순서와 확인 항목은 책 3.5의 목록을 그대로 따랐다. 메트릭 이름은 각 항목을 실제로 조회할 때 쓰는 이름이다.</li>
+  <li>① 노드는 node-exporter, ② 컴포넌트는 각 구성요소 자신, ④ 컨테이너 항목은 cAdvisor, 프레임워크 항목은 앱 계측에서 온다.</li>
+  <li>node_cpu_seconds_total 은 모드(idle, user, system 등)별 누적 초라서, 사용률은 1 - rate(idle) 로 계산한다.</li>
+  <li>③ 애드온 메트릭은 애드온을 설치해야 생긴다. 실습 클러스터(kind)에는 클러스터 오토스케일러가 없고, 인그레스 컨트롤러 메트릭은 수집 설정을 켜지 않았다. 이름은 각 프로젝트 공식 문서 기준.</li>
+  <li>①②④의 메트릭은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">prometheus/node_exporter</a></li>
+<li><a href="https://etcd.io/docs/latest/metrics/" target="_blank" rel="noopener">etcd · Metrics</a></li>
+<li><a href="https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/proposals/metrics.md" target="_blank" rel="noopener">Cluster Autoscaler · Metrics</a></li>
+<li><a href="https://kubernetes.github.io/ingress-nginx/user-guide/monitoring/" target="_blank" rel="noopener">ingress-nginx · Monitoring</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="계층별로 좁혀 가기">
+  <span class="kicker"><span class="n">02</span>DRILL DOWN · 책 3.5</span>
+  <h1>파드가 Pending일 때 <span class="hl">노드에서 컴포넌트로</span> 좁혀 가는 순서</h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:12%"><col style="width:36%"><col></colgroup>
+      <thead><tr><th>단계</th><th>메트릭 · 명령</th><th>이렇게 판단한다</th></tr></thead>
+      <tbody>
+        <tr><td>증상</td><td><code>kube_pod_status_phase{phase="Pending"}</code></td><td class="it">0보다 크면 배치되지 못한 파드가 있다. ①로 간다</td></tr>
+        <tr><td>① 노드</td><td><code>kube_node_status_allocatable</code> 대 requests 합</td><td class="it">남은 자리가 파드 requests보다 작으면 원인은 노드 부족. 자리가 있으면 ②로 간다</td></tr>
+        <tr><td>② 스케줄러</td><td><code>up{job="kube-scheduler"}</code></td><td class="it">0이면 스케줄러가 멈춰 있다. 1이면 아래 줄을 본다</td></tr>
+        <tr><td></td><td><code>scheduler_pending_pods{queue="unschedulable"}</code></td><td class="it">늘고 있으면 스케줄러는 시도했지만 맞는 노드가 없다(노드 셀렉터·taint·어피니티 조건)</td></tr>
+        <tr><td>② API 서버</td><td><code>apiserver_request_duration_seconds</code></td><td class="it">느리면 배치 결과 기록이 늦어진다. etcd 쓰기 지연을 이어서 본다</td></tr>
+        <tr><td>원인 확인</td><td><code>kubectl describe pod &lt;이름&gt;</code></td><td class="it">FailedScheduling 이벤트 메시지가 이유를 그대로 알려 준다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">노드에 자리가 있는데도 Pending이면 문제는 노드가 아니라 <b>배치를 결정하는 쪽(스케줄러)</b>이나 <b>결정을 기록하는 쪽(API 서버·etcd)</b>에 있다.</div>
+  </div>
+  <div class="foot"><span>노드 → 스케줄러 → API 서버·etcd → 이벤트</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>① 노드에서 "사용률"이 아니라 "requests 합"을 보는 이유: 스케줄러는 실제 사용량이 아니라 requests로 자리를 계산한다. 노드 CPU가 20%만 쓰여도 requests가 꽉 차 있으면 새 파드는 들어가지 못한다.</li>
+  <li>노드에 자리가 있는데도 Pending이면 컴포넌트로 옮겨 간다. 배치를 결정하는 스케줄러가 먼저, 그 결정을 기록하는 API 서버·etcd가 다음이다.</li>
+  <li>up{job="kube-scheduler"} 는 프로메테우스가 스케줄러를 긁는 데 성공했는지(1) 실패했는지(0)다. 스케줄러 프로세스가 죽어 있으면 0이 된다.</li>
+  <li>scheduler_pending_pods 의 queue="unschedulable" 은 스케줄러가 시도했지만 조건에 맞는 노드를 찾지 못해 보류한 파드 수다. 자리는 있어도 노드 셀렉터·taint·어피니티가 맞지 않으면 여기로 간다.</li>
+  <li>kubectl describe pod 이벤트 예: "0/3 nodes are available: 3 Insufficient cpu." 또는 "node(s) had untolerated taint". 메트릭으로 좁힌 뒤 마지막 원인은 이벤트로 확인한다.</li>
+  <li>메트릭 이름은 실습 클러스터 프로메테우스에서 조회되는 것을 확인했다(scheduler_pending_pods 의 queue 라벨: active, backoff, gated, incomplete, pending, unschedulable).</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/" target="_blank" rel="noopener">Kubernetes · kube-scheduler</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/" target="_blank" rel="noopener">Kubernetes · Debug Pods</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="2장 정리">
+  <span class="kicker"><span class="n">02</span>WRAP-UP</span>
+  <h1>같은 파드를 두고 <span class="hl">세 출처가 다른 것</span>을 말한다</h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed">
+      <colgroup><col style="width:29%"><col></colgroup>
+      <thead><tr><th>질문</th><th>답</th></tr></thead>
+      <tbody>
+        <tr><td>메트릭은 누가 만드나?</td><td>사용량 cAdvisor(<code>container_</code>) · 상태 KSM(<code>kube_</code>) · 노드 node-exporter(<code>node_</code>) · 앱 자신</td></tr>
+        <tr><td>metrics-server는 어디에 들어가나?</td><td>전달자. kubelet의 최근값을 HPA·VPA·<code>kubectl top</code>에 준다. 모니터링용 아님</td></tr>
+        <tr><td>kubectl top과 프로메테우스 값은 같은가?</td><td>값은 같다(174Mi 대 174Mi). 다른 것은 보관: 최근값 하나 대 3일치 시계열</td></tr>
+        <tr><td>무엇부터 보나?</td><td>노드 → 클러스터 컴포넌트 → 애드온 → 애플리케이션 순서로 좁힌다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">남은 질문: 이 출처들을 한곳에 모으려면 어떤 도구를 골라야 하나? 프로메테우스는 수십 개의 타깃을 어떻게 찾아서 긁어 오나?</div>
+  </div>
+  <div class="foot"><span>책 3.4~3.5 정리</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>다음은 책 3.6(모니터링 툴)과 3.7 전반(프로메테우스 구조). 프로메테우스가 서비스 디스커버리와 라벨로 타깃을 찾는 방식, kube-prometheus-stack 구성요소를 다룬다.</li>
+</ul>
+</aside>
+</section>

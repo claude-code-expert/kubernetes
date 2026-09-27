@@ -1,0 +1,334 @@
+
+<!-- ===================================================================
+  CHAPTER 4 · 실습 ① 프로메테우스 스택 설치·사용 (책 3.7 후반)
+=================================================================== -->
+
+<section class="slide section-lead" data-label="4장 리드">
+  <div class="body">
+    <div class="quest">CHAPTER · 04 · 책 3.7</div>
+    <div class="secnum">04</div>
+    <h1>프로메테우스 스택을 설치하고 <span class="hl">세 출처를 화면으로</span> 확인한다</h1>
+    <p class="sub">kind 클러스터에 kube-prometheus-stack을 설치한다. 타깃이 모두 up인지 확인하고, cAdvisor·metrics-server·kube-state-metrics의 값을 질의와 대시보드로 본다.</p>
+  </div>
+  <div class="foot"><span>실습 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다. 긴 YAML은 핵심 줄만 보여 주고 GitHub 링크로 전체를 연다.</li>
+  <li>캡처 자리(점선 상자)는 설치 실습 중에 찍은 화면으로 채운다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="4장 용어">
+  <span class="kicker"><span class="n">04</span>GLOSSARY</span>
+  <h1>용어 <span class="hl">설치와 확인</span>에 쓰는 것</h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>Helm</td><td>Helm (쿠버네티스 패키지 관리자)</td><td>여러 매니페스트를 묶은 패키지를 설치·업그레이드·삭제하는 도구</td></tr>
+        <tr><td>차트</td><td>Chart</td><td>Helm 패키지. 매니페스트 템플릿과 기본 설정값의 묶음</td></tr>
+        <tr><td>릴리스</td><td>Release</td><td>차트를 클러스터에 설치한 한 벌. 이름을 붙인다(여기서는 <code>kps</code>)</td></tr>
+        <tr><td>값 파일</td><td>Values file</td><td>차트 기본값을 덮어쓰는 설정 파일. <code>-f</code>로 넘긴다</td></tr>
+        <tr><td>차트 저장소</td><td>Chart repository</td><td>차트를 내려받는 주소. <code>helm repo add</code>로 등록</td></tr>
+        <tr><td>포트 포워드</td><td>Port forward (<code>kubectl port-forward</code>)</td><td>내 PC의 포트를 클러스터 안 서비스로 이어 주는 임시 터널</td></tr>
+        <tr><td>PVC</td><td>PersistentVolumeClaim</td><td>저장 공간을 달라는 요청서. 파드가 재시작돼도 데이터가 남는다</td></tr>
+        <tr><td>데몬셋</td><td>DaemonSet</td><td>노드마다 파드를 하나씩 띄우는 워크로드. node-exporter가 이것</td></tr>
+        <tr><td>정적 파드</td><td>Static pod</td><td>kubelet이 노드의 매니페스트 파일을 직접 읽어 띄우는 파드. 컨트롤 플레인이 이 방식</td></tr>
+        <tr><td>바인드 주소</td><td>Bind address · 루프백(127.0.0.1)</td><td>프로그램이 연결을 받는 주소. 127.0.0.1이면 자기 노드 안에서만 접근 가능</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>설치는 Helm, 확인은 port-forward와 PromQL</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>정적 파드와 바인드 주소는 설치 직후 만나는 실패(컨트롤 플레인 타깃 DOWN)를 이해하는 데 필요하다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://helm.sh/docs/intro/using_helm/" target="_blank" rel="noopener">Helm · Using Helm</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/" target="_blank" rel="noopener">Kubernetes · Static Pods</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="값 파일">
+  <span class="kicker"><span class="n">04</span>VALUES</span>
+  <h1>차트 기본값 대신 <span class="hl">보존 기간·저장소·배치</span>를 정한다</h1>
+  <div class="body">
+    <div class="split a" style="align-items:start">
+      <div class="stack">
+        <pre class="code" style="font-size:13.5px">helm repo add prometheus-community \
+  https://prometheus-community.github.io/helm-charts
+helm repo update
+
+<span class="c"># 관측 스택을 한 노드에 모으기 위한 라벨</span>
+kubectl label node obs-worker2 workload=observability</pre>
+        <p class="small"><b>kps-values.yaml</b> (일부)</p>
+        <pre class="code" style="font-size:13px"><span class="k">prometheus:</span>
+  <span class="k">service:</span> {<span class="k">type:</span> ClusterIP}
+  <span class="k">prometheusSpec:</span>
+    <span class="k">nodeSelector:</span> {<span class="k">workload:</span> observability}
+<span class="hl">    <span class="k">scrapeInterval:</span> <span class="v">30s</span></span><span class="hl">    <span class="k">retention:</span> <span class="v">3d</span></span><span class="hl">    <span class="k">retentionSize:</span> <span class="v">4GB</span></span>    <span class="k">storageSpec:</span>
+      <span class="k">volumeClaimTemplate:</span>
+        <span class="k">spec:</span>
+<span class="hl">          <span class="k">resources:</span> {<span class="k">requests:</span> {<span class="k">storage:</span> <span class="v">8Gi</span>}}</span><span class="k">grafana:</span>
+  <span class="k">adminPassword:</span> obs-study</pre>
+      </div>
+      <table class="compare">
+        <thead><tr><th>값</th><th>왜</th></tr></thead>
+        <tbody>
+          <tr><td>scrapeInterval 30s</td><td>짧을수록 해상도가 오르고 저장량도 오른다. 15초면 저장량이 두 배</td></tr>
+          <tr><td>retention 3d · 4GB</td><td>둘 중 먼저 닿는 쪽에서 오래된 데이터를 지운다. 며칠 전 장애까지 되짚을지가 이 값</td></tr>
+          <tr><td>storageSpec 8Gi</td><td>없으면 emptyDir. 파드가 재시작되면 쌓은 메트릭이 전부 사라진다</td></tr>
+          <tr><td>nodeSelector</td><td>관측 스택을 한 노드에 모은다. 관측 대상이 앓을 때 같이 앓지 않게</td></tr>
+          <tr><td>type ClusterIP</td><td>UI는 port-forward로 연다. 외부 노출 불필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>전체 파일: <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">labs/helm/kps-values.yaml</a></span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>값 파일 전체에는 Alertmanager 라우팅, Grafana 사이드카, 노드 익스포터 설정도 있다. 슬라이드에는 프로메테우스 저장과 관련된 줄만 올렸다.</li>
+  <li>Grafana 관리자 비밀번호는 실습용으로 값 파일에 적었다. 운영이라면 시크릿으로 넘긴다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack" target="_blank" rel="noopener">kube-prometheus-stack 차트</a></li>
+<li><a href="https://prometheus.io/docs/prometheus/latest/storage/" target="_blank" rel="noopener">Prometheus · Storage (retention)</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="라이브 데모 ① 설치">
+  <span class="kicker"><span class="n">04</span>LIVE DEMO ① · 설치</span>
+  <h1>라이브 데모 ① <span class="hl">클러스터부터 스택 설치까지</span></h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
+      <colgroup><col style="width:6%"><col style="width:60%"><col></colgroup>
+      <thead><tr><th>#</th><th>명령</th><th>화면에서 볼 것</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>kind create cluster --config labs/kind-cluster.yaml</code></td><td class="it">체크 표시 7개, 컨텍스트 kind-obs</td></tr>
+        <tr><td>2</td><td><code>kubectl get nodes</code></td><td class="it">노드 3개 Ready</td></tr>
+        <tr><td>3</td><td><code>kind load docker-image journal-api:v1 order-api:v1 --name obs</code><br><code>kubectl apply -f labs/k8s/journal.yaml -f labs/k8s/order-api.yaml</code></td><td class="it">journal-api 3 · order-api 2 Running</td></tr>
+        <tr><td>4</td><td><code>helm repo add prometheus-community https://prometheus-community.github.io/helm-charts</code></td><td class="it">저장소 등록</td></tr>
+        <tr><td>5</td><td><code>kubectl label node obs-worker2 workload=observability</code></td><td class="it">관측 스택을 올릴 노드 지정</td></tr>
+        <tr><td>6</td><td><code>helm upgrade --install kps prometheus-community/kube-prometheus-stack \</code><br><code>&nbsp;&nbsp;-n monitoring --create-namespace --version 89.2.2 \</code><br><code>&nbsp;&nbsp;-f labs/helm/kps-values.yaml --wait</code></td><td class="it">완료까지 수 분</td></tr>
+        <tr><td>7</td><td><code>kubectl -n monitoring get pods,pvc</code></td><td class="it">파드 8개 Running (node-exporter 3), PVC 8Gi Bound</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>설정 파일: <a href="labs/kind-cluster.yaml" target="_blank" rel="noopener">kind-cluster.yaml</a> · <a href="labs/k8s/order-api.yaml" target="_blank" rel="noopener">order-api.yaml</a> · <a href="labs/helm/kps-values.yaml" target="_blank" rel="noopener">kps-values.yaml</a></span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>기준값(실측): kind 생성 약 20초, 노드는 생성 직후 NotReady였다가 35초 시점에 셋 다 Ready.</li>
+  <li>이미지 두 개는 미리 빌드해 둔다: docker build -t journal-api:v1 labs/apps/journal-api · docker build -t order-api:v1 labs/apps/order-api (524MB). 처음 빌드는 수 분 걸리므로 발표 중에는 생략한다.</li>
+  <li>order-api 파드 예: order-api-77bf967968-jkg7c (obs-worker), -k5qfm (obs-worker2).</li>
+  <li>helm install 은 --timeout 12m 까지 걸릴 수 있다. 미리 설치해 둔 클러스터로 결과만 보여 주는 것도 방법.</li>
+  <li>설치 후 파드 8개: alertmanager-…-0 (2/2), kps-grafana (3/3), operator (1/1), kube-state-metrics (1/1), node-exporter × 3 (1/1), prometheus-…-0 (2/2).</li>
+  <li>책 3.7의 절차(네임스페이스 → 저장소 추가 → 차트 설치 → 파드 확인)와 순서가 같다.</li>
+</ul>
+</aside>
+</section>
+
+
+<section class="slide expanded" data-label="라이브 데모 ② 타깃 확인">
+  <span class="kicker"><span class="n">04</span>LIVE DEMO ② · 타깃</span>
+  <h1>라이브 데모 ② <span class="hl">프로메테우스가 무엇을 긁고 있나</span></h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:6%"><col style="width:54%"><col></colgroup>
+      <thead><tr><th>#</th><th>명령 · 화면</th><th>볼 것 (기준값)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090</code></td><td class="it">http://localhost:9090 접속</td></tr>
+        <tr><td>2</td><td>Status → Target health</td><td class="it">타깃 28개 중 <b>6개 DOWN</b></td></tr>
+        <tr><td>3</td><td>DOWN 행 펼치기</td><td class="it">kube-controller-manager · kube-etcd · kube-proxy × 3 · kube-scheduler</td></tr>
+        <tr><td>4</td><td>에러 메시지 읽기</td><td class="it"><code>connect: connection refused</code></td></tr>
+        <tr><td>5</td><td>kubelet 타깃 수 세기</td><td class="it">9개 = 노드 3 × 경로 3</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">파드는 전부 Running인데 컨트롤 플레인이 통째로 안 보인다. <b>설치 성공 기준은 "파드 Running"이 아니라 "타깃 up"</b>이다.</div>
+  </div>
+  <div class="foot"><span>kubelet 경로 3개: /metrics · /metrics/cadvisor · /metrics/probes</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>기준값(실측): up 22 · down 6, 총 28.</li>
+  <li>스크레이프 주기가 30초라 설치 직후에는 unknown 인 타깃이 있다. 1~2분 기다린다.</li>
+  <li>잡별 up: apiserver 1, coredns 2, grafana 1, alertmanager 2, operator 1, prometheus 2, kube-state-metrics 1, kubelet 9, node-exporter 3.</li>
+</ul>
+</aside>
+</section>
+
+
+<section class="slide" data-label="실패 원인: 루프백 바인드">
+  <span class="kicker"><span class="n">04</span>FAILURE · 원인 읽기</span>
+  <h1>DOWN 6개는 모두 <span class="warn">connection refused</span>: 루프백에만 열려 있다</h1>
+  <div class="body">
+    <pre class="code" style="font-size:13px"><span class="c"># DOWN 타깃의 마지막 에러 (lastError)</span>
+kube-controller-manager: Get "https://172.20.0.4:10257/metrics": dial tcp 172.20.0.4:10257: connect: <span class="v">connection refused</span>
+kube-etcd:  Get "http://172.20.0.4:2381/metrics": ... connection refused
+kube-proxy: Get "http://172.20.0.2:10249/metrics": ... connection refused   <span class="c">(노드 3개 모두)</span>
+kube-scheduler: Get "https://172.20.0.4:10259/metrics": ... connection refused</pre>
+    <div class="split a" style="align-items:start">
+      <pre class="code" style="font-size:13px"><span class="c"># 컨트롤 플레인 노드 안의 정적 파드 매니페스트</span>
+docker exec study-control-plane sh -c \
+  "grep -h 'bind-address\|listen-metrics-urls' \
+   /etc/kubernetes/manifests/*.yaml"
+<span class="c"># 결과</span>
+- --bind-address=<span class="v">127.0.0.1</span>          <span class="c"># controller-manager</span>
+- --bind-address=<span class="v">127.0.0.1</span>          <span class="c"># scheduler</span>
+- --listen-metrics-urls=http://<span class="v">127.0.0.1</span>:2381  <span class="c"># etcd</span></pre>
+      <div class="stack">
+        <div class="card red"><h3>원인</h3><p>네 구성요소가 메트릭 포트를 <b>127.0.0.1(루프백)</b>에만 열었다. 같은 노드 안에서만 닿고, 다른 노드의 프로메테우스는 닿을 수 없다. kube-proxy는 <code>metricsBindAddress: ""</code>(기본값 루프백).</p></div>
+        <div class="callout" style="font-size:16px">차트는 "이 주소를 긁어라"라는 설정만 만든다. 대상 포트가 열려 있는지는 확인하지 않는다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>인증서·권한 문제가 아니라 그 포트에서 아무도 듣고 있지 않다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>출력은 실측. 에러 문자열은 줄였다.</li>
+  <li>루프백 바인드는 kind(kubeadm)의 기본값이고 보안상 합당하다. 메트릭 포트는 인증 없이 클러스터 내부 정보를 내놓을 수 있기 때문이다.</li>
+  <li>kube-proxy 설정 확인 명령: kubectl -n kube-system get cm kube-proxy -o jsonpath='{.data.config\.conf}' | grep -i metricsBindAddress</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide" data-label="실패 고치기: 0.0.0.0으로 열기">
+  <span class="kicker"><span class="n">04</span>FAILURE · 고치기</span>
+  <h1>메트릭 포트를 <span class="hl">0.0.0.0</span>으로 열면 <span class="hl">28/28 up</span>이 된다</h1>
+  <div class="body">
+    <div class="split a" style="align-items:start">
+      <div class="stack">
+        <p class="small"><b>정적 파드 3개</b>: 파일을 고치면 kubelet이 파드를 다시 만든다</p>
+        <pre class="code" style="font-size:12.5px">docker exec study-control-plane sh -c "
+ sed -i 's|--bind-address=127.0.0.1|--bind-address=0.0.0.0|' \
+   /etc/kubernetes/manifests/kube-controller-manager.yaml
+ sed -i 's|--bind-address=127.0.0.1|--bind-address=0.0.0.0|' \
+   /etc/kubernetes/manifests/kube-scheduler.yaml
+ sed -i 's|--listen-metrics-urls=http://127.0.0.1:2381|--listen-metrics-urls=http://0.0.0.0:2381|' \
+   /etc/kubernetes/manifests/etcd.yaml"</pre>
+        <p class="small"><b>kube-proxy</b>: 데몬셋이라 ConfigMap을 고치고 다시 띄운다</p>
+        <pre class="code" style="font-size:12.5px">kubectl -n kube-system get cm kube-proxy -o yaml \
+ | sed 's|metricsBindAddress: ""|metricsBindAddress: "0.0.0.0:10249"|' \
+ | kubectl apply -f -
+kubectl -n kube-system rollout restart ds kube-proxy</pre>
+      </div>
+      <div class="stack">
+        <pre class="code" style="font-size:14px"><span class="c"># 1~2분 뒤 다시 집계</span>
+총 28  <span class="v">up 28</span></pre>
+        <div class="card"><h3>이제 보이는 것</h3><p><code>etcd_disk_wal_fsync_duration_seconds</code> · <code>scheduler_pending_pods</code> · <code>workqueue_depth</code> 같은 컨트롤 플레인 메트릭</p></div>
+        <div class="warning" style="font-size:16px">정적 파드 셋이 동시에 재시작되는 동안 API 서버 요청이 잠깐 타임아웃날 수 있다. 안정되면 같은 명령을 다시 친다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>kind 노드를 다시 만들면 이 설정은 사라진다. 다시 해야 한다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>/etc/kubernetes/manifests 는 정적 파드 디렉터리다. kubelet이 이 디렉터리를 지켜보다가 파일이 바뀌면 파드를 다시 만든다. API 서버를 거치지 않으므로 API 서버 자신도 이 방식으로 뜬다.</li>
+  <li>실습 중 kube-proxy ConfigMap 수정이 한 번 "Error from server (Timeout)"로 실패했다. 컨트롤 플레인이 안정된 뒤 같은 명령으로 성공했다.</li>
+  <li>매번 하기 싫다면 kind-cluster.yaml 의 kubeadmConfigPatches 에 넣어 둘 수 있다. 여기서는 왜 필요한지 보여 주려고 일부러 넣지 않았다.</li>
+  <li>운영 클러스터에서 0.0.0.0으로 열 때는 네트워크 정책이나 인증(authentication)으로 메트릭 포트 접근을 제한한다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="라이브 데모 ③ 세 출처와 대시보드">
+  <span class="kicker"><span class="n">04</span>LIVE DEMO ③ · 세 출처 · Grafana</span>
+  <h1>라이브 데모 ③ <span class="hl">세 출처를 질의와 대시보드로</span> 확인한다</h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:14px">
+      <colgroup><col style="width:5%"><col style="width:57%"><col></colgroup>
+      <thead><tr><th>#</th><th>명령 · 질의 · 화면</th><th>볼 것 (기준값)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>kubectl get apiservices | grep metrics</code> · <code>kubectl top pod -n apps</code></td><td class="it">metrics.k8s.io True · 171Mi / 170Mi</td></tr>
+        <tr><td>2</td><td>Query: <code>container_memory_working_set_bytes{namespace="apps",container="order-api"}</code></td><td class="it">kubectl top과 같은 값 (cAdvisor)</td></tr>
+        <tr><td>3</td><td>Query: <code>kube_deployment_spec_replicas{namespace="apps"}</code></td><td class="it">2 (매니페스트 값, KSM)</td></tr>
+        <tr><td>4</td><td>Query: <code>count({__name__=~".+"})</code></td><td class="it">약 6만 시계열 (실행마다 다르다)</td></tr>
+        <tr><td>5</td><td><code>kubectl -n monitoring port-forward svc/kps-grafana 3000:80</code></td><td class="it">http://localhost:3000 · admin</td></tr>
+        <tr><td>6</td><td>Grafana: Kubernetes / Compute Resources / Pod</td><td class="it">order-api 메모리 패널 ≈ 2번 값</td></tr>
+        <tr><td>7</td><td>Grafana: Node Exporter / USE Method / Cluster</td><td class="it">사용률 · 포화도 패널 (책 그림 3.2)</td></tr>
+        <tr><td>8</td><td>Grafana: etcd · Kubernetes / API server</td><td class="it">컨트롤 플레인을 고친 뒤 선이 그려진다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>container_ 는 cAdvisor, kube_ 는 kube-state-metrics, kubectl top 은 metrics-server</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>기준값(실측): cAdvisor 171.9Mi / 170.3Mi, kubectl top 171Mi / 170Mi. 둘 다 working set 값을 읽으므로 같다.</li>
+  <li>KSM: replicas 2, requests.cpu 0.2 · 0.2, Running 1 · 1.</li>
+  <li>전체 시계열 66,551(실측, 같은 절차로 다시 돌리면 5만 6천~6만 7천). 상위 다섯이 모두 _bucket(히스토그램): apiserver_watch_events_dispatch_duration_seconds_bucket 2982, apiserver_request_body_size_bytes_bucket 2816, etcd_request_duration_seconds_bucket 2560, apiserver_watch_list_duration_seconds_bucket 2470, apiserver_request_duration_seconds_bucket 2430.</li>
+  <li>보존 설정 확인: /api/v1/status/flags 에서 retention.time 3d, retention.size 4GiB.</li>
+  <li>up{job=~".*metrics-server.*"} 는 0건. metrics-server는 프로메테우스와 독립된 경로.</li>
+  <li>Grafana 비밀번호는 값 파일의 adminPassword. 대시보드가 No data면 시간 범위를 Last 15 minutes로 좁힌다.</li>
+</ul>
+</aside>
+</section>
+
+
+<section class="slide" data-label="실패 재현: Pending 파드">
+  <span class="kicker"><span class="n">04</span>FAILURE · PENDING</span>
+  <h1>requests를 노드보다 크게 주면 <span class="warn">Pending</span>에서 멈춘다</h1>
+  <div class="body">
+    <div class="split a" style="align-items:start">
+      <div class="stack">
+        <pre class="code" style="font-size:12.5px"><span class="c"># CPU 16개를 요청하는 파드 (노드 allocatable은 14)</span>
+kubectl -n apps run pending-demo --restart=Never \
+  --image=registry.k8s.io/pause:3.10 \
+  --overrides='{"spec":{"containers":[{"name":"pending-demo",
+   "image":"registry.k8s.io/pause:3.10",
+   "resources":{"requests":{"cpu":"16"}}}]}}'</pre>
+        <pre class="code" style="font-size:12.5px"><span class="c"># 프로메테우스 (약 1분 뒤)</span>
+kube_pod_status_phase{phase="Pending"} == 1
+  {namespace="apps", pod="pending-demo"}  <span class="v">1</span>
+sum by (queue)(scheduler_pending_pods) &gt; 0
+  {queue="unschedulable"}                 <span class="v">1</span>
+kube_node_status_allocatable{resource="cpu"}  <span class="v">14</span> (노드마다)</pre>
+        <pre class="code" style="font-size:12.5px">kubectl -n apps describe pod pending-demo
+Warning  FailedScheduling  default-scheduler
+  0/3 nodes are available: 1 node(s) had untolerated taint(s),
+  <span class="v">2 Insufficient cpu</span>. preemption: ... not helpful</pre>
+      </div>
+      <div class="capture"><b>캡처</b><span>Prometheus → Query<br><code>kube_pod_status_phase{phase="Pending"}</code><br>+ 터미널 describe 이벤트</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>정리: kubectl -n apps delete pod pending-demo</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>2026-09-26 실습 클러스터에서 실제로 실행한 결과다. 끝나면 파드를 지운다.</li>
+  <li>2장 "Pending일 때 노드에서 컴포넌트로 좁혀 가는 순서" 표를 그대로 따라간다. ① Pending 1개 확인 → ② 노드 allocatable 14 대 요청 16, 어느 노드에도 자리가 없다 → ③ 스케줄러는 up 1, unschedulable 큐에 1개 → ④ 이벤트가 이유를 말한다.</li>
+  <li>"1 node(s) had untolerated taint(s)": 컨트롤 플레인 노드는 일반 파드를 받지 않도록 taint가 걸려 있다. "2 Insufficient cpu": 워커 두 대는 CPU가 모자란다.</li>
+  <li>이미지는 끝까지 받지 않는다. 스케줄되지 못한 파드는 이미지를 당기기 전 단계에서 멈춘다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/" target="_blank" rel="noopener">Kubernetes · Debug Pods</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="4장 체크포인트">
+  <span class="kicker"><span class="n">04</span>CHECKPOINT</span>
+  <h1>설치가 끝났다고 말할 수 있는 <span class="hl">명령과 기대값</span></h1>
+  <div class="body">
+    <table class="compare dense" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:52%"><col></colgroup>
+      <thead><tr><th>명령</th><th>기대값</th></tr></thead>
+      <tbody>
+        <tr><td><code>kubectl get nodes</code></td><td class="it">노드 3개 Ready</td></tr>
+        <tr><td><code>kubectl -n monitoring get pods</code></td><td class="it">8개 Running (node-exporter 3개 포함)</td></tr>
+        <tr><td><code>kubectl -n monitoring get pvc</code></td><td class="it">8Gi PVC Bound</td></tr>
+        <tr><td>Prometheus → Status → Target health</td><td class="it">28개 모두 up</td></tr>
+        <tr><td><code>container_memory_working_set_bytes{namespace="apps"}</code></td><td class="it">order-api 파드 2개의 값, kubectl top과 같은 수준</td></tr>
+        <tr><td><code>kube_deployment_spec_replicas{namespace="apps"}</code></td><td class="it">2</td></tr>
+        <tr><td>Grafana → Kubernetes / Compute Resources / Pod</td><td class="it">order-api 패널에 선이 그려진다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">남은 질문: 앱이 <code>/actuator/prometheus</code>로 메트릭을 내놓고 있는데 <code>http_server_requests_seconds_count</code>를 물으면 0건이다. 왜 앱은 긁히지 않는가?</div>
+  </div>
+  <div class="foot"><span>책 3.7 정리</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>남은 질문은 실제로 확인한 상태다. 앱은 /actuator/prometheus 에 메트릭 357줄을 내놓고 있지만 프로메테우스에는 없다. 누가 "저기도 긁어라"라고 말해 주지 않았기 때문. 다음은 ServiceMonitor로 앱을 연결하고 RED를 계산한다.</li>
+</ul>
+</aside>
+</section>

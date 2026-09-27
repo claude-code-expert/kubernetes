@@ -1,0 +1,159 @@
+# kube-prometheus-stack 설치 값 (차트 89.2.2)
+#   helm upgrade --install kps prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace --version 89.2.2 -f labs/helm/kps-values.yaml --wait
+
+prometheus:
+  service:
+    # UI 는 port-forward 로 본다
+    type: ClusterIP
+  prometheusSpec:
+    # 관측 스택을 한 노드(workload=observability 라벨)에 모은다.
+    # 흩어 놓으면 관측 대상이 앓을 때 관측 스택도 같이 앓는다.
+    nodeSelector:
+      workload: observability
+
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # 실습용. 노트북 디스크를 아끼려고 짧게 잡는다.
+    # 운영에서는 보존 기간이 곧 "얼마나 오래된 장애를 되짚을 수 있는가"다.
+    retention: 3d
+    retentionSize: 4GB
+
+    # storageSpec 을 생략하면 emptyDir 이 되어 파드가 재시작되면 지표가 전부 사라진다.
+    # kind 의 기본 스토리지클래스 standard 를 쓴다.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 8Gi
+
+    resources:
+      requests: {cpu: 200m, memory: 900Mi}
+      limits: {memory: 1600Mi}
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      workload: observability
+    resources:
+      requests: {cpu: 20m, memory: 96Mi}
+      limits: {memory: 192Mi}
+  # 이 블록을 쓰면 차트 기본 설정을 통째로 대체한다.
+  # Watchdog 처리와 억제 규칙을 빠뜨리면 안 되는 이유다.
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ["namespace", "alertname"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: study-default
+      routes:
+        # Watchdog 은 "모니터링이 살아있다"를 알리는 상시 알림이다. 버린다.
+        # NodeClockNotSynchronising 은 kind 노드가 NTP 를 돌리지 않아서 늘 울린다. 실습 환경의 특성이라 버린다.
+        - receiver: "null"
+          matchers:
+            - alertname =~ "InfoInhibitor|Watchdog|NodeClockNotSynchronising"
+        - receiver: study-critical
+          matchers:
+            - severity = "critical"
+    inhibit_rules:
+      # critical 이 울리는 동안 같은 대상의 warning/info 는 숨긴다
+      - source_matchers: [severity = "critical"]
+        target_matchers: [severity =~ "warning|info"]
+        equal: ["namespace", "alertname"]
+    # 수신자 = 알림을 보낼 곳. 실습에서는 클러스터 안의 웹훅 서버(labs/k8s/alert-sink.yaml)로 보낸다.
+    # 운영에서는 같은 자리에 slack_configs · pagerduty_configs · email_configs 를 쓴다.
+    receivers:
+      - name: "null"
+      - name: study-default
+        webhook_configs:
+          - url: http://alert-sink.monitoring.svc:8080/default
+            send_resolved: true     # 해소(resolved)도 보낸다
+      - name: study-critical
+        webhook_configs:
+          - url: http://alert-sink.monitoring.svc:8080/critical
+            send_resolved: true
+
+grafana:
+  adminPassword: obs-study        # 실습용. 운영이라면 시크릿으로
+  nodeSelector:
+    workload: observability
+  service:
+    type: ClusterIP
+  defaultDashboardsTimezone: Asia/Seoul
+  # Grafana 13 은 기동할 때 내장 플러그인(prometheus · loki 포함)을 최신판으로 "업데이트"하려 한다.
+  # 이 이미지는 플러그인 폴더가 읽기 전용이라 업데이트가 실패하고, 그 과정에서 내려간 플러그인이
+  # 다시 올라오지 않는다. 결과: 모든 대시보드가 "Datasource … was not found" · No data.
+  # 자동 업데이트를 끄면 이미지에 든 버전을 그대로 쓴다.
+  grafana.ini:
+    plugins:
+      preinstall_auto_update: false
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard    # 이 라벨이 붙은 ConfigMap 을 대시보드로 인식한다
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      searchNamespace: ALL
+  # 데이터소스는 이름이 아니라 uid 로 참조한다.
+  # 대시보드 JSON 이 uid 를 박아 두므로 이름을 바꿔도 패널이 깨지지 않는다.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      # 그라파나 파드에서 접근하는 주소다. 브라우저 주소가 아니다.
+      url: http://loki-gateway.logging.svc.cluster.local
+      jsonData:
+        maxLines: 1000
+  # Grafana 13 은 대시보드 몇 개를 열면 RSS 가 650Mi 안팎까지 오른다(실측).
+  # 384Mi 에서는 OOMKilled 로 재시작을 반복하고, 브라우저에는 "Failed to fetch" 만 뜬다.
+  resources:
+    requests: {cpu: 50m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+prometheusOperator:
+  nodeSelector:
+    workload: observability
+
+kube-state-metrics:
+  nodeSelector:
+    workload: observability
+
+# ── 컨트롤 플레인 타깃 ────────────────────────────────────────────────
+# 아래 넷은 차트가 기본으로 켜 두지만, kind 의 기본 설정에서는 전부 DOWN 이 된다.
+# labs/kind-cluster.yaml 에서 메트릭 주소를 0.0.0.0 으로 열어 두었으므로 처음부터 up 이다.
+kubeControllerManager:
+  enabled: true
+  service: {port: 10257, targetPort: 10257}
+  serviceMonitor:
+    # HTTPS 를 끄지 않는다. kind 의 인증서는 노드 IP 를 SAN 에 갖고 있지 않으므로
+    # 검증만 건너뛴다.
+    https: true
+    insecureSkipVerify: true
+kubeScheduler:
+  enabled: true
+  service: {port: 10259, targetPort: 10259}
+  serviceMonitor:
+    https: true
+    insecureSkipVerify: true
+kubeEtcd:
+  enabled: true
+  # 2379 는 상호 TLS 가 필요한 클라이언트 포트다. 메트릭 전용 2381 을 쓴다.
+  service: {port: 2381, targetPort: 2381}
+  serviceMonitor:
+    scheme: http
+kubeProxy:
+  enabled: true
+  service: {port: 10249, targetPort: 10249}

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t7 d7">
+  <title id="t7">프로메테우스 아키텍처</title>
+  <desc id="d7">프로메테우스 서버는 쿠버네티스 API에서 대상 목록을 받아 각 대상의 메트릭을 주기적으로 가져와 TSDB에 저장한다. 알림 규칙을 평가해 Alertmanager로 보내고, Grafana는 PromQL로 값을 조회한다. 짧게 끝나는 배치 작업은 Pushgateway에 값을 밀어 넣고 프로메테우스가 그것을 가져간다.</desc>
+  <defs>
+    <marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
+    <marker id="a7t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
+    <marker id="a7y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B5761F"/></marker>
+  </defs>
+  <style>
+    .t{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#24292A}
+    .s{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#5A6867}
+    .m{font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;fill:#5A6867}
+    .box{fill:#FFFFFF;stroke:#A7B5AC;stroke-width:2}
+    .teal{fill:#E0EFEB;stroke:#0F766E;stroke-width:2}
+    .in{fill:#FFFFFF;stroke:#0F766E;stroke-width:1.5}
+    .yel{fill:#FFF1DE;stroke:#B5761F;stroke-width:2}
+    .blu{fill:#E7F0FF;stroke:#1D5FBF;stroke-width:2}
+  </style>
+  <rect width="1600" height="900" fill="#FFFFFF"/>
+
+  <!-- service discovery source -->
+  <rect class="blu" x="40" y="40" width="400" height="110" rx="8"/>
+  <text class="t" x="64" y="88" font-size="30" font-weight="700">쿠버네티스 API 서버</text>
+  <text class="s" x="64" y="126" font-size="23">파드·서비스·엔드포인트 목록</text>
+
+  <!-- targets -->
+  <text class="t" x="40" y="210" font-size="24" font-weight="700" style="fill:#5A6867">스크레이프 대상 (타깃)</text>
+  <rect class="box" x="40" y="228" width="400" height="80" rx="8"/>
+  <text class="t" x="64" y="264" font-size="26" font-weight="700">node-exporter</text>
+  <text class="m" x="64" y="294" font-size="19">노드 자원 · :9100/metrics</text>
+  <rect class="box" x="40" y="318" width="400" height="80" rx="8"/>
+  <text class="t" x="64" y="354" font-size="26" font-weight="700">kubelet · cAdvisor</text>
+  <text class="m" x="64" y="384" font-size="19">/metrics/cadvisor</text>
+  <rect class="box" x="40" y="408" width="400" height="80" rx="8"/>
+  <text class="t" x="64" y="444" font-size="26" font-weight="700">kube-state-metrics</text>
+  <text class="m" x="64" y="474" font-size="19">오브젝트 상태 · /metrics</text>
+  <rect class="box" x="40" y="498" width="400" height="80" rx="8"/>
+  <text class="t" x="64" y="534" font-size="26" font-weight="700">order-api</text>
+  <text class="m" x="64" y="564" font-size="19">/actuator/prometheus</text>
+
+  <!-- pushgateway -->
+  <rect class="box" x="40" y="660" width="180" height="100" rx="8"/>
+  <text class="t" x="60" y="702" font-size="24" font-weight="700">배치 잡</text>
+  <text class="s" x="60" y="738" font-size="20">금방 끝남</text>
+  <rect class="box" x="270" y="660" width="170" height="100" rx="8" stroke-dasharray="7 5"/>
+  <text class="t" x="286" y="702" font-size="22" font-weight="700">Pushgateway</text>
+  <text class="s" x="286" y="738" font-size="20">값을 대신 보관</text>
+  <path d="M224 710 L264 710" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a7)"/>
+  <text class="m" x="222" y="694" font-size="17">push</text>
+
+  <!-- prometheus server -->
+  <rect class="teal" x="560" y="40" width="460" height="720" rx="12"/>
+  <text class="t" x="588" y="94" font-size="34" font-weight="700" style="fill:#0B5A54">Prometheus 서버</text>
+
+  <rect class="in" x="588" y="120" width="404" height="110" rx="8"/>
+  <text class="t" x="612" y="164" font-size="25" font-weight="700" style="fill:#0B5A54">① 서비스 디스커버리</text>
+  <text class="s" x="612" y="202" font-size="22">긁을 대상 목록을 자동으로 갱신</text>
+
+  <rect class="in" x="588" y="250" width="404" height="110" rx="8"/>
+  <text class="t" x="612" y="294" font-size="25" font-weight="700" style="fill:#0B5A54">② 스크레이프</text>
+  <text class="s" x="612" y="332" font-size="22">30초마다 각 대상에서 가져옴 (pull)</text>
+
+  <rect class="in" x="588" y="380" width="404" height="110" rx="8"/>
+  <text class="t" x="612" y="424" font-size="25" font-weight="700" style="fill:#0B5A54">③ TSDB 저장</text>
+  <text class="s" x="612" y="462" font-size="22">시계열로 로컬 디스크에 보존</text>
+
+  <rect class="in" x="588" y="510" width="404" height="110" rx="8"/>
+  <text class="t" x="612" y="554" font-size="25" font-weight="700" style="fill:#0B5A54">④ 규칙 평가</text>
+  <text class="s" x="612" y="592" font-size="22">알림 조건을 주기적으로 계산</text>
+
+  <rect class="in" x="588" y="640" width="404" height="96" rx="8"/>
+  <text class="t" x="612" y="682" font-size="25" font-weight="700" style="fill:#0B5A54">⑤ PromQL · HTTP API</text>
+  <text class="s" x="612" y="716" font-size="22">저장된 값을 질의로 내준다</text>
+
+  <path d="M444 95 L582 170" stroke="#1D5FBF" stroke-width="2.5" fill="none" marker-end="url(#a7)"/>
+  <path d="M444 268 L582 290" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a7t)"/>
+  <path d="M444 358 L582 305" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a7t)"/>
+  <path d="M444 448 L582 318" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a7t)"/>
+  <path d="M444 538 L582 332" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a7t)"/>
+  <path d="M444 700 L582 345" stroke="#0F766E" stroke-width="2.5" stroke-dasharray="7 5" fill="none" marker-end="url(#a7t)"/>
+
+  <!-- consumers -->
+  <rect class="yel" x="1110" y="470" width="270" height="150" rx="8"/>
+  <text class="t" x="1134" y="518" font-size="28" font-weight="700" style="fill:#8A5813">Alertmanager</text>
+  <text class="s" x="1134" y="556" font-size="22" style="fill:#6B4410">묶고 · 억제하고</text>
+  <text class="s" x="1134" y="590" font-size="22" style="fill:#6B4410">담당자에게 보냄</text>
+  <path d="M996 565 L1104 545" stroke="#B5761F" stroke-width="2.5" fill="none" marker-end="url(#a7y)"/>
+  <text class="m" x="1010" y="530" font-size="18" style="fill:#8A5813">발화</text>
+
+  <rect class="box" x="1420" y="485" width="150" height="120" rx="8"/>
+  <text class="t" x="1440" y="532" font-size="24" font-weight="700">Slack</text>
+  <text class="t" x="1440" y="572" font-size="24" font-weight="700">메일</text>
+  <path d="M1384 545 L1414 545" stroke="#B5761F" stroke-width="2.5" fill="none" marker-end="url(#a7y)"/>
+
+  <rect class="box" x="1110" y="640" width="270" height="120" rx="8"/>
+  <text class="t" x="1134" y="688" font-size="28" font-weight="700">Grafana</text>
+  <text class="s" x="1134" y="726" font-size="22">대시보드 · PromQL</text>
+  <path d="M996 690 L1104 695" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a7)"/>
+
+  <text class="t" x="1110" y="820" font-size="22" style="fill:#5A6867">화살표 = 데이터가 흐르는 방향</text>
+  <text class="t" x="1110" y="856" font-size="22" style="fill:#5A6867">점선 = 필요할 때만 쓰는 구성요소</text>
+</svg>

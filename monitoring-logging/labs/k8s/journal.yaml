@@ -1,0 +1,193 @@
+# journal-api 와 레디스. 관측 대상 앱 ① (Node.js · prom-client 로 /metrics 노출, JSON 로그)
+#   kubectl apply -f labs/k8s/journal.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: journal
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: journal-config
+  namespace: journal
+data:
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: journal-secret
+  namespace: journal
+type: Opaque
+stringData:
+  REDIS_PASSWORD: "s3cr3t-pass"     # 실습용 값. 실제 비밀번호는 깃에 올리지 않는다
+---
+# ── 레디스: journal-api 의 저장소 ─────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: journal                      # 스테이트풀셋의 serviceName 과 같아야 한다
+  labels:
+    app: redis
+spec:
+  clusterIP: None                  # 헤드리스 — redis-0.redis 라는 고정 DNS 이름을 만든다
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: journal
+spec:
+  serviceName: redis               # 헤드리스 서비스 이름. 파드 DNS 는 <파드>.<이 이름> 이 된다
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999              # 이미지 안의 redis 사용자
+        fsGroup: 999                # PVC 의 소유자를 이 그룹으로 바꿔 준다
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: redis
+          image: redis:8.2-alpine
+          imagePullPolicy: IfNotPresent
+          # $(VAR) 는 쿠버네티스가 같은 컨테이너의 env 에서 치환한다. 셸이 하는 일이 아니다.
+          args: ["--requirepass", "$(REDIS_PASSWORD)", "--appendonly", "yes"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: journal-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:                    
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data     # appendonly 파일이 여기 쌓인다
+  # 디플로이먼트에는 없는 필드. 파드마다 PVC 를 하나씩 만들어 붙인다.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # storageClassName 을 생략하면 클러스터의 기본 스토리지클래스를 쓴다.
+        # kind 는 local-path-provisioner 의 standard 가 기본이다: kubectl get sc
+        resources:
+          requests:
+            storage: 1Gi
+---
+# ── journal-api ─────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-api
+  namespace: journal
+  labels:
+    app: journal-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: journal-api
+  template:
+    metadata:
+      labels:
+        app: journal-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      # 파드를 워커 두 대에 고르게 편다
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: journal-api
+      containers:
+        - name: api
+          image: journal-api:v1
+          imagePullPolicy: IfNotPresent      # kind load 로 넣은 로컬 이미지
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 192Mi}
+          env:
+            - name: APP_VERSION
+              value: "v1"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef: {name: journal-config, key: LOG_LEVEL}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: journal-secret, key: REDIS_PASSWORD}
+            - name: REDIS_URL
+              value: "redis://default:$(REDIS_PASSWORD)@redis-0.redis:6379"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 1
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: journal-api
+  namespace: journal
+  labels:
+    # ServiceMonitor 가 이 라벨(metadata.labels)로 서비스를 찾는다.
+    # spec.selector 는 "어느 파드를 묶을까", metadata.labels 는 "이 서비스는 누구인가".
+    app: journal-api
+spec:
+  type: ClusterIP
+  selector:
+    app: journal-api
+  ports:
+    - name: http          # ServiceMonitor 의 endpoints[].port 가 이 이름을 가리킨다
+      port: 8080
+      targetPort: http

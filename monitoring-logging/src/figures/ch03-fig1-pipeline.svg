@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t1 d1">
+  <title id="t1">관측 파이프라인 전체 지도</title>
+  <desc id="d1">메트릭은 프로메테우스가 긁어 가 시계열 DB에 저장하고 그라파나와 알림매니저가 쓴다. 로그는 Alloy가 모아 Loki에 저장하고 그라파나 Explore에서 조회한다.</desc>
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
+    <marker id="a1t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
+    <marker id="a1b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1D5FBF"/></marker>
+  </defs>
+  <style>
+    .t{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#24292A;font-weight:700}
+    .s{font-family:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;fill:#5A6867}
+    .m{font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;fill:#5A6867}
+    .box{fill:#FFFFFF;stroke:#A7B5AC;stroke-width:2}
+    .boxT{fill:#E0EFEB;stroke:#0F766E;stroke-width:2}
+    .boxB{fill:#E7F0FF;stroke:#1D5FBF;stroke-width:2}
+    .col{font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;font-size:26px;font-weight:700;fill:#6F7C79}
+    .lane{font-family:'SFMono-Regular',Consolas,monospace;font-size:22px;font-weight:700;letter-spacing:2px}
+    .ch{font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;font-size:24px;font-weight:700;fill:#B5761F}
+  </style>
+  <rect width="1600" height="900" fill="#FFFFFF"/>
+
+  <text class="col" x="40" y="46">① 신호가 생기는 곳</text>
+  <text class="col" x="560" y="46">② 수집</text>
+  <text class="col" x="930" y="46">③ 저장</text>
+  <text class="col" x="1270" y="46">④ 활용</text>
+  <line x1="30" y1="68" x2="1570" y2="68" stroke="#D8DDD6" stroke-width="2"/>
+
+  <text class="lane" x="40" y="104" fill="#0F766E">METRICS · 숫자</text>
+
+  <rect class="box" x="40" y="120" width="440" height="96" rx="8"/>
+  <text class="t" x="62" y="160" font-size="30">노드</text>
+  <text class="m" x="62" y="198" font-size="22">node-exporter</text>
+  <rect class="box" x="40" y="226" width="440" height="96" rx="8"/>
+  <text class="t" x="62" y="266" font-size="30">컨테이너 사용량</text>
+  <text class="m" x="62" y="304" font-size="22">kubelet 안의 cAdvisor</text>
+  <rect class="box" x="40" y="332" width="440" height="96" rx="8"/>
+  <text class="t" x="62" y="372" font-size="30">오브젝트 상태</text>
+  <text class="m" x="62" y="410" font-size="22">kube-state-metrics</text>
+  <rect class="box" x="40" y="438" width="440" height="96" rx="8"/>
+  <text class="t" x="62" y="478" font-size="30">애플리케이션</text>
+  <text class="m" x="62" y="516" font-size="22">/actuator/prometheus</text>
+
+  <rect class="boxT" x="560" y="210" width="290" height="236" rx="8"/>
+  <text class="t" x="584" y="260" font-size="34" style="fill:#0B5A54">Prometheus</text>
+  <text class="t" x="584" y="304" font-size="28" style="fill:#0B5A54">스크레이프 <tspan class="m" font-size="22" style="fill:#0B5A54">scrape</tspan></text>
+  <text class="s" x="584" y="352" font-size="24">30초마다</text>
+  <text class="s" x="584" y="386" font-size="24">대상에서 가져온다</text>
+  <text class="m" x="584" y="424" font-size="22">(pull)</text>
+  <path d="M556 250 L486 170" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a1t)"/>
+  <path d="M556 300 L486 274" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a1t)"/>
+  <path d="M556 356 L486 380" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a1t)"/>
+  <path d="M556 410 L486 486" stroke="#0F766E" stroke-width="2.5" fill="none" marker-end="url(#a1t)"/>
+
+  <rect class="boxT" x="930" y="256" width="260" height="150" rx="8"/>
+  <text class="t" x="952" y="302" font-size="32" style="fill:#0B5A54">TSDB</text>
+  <text class="s" x="952" y="344" font-size="24">시계열 데이터베이스</text>
+  <text class="s" x="952" y="380" font-size="24">보존 3일 · 4GB</text>
+  <path d="M854 330 L924 330" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a1)"/>
+
+  <rect class="box" x="1270" y="120" width="300" height="130" rx="8"/>
+  <text class="t" x="1292" y="168" font-size="30">Grafana</text>
+  <text class="s" x="1292" y="206" font-size="24">대시보드 · 사람이 볼 때</text>
+  <rect class="box" x="1270" y="290" width="300" height="190" rx="8"/>
+  <text class="t" x="1292" y="336" font-size="30">알림 규칙</text>
+  <text class="t" x="1292" y="376" font-size="26">→ Alertmanager</text>
+  <text class="s" x="1292" y="418" font-size="24">사람이 안 볼 때</text>
+  <text class="s" x="1292" y="454" font-size="24">Slack · 메일로 보냄</text>
+  <path d="M1194 300 L1264 210" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a1)"/>
+  <path d="M1194 360 L1264 382" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a1)"/>
+
+  <line x1="30" y1="590" x2="1570" y2="590" stroke="#D8DDD6" stroke-width="2" stroke-dasharray="8 8"/>
+
+  <text class="lane" x="40" y="630" fill="#1D5FBF">LOGS · 사건 기록</text>
+  <rect class="box" x="40" y="648" width="440" height="150" rx="8"/>
+  <text class="t" x="62" y="692" font-size="30">컨테이너 stdout</text>
+  <text class="s" x="62" y="732" font-size="24">노드 /var/log/pods 파일</text>
+  <text class="s" x="62" y="768" font-size="24">파드가 지워지면 함께 삭제</text>
+
+  <rect class="boxB" x="560" y="648" width="290" height="150" rx="8"/>
+  <text class="t" x="584" y="696" font-size="34" style="fill:#1D5FBF">Alloy</text>
+  <text class="s" x="584" y="736" font-size="24">따라 읽고</text>
+  <text class="s" x="584" y="770" font-size="24">라벨 붙여 전송</text>
+  <path d="M484 722 L554 722" stroke="#1D5FBF" stroke-width="2.5" fill="none" marker-end="url(#a1b)"/>
+
+  <rect class="boxB" x="930" y="648" width="260" height="150" rx="8"/>
+  <text class="t" x="952" y="696" font-size="34" style="fill:#1D5FBF">Loki</text>
+  <text class="s" x="952" y="736" font-size="24">라벨만 색인</text>
+  <text class="s" x="952" y="770" font-size="24">본문은 압축 저장</text>
+  <path d="M854 722 L924 722" stroke="#1D5FBF" stroke-width="2.5" fill="none" marker-end="url(#a1b)"/>
+
+  <rect class="box" x="1270" y="648" width="300" height="150" rx="8"/>
+  <text class="t" x="1292" y="696" font-size="30">Grafana Explore</text>
+  <text class="s" x="1292" y="736" font-size="24">LogQL로 조회</text>
+  <text class="s" x="1292" y="770" font-size="24">메트릭과 나란히</text>
+  <path d="M1194 722 L1264 722" stroke="#1D5FBF" stroke-width="2.5" fill="none" marker-end="url(#a1b)"/>
+
+</svg>

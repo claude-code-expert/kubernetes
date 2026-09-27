@@ -1,0 +1,476 @@
+
+<!-- ===================================================================
+  CHAPTER 3 · 도구와 프로메테우스 구조 (책 3.6 ~ 3.7 전반)
+=================================================================== -->
+
+<section class="slide section-lead" data-label="3장 리드">
+  <div class="body">
+    <div class="quest">CHAPTER · 03 · 책 3.6 ~ 3.7</div>
+    <div class="secnum">03</div>
+    <h1>메트릭을 모으는 도구와 <span class="hl">프로메테우스의 동작 방식</span></h1>
+    <p class="sub">여러 출처의 메트릭을 한곳에 모으는 도구를 비교하고, 프로메테우스가 대상을 찾아 긁어 오고 저장하는 구조를 본다.</p>
+  </div>
+  <div class="foot"><span>개념 · 3.6 모니터링 툴 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>2장 끝의 두 질문에 답한다. 어떤 도구로 모으나, 프로메테우스는 수십 개의 타깃을 어떻게 찾아서 긁어 오나.</li>
+  <li>책 3.7의 설치 절차는 4장에서 다룬다. 여기서는 구조와 구성요소까지.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="3장 용어 ① 도구">
+  <span class="kicker"><span class="n">03</span>GLOSSARY · 1/2</span>
+  <h1>용어 ① <span class="hl">모니터링 도구</span></h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>InfluxDB</td><td>InfluxDB · TICK 스택의 저장소</td><td>시계열 DB. TICK = Telegraf 수집 · InfluxDB 저장 · Chronograf 시각화 · Kapacitor 알림</td></tr>
+        <tr><td>Datadog</td><td>Datadog</td><td>SaaS 전용 모니터링. 노드마다 에이전트를 두고 데이터를 벤더 저장소로 보낸다</td></tr>
+        <tr><td>Sysdig Monitor</td><td>Sysdig Monitor</td><td>상용 모니터링. SaaS와 설치형(온프렘) 모두 제공. 프로메테우스 메트릭 수집·질의</td></tr>
+        <tr><td>SaaS</td><td>Software as a Service</td><td>서비스형 소프트웨어. 설치·운영은 벤더가 하고 사용자는 구독해서 쓴다</td></tr>
+        <tr><td>관리형 서비스</td><td>Managed service</td><td>클라우드 사업자가 운영하는 서비스. 예: CloudWatch Container Insights, Azure Monitor</td></tr>
+        <tr><td>CNCF</td><td>Cloud Native Computing Foundation</td><td>클라우드 네이티브 오픈소스 재단. 쿠버네티스·프로메테우스가 졸업(Graduated) 프로젝트</td></tr>
+        <tr><td>다차원 데이터 모델</td><td>Multidimensional data model</td><td>메트릭 하나를 여러 라벨(차원)로 나눠 저장하는 방식. 라벨 조합마다 별도 시계열이 된다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>오픈소스 · 상용 SaaS · 클라우드 관리형</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.6이 소개하는 도구: 프로메테우스, InfluxDB, 데이터독, 시스딕, 클라우드 프로바이더 도구(GCP·Azure·AWS).</li>
+  <li>다차원 데이터 모델은 책 3.7이 프로메테우스와 쿠버네티스가 잘 맞는 이유로 든다. 쿠버네티스의 라벨 붙이는 방식과 같다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://www.cncf.io/projects/prometheus/" target="_blank" rel="noopener">CNCF · Prometheus</a></li>
+<li><a href="https://prometheus.io/docs/concepts/data_model/" target="_blank" rel="noopener">Prometheus · Data model</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="3장 용어 ② 프로메테우스 구조">
+  <span class="kicker"><span class="n">03</span>GLOSSARY · 2/2</span>
+  <h1>용어 ② <span class="hl">프로메테우스 구조</span></h1>
+  <div class="body">
+    <table class="compare gloss">
+      <colgroup><col class="c1"><col class="c2"><col></colgroup>
+      <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td>익스포터</td><td>Exporter</td><td>다른 시스템의 상태를 읽어 프로메테우스 형식으로 내놓는 프로그램. 예: node-exporter</td></tr>
+        <tr><td>노출 형식</td><td>Exposition format</td><td>메트릭을 HTTP로 보여 주는 텍스트 형식. <code># HELP</code>·<code># TYPE</code> 줄과 <code>이름{라벨} 값</code> 줄</td></tr>
+        <tr><td>샘플</td><td>Sample</td><td>저장의 최소 단위. float64 값 하나 + 밀리초 단위 시각</td></tr>
+        <tr><td>서비스 디스커버리</td><td>Service discovery</td><td>긁을 대상 목록을 외부(쿠버네티스 API 등)에서 자동으로 받아 오는 기능</td></tr>
+        <tr><td>Pushgateway</td><td>Prometheus Pushgateway</td><td>금방 끝나는 배치 잡이 값을 밀어 넣어 두는 곳. 프로메테우스가 대신 긁는다</td></tr>
+        <tr><td>오퍼레이터</td><td>Operator</td><td>특정 소프트웨어의 설치·설정을 쿠버네티스 리소스로 관리해 주는 컨트롤러</td></tr>
+        <tr><td>CRD</td><td>Custom Resource Definition</td><td>쿠버네티스에 새 리소스 종류를 추가하는 정의. 예: ServiceMonitor</td></tr>
+        <tr><td>ServiceMonitor</td><td>ServiceMonitor (CRD)</td><td>"라벨이 X인 서비스의 포트 Y를 긁어라"를 적는 리소스</td></tr>
+        <tr><td>PrometheusRule</td><td>PrometheusRule (CRD)</td><td>알림 규칙과 기록 규칙을 담는 리소스</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>수집 대상 · 형식 · 발견 · 관리 방식</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>샘플 정의는 프로메테우스 공식 용어집 기준: float64 값과 밀리초 정밀도 타임스탬프.</li>
+  <li>Pushgateway 공식 용어집: 배치 잡의 메트릭을 잡이 끝난 뒤에도 긁을 수 있게 보관한다.</li>
+  <li>오퍼레이터와 CRD는 이 장 뒤쪽에서 실제 클러스터의 CRD 목록으로 다시 본다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/introduction/glossary/" target="_blank" rel="noopener">Prometheus · Glossary</a></li>
+<li><a href="https://prometheus.io/docs/instrumenting/exposition_formats/" target="_blank" rel="noopener">Prometheus · Exposition formats</a></li>
+<li><a href="https://prometheus-operator.dev/docs/getting-started/design/" target="_blank" rel="noopener">Prometheus Operator · Design</a></li>
+</ul></details>
+</aside>
+</section>
+
+
+<section class="slide" data-label="라벨이 쿠버네티스와 같다" data-cap="labels">
+  <span class="kicker"><span class="n">03</span>WHY PROMETHEUS · 책 3.7</span>
+  <h1>프로메테우스의 라벨에 <span class="hl">쿠버네티스 정보가 그대로</span> 붙는다</h1>
+  <div class="body">
+    <pre class="code" style="font-size:14px"><span class="c"># 프로메테우스에 저장된 order-api 메모리 시계열 하나의 라벨 (실측, 일부)</span>
+container_memory_working_set_bytes{
+  <span class="k">namespace</span>=<span class="v">"apps"</span>,  <span class="k">pod</span>=<span class="v">"order-api-77bf967968-g247f"</span>,  <span class="k">container</span>=<span class="v">"order-api"</span>,
+  <span class="k">node</span>=<span class="v">"obs-worker"</span>,  <span class="k">image</span>=<span class="v">"docker.io/library/order-api:v1"</span>,
+  <span class="k">job</span>=<span class="v">"kubelet"</span>,  <span class="k">metrics_path</span>=<span class="v">"/metrics/cadvisor"</span>,  <span class="k">instance</span>=<span class="v">"172.20.0.2:10250"</span> }</pre>
+    <div class="grid3">
+      <div class="card teal"><h3>쿠버네티스에서 온 라벨</h3><p><code>namespace</code> · <code>pod</code> · <code>container</code> · <code>node</code>. 쿠버네티스에서 쓰던 이름으로 그대로 나눠 본다.</p></div>
+      <div class="card"><h3>수집 과정에서 붙은 라벨</h3><p><code>job</code>(어느 수집 설정인가) · <code>instance</code>(어느 주소에서 긁었나) · <code>metrics_path</code>.</p></div>
+      <div class="card"><h3>그래서 가능한 질의</h3><p>"apps 네임스페이스 전체", "obs-worker 노드 위의 컨테이너"처럼 라벨로 골라 합친다.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>책 3.7: 프로메테우스는 쿠버네티스의 레이블, 서비스 디스커버리, 메타데이터와 잘 맞는 메트릭 모니터링 도구다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>라벨 세트는 실습 클러스터 프로메테우스에서 조회한 실제 값이다(2026-09-26). id, name, endpoint, service 라벨은 생략했다.</li>
+  <li>이 라벨들은 서비스 디스커버리가 쿠버네티스 API에서 받아 온 메타데이터를 스크레이프할 때 붙인 것이다. 앱이나 cAdvisor가 직접 "obs-worker"를 아는 게 아니다.</li>
+  <li>책 3.7: 프로메테우스는 구글 내부 시스템 보그몬(Borgmon)의 키/값 다차원 데이터 모델에서 아이디어를 가져왔고, 쿠버네티스가 레이블을 쓰는 방식과 매우 비슷하다.</li>
+</ul>
+</aside>
+</section>
+
+<section class="slide" data-label="노출 형식과 데이터 모델">
+  <span class="kicker"><span class="n">03</span>DATA MODEL · 책 3.7</span>
+  <h1>메트릭은 <span class="hl">사람이 읽을 수 있는 텍스트</span>로 노출된다</h1>
+  <div class="body">
+    <div class="split" style="grid-template-columns:1.25fr .75fr">
+      <pre class="code" style="font-size:13px"><span class="c"># node-exporter의 /metrics 응답 (실측, 일부)</span>
+<span class="k"># HELP node_cpu_seconds_total Seconds the CPUs spent in each mode.</span>
+<span class="k"># TYPE node_cpu_seconds_total counter</span>
+node_cpu_seconds_total{cpu="0",mode="idle"}   <span class="v">1.76328028e+06</span>
+node_cpu_seconds_total{cpu="0",mode="iowait"} <span class="v">59525.98</span>
+node_cpu_seconds_total{cpu="0",mode="irq"}    <span class="v">0</span>
+node_cpu_seconds_total{cpu="0",mode="nice"}   <span class="v">0</span>
+<span class="c">...</span></pre>
+      <table class="compare">
+        <thead><tr><th>부분</th><th>뜻</th></tr></thead>
+        <tbody>
+          <tr><td># HELP</td><td>메트릭 설명</td></tr>
+          <tr><td># TYPE</td><td>메트릭 타입. 여기서는 counter(계속 증가)</td></tr>
+          <tr><td>이름</td><td><code>node_cpu_seconds_total</code>: CPU가 쓴 누적 초</td></tr>
+          <tr><td>{라벨}</td><td><code>cpu</code> 번호 × <code>mode</code>(idle, iowait …) 조합마다 별도 시계열</td></tr>
+          <tr><td>값</td><td>긁는 순간의 숫자. 프로메테우스가 시각을 붙여 샘플로 저장</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span># HELP · # TYPE · 이름{라벨} 값</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>node-exporter 서비스에 port-forward 한 뒤 curl localhost:9100/metrics 로 받은 실제 응답이다. 책 3.7에 실린 예시와 형식이 같다.</li>
+  <li>이 텍스트를 내놓기만 하면 무엇이든 프로메테우스 수집 대상이 된다. 쿠버네티스 구성요소, Nginx, Traefik, Istio, Linkerd 등이 이미 이 형식으로 메트릭을 내놓는다(책 3.7).</li>
+  <li>CPU 사용률은 이 counter를 그대로 보지 않고 rate()로 초당 증가량을 구해 계산한다. mode="idle"의 증가율을 1에서 빼면 사용률이다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/instrumenting/exposition_formats/" target="_blank" rel="noopener">Prometheus · Exposition formats</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="메트릭 타입 4종">
+  <span class="kicker"><span class="n">03</span>METRIC TYPES</span>
+  <h1>메트릭 타입 4가지와 <span class="hl">각각을 읽는 방법</span></h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:13%"><col style="width:30%"><col style="width:30%"><col></colgroup>
+      <thead><tr><th>타입</th><th>값의 성질</th><th>예</th><th>읽는 방법</th></tr></thead>
+      <tbody>
+        <tr><td>Counter</td><td class="it">늘기만 한다. 재시작하면 0부터</td><td><code>node_cpu_seconds_total</code></td><td class="it"><code>rate()</code>로 초당 증가량을 본다</td></tr>
+        <tr><td>Gauge</td><td class="it">오르내린다. 지금 상태</td><td><code>node_memory_MemAvailable_bytes</code></td><td class="it">값을 그대로 본다. <code>rate()</code>를 쓰지 않는다</td></tr>
+        <tr><td>Histogram</td><td class="it">값을 구간(버킷)별로 센 누적 개수</td><td><code>http_server_requests_seconds_bucket</code></td><td class="it"><code>histogram_quantile()</code>로 P99</td></tr>
+        <tr><td>Summary</td><td class="it">앱이 분위수를 미리 계산해 내놓음</td><td>(order-api는 쓰지 않음)</td><td class="it">파드끼리 평균 내면 틀린 값</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">히스토그램은 파드마다 버킷을 합친 뒤 분위수를 계산할 수 있다. 서머리는 이미 계산된 분위수라 합칠 수 없다. 파드가 여러 개인 쿠버네티스에서는 히스토그램을 쓴다.</div>
+  </div>
+  <div class="foot"><span>counter는 rate로, gauge는 그대로, histogram은 histogram_quantile로</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>프로메테우스 공식 가이드: 늘기만 하는 값은 counter, 오르내리는 값은 gauge. counter는 rate()로 분석하고, gauge는 상태의 스냅숏이라 rate()를 쓰지 않는다.</li>
+  <li>공식 문서 예: avg(http_request_duration_seconds{quantile="0.95"}) 는 틀렸다(BAD). histogram_quantile(0.95, sum(rate(..._bucket[5m])) by (le)) 가 맞다.</li>
+  <li>order-api의 /actuator/prometheus 에는 http_server_requests_seconds 가 # TYPE ... histogram 으로 나온다(실측). 5장에서 이 버킷으로 P99를 계산한다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/concepts/metric_types/" target="_blank" rel="noopener">Prometheus · Metric types</a></li>
+<li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">Prometheus · Histograms and summaries</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="프로메테우스 아키텍처">
+  <span class="kicker"><span class="n">03</span>ARCHITECTURE · 책 그림 3.1</span>
+  <h1>프로메테우스 서버 안에서 <span class="hl">다섯 가지 일</span>이 일어난다</h1>
+  <div class="body fig">{{FIG:ch03-fig7-prometheus-arch.svg}}</div>
+  <div class="foot"><span>① 대상 찾기 → ② 가져오기 → ③ 저장 → ④ 규칙 평가 → ⑤ 질의 응답</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>① 쿠버네티스 API에서 파드·서비스·엔드포인트 목록을 받아 긁을 대상을 정한다. 파드가 새로 뜨거나 사라지면 목록이 자동으로 바뀐다.</li>
+  <li>② 30초마다 각 대상의 /metrics 류 주소를 HTTP로 요청해 값을 가져온다(pull).</li>
+  <li>③ 가져온 값에 시각을 붙여 TSDB에 쌓는다.</li>
+  <li>④ 알림 규칙을 주기적으로 계산하고 조건이 맞으면 Alertmanager로 보낸다. Alertmanager가 묶고 억제해서 Slack·메일로 전달한다(책 그림 3.1은 슬랙·페이저듀티).</li>
+  <li>⑤ Grafana 같은 도구가 PromQL로 질의하면 저장된 값을 계산해 돌려준다.</li>
+  <li>Pushgateway는 긁으러 갈 때쯤 이미 끝나 있는 배치 잡을 위한 선택 구성요소다. 이 클러스터에는 설치하지 않았다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/introduction/overview/" target="_blank" rel="noopener">Prometheus · Overview (Architecture)</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="pull 방식의 장단점">
+  <span class="kicker"><span class="n">03</span>PULL MODEL</span>
+  <h1>가져오는 방식(pull)은 <span class="hl">대상이 죽었는지</span>를 수집 자체로 안다</h1>
+  <div class="body">
+    <div class="split a">
+      <div class="stack">
+        <pre class="code" style="font-size:14px"><span class="c"># 긁기에 성공하면 1, 실패하면 0 (실측)</span>
+up{job="order-api", pod="order-api-…-g247f"}  <span class="v">1</span>
+up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
+        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 응답이 없으면 0이 되므로 "죽었다"와 "한가하다"가 구분된다.</p></div>
+      </div>
+      <div class="stack">
+        <div class="card"><h3>대가 ①</h3><p>프로메테우스가 대상에 <b>네트워크로 닿아야</b> 한다. 방화벽·네트워크 정책이 막으면 수집이 안 된다.</p></div>
+        <div class="card"><h3>대가 ②</h3><p>수십 초 만에 끝나는 <b>배치 잡</b>은 긁으러 갈 때 이미 없다. 이때는 Pushgateway에 값을 남긴다.</p></div>
+        <div class="card"><h3>대가 ③</h3><p>30초 간격 샘플이라 <b>요청 하나하나를 세는 과금</b>처럼 100% 정확도가 필요한 용도에는 맞지 않는다.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>대상은 메트릭을 보여 주기만 하고, 주기와 목록은 프로메테우스가 정한다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>up 값은 실습 클러스터에서 조회한 실제 결과다. order-api 파드 두 개 모두 1.</li>
+  <li>푸시 방식에서는 값이 안 오는 이유가 "앱이 죽었다"인지 "보낼 게 없다"인지 수집 쪽이 구분하지 못한다.</li>
+  <li>프로메테우스 공식 개요: 신뢰성을 정확도보다 우선한다. 요청별 과금처럼 100% 정확해야 하는 용도에는 권하지 않는다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/introduction/overview/#when-does-it-not-fit" target="_blank" rel="noopener">Prometheus · When does it not fit?</a></li>
+<li><a href="https://prometheus.io/docs/practices/pushing/" target="_blank" rel="noopener">Prometheus · When to use the Pushgateway</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="쿠버네티스 서비스 디스커버리">
+  <span class="kicker"><span class="n">03</span>SERVICE DISCOVERY</span>
+  <h1>쿠버네티스 API에서 <span class="hl">대상을 찾는 6가지 방법</span></h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:18%"><col style="width:40%"><col></colgroup>
+      <thead><tr><th>역할 (role)</th><th>무엇을 대상으로 만드나</th><th>주로 쓰는 곳</th></tr></thead>
+      <tbody>
+        <tr><td>node</td><td class="it">노드마다 대상 하나 (kubelet 주소)</td><td class="it">kubelet · cAdvisor</td></tr>
+        <tr><td>service</td><td class="it">서비스의 포트마다 대상 하나</td><td class="it">서비스 주소로 외부 점검(블랙박스)</td></tr>
+        <tr><td>pod</td><td class="it">파드의 컨테이너 포트마다 대상 하나</td><td class="it">서비스 없이 파드를 직접 긁을 때 (PodMonitor)</td></tr>
+        <tr><td>endpoints</td><td class="it">서비스 뒤의 실제 파드 주소마다 대상 하나</td><td class="it">서비스로 묶인 앱 (ServiceMonitor 기본값)</td></tr>
+        <tr><td>endpointslice</td><td class="it">endpoints와 같고 EndpointSlice API를 쓴다</td><td class="it">endpoints의 후속. 공식 문서가 전환을 권장</td></tr>
+        <tr><td>ingress</td><td class="it">인그레스의 경로마다 대상 하나</td><td class="it">외부 URL 점검(블랙박스)</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">대상을 찾을 때 파드의 네임스페이스·이름·라벨이 <code>__meta_kubernetes_*</code> 라벨로 함께 따라온다. 앞에서 본 <code>namespace</code>·<code>pod</code> 라벨은 여기서 옮겨 붙인 것이다.</div>
+  </div>
+  <div class="foot"><span>kubernetes_sd_configs 의 role 값</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>프로메테우스 공식 설정 문서의 kubernetes_sd_config 역할: endpoints, endpointslice, service, pod, node, ingress.</li>
+  <li>공식 문서: Endpoints API는 쿠버네티스 1.33부터 사용 중단(deprecated)되어 endpointslice 역할로의 전환을 권한다.</li>
+  <li>실습 클러스터에서 오퍼레이터가 만든 수집 설정은 ServiceMonitor 마다 role: endpoints 를 쓴다(생성된 설정 파일에서 확인).</li>
+  <li>__meta_ 로 시작하는 라벨은 대상을 고르는 단계에서만 쓰이고 저장 전에 지워진다. 남기고 싶은 것은 relabel 규칙으로 일반 라벨에 옮긴다.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config" target="_blank" rel="noopener">Prometheus · kubernetes_sd_config</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide expanded" data-label="kube-prometheus-stack 구성요소" data-cap="kps-pods">
+  <span class="kicker"><span class="n">03</span>KUBE-PROMETHEUS-STACK · 책 3.7</span>
+  <h1>kube-prometheus-stack 차트 하나로 <span class="hl">6가지 구성요소</span>가 뜬다</h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed;font-size:15px">
+      <colgroup><col style="width:21%"><col style="width:37%"><col></colgroup>
+      <thead><tr><th>구성요소</th><th>하는 일 (책 3.7)</th><th>실제 파드 이름</th></tr></thead>
+      <tbody>
+        <tr><td>프로메테우스 서버</td><td class="it">수집한 메트릭을 가져와 저장</td><td><code>prometheus-kps-kube-prometheus-stack-prometheus-0</code></td></tr>
+        <tr><td>프로메테우스 오퍼레이터</td><td class="it">프로메테우스·Alertmanager를 쿠버네티스 리소스로 관리</td><td><code>kps-kube-prometheus-stack-operator-…</code></td></tr>
+        <tr><td>노드 익스포터</td><td class="it">노드의 호스트 메트릭을 내놓음</td><td><code>kps-prometheus-node-exporter-…</code> × 3 (노드마다)</td></tr>
+        <tr><td>kube-state-metrics</td><td class="it">쿠버네티스 오브젝트 상태 메트릭</td><td><code>kps-kube-state-metrics-…</code></td></tr>
+        <tr><td>Alertmanager</td><td class="it">알림을 받아 외부로 전달</td><td><code>alertmanager-kps-kube-prometheus-stack-alertmanager-0</code></td></tr>
+        <tr><td>Grafana</td><td class="it">메트릭을 대시보드로 시각화</td><td><code>kps-grafana-…</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout">node-exporter만 노드 수만큼(DaemonSet) 뜨고 나머지는 하나씩 뜬다. 프로메테우스와 Alertmanager 이름 끝의 <code>-0</code>은 StatefulSet으로 떠 있다는 표시다.</div>
+  </div>
+  <div class="foot"><span>kubectl get pods -n monitoring 결과 (파드 접미사는 환경마다 다르다)</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>표 왼쪽 두 열은 책 3.7의 구성요소 목록 그대로다. 오른쪽은 실습 클러스터에서 kubectl get pods -n monitoring 으로 본 실제 파드 이름이다. 모두 Running.</li>
+  <li>"kps"는 helm install 할 때 붙인 릴리스 이름이다. 4장 설치 명령에서 이 이름이 정해진다.</li>
+  <li>프로메테우스 파드 READY 2/2: 프로메테우스 본체 + 설정이 바뀌면 다시 읽게 하는 config-reloader 사이드카.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack" target="_blank" rel="noopener">kube-prometheus-stack 차트</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="오퍼레이터와 CRD">
+  <span class="kicker"><span class="n">03</span>PROMETHEUS OPERATOR</span>
+  <h1>수집 설정을 <span class="hl">YAML 리소스로 적으면</span> 오퍼레이터가 설정 파일을 만든다</h1>
+  <div class="body">
+    <div class="flow f4">
+      <div class="step-box teal"><span class="num">1</span><b>ServiceMonitor 적용</b><p>"라벨 app=order-api 서비스의 http 포트를 긁어라"</p></div>
+      <div class="arrow-h"></div>
+      <div class="step-box teal"><span class="num">2</span><b>오퍼레이터가 감지</b><p>CRD 변경을 watch 하고 있다</p></div>
+      <div class="arrow-h"></div>
+      <div class="step-box teal"><span class="num">3</span><b>수집 설정 생성</b><p>프로메테우스 설정 파일에 잡 추가</p></div>
+      <div class="arrow-h"></div>
+      <div class="step-box blue"><span class="num">4</span><b>타깃 등록</b><p>설정을 다시 읽고 긁기 시작</p></div>
+    </div>
+    <div class="split a">
+      <pre class="code" style="font-size:14px"><span class="c"># 오퍼레이터가 만든 설정 (실측, 일부)</span>
+<span class="k">- job_name:</span> <span class="v">serviceMonitor/apps/order-api/0</span>
+  <span class="k">kubernetes_sd_configs:</span>
+  <span class="k">- role:</span> <span class="v">endpoints</span></pre>
+      <table class="compare">
+        <thead><tr><th>주요 CRD</th><th>담는 것</th></tr></thead>
+        <tbody>
+          <tr><td>Prometheus</td><td>프로메테우스 서버 자체(보존 기간, 자원)</td></tr>
+          <tr><td>ServiceMonitor · PodMonitor</td><td>무엇을 긁을지</td></tr>
+          <tr><td>PrometheusRule</td><td>알림·기록 규칙</td></tr>
+          <tr><td>Alertmanager</td><td>Alertmanager 서버 자체</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>ServiceMonitor는 무엇을 긁을지, PrometheusRule은 언제 알릴지 적는다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>책 3.7: 오퍼레이터는 프로메테우스를 쿠버네티스에 네이티브하게 구성하고, 사용자는 쿠버네티스 리소스 정의로 프로메테우스 리소스를 생성·삭제·구성한다.</li>
+  <li>생성된 설정은 monitoring 네임스페이스의 시크릿(prometheus-...-prometheus)에 압축되어 들어 있다. 잡 이름 형식은 serviceMonitor/네임스페이스/이름/엔드포인트번호.</li>
+  <li>실습 클러스터의 monitoring.coreos.com CRD 10종: Prometheus, PrometheusAgent, Alertmanager, AlertmanagerConfig, ServiceMonitor, PodMonitor, Probe, ScrapeConfig, PrometheusRule, ThanosRuler.</li>
+  <li>ServiceMonitor 15개 중 대부분은 차트가 쿠버네티스 구성요소용으로 함께 만든 것이다. 우리 앱의 것은 직접 만들어야 한다(5장).</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus-operator.dev/docs/getting-started/design/" target="_blank" rel="noopener">Prometheus Operator · Design</a></li>
+<li><a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">90-servicemonitors.yaml</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="ServiceMonitor와 Service">
+  <span class="kicker"><span class="n">03</span>SERVICEMONITOR · YAML</span>
+  <h1>ServiceMonitor는 <span class="hl">세 군데</span>가 맞아야 서비스를 찾는다</h1>
+  <div class="body">
+    <div class="split a" style="align-items:start">
+      <div class="stack">
+        <p class="small"><b>ServiceMonitor</b> · 무엇을 긁을지</p>
+        <pre class="code" style="font-size:13.5px"><span class="k">apiVersion:</span> monitoring.coreos.com/v1
+<span class="k">kind:</span> ServiceMonitor
+<span class="k">metadata:</span>
+  <span class="k">name:</span> order-api
+  <span class="k">namespace:</span> apps
+  <span class="k">labels:</span>
+<span class="hl">    <span class="k">release:</span> <span class="v">kps</span>                  <span class="c"># ① 프로메테우스가 고르는 라벨</span></span><span class="k">spec:</span>
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span>
+<span class="hl">      <span class="k">app.kubernetes.io/name:</span> <span class="v">order-api</span> <span class="c"># ② 서비스 라벨</span></span>  <span class="k">namespaceSelector:</span>
+    <span class="k">matchNames:</span> [apps]
+  <span class="k">endpoints:</span>
+<span class="hl">    - <span class="k">port:</span> <span class="v">http</span>                <span class="c"># ③ 서비스 포트 이름</span></span>      <span class="k">path:</span> /actuator/prometheus
+      <span class="k">interval:</span> 30s
+      <span class="k">scrapeTimeout:</span> 10s</pre>
+      </div>
+      <div class="stack">
+        <p class="small"><b>Service</b> · order-api 앞에 있는 서비스</p>
+        <pre class="code" style="font-size:13.5px"><span class="k">kind:</span> Service
+<span class="k">metadata:</span>
+  <span class="k">name:</span> order-api
+  <span class="k">namespace:</span> apps
+  <span class="k">labels:</span>
+<span class="hl">    <span class="k">app.kubernetes.io/name:</span> <span class="v">order-api</span> <span class="c"># ②</span></span><span class="k">spec:</span>
+  <span class="k">ports:</span>
+<span class="hl">    - <span class="k">name:</span> <span class="v">http</span>                <span class="c"># ③</span></span>      <span class="k">port:</span> 8080</pre>
+        <p class="small"><b>Prometheus</b> 리소스 · 어떤 ServiceMonitor를 읽을지</p>
+        <pre class="code" style="font-size:13.5px"><span class="k">spec:</span>
+  <span class="k">serviceMonitorSelector:</span>
+    <span class="k">matchLabels:</span>
+<span class="hl">      <span class="k">release:</span> <span class="v">kps</span>                <span class="c"># ①</span></span></pre>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>전체 파일: <a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a></span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>① ServiceMonitor 자신의 라벨 release: kps. 프로메테우스 리소스의 serviceMonitorSelector 가 이 라벨을 가진 ServiceMonitor만 읽는다. 실습 클러스터에서 확인한 값: {"matchLabels":{"release":"kps"}}.</li>
+  <li>② ServiceMonitor 의 selector 가 서비스의 metadata.labels 와 맞아야 한다. 서비스의 spec.selector(파드를 고르는 쪽)가 아니다.</li>
+  <li>③ endpoints[].port 는 서비스 포트의 "이름"이다. 8080 같은 숫자를 적으면 맞는 포트가 없어 대상이 생기지 않는다.</li>
+  <li>셋 중 하나라도 어긋나면 에러 없이 대상이 0개가 된다. 5장에서 일부러 어긋나게 만들어 본다.</li>
+  <li>kps는 helm install 때 붙인 릴리스 이름이다. 차트가 serviceMonitorSelector 를 release: 릴리스이름 으로 설정한다.</li>
+  <li>ServiceMonitor 코드는 저장소 파일에서 주석만 발표용으로 바꿨다. Service는 labs/k8s/order-api.yaml 의 일부.</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">90-servicemonitors.yaml</a></li>
+<li><a href="labs/k8s/order-api.yaml" target="_blank" rel="noopener">10-order-api.yaml</a></li>
+<li><a href="https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.ServiceMonitor" target="_blank" rel="noopener">Prometheus Operator · ServiceMonitor API</a></li>
+</ul></details>
+</aside>
+</section>
+
+<section class="slide" data-label="오퍼레이터가 만든 수집 설정">
+  <span class="kicker"><span class="n">03</span>GENERATED CONFIG</span>
+  <h1>ServiceMonitor 한 칸이 <span class="hl">수집 설정 한 줄</span>로 바뀐다</h1>
+  <div class="body">
+    <div class="split a" style="align-items:start">
+      <div class="stack">
+        <p class="small"><b>우리가 적은 것</b> · ServiceMonitor (일부)</p>
+        <pre class="code" style="font-size:13.5px"><span class="k">spec:</span>
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span>
+<span class="hl">      <span class="k">app.kubernetes.io/name:</span> <span class="v">order-api</span>   <span class="c"># A</span></span>  <span class="k">namespaceSelector:</span>
+<span class="hl">    <span class="k">matchNames:</span> [<span class="v">apps</span>]                  <span class="c"># B</span></span>  <span class="k">endpoints:</span>
+<span class="hl">    - <span class="k">port:</span> <span class="v">http</span>                         <span class="c"># C</span></span><span class="hl">      <span class="k">path:</span> <span class="v">/actuator/prometheus</span>       <span class="c"># D</span></span><span class="hl">      <span class="k">interval:</span> <span class="v">30s</span>                    <span class="c"># E</span></span>      <span class="k">scrapeTimeout:</span> 10s</pre>
+        <div class="callout" style="font-size:16px">오퍼레이터는 <b>서비스 디스커버리(role: endpoints)</b>로 apps 네임스페이스의 대상을 모두 받은 뒤, 조건에 맞는 것만 <b>keep</b>으로 남긴다.</div>
+      </div>
+      <div class="stack">
+        <p class="small"><b>오퍼레이터가 만든 것</b> · 프로메테우스 설정 (실측, 일부)</p>
+        <pre class="code" style="font-size:13px"><span class="k">- job_name:</span> serviceMonitor/apps/order-api/0
+  <span class="k">kubernetes_sd_configs:</span>
+  - <span class="k">role:</span> endpoints
+<span class="hl">    <span class="k">namespaces:</span> {<span class="k">names:</span> [<span class="v">apps</span>]}            <span class="c"># B</span></span><span class="hl">  <span class="k">scrape_interval:</span> <span class="v">30s</span>                    <span class="c"># E</span></span>  <span class="k">scrape_timeout:</span> 10s
+<span class="hl">  <span class="k">metrics_path:</span> <span class="v">/actuator/prometheus</span>       <span class="c"># D</span></span>  <span class="k">relabel_configs:</span>
+  - <span class="k">action:</span> keep                          <span class="c"># A</span>
+    <span class="k">source_labels:</span>
+<span class="hl">    - __meta_kubernetes_service_label_app_kubernetes_io_name</span>    <span class="k">regex:</span> (<span class="v">order-api</span>);true
+  - <span class="k">action:</span> keep                          <span class="c"># C</span>
+<span class="hl">    <span class="k">source_labels:</span> [__meta_kubernetes_endpoint_port_name]</span>    <span class="k">regex:</span> <span class="v">http</span>
+  - <span class="k">source_labels:</span> [__meta_kubernetes_namespace]
+    <span class="k">target_label:</span> namespace              <span class="c"># 라벨 붙이기</span>
+  - <span class="k">source_labels:</span> [__meta_kubernetes_pod_name]
+    <span class="k">target_label:</span> pod
+<span class="c">  ... (container · service · job 라벨, 샤딩 규칙)</span></pre>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>생성된 전체 설정은 monitoring 네임스페이스의 시크릿에 압축되어 들어 있다</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>왼쪽 A~E 한 칸이 오른쪽 같은 글자의 줄로 바뀐다. 오른쪽은 실습 클러스터에서 오퍼레이터가 실제로 만든 설정의 일부다.</li>
+  <li>A selector → 서비스 라벨로 걸러 내는 keep 규칙. 서비스 라벨은 __meta_kubernetes_service_label_… 로 들어온다.</li>
+  <li>B namespaceSelector → 서비스 디스커버리의 namespaces.</li>
+  <li>C port → 서비스 포트 이름으로 걸러 내는 keep 규칙.</li>
+  <li>D path → metrics_path, E interval → scrape_interval.</li>
+  <li>그 아래 규칙들이 __meta_ 라벨을 namespace · pod · container · service · job 같은 일반 라벨로 옮긴다. 39번 슬라이드에서 본 라벨이 여기서 붙는다.</li>
+  <li>전체 설정을 직접 보는 명령: kubectl -n monitoring get secret prometheus-kps-kube-prometheus-stack-prometheus -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip</li>
+</ul>
+<details class="note-sources"><summary>참고 자료</summary><ul>
+<li><a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config" target="_blank" rel="noopener">Prometheus · relabel_config</a></li>
+<li><a href="https://prometheus-operator.dev/docs/getting-started/design/" target="_blank" rel="noopener">Prometheus Operator · Design</a></li>
+</ul></details>
+</aside>
+</section>
+
+
+<section class="slide expanded" data-label="3장 정리">
+  <span class="kicker"><span class="n">03</span>WRAP-UP</span>
+  <h1>프로메테우스는 <span class="hl">찾고, 가져오고, 저장하고, 평가한다</span></h1>
+  <div class="body">
+    <table class="compare" style="table-layout:fixed">
+      <colgroup><col style="width:30%"><col></colgroup>
+      <thead><tr><th>질문</th><th>답</th></tr></thead>
+      <tbody>
+        <tr><td>어떤 도구로 모으나?</td><td>프로메테우스. 라벨 기반 저장이 쿠버네티스 라벨과 같고, 구성요소가 이미 이 형식을 쓴다</td></tr>
+        <tr><td>대상을 어떻게 찾나?</td><td>쿠버네티스 API에서 서비스 디스커버리(role: endpoints 등)로 자동 발견</td></tr>
+        <tr><td>무엇을 저장하나?</td><td>이름 + 라벨 = 시계열. 샘플 = 값 + 시각. 타입은 counter·gauge·histogram·summary</td></tr>
+        <tr><td>수집 설정은 누가 쓰나?</td><td>ServiceMonitor 리소스를 적으면 오퍼레이터가 설정 파일로 바꾼다</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">남은 질문: 이 스택을 실제로 어떻게 설치하고, 설치가 제대로 됐는지는 무엇으로 확인하나?</div>
+  </div>
+  <div class="foot"><span>책 3.6~3.7 정리</span><span>{{PG}}</span></div>
+  <aside class="notes">
+<ul class="speaker-points">
+  <li>다음은 설치 실습. kind 클러스터에 kube-prometheus-stack을 설치하고, 타깃 28개가 모두 up인지 확인하고, 2장에서 본 세 출처를 화면으로 확인한다.</li>
+</ul>
+</aside>
+</section>

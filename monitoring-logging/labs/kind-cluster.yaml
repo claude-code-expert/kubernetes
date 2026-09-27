@@ -1,0 +1,37 @@
+# kind 클러스터: 컨트롤 플레인 1 + 워커 2
+#   kind create cluster --config labs/kind-cluster.yaml
+# 노드 이미지는 태그와 @sha256 다이제스트를 함께 적는다. 태그만 적으면 같은 kind 버전에서도
+# 나중에 다른 이미지를 받아 결과가 달라질 수 있다.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: obs
+# 컨트롤 플레인 구성요소의 메트릭 주소를 노드 IP 에서도 열어 둔다.
+# kubeadm 기본값은 127.0.0.1(루프백)이라, 이 설정이 없으면 프로메테우스가 노드 IP 로 찾아가
+# connection refused 를 받고 타깃 6개(controller-manager · scheduler · etcd · kube-proxy ×3)가 DOWN 이 된다.
+# 실습용 설정이다. 운영에서는 이 포트를 노드 방화벽으로 막고 인증을 건다.
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    controllerManager:
+      extraArgs:
+        - name: bind-address
+          value: "0.0.0.0"
+    scheduler:
+      extraArgs:
+        - name: bind-address
+          value: "0.0.0.0"
+    etcd:
+      local:
+        extraArgs:
+          - name: listen-metrics-urls
+            value: "http://0.0.0.0:2381"
+  - |
+    kind: KubeProxyConfiguration
+    metricsBindAddress: "0.0.0.0:10249"
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
