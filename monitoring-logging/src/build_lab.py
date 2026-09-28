@@ -34,7 +34,6 @@ for sec in re.finditer(r'<section id="(p\d+)">\s*<h2><span class="no">(\d+)</spa
         f'<li><a href="#{i}">{re.sub(r"<[^>]+>", "", re.sub(r'<span class="badge[^"]*">.*?</span>', "", t)).strip()}</a></li>' for i, t in subs)
     toc.append(f'<li><a href="#{sid}"><b>{no}</b> {title}</a><ul>{items}</ul></li>')
 
-caps = len(re.findall(r'data-k="', body))
 
 page = f"""<!doctype html>
 <html lang="ko"><head>
@@ -50,7 +49,6 @@ body{{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);lin
 .layout{{display:grid;grid-template-columns:300px minmax(0,1fr);max-width:1400px;margin:0 auto}}
 nav{{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 20px;border-right:1px solid var(--line);font-size:.86rem}}
 nav h1{{font-size:1.05rem;margin:0 0 6px}}
-nav .progress{{font:600 .8rem var(--mono);color:var(--teal);margin-bottom:16px}}
 nav ul{{list-style:none;margin:0;padding:0}}
 nav li{{margin:6px 0}}
 nav li ul{{margin:4px 0 10px 14px}}
@@ -72,7 +70,6 @@ h3{{font-size:1.1rem;margin:0 0 8px}}
 .warn{{margin:10px 0;color:var(--yellow)}}
 .note{{margin:10px 0;color:var(--muted)}}
 .badge{{display:inline-block;font:600 .72rem var(--mono);padding:2px 7px;border-radius:4px;background:var(--teal-bg);color:var(--teal-deep);vertical-align:middle;margin-left:4px}}
-.badge.cap{{background:#E7F0FF;color:#1D5FBF}}
 .badge.warn{{background:var(--yellow-bg);color:var(--yellow)}}
 pre{{font:13.5px/1.55 var(--mono);background:#F4F7F5;border:1px solid var(--line);border-radius:6px;padding:12px 14px;overflow-x:auto;margin:8px 0;white-space:pre}}
 pre.cmd{{position:relative;background:#F4F7F5;padding-right:64px}}
@@ -82,9 +79,6 @@ button.copy{{position:absolute;top:8px;right:8px;font:600 .72rem var(--sans);bor
 button.copy:hover{{color:var(--teal);border-color:var(--teal)}}
 code{{font-family:var(--mono);font-size:.88em;background:var(--teal-bg);color:var(--teal-deep);padding:1px 5px;border-radius:3px}}
 pre code{{background:none;padding:0;color:inherit}}
-label.cap{{display:block;margin:8px 0;padding:8px 12px;border:1px solid #B8D3F5;border-radius:6px;background:#F5F9FF;cursor:pointer}}
-label.cap input{{margin-right:6px;transform:scale(1.15)}}
-label.cap.done{{opacity:.55}}
 details.file{{margin:10px 0}}
 details.file summary{{cursor:pointer;font-weight:600;color:var(--teal-deep)}}
 p.src{{margin:6px 0 0;font:.8rem var(--mono)}}
@@ -104,7 +98,6 @@ table.opt td:first-child{{font-family:var(--mono);font-size:.85rem;white-space:n
 <div class="layout">
 <nav>
   <h1>실습 가이드</h1>
-  <div class="progress">캡처 <span id="capDone">0</span> / {caps}</div>
   <ul>{"".join(toc)}</ul>
 </nav>
 <main>
@@ -124,21 +117,8 @@ document.querySelectorAll('pre.cmd').forEach(p => {{
   }});
   p.dataset.raw = p.innerText; p.appendChild(b);
 }});
-const KEY = 'ch03-lab-caps';
-let saved = {{}};
-try {{ saved = JSON.parse(localStorage.getItem(KEY) || '{{}}'); }} catch (e) {{ saved = {{}}; }}
-function count() {{ document.getElementById('capDone').textContent = document.querySelectorAll('label.cap input:checked').length; }}
-document.querySelectorAll('label.cap input').forEach(i => {{
-  if (saved[i.dataset.k]) {{ i.checked = true; i.parentElement.classList.add('done'); }}
-  i.addEventListener('change', () => {{
-    saved[i.dataset.k] = i.checked; i.parentElement.classList.toggle('done', i.checked);
-    try {{ localStorage.setItem(KEY, JSON.stringify(saved)); }} catch (e) {{}}
-    count();
-  }});
-}});
-count();
 </script>
 </body></html>
 """
 OUT.write_text(page, encoding="utf-8")
-print(f"{OUT.name}: steps={len(re.findall(r'class=\"step\"', body))} captures={caps}")
+print(f"{OUT.name}: steps={len(re.findall(r'class=\"step\"', body))}")
