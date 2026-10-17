@@ -32,8 +32,13 @@ loki:
     # 구조화 메타데이터: 라벨을 늘리지 않고 필드를 붙이는 방법
     allow_structured_metadata: true
     volume_enabled: true
-    # 실습용 보존 기간
+    # 실습용 보존 기간. 이 값만으로는 아무것도 지워지지 않는다 — 아래 compactor 설정이 있어야 적용된다.
     retention_period: 72h
+  # 보존 기간이 지난 로그를 실제로 지우는 것은 compactor 다.
+  # retention_enabled 를 켜면 delete_request_store 도 정해야 한다. 비우면 Loki 가 설정 오류로 기동하지 못한다.
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
 
 singleBinary:
   replicas: 1

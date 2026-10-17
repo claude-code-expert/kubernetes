@@ -2,7 +2,7 @@
 //
 //   kubectl -n apps    port-forward svc/order-api   18082:8080 &
 //   kubectl -n journal port-forward svc/journal-api 18083:8080 &
-//   k6 run -e DURATION=3m labs/k6/k6-red.js
+//   k6 run -e DURATION=15m labs/k6/k6-red.js
 //
 // 멈추기: Ctrl-C (포그라운드). 백그라운드로 돌렸다면 pkill -f k6-red
 import http from 'k6/http';

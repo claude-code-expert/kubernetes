@@ -62,7 +62,8 @@ spec:
             # 그런 파일은 없으므로 액세스 로그가 조용히 사라진다.
             - name: SERVER_TOMCAT_ACCESSLOG_ROTATE
               value: "false"
-            # %D 는 처리 시간(밀리초). 기본 패턴에는 없어 지연을 로그로 못 본다.
+            # %D 는 처리 시간(마이크로초 — 톰캣 10부터. 319 는 0.319ms). %b 는 헤더를 뺀 응답 바이트.
+            # 기본 패턴에는 %D 가 없어 지연을 로그로 못 본다.
             - name: SERVER_TOMCAT_ACCESSLOG_PATTERN
               value: '%h %l %u %t "%r" %s %b %D'
           # JVM 은 기동이 느리다. startupProbe 가 그동안 liveness 가 죽이지 못하게 막는다.

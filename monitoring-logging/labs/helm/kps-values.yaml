@@ -8,7 +8,7 @@ prometheus:
     type: ClusterIP
   prometheusSpec:
     # 관측 스택을 한 노드(workload=observability 라벨)에 모은다.
-    # 흩어 놓으면 관측 대상이 앓을 때 관측 스택도 같이 앓는다.
+    # 앱과 섞어 두면 앱이 자원을 다 써 버릴 때 관측 도구도 같이 느려진다.
     nodeSelector:
       workload: observability
 

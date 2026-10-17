@@ -7,14 +7,14 @@
     <div class="quest">CHAPTER · 05 · 책 3.12.1</div>
     <div class="secnum">05</div>
     <h1>앱을 연결하고 <span class="hl">PromQL로 RED를 읽는다</span></h1>
-    <p class="sub">앱이 내놓는 메트릭을 ServiceMonitor로 수집 대상에 올리고, 요청률 · 에러율 · 지연을 PromQL로 뽑는다. 평균 대신 분위수로 보고, 라벨로 쪼개 원인을 좁히는 법을 익힌다.</p>
+    <p class="sub">두 앱을 ServiceMonitor로 수집 대상에 올려 타깃 33개가 모두 up인 것을 확인한다. 부하를 넣고 order-api의 P99 790ms를 PromQL로 직접 계산한 뒤, uri로 나눠 느린 경로 <code>/api/chaos/slow</code> 하나를 찾는다.</p>
   </div>
   <div class="foot"><span>실습 · 책 3.12.1: 애플리케이션의 사용률, 에러 수, 실행 시간도 모니터링한다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>명령과 출력은 실습 가이드(lab-guide.html)의 절차를 kind 클러스터에서 실제로 실행한 결과다.</li>
-  <li>RED는 애플리케이션만 답할 수 있다. 밖에서는 요청이 성공했는지 실패했는지 알 수 없기 때문에 앱을 계측해야 한다.</li>
-  <li>흐름: 앱이 메트릭을 내놓는 방법 → ServiceMonitor로 연결 → PromQL 패턴 네 가지 → 부하를 넣고 RED 계산 → 결과 읽는 법.</li>
+  <li>5장은 우리 앱을 연결하고 PromQL로 RED를 읽는 장입니다. RED는 요청 수(Rate), 에러(Errors), 처리 시간(Duration) 세 가지로 서비스를 보는 방법입니다.</li>
+  <li>먼저 두 앱을 ServiceMonitor로 수집 대상에 올리고 타깃 33개가 모두 up인지 확인합니다. 타깃은 프로메테우스가 메트릭을 긁어 가는 주소 하나를 말하고, up은 마지막 수집이 성공했다는 뜻입니다.</li>
+  <li>그다음 부하를 넣고 order-api의 P99 790ms를 PromQL로 직접 계산합니다. P99는 요청 100건 중 가장 느린 1건을 뺀 나머지가 모두 이 시간 안에 끝났다는 값입니다. 마지막으로 요청 경로(uri)별로 나눠 느린 경로 /api/chaos/slow를 찾습니다.</li>
 </ul>
 </aside>
 </section>
@@ -42,7 +42,11 @@
   <div class="foot"><span>앱은 계측 라이브러리로 내놓고, 프로메테우스는 PromQL로 계산한다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>order-api는 Micrometer가 HTTP 메트릭을 자동으로 만든다. journal-api(Node)는 prom-client로 같은 이름의 메트릭을 직접 만든다.</li>
+  <li>이 장에서 쓰는 용어입니다. 계측은 앱 코드가 스스로 메트릭을 만들어 내놓게 하는 일입니다. 예를 들어 요청이 들어올 때마다 숫자를 하나 올리고 걸린 시간을 기록하는 코드가 계측입니다.</li>
+  <li>order-api는 Spring Boot라 Micrometer라는 라이브러리가 HTTP 요청 메트릭을 자동으로 만듭니다. 액추에이터는 Spring Boot의 운영용 주소 모음으로, 헬스 체크와 메트릭 같은 것을 내놓고 그중 /actuator/prometheus가 프로메테우스 형식의 메트릭입니다. journal-api는 Node.js라 prom-client 라이브러리로 코드에서 직접 만듭니다.</li>
+  <li>rate()는 카운터가 1초에 얼마씩 늘었는지 계산하는 함수입니다. 카운터는 앱이 뜬 뒤로 계속 쌓이는 값이라 숫자 자체보다 늘어나는 속도가 의미 있습니다. 예를 들어 5분 동안 300 늘었다면 초당 1입니다.</li>
+  <li>histogram_quantile()은 히스토그램으로 분위수를 추정하는 함수입니다. 히스토그램은 처리 시간을 구간(버킷)별로 나눠 센 것이고, le는 그 구간의 경계 라벨입니다. le="0.1"이면 0.1초 이하로 끝난 요청 수입니다.</li>
+  <li>카디널리티는 메트릭 하나가 만드는 시계열 수입니다. 라벨 값의 가짓수만큼 시계열이 생기기 때문에, 예를 들어 라벨에 주문 번호를 넣으면 주문마다 시계열이 생겨 저장량이 폭증합니다. k6는 초당 요청 수를 정해 두고 그대로 부하를 넣는 도구입니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html" target="_blank" rel="noopener">Spring Boot · Metrics</a></li>
@@ -56,6 +60,7 @@
   <span class="kicker"><span class="n">05</span>INSTRUMENTATION</span>
   <h1>앱은 <span class="hl">HTTP 엔드포인트</span>로 메트릭을 내놓는다</h1>
   <div class="body">
+    <div class="access"><span><b>접속</b>터미널에서 <code>localhost:18082</code> (order-api). 4장에서 띄운 port-forward가 필요하다</span><span><b>살아 있나</b><code>curl -s localhost:18082/api/orders</code> → <code>{"data":[],"message":"조회 성공",…}</code></span><span><b>꺼졌으면</b><code>kubectl -n apps port-forward svc/order-api 18082:8080 &gt;/dev/null 2&gt;&amp;1 &amp;</code></span></div>
     <div class="split a" style="align-items:start">
       <div class="stack">
         <pre class="code" style="font-size:13px"><span class="c">// order-api · OrderService.java (일부)</span>
@@ -69,9 +74,11 @@ curl -s localhost:18082/actuator/prometheus \
 <span class="c"># TYPE http_server_requests_seconds histogram</span>
 <span class="c"># TYPE</span> <span class="v">orders_total</span> counter
 <span class="c"># TYPE</span> orders_processing_seconds histogram
+<span class="c"># TYPE</span> orders_processing_seconds_max gauge
 <span class="c"># TYPE</span> orders_rejected_total counter
 <span class="c"># TYPE</span> orders_stored gauge</pre>
       </div>
+      <div class="stack">
       <table class="compare">
         <thead><tr><th></th><th>order-api</th><th>journal-api</th></tr></thead>
         <tbody>
@@ -82,16 +89,19 @@ curl -s localhost:18082/actuator/prometheus \
           <tr><td>공통 이름</td><td colspan="2"><code>http_server_requests_seconds</code> (히스토그램)</td></tr>
         </tbody>
       </table>
+    <div class="callout" style="font-size:16px"><b>메트릭 이름은 코드가 아니라 엔드포인트에서 확인한다.</b> 응답은 <code># HELP</code> 설명 · <code># TYPE</code> 타입 · <code>이름{라벨} 값</code> 줄로 되어 있다. 코드의 <code>orders.created</code>는 <code>orders_total</code>로 나온다.</div>
+      </div>
     </div>
-    <div class="callout"><b>메트릭 이름은 코드가 아니라 엔드포인트에서 확인한다.</b> 코드의 <code>orders.created</code>는 <code>orders_total</code>로 나온다. <code>_created</code>가 OpenMetrics 예약 접미사라 라이브러리가 떼어 낸다.</div>
   </div>
   <div class="foot"><span>코드: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a> · 메트릭 목록: <a href="https://docs.spring.io/spring-boot/reference/actuator/metrics.html" target="_blank" rel="noopener">Spring Boot · Metrics</a> · <a href="https://github.com/siimon/prom-client" target="_blank" rel="noopener">prom-client</a> · <a href="lab-guide.html#s2-5" target="_blank" rel="noopener">실습 가이드 02 앱 2-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>두 앱이 같은 이름을 쓰도록 맞춰 두면 질의 하나로 두 앱을 함께 본다</li>
-  <li>노출 이름은 port-forward 한 order-api에서 /actuator/prometheus 를 받아 # TYPE 줄로 확인한 실측이다. 메트릭 줄 357개.</li>
-  <li>이름을 지을 때 _total · _created · _bucket · _sum · _count 는 피한다. 라이브러리가 붙이거나 떼는 접미사다.</li>
-  <li>journal-api는 order-api와 같은 이름 · 같은 라벨(method · uri · status)로 히스토그램을 직접 만든다. 그래서 뒤의 RED 질의 하나가 두 앱을 함께 다룬다.</li>
+  <li>앱은 HTTP 주소로 메트릭을 내놓고, 프로메테우스가 그 주소를 주기적으로 읽어 갑니다. 먼저 curl -s localhost:18082/api/orders로 order-api가 열려 있는지 확인합니다. 응답이 없으면 위쪽의 port-forward 명령으로 다시 엽니다.</li>
+  <li>왼쪽 위 코드는 order-api가 주문 메트릭을 만드는 부분입니다. Counter는 주문 수처럼 늘기만 하는 값을 세고, Timer는 처리 시간을 잽니다. publishPercentileHistogram()을 켜면 처리 시간을 구간별로 센 히스토그램도 함께 내놓아서, 나중에 P99 같은 분위수를 계산할 수 있습니다.</li>
+  <li>아래 명령은 엔드포인트에서 실제 메트릭 이름과 타입을 확인합니다. # TYPE 줄의 counter는 늘기만 하는 값, gauge는 저장된 주문 수처럼 오르내리는 현재 값, histogram은 구간별 개수입니다. _max는 최근 가장 오래 걸린 처리 시간입니다.</li>
+  <li>코드의 orders.created가 orders_total로 나오는 것처럼 이름이 바뀝니다. 프로메테우스 형식에서 _created는 "카운터가 처음 만들어진 시각"을 나타내는 데 쓰이는 이름이라 라이브러리가 떼어 내고, 카운터에는 _total을 붙입니다. 그래서 메트릭 이름은 코드가 아니라 엔드포인트에서 확인합니다.</li>
+  <li>오른쪽 표는 두 앱의 차이입니다. 언어와 라이브러리, 경로는 다르지만 둘 다 http_server_requests_seconds라는 같은 이름의 히스토그램을 씁니다. 그래서 같은 질의 하나로 두 앱을 함께 볼 수 있습니다.</li>
+  <li>엔드포인트 응답은 사람이 읽을 수 있는 텍스트입니다. # HELP 줄에 메트릭 설명이, # TYPE 줄에 타입이 있고, 그 아래에 이름, 중괄호 안의 라벨, 값이 한 줄씩 나옵니다. 라벨 조합이 다르면 다른 시계열이라, 예를 들어 status="200"과 status="500"은 따로 쌓입니다. 프로메테우스는 이 텍스트를 긁어 온 시각을 붙여 저장합니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/apps/order-api/src/main/java/com/study/obs/order/service/OrderService.java" target="_blank" rel="noopener">OrderService.java</a></li>
@@ -119,25 +129,25 @@ curl -s localhost:18082/actuator/prometheus \
   <span class="k">endpoints:</span>
 <span class="hl">    - <span class="k">port:</span> <span class="v">http</span>                         <span class="c"># ③</span></span>      <span class="k">path:</span> /actuator/prometheus
       <span class="k">interval:</span> 30s</pre>
-      <table class="compare">
-        <thead><tr><th>#</th><th>맞출 상대</th><th>확인</th></tr></thead>
+      <table class="compare" style="table-layout:fixed;font-size:14px;overflow-wrap:anywhere"><colgroup><col style="width:7%"><col style="width:26%"><col></colgroup>
+        <thead><tr><th>#</th><th>맞출 상대</th><th>확인 명령 → 나와야 할 값</th></tr></thead>
         <tbody>
-          <tr><td>①</td><td>Prometheus가 고르는 라벨</td><td class="it">Prometheus 리소스의 <code>serviceMonitorSelector</code> → <code>{"release":"kps"}</code></td></tr>
-          <tr><td>②</td><td>Service의 <code>metadata.labels</code></td><td class="it"><code>kubectl -n apps get svc order-api --show-labels</code></td></tr>
-          <tr><td>③</td><td>Service 포트의 <b>이름</b></td><td class="it">Service <code>spec.ports[].name</code> → <code>http</code></td></tr>
+          <tr><td>①</td><td>Prometheus가 고르는 라벨</td><td class="it"><code>kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}'</code> → <code>{"matchLabels":{"release":"kps"}}</code></td></tr>
+          <tr><td>②</td><td>Service의 <code>metadata.labels</code></td><td class="it"><code>kubectl -n apps get svc order-api --show-labels</code> → LABELS에 <code>app.kubernetes.io/name=order-api</code></td></tr>
+          <tr><td>③</td><td>Service 포트의 <b>이름</b></td><td class="it"><code>kubectl -n apps get svc order-api -o jsonpath='{.spec.ports}'</code> → <code>"name":"http"</code></td></tr>
         </tbody>
       </table>
     </div>
-    <div class="callout">셋이 맞으면 오퍼레이터가 수집 설정을 만들고, 1~2분 뒤 Target health에 <code>serviceMonitor/apps/order-api/0</code>이 나타난다. 하나라도 어긋나면 에러 없이 타깃이 생기지 않는다.</div>
+    <div class="callout">셋이 맞으면 오퍼레이터가 수집 설정을 만들고, 1~2분 뒤 Target health에 <code>serviceMonitor/apps/order-api/0</code>이 나타난다. 하나라도 어긋나면 에러 없이 타깃이 생기지 않는다. 그때는 <a href="lab-guide.html#q-sm" target="_blank" rel="noopener">실습 가이드 Q4</a>의 순서로 찾는다.</div>
   </div>
   <div class="foot"><span>전체 파일: <a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">labs/k8s/servicemonitors.yaml</a> (order-api · journal-api 두 개) · <a href="lab-guide.html#s6-1" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>확인 명령: ① kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.serviceMonitorSelector}' ③ kubectl -n apps get svc order-api -o jsonpath='{.spec.ports}'</li>
-  <li>① release: kps 는 이 차트가 설치될 때 Prometheus 리소스에 적힌 셀렉터다. 다른 이름으로 설치했다면 그 이름을 쓴다.</li>
-  <li>② 는 Service가 "나는 누구인가"로 붙인 라벨(metadata.labels)이다. Service가 파드를 고르는 spec.selector와 다르다.</li>
-  <li>③ 은 숫자가 아니라 이름이다. 숫자 포트를 쓰려면 targetPort 라는 다른 필드를 쓴다.</li>
-  <li>3장 "ServiceMonitor와 Service" · "오퍼레이터가 만든 수집 설정"에서 본 구조를 이제 직접 적용한다.</li>
+  <li>ServiceMonitor는 "이 Service의 이 포트를 긁어 가라"고 적는 쿠버네티스 리소스입니다. 프로메테우스 오퍼레이터가 이것을 읽어 프로메테우스 수집 설정을 대신 만들어 줍니다. 앱을 수집 대상에 올리려면 세 가지가 맞아야 합니다.</li>
+  <li>① release: kps는 프로메테우스가 자기 것으로 고르는 표시입니다. 프로메테우스는 클러스터의 ServiceMonitor를 전부 읽지 않고 serviceMonitorSelector에 적힌 라벨이 붙은 것만 읽습니다. kps는 스택을 설치할 때 붙인 이름입니다.</li>
+  <li>② matchLabels는 어떤 Service를 찾을지 정하는 조건으로, Service에 붙은 라벨과 같아야 합니다. Service가 파드를 고르는 selector가 아니라 Service 자신의 라벨이라는 점이 자주 헷갈립니다. namespaceSelector는 그 Service를 어느 네임스페이스에서 찾을지 정합니다.</li>
+  <li>③ endpoints의 port: http는 포트 번호가 아니라 Service 포트의 이름입니다. path는 메트릭 주소, interval 30s는 30초마다 긁어 간다는 뜻입니다.</li>
+  <li>오른쪽 표의 명령으로 셋을 하나씩 확인합니다. jsonpath는 긴 출력에서 필요한 필드만 뽑아 보는 옵션입니다. 각각 release: kps, app.kubernetes.io/name=order-api, "name":"http"가 나오면 맞습니다. 셋이 맞으면 1~2분 뒤 Target health에 serviceMonitor/apps/order-api/0이 나타나고, 하나라도 어긋나면 에러 없이 타깃이 생기지 않습니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus-operator.dev/docs/developer/getting-started/" target="_blank" rel="noopener">Prometheus Operator · Getting started</a></li>
@@ -149,36 +159,37 @@ curl -s localhost:18082/actuator/prometheus \
   <span class="kicker"><span class="n">05</span>FOLLOW ALONG ① · 연결</span>
   <h1>따라하기 ① <span class="hl">두 앱을 수집 대상에 올린다</span></h1>
   <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
+    <div class="access"><span><b>접속</b>브라우저 <code>http://localhost:9090</code>. 안 열리면 <code>kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 &gt;/dev/null 2&gt;&amp;1 &amp;</code></span><span><b>로그인</b>없음</span><span><b>메뉴</b>질의는 위쪽 Query 입력칸에 붙여 넣고 Execute, 결과는 Table 탭</span></div>
+    <table class="compare dense" style="table-layout:fixed;font-size:14px">
       <colgroup><col style="width:5%"><col style="width:58%"><col></colgroup>
-      <thead><tr><th>#</th><th>명령 · 화면</th><th>볼 것 (기준값)</th></tr></thead>
+      <thead><tr><th>#</th><th>명령 · 화면</th><th>보이면 통과</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td><code>kubectl apply -f labs/k8s/servicemonitors.yaml</code></td><td class="it">order-api · journal-api created</td></tr>
-        <tr><td>2</td><td><code>kubectl get servicemonitor -A -l release=kps | grep -E 'apps|journal'</code></td><td class="it">두 개가 목록에 있다</td></tr>
-        <tr><td>3</td><td>1~2분 기다린 뒤 브라우저 localhost:9090 → Status → Target health, 오른쪽 위 검색칸에 <code>api</code> (apiserver 줄은 무시)</td><td class="it">order-api 2/2 up · journal-api 3/3 up</td></tr>
-        <tr><td>4</td><td>Query: <code>count(up)</code> · <code>sum(up)</code></td><td class="it">33 · 33 (28 + 앱 파드 5)</td></tr>
-        <tr><td>5</td><td>Query: <code>http_server_requests_seconds_count</code> (Table)</td><td class="it">job="order-api" · job="journal-api" 줄들</td></tr>
-        <tr><td>6</td><td>Status → Configuration, 검색 <code>order-api</code></td><td class="it"><code>job_name: serviceMonitor/apps/order-api/0</code></td></tr>
+        <tr><td>1</td><td><code>kubectl apply -f labs/k8s/servicemonitors.yaml</code></td><td class="it"><code>order-api created</code> · <code>journal-api created</code> 두 줄</td></tr>
+        <tr><td>2</td><td><code>kubectl get servicemonitor -A -l release=kps | grep -E 'apps|journal'</code></td><td class="it"><code>apps order-api</code> · <code>journal journal-api</code> 두 줄</td></tr>
+        <tr><td>3</td><td>1~2분 기다린 뒤 Status → Target health, 위쪽 세 번째 칸 <b>Filter by endpoint or labels</b>에 <code>api</code> (apiserver 줄은 무시)</td><td class="it">order-api <code>2 / 2 up</code> · journal-api <code>3 / 3 up</code></td></tr>
+        <tr><td>4</td><td>Query: <code>count(up)</code>, 다음에 <code>sum(up)</code></td><td class="it">둘 다 33 (기본 타깃 28 + 앱 파드 5)</td></tr>
+        <tr><td>5</td><td>Query: <code>http_server_requests_seconds_count</code></td><td class="it"><code>job="order-api"</code> 줄과 <code>job="journal-api"</code> 줄이 각각 한 줄 이상</td></tr>
+        <tr><td>6</td><td>Status → Configuration, 브라우저 찾기(Cmd-F · Ctrl-F)로 <code>order-api</code></td><td class="it"><code>job_name: serviceMonitor/apps/order-api/0</code></td></tr>
       </tbody>
     </table>
-    <div class="callout">타깃 하나 = 파드 하나. order-api를 3개로 늘리면 타깃도 자동으로 3개가 된다. 서비스 디스커버리가 엔드포인트를 따라가기 때문이다.</div>
+    <div class="callout">타깃 하나 = 파드 하나. order-api를 3개로 늘리면 타깃도 자동으로 3개가 된다. 3번에서 타깃이 안 보이면 <a href="lab-guide.html#q-sm" target="_blank" rel="noopener">실습 가이드 Q4</a>.</div>
   </div>
   <div class="foot"><span>job 라벨 값은 Service 이름에서 온다(order-api · journal-api) · <a href="lab-guide.html#s6-2" target="_blank" rel="noopener">실습 가이드 06 앱 연결 6-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>실측: 적용 2분 뒤 두 앱 타깃 5개가 up, count(up) 33.</li>
-  <li>3번 순서: ServiceMonitor를 만들면 오퍼레이터가 수집 설정을 새로 만들고 Prometheus가 다시 읽는다. 1~2분 걸리므로 바로 보면 목록에 아직 없다. 브라우저 localhost:9090(port-forward 필요) → Status → Target health → 오른쪽 위 검색칸에 api. 기본 타깃 28개 중 앱 묶음만 남긴다.</li>
-  <li>판정: serviceMonitor/apps/order-api/0 2/2 up, serviceMonitor/journal/journal-api/0 3/3 up. 묶음 이름 옆 숫자가 파드 수와 같으면 성공.</li>
-  <li>검색 api에는 serviceMonitor/monitoring/kps-kube-prometheus-stack-apiserver/0 도 걸린다. 이름의 apiserver 때문이다. 쿠버네티스 API 서버 타깃이라 무시한다.</li>
-  <li>앱 묶음이 아예 안 보이면 라벨 · 셀렉터 · 포트 이름 중 하나가 어긋난 것이다(앞 슬라이드의 세 가지). 에러 없이 타깃만 생기지 않는다.</li>
-  <li>6번 설정에는 role: endpoints, namespaces: [apps], metrics_path: /actuator/prometheus, 서비스 라벨과 포트 이름으로 keep 하는 relabel 규칙이 들어 있다(3장 슬라이드와 같은 모양).</li>
+  <li>두 앱을 수집 대상에 올리는 순서입니다. Prometheus는 localhost:9090에서 열고, 로그인은 없습니다. 질의는 위쪽 Query 입력칸에 넣고 Execute를 누르면 Table 탭에 결과가 나옵니다.</li>
+  <li>1번으로 ServiceMonitor 두 개를 적용하고, 2번으로 release=kps 라벨을 단 목록에 두 개가 있는지 봅니다.</li>
+  <li>3번은 1~2분 기다린 뒤 Status → Target health에서 api로 검색합니다. n / n up은 전체 타깃 중 up인 수로, order-api 2 / 2 up, journal-api 3 / 3 up이면 됩니다. 숫자는 파드 수입니다.</li>
+  <li>4번 up은 타깃마다 수집이 성공하면 1, 실패하면 0인 메트릭입니다. 그래서 count(up)은 타깃 수, sum(up)은 성공한 타깃 수이고, 둘이 같으면 전부 살아 있다는 뜻입니다. 둘 다 33이어야 하고, 스택 설치 직후의 기본 타깃 28개에 앱 파드 5개가 더해진 값입니다.</li>
+  <li>5번 http_server_requests_seconds_count는 앱이 받은 요청 횟수를 세는 카운터입니다. job="order-api"와 job="journal-api" 줄이 보이면 두 앱의 메트릭이 들어오는 것입니다. job 라벨 값은 Service 이름에서 옵니다.</li>
+  <li>6번 Status → Configuration은 프로메테우스가 지금 실제로 쓰는 설정 전체입니다. 여기에 serviceMonitor/apps/order-api/0이 있으면 오퍼레이터가 수집 설정을 만든 것입니다. 타깃은 파드 하나에 하나씩 생겨서, 파드를 늘리면 타깃도 자동으로 늘어납니다.</li>
 </ul>
 </aside>
 </section>
 
 <section class="slide expanded" data-label="PromQL 기본 패턴">
   <span class="kicker"><span class="n">05</span>HOW TO QUERY · PromQL</span>
-  <h1>PromQL은 <span class="hl">네 가지 모양</span>만 알면 대부분 읽힌다</h1>
+  <h1>이 장의 질의는 모두 <span class="hl">네 가지 모양</span>을 조합한 것이다</h1>
   <div class="body">
     <table class="compare dense" style="table-layout:fixed;font-size:14.5px">
       <colgroup><col style="width:17%"><col style="width:45%"><col></colgroup>
@@ -186,8 +197,8 @@ curl -s localhost:18082/actuator/prometheus \
       <tbody>
         <tr><td>① 고르기</td><td><code>http_server_requests_seconds_count{job="order-api", status=~"5.."}</code></td><td class="it">이름과 라벨로 시계열을 고른다. <code>=~</code>는 정규식</td></tr>
         <tr><td>② 속도</td><td><code>rate(http_server_requests_seconds_count[5m])</code></td><td class="it">카운터(누적)를 초당 값으로. 카운터는 거의 항상 rate로 감싼다</td></tr>
-        <tr><td>③ 합치기</td><td><code>sum by (job) (rate(…[5m]))</code></td><td class="it">파드 여러 개를 앱 단위로. <code>by</code>에 남길 라벨을 적는다</td></tr>
-        <tr><td>④ 비율 · 분위수</td><td><code>sum(rate(…{status=~"5.."}[5m])) / sum(rate(…[5m]))</code><br><code>histogram_quantile(0.99, sum by (le) (rate(…_bucket[5m])))</code></td><td class="it">에러 비율, P99. 분위수는 <code>le</code>를 by에 꼭 남긴다</td></tr>
+        <tr><td>③ 합치기</td><td><code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">파드 여러 개를 앱 단위로. <code>by</code>에 남길 라벨을 적는다</td></tr>
+        <tr><td>④ 비율 · 분위수</td><td><code>sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))</code><br><code>histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))</code></td><td class="it">에러 비율, P99. 분위수는 <code>le</code>를 by에 꼭 남긴다</td></tr>
       </tbody>
     </table>
     <div class="callout">읽는 순서는 안쪽부터: 고르고 → 초당으로 바꾸고 → 앱 단위로 합치고 → 나누거나 분위수를 구한다. 5장의 RED 질의가 모두 이 순서다.</div>
@@ -195,9 +206,12 @@ curl -s localhost:18082/actuator/prometheus \
   <div class="foot"><span>[5m]: 최근 5분의 샘플로 계산한다. 수집 주기(30초)의 4배 이상으로 둔다 · <a href="lab-guide.html#s7-2" target="_blank" rel="noopener">실습 가이드 07 RED 7-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>rate 창을 수집 주기와 비슷하게 잡으면(예: [30s]) 샘플이 1~2개뿐이라 값이 튀거나 비어 나온다. 수집 주기의 4배 이상이 흔한 권장이다.</li>
-  <li>sum by 에 없는 라벨은 사라진다. 나중에 어느 파드인지 보려면 by (job, pod) 처럼 남긴다.</li>
-  <li>histogram_quantile 은 버킷 경계 사이를 선형 보간해 추정한다. 경계가 앱의 실제 지연 분포에 맞아야 값이 의미가 있다(실습 가이드 11 Q&amp;A).</li>
+  <li>이 장의 PromQL은 모두 네 가지 모양을 조합한 것입니다.</li>
+  <li>① 고르기는 이름과 라벨로 시계열을 고릅니다. =~는 정규식으로 고른다는 뜻이고, status=~"5.."는 500부터 599까지, 즉 서버 에러 응답만 고릅니다.</li>
+  <li>② 속도는 rate()로 누적 카운터를 초당 값으로 바꿉니다. 카운터는 계속 쌓이기만 해서 값 자체로는 지금 상황을 알 수 없으므로 거의 항상 rate로 감쌉니다.</li>
+  <li>③ 합치기의 sum by (job)은 job 라벨만 남기고 나머지 라벨을 모두 합칩니다. 파드가 여러 개라도 앱 하나당 한 줄로 묶입니다.</li>
+  <li>④는 두 값을 나눠 에러 비율을 구하거나, histogram_quantile()로 P99를 구합니다. 분위수는 구간 경계인 le가 있어야 계산할 수 있어서 by에 le를 꼭 남깁니다.</li>
+  <li>읽을 때는 안쪽부터 봅니다. 고르고, 초당으로 바꾸고, 앱 단위로 합치고, 마지막에 나누거나 분위수를 구합니다. [5m]은 최근 5분의 샘플로 계산한다는 뜻으로, 수집 주기 30초의 4배 이상으로 둬야 샘플이 충분해 값이 흔들리지 않습니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/prometheus/latest/querying/basics/" target="_blank" rel="noopener">PromQL · Querying basics</a></li>
@@ -210,30 +224,29 @@ curl -s localhost:18082/actuator/prometheus \
   <span class="kicker"><span class="n">05</span>FOLLOW ALONG ② · RED</span>
   <h1>따라하기 ② <span class="hl">부하를 넣고 RED를 뽑는다</span></h1>
   <div class="body">
-    <table class="compare dense" style="table-layout:fixed;font-size:13.5px">
-      <colgroup><col style="width:5%"><col style="width:62%"><col></colgroup>
-      <thead><tr><th>#</th><th>명령 · 질의</th><th>볼 것 (기준값)</th></tr></thead>
+    <div class="access"><span><b>접속</b>브라우저 <code>http://localhost:9090</code>. k6는 앱 포트 <code>18082</code> · <code>18083</code>을 쓴다(4장에서 띄운 port-forward)</span><span><b>로그인</b>없음</span><span><b>메뉴</b>2~5번은 Query 입력칸 → Execute → Table, 6번은 Graph 탭</span></div>
+    <table class="compare dense" style="table-layout:fixed;font-size:12.5px">
+      <colgroup><col style="width:4%"><col style="width:68%"><col></colgroup>
+      <thead><tr><th>#</th><th>명령 · 질의</th><th>보이면 통과</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td><code>k6 run -e DURATION=6m labs/k6/k6-red.js</code> (port-forward 18082 · 18083)</td><td class="it">초당 30 정상 + 2 느린 요청 + 3 에러. 질의는 5분쯤 지나서</td></tr>
-        <tr><td>2</td><td>R: <code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">order-api ≈ 36/s</td></tr>
-        <tr><td>3</td><td>E: <code>sum by (job) (rate(…_count{status=~"5.."}[5m])) / sum by (job) (rate(…_count[5m]))</code></td><td class="it">order-api ≈ 0.06 (6%)</td></tr>
-        <tr><td>4</td><td>D 평균: <code>sum by (job) (rate(…_sum[5m])) / sum by (job) (rate(…_count[5m]))</code></td><td class="it">≈ 0.045 (45ms)</td></tr>
-        <tr><td>5</td><td>D 분위수: <code>histogram_quantile(0.99, sum by (job, le) (rate(…_bucket[5m])))</code></td><td class="it">≈ 0.79 (790ms)</td></tr>
-        <tr><td>6</td><td>쪼개기: 5번의 <code>job</code>을 <code>uri</code>로, <code>{job="order-api"}</code>로 고른다 (Graph)</td><td class="it">/api/chaos/slow만 ≈ 0.80</td></tr>
+        <tr><td>1</td><td>새 터미널에서 <code>k6 run -e DURATION=15m labs/k6/k6-red.js</code><br>15분 동안 돈다. 2~6번은 <b>시작 5분 뒤부터</b>, 부하가 도는 동안 친다</td><td class="it">진행 표시 아래 <code>errors</code> · <code>normal</code> · <code>slow</code> 세 줄. 멈출 때 <code>Ctrl-C</code></td></tr>
+        <tr><td>2</td><td>R <code>sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">order-api ≈ 36</td></tr>
+        <tr><td>3</td><td>E <code>sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">order-api ≈ 0.06 (6%)</td></tr>
+        <tr><td>4</td><td>D 평균 <code>sum by (job) (rate(http_server_requests_seconds_sum[5m])) / sum by (job) (rate(http_server_requests_seconds_count[5m]))</code></td><td class="it">order-api ≈ 0.045 (45ms)</td></tr>
+        <tr><td>5</td><td>D 분위수 <code>histogram_quantile(0.99, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))</code></td><td class="it">order-api ≈ 0.79 (790ms)</td></tr>
+        <tr><td>6</td><td>쪼개기 <code>histogram_quantile(0.99, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job="order-api"}[5m])))</code></td><td class="it">선 하나(<code>/api/chaos/slow</code>)만 ≈ 0.80, 나머지는 바닥</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>…_count · …_sum · …_bucket = http_server_requests_seconds_* · <a href="lab-guide.html#s7-1" target="_blank" rel="noopener">실습 가이드 07 RED 7-1 · 7-2 섹션 참고</a></span><span>{{PG}}</span></div>
+  <div class="foot"><span>k6가 "connection refused"로 실패하면 앱 port-forward가 꺼진 것이다(53번 슬라이드 맨 위 명령) · <a href="lab-guide.html#s7-1" target="_blank" rel="noopener">실습 가이드 07 RED 7-1 · 7-2 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>기준값은 모두 실측이다. 라이브 값은 부하 시점에 따라 조금씩 다르다.</li>
-  <li>1: k6 요약 기준값(6분 실행) http_req_duration avg 27.15ms, p(95) 6.26ms, max 814.89ms · 실패율 3.17% · 64.9 req/s (두 앱 섞인 클라이언트 관점).</li>
-  <li>2: order-api 35.67 · journal-api 31.90. order-api에는 부하 외에 프로브 · 수집 요청이 섞인다.</li>
-  <li>3: order-api 0.058(다른 실행 0.061). journal-api는 0.</li>
-  <li>4: order-api 45.4ms · journal-api 0.53ms.</li>
-  <li>5: order-api P50 0.58ms · P95 725ms · P99 789ms.</li>
-  <li>6: /api/chaos/slow 805ms, 나머지는 /actuator/prometheus 17.8ms, /actuator/health/** 4.0ms, /api/orders 1.7ms, /api/chaos/error 1.4ms.</li>
-  <li>끝나면 k6는 Ctrl-C.</li>
+  <li>이제 부하를 넣고 RED를 직접 계산합니다. 1번은 새 터미널에서 k6를 15분 동안 돌립니다. 시나리오는 세 가지로, normal은 정상 요청 초당 30건, slow는 0.8초 걸리는 요청 초당 2건, errors는 70% 확률로 500을 돌려주는 요청 초당 3건입니다. 진행 표시에 이 세 줄이 보이면 됩니다.</li>
+  <li>질의는 시작 5분 뒤부터, 부하가 도는 동안 칩니다. 질의가 최근 5분을 보기 때문에 그 창이 부하로 채워져야 숫자가 제대로 나옵니다.</li>
+  <li>2번 R은 요청 횟수 카운터를 rate로 바꿔 앱별로 합친 초당 요청 수로, order-api가 약 36건입니다. 3번 E는 5xx 요청의 초당 수를 전체 요청의 초당 수로 나눈 에러 비율로, 약 0.06, 6%입니다.</li>
+  <li>4번 D 평균은 _sum을 _count로 나눈 값입니다. _sum은 걸린 시간의 합계, _count는 요청 수라서 나누면 요청 하나의 평균 시간이 되고, 약 0.045초, 45ms입니다. 5번 D 분위수 P99는 구간별 개수인 _bucket으로 계산하고, 약 0.79초, 790ms입니다. 평균은 45ms인데 가장 느린 1%는 790ms 가까이 걸린다는 뜻입니다.</li>
+  <li>6번은 by의 job을 uri로 바꿔 P99를 요청 경로별로 나눕니다. Graph 탭에서 보면 /api/chaos/slow 하나만 약 0.8초로 위로 뜨고 나머지는 바닥에 깔립니다.</li>
+  <li>k6가 connection refused로 실패하면 앱 port-forward가 꺼진 것이니 다시 띄웁니다. 멈출 때는 Ctrl-C를 누릅니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k6/k6-red.js" target="_blank" rel="noopener">k6-red.js</a></li>
@@ -260,7 +273,7 @@ P99    0.789   <span class="c"># 789ms</span>
 /api/chaos/error       0.0014</pre>
       <div class="stack">
         <div class="card"><h3>1. 평균은 없는 요청을 가리킨다</h3><p>요청 절반은 1ms 안쪽, 상위 5%는 700ms를 넘는다. 45ms 근처의 요청은 거의 없다(1장 "평균의 함정").</p></div>
-        <div class="card"><h3>2. 분위수로 꼬리를 본다</h3><p>P50은 대부분의 경험, P99는 가장 느린 1%의 경험. 알림과 SLO는 P95 · P99로 건다.</p></div>
+        <div class="card"><h3>2. 분위수로 꼬리를 본다</h3><p>P50은 요청 절반이 이 시간 안에 끝났다는 뜻, P99는 가장 느린 1%가 이 시간보다 오래 걸렸다는 뜻. 알림과 SLO는 P95 · P99로 건다.</p></div>
         <div class="card"><h3>3. 라벨로 쪼개 원인을 좁힌다</h3><p><code>sum by (uri, le)</code>로 바꾸자 느린 경로가 하나로 드러난다(0.805초, 나머지는 18ms 이하). 쪼갤 라벨이 계측에 있어야 가능하다.</p></div>
       </div>
     </div>
@@ -268,8 +281,10 @@ P99    0.789   <span class="c"># 789ms</span>
   <div class="foot"><span>Graph 탭에서 uri별 선을 그리면 /api/chaos/slow 하나만 위로 뜬다 · <a href="lab-guide.html#s7-3" target="_blank" rel="noopener">실습 가이드 07 RED 7-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>실측값. 1장 "오늘의 질문"의 ①②가 이 두 단계다: 무엇이 이상한가(P99) → 어디에서 발생했나(uri).</li>
-  <li>쪼갤 라벨은 경로 템플릿(/api/orders/{id})이어야 한다. 실제 ID가 들어간 경로를 라벨로 쓰면 시계열이 끝없이 는다(카디널리티).</li>
+  <li>결과를 읽는 순서입니다. 왼쪽 위는 같은 5분 동안의 order-api 값입니다. 평균은 45ms지만 P50은 0.58ms, P95는 725ms, P99는 789ms입니다.</li>
+  <li>첫째, 평균은 실제로 없는 요청을 가리킵니다. 요청 절반은 1ms 안쪽, 상위 5%는 700ms를 넘어서 45ms 근처의 요청은 거의 없습니다. 빠른 요청과 느린 요청이 두 무리로 나뉘어 있으면 평균은 그 사이 빈 곳에 떨어집니다.</li>
+  <li>둘째, 분위수로 꼬리를 봅니다. P50은 요청 절반이 이 시간 안에 끝났다는 뜻, P95는 요청 95%가 이 시간 안에 끝났다는 뜻, P99는 가장 느린 1%가 이보다 오래 걸렸다는 뜻입니다. 알림과 SLO는 P95와 P99로 겁니다. SLO는 "요청 99%를 200ms 안에 처리한다"처럼 서비스가 지키기로 한 목표이고, 평균으로 걸면 느린 요청이 숫자에 묻히기 때문입니다.</li>
+  <li>셋째, 라벨로 쪼개 원인을 좁힙니다. uri로 나누면 /api/chaos/slow만 0.805초이고 나머지는 18ms 이하입니다. 이렇게 쪼개려면 계측할 때 uri 같은 라벨이 붙어 있어야 합니다. 느린 원인이 경로 하나라는 것을 메트릭만으로 찾은 것입니다.</li>
 </ul>
 </aside>
 </section>

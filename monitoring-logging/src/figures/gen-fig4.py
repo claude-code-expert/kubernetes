@@ -25,14 +25,14 @@ ticks = "".join(
     f'<line x1="{X(v):.0f}" y1="{base}" x2="{X(v):.0f}" y2="{base+14}" stroke="#5A6867" stroke-width="2"/>'
     f'<text x="{X(v):.0f}" y="{base+48}" font-size="26" text-anchor="middle" style="{MONO};fill:#5A6867">{l}</text>'
     for v, l in [(0.0001, "0.1ms"), (0.001, "1ms"), (0.01, "10ms"), (0.1, "100ms"), (1, "1s")])
-marks = (mark(0.00059, "P50", "0.59ms", 150, "#0B5A54")
+marks = (mark(0.00058, "P50", "0.58ms", 150, "#0B5A54")
          + mark(0.045, "평균", "45ms", 300, "#B5761F", dash=True)
          + mark(0.725, "P95", "725ms", 150, "#C2414A", "end", -14)
          + mark(0.79, "P99", "790ms", 250, "#C2414A"))
 
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t4 d4">
   <title id="t4">평균 45ms를 겪은 요청은 없다</title>
-  <desc id="d4">order-api 응답 시간 분포. 대부분의 요청은 1밀리초 안팎에 끝나고 일부가 800밀리초 근처에 몰린다. 평균 45밀리초는 두 무리 사이 빈 곳에 떨어진다. P50 0.59ms, P95 725ms, P99 790ms는 실측값이다.</desc>
+  <desc id="d4">order-api 응답 시간 분포. 대부분의 요청은 1밀리초 안팎에 끝나고 일부가 800밀리초 근처에 몰린다. 평균 45밀리초는 두 무리 사이 빈 곳에 떨어진다. P50 0.58ms, P95 725ms, P99 790ms는 실측값이다.</desc>
   <rect width="1600" height="900" fill="#FFFFFF"/>
   <text x="40" y="60" font-size="34" font-weight="700" style="{SANS};fill:#24292A">order-api 응답 시간 분포</text>
   <text x="40" y="102" font-size="24" style="{SANS};fill:#5A6867">가로축 로그 눈금 · 세로축 요청 수(개략)</text>

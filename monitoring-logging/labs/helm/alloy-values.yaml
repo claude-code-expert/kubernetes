@@ -54,9 +54,15 @@ alloy:
 
       // 3) 쿠버네티스 API 로 로그를 읽는다.
       //    호스트의 /var/log 를 마운트하는 방식과 달리 특권 컨테이너가 필요 없다.
+      //    API 로 읽으므로 수집기가 어느 노드에 떠 있든 모든 파드 로그를 읽을 수 있다.
+      //    그래서 클러스터링을 켜서 대상을 Alloy 파드끼리 나눈다. 끄면 Alloy 파드마다
+      //    전체 파드 로그를 각자 보내서 같은 로그가 파드 수만큼 중복 전송된다.
       loki.source.kubernetes "pods" {
         targets    = discovery.relabel.pod_logs.output
         forward_to = [loki.write.default.receiver]
+        clustering {
+          enabled = true
+        }
       }
 
       // 4) 로키로 밀어 넣는다
@@ -66,10 +72,15 @@ alloy:
         }
       }
 
+  # 위 clustering 블록이 동작하려면 Alloy 파드끼리 서로를 찾아야 한다. 차트가 헤드리스 서비스를 만든다.
+  clustering:
+    enabled: true
+
   resources:
     requests: {cpu: 50m, memory: 128Mi}
     limits: {memory: 256Mi}
 
-# 노드마다 하나씩 뜨는 데몬셋
+# 노드마다 하나씩 뜨는 데몬셋. 톨러레이션이 없어 컨트롤 플레인 노드에는 뜨지 않지만,
+# API 로 읽으므로 컨트롤 플레인 파드(kube-system)의 로그도 수집된다.
 controller:
   type: daemonset
