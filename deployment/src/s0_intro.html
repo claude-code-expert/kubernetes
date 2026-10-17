@@ -1,0 +1,138 @@
+  <section class="slide on" data-t="표지">
+    <div class="kicker">KUBERNETES STUDY · WEEK 07</div>
+    <h1>릴리스 파이프라인</h1>
+    <p class="dim" style="margin-top:28px">『쿠버네티스 창시자에게 배우는 모범 사례 2판』<br>5장 지속적 통합, 테스팅, 배포 / 6장 버저닝, 릴리스, 롤아웃<br>7장 글로벌 애플리케이션 분산과 스테이징 / 18장 깃옵스와 배포</p>
+    <div style="margin-top:22px"><span class="tag">2026-10-04 (일) 20:00</span></div>
+    <aside class="notes"><b>발표 노트</b><ul><li>7주차 발표 맡은 명주입니다. 오늘은 5, 6, 7, 18장 네 장을 봅니다.</li><li>장 순서대로 가지 않고 흐름 하나로 묶었습니다. 그 흐름은 질문 하나로 시작하겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="질문">
+    <div class="kicker">서론</div>
+    <h1>릴리스 파이프라인에서<br><span class="em">제일 중요한 건</span> 뭘까요?</h1>
+    <p class="dim" style="margin-top:28px">하나만 고른다면</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>시작하기 전에 질문 하나 드리겠습니다. 릴리스 파이프라인에서 제일 중요한 게 뭐라고 생각하세요? 하나만 고른다면요.</li><li>채팅으로 답 주셔도 되고 말로 해 주셔도 됩니다. 잠깐 기다리겠습니다.</li><li>(누가 롤백이나 핫픽스라고 답하면) 네, 좋은 답입니다. 오늘 그 얘기를 길게 할 거라서 조금 뒤에 이어서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="흔히 나오는 답">
+    <div class="kicker">서론</div>
+    <h2>보통 이런 답이 나옵니다</h2>
+    <div class="cols c3">
+      <div class="card"><h3>테스트</h3><p>깨진 코드가 나가지 않게</p></div>
+      <div class="card"><h3>빠른 빌드</h3><p>커밋하고 금방 결과를 보게</p></div>
+      <div class="card"><h3>자동화</h3><p>사람 손이 안 타게</p></div>
+      <div class="card"><h3>무중단 배포</h3><p>배포 중에도 요청이 안 끊기게</p></div>
+      <div class="card"><h3>모니터링</h3><p>문제가 생기면 바로 알게</p></div>
+    </div>
+    <p style="margin-top:22px">다 맞는 말입니다. 그런데 하나 더 물어보겠습니다.</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>보통 이런 답이 나옵니다. 테스트, 빠른 빌드, 자동화, 무중단 배포, 모니터링.</li><li>다 맞습니다. 실제로 교재 5장이 이 이야기들을 합니다.</li><li>그런데 상황을 하나 가정해 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="배포 직후 에러가 났다">
+    <div class="kicker">서론</div>
+    <h2>금요일 오후 6시, 방금 배포가 끝났습니다</h2>
+    <pre class="code" style="font-size:21px">18:02  order-api 1.7.0 롤아웃 완료 (successfully rolled out)
+18:03  알람: 결제 API 5xx 비율 <span class="y">3.1%</span>
+18:05  CS 채널: "쿠폰 적용하면 결제가 안 돼요"</pre>
+    <p style="margin-top:28px" class="big">지금 제일 먼저 하고 싶은 건?</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>금요일 오후 6시에 배포가 끝났습니다. 롤아웃도 성공으로 끝났는데, 1분 뒤 결제 에러 알람이 옵니다. 평소 0.1%이던 5xx 비율이 3.1%입니다. 2분 뒤에는 CS 채널에 쿠폰 쓰면 결제가 안 된다는 문의가 들어옵니다.</li><li>이때 제일 먼저 하고 싶은 게 뭔가요? 원인 분석? 로그 확인?</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="되돌리고 싶다">
+    <div class="kicker">서론</div>
+    <h1>일단 <span class="em">되돌리고</span> 싶다</h1>
+    <p style="margin-top:28px">원인은 되돌린 다음에 봐도 됩니다</p>
+    <p class="dim">그런데 이 순간, 되돌리는 데 몇 분 걸리는지, 그동안 몇 명이 겪는지 알고 계신가요?</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>네, 일단 되돌리고 싶습니다. 원인은 되돌린 다음에 봐도 되니까요.</li><li>그런데 이 순간에 되돌리는 데 몇 분 걸리는지, 그동안 사용자가 몇 명이나 이 에러를 겪는지 바로 답할 수 있는 팀은 많지 않습니다.</li><li>그래서 제 답은 이겁니다. 릴리스 파이프라인에서 제일 중요한 건 롤백입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="앞의 답들을 롤백 쪽에서 다시 보면">
+    <div class="kicker">서론</div>
+    <h2>앞의 답들을 롤백 쪽에서 다시 보면</h2>
+    <table>
+      <tr><th>흔한 답</th><th>롤백 쪽에서 보면</th></tr>
+      <tr><td class="k">테스트</td><td>되돌릴 일을 줄인다</td></tr>
+      <tr><td class="k">빠른 빌드</td><td>고쳐서 다시 내보낼 때 빨리 나간다</td></tr>
+      <tr><td class="k">자동화</td><td>급할 때 손으로 치다 틀리지 않는다</td></tr>
+      <tr><td class="k">무중단 배포</td><td>되돌릴 때도 안 끊긴다</td></tr>
+      <tr><td class="k">모니터링</td><td>언제 되돌릴지 알려 준다</td></tr>
+    </table>
+    <p style="margin-top:20px">안 깨지는 배포는 없습니다. 그래서 깨졌을 때 <b>빨리, 싸게 되돌릴 수 있는지</b>가 제일 중요합니다.</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>앞에서 나온 답들을 롤백 쪽에서 다시 보면 이렇게 됩니다.</li><li>테스트는 되돌릴 일 자체를 줄이고, 무중단 배포는 되돌릴 때도 안 끊기게 해 주고, 모니터링은 언제 되돌릴지 알려 줍니다. 빠른 빌드는 고쳐서 다시 내보낼 때 도움이 됩니다.</li><li>배포가 한 번도 안 깨지는 팀은 없습니다. 그래서 깨졌을 때 빨리, 싸게 되돌릴 수 있느냐가 제일 중요하다고 생각합니다. 오늘은 네 장을 이 관점으로 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="배포 전략이란">
+    <div class="kicker">서론</div>
+    <h2>그럼 처음부터 되돌리기 쉽게 내보내면 된다</h2>
+    <div class="quote">배포 전략 = 새 버전을 <b>누구에게, 얼마나, 어떤 순서로</b> 보여 줄지 정하는 것</div>
+    <table style="margin-top:22px">
+      <tr><th>전략에 따라 달라지는 것</th><th>예</th></tr>
+      <tr><td class="k">버그를 몇 명이 겪나</td><td>전부 한 번에 vs 5%만 먼저</td></tr>
+      <tr><td class="k">언제 알아채나</td><td>사용자 문의로 vs 옛 버전과 비교해서 자동으로</td></tr>
+      <tr><td class="k">되돌리는 데 얼마나 걸리나</td><td>다시 배포 수 분 vs 전환 수 초</td></tr>
+      <tr><td class="k">무엇이 더 드나</td><td>자원 두 배, 트래픽 나누는 장치, 판정할 메트릭</td></tr>
+    </table>
+    <p style="margin-top:18px" class="dim">오늘은 같은 배포를 전략만 바꿔서 세 번 해 보고 이 차이를 직접 비교합니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>롤백이 제일 중요하다면, 처음부터 되돌리기 쉽게 내보내면 됩니다. 그게 배포 전략입니다.</li><li>배포 전략은 새 버전을 누구에게, 얼마나, 어떤 순서로 보여 줄지 정하는 겁니다. 전략에 따라 버그를 몇 명이 겪는지, 언제 알아채는지, 되돌리는 데 얼마나 걸리는지, 그리고 무엇이 더 드는지가 달라집니다.</li><li>오늘은 같은 쿠폰 배포를 롤링, 블루/그린, 카나리로 세 번 해 보고 이 네 가지를 직접 비교하겠습니다. 그 전에 전략을 쓰려면 갖춰야 할 준비물부터 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="예시 서비스">
+    <div class="kicker">서론</div>
+    <h2>오늘 계속 쓸 예시</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:19px">서비스   order-api (주문 API)
+레플리카 10개, 초당 1,000 요청
+버전     1.6.3 → 1.7.0
+커밋     <span class="y">3f9c2e1</span> "쿠폰 할인 적용"
+변경     코드만 (쿠폰 컬럼은 1.6.3 배포 때
+         미리 추가해 둠)</pre>
+      <div class="card rose"><h3>숨어 있는 버그</h3>
+        <p style="font-size:20px">쿠폰 코드에 이모지나 일본어가 들어오면 문자열 처리에서 에러가 나서 <b>결제가 실패</b>한다</p>
+        <p style="font-size:20px">그런 요청은 전체의 <b>3%</b></p>
+        <p class="dim" style="font-size:18px">테스트는 영어 쿠폰 코드로만 했고, 스테이징에도 그런 데이터가 없었다</p></div>
+    </div>
+    <p style="margin-top:20px">아까 금요일 6시에 깨진 그 배포입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>오늘 계속 쓸 예시입니다. 주문 API이고, 레플리카 10개에 초당 1,000 요청을 받습니다. 쿠폰 할인을 적용하는 1.7.0 배포입니다. 쿠폰 컬럼은 그 전 1.6.3 배포 때 미리 추가해 뒀습니다. 왜 따로 했는지는 3부에서 봅니다.</li><li>이 버전에는 버그가 숨어 있습니다. 쿠폰 코드에 이모지나 일본어가 들어오면 결제가 실패합니다. 그런 요청이 3%입니다. 테스트는 영어 코드로만 했고 스테이징에도 그런 데이터가 없어서 못 잡았습니다.</li><li>이 버그는 교재 7.4에 나오는 예를 그대로 가져왔습니다. 교재는 "테스트할 때는 영어로만 입력하지만 실제 환경에서는 다양한 언어로 입력이 들어올 수 있다"고 씁니다. 7.4.3에도 비영어권에서는 문자열 처리 중 버그가 나기 쉬운 유니코드 문자가 더 많이 들어온다는 얘기가 있습니다.</li><li>아까 금요일 6시에 깨진 그 배포입니다. 3부에서 이 배포를 전략만 바꿔서 세 번 해 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="오늘의 흐름">
+    <div class="kicker">오늘의 흐름</div>
+    <h2>오늘의 흐름</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="1부 준비, 2부 배포 전략 한눈에, 3부 같은 배포 세 번, 4부 되돌리기의 순서와 교재 범위">
+      <defs><marker id="ar0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <g text-anchor="middle">
+        <rect x="10" y="40" width="250" height="120" rx="12" fill="#141d33" stroke="#4f9cff"/>
+        <text x="135" y="80" font-size="20" fill="#4f9cff" font-weight="800">1부 준비</text><text x="135" y="110" font-size="17" fill="#eaf0ff">되돌아갈 이름과 기록</text><text x="135" y="136" font-size="15" fill="#9db0d6">태그, 깃옵스, RS</text>
+        <rect x="300" y="40" width="250" height="120" rx="12" fill="#141d33" stroke="#a78bfa"/>
+        <text x="425" y="80" font-size="20" fill="#a78bfa" font-weight="800">2부 배포 전략</text><text x="425" y="110" font-size="17" fill="#eaf0ff">다섯 가지 한눈에</text><text x="425" y="136" font-size="15" fill="#9db0d6">Recreate ~ A/B</text>
+        <rect x="590" y="40" width="300" height="120" rx="12" fill="#141d33" stroke="#34d399" stroke-width="2.5"/>
+        <text x="740" y="80" font-size="20" fill="#34d399" font-weight="800">3부 같은 배포, 세 번</text><text x="740" y="110" font-size="17" fill="#eaf0ff">롤링 → 블루/그린 → 카나리</text><text x="740" y="136" font-size="15" fill="#9db0d6">같은 버그, 다른 결과</text>
+        <rect x="930" y="40" width="210" height="120" rx="12" fill="#141d33" stroke="#fb7185"/>
+        <text x="1035" y="80" font-size="20" fill="#fb7185" font-weight="800">4부 되돌리기</text><text x="1035" y="110" font-size="17" fill="#eaf0ff">실제로 되돌릴 때</text><text x="1035" y="136" font-size="15" fill="#9db0d6">깃옵스, 체크리스트</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" marker-end="url(#ar0)"><line x1="260" y1="100" x2="298" y2="100"/><line x1="550" y1="100" x2="588" y2="100"/><line x1="890" y1="100" x2="928" y2="100"/></g>
+      <g font-size="16" text-anchor="middle" fill="#9db0d6">
+        <text x="135" y="192">5.1 ~ 5.6, 6장, 18장</text>
+        <text x="425" y="192">5.7, 6.3</text>
+        <text x="740" y="192">5.7, 5.8, 6.3, 7장</text>
+        <text x="1035" y="192">7.5, 6.5, 18장</text>
+      </g>
+      <text x="575" y="260" font-size="18" fill="#fbbf24" text-anchor="middle" font-weight="700">3부가 본론입니다</text>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>오늘 흐름입니다. 1부에서 배포 전략을 쓰려면 필요한 준비물을 보고, 2부에서 전략 다섯 가지를 한눈에 봅니다.</li><li>3부가 본론입니다. 같은 쿠폰 배포를 롤링, 블루/그린, 카나리로 세 번 해 보고, 같은 버그가 터졌을 때 결과가 어떻게 다른지 봅니다.</li><li>4부는 실제로 되돌릴 때 챙겨야 할 것들입니다. 교재 범위는 상자 아래에 적었습니다. 7장은 여러 리전에 배포하는 이야기가 많은데, 배포 전략과 이어지는 부분은 3부에서 쓰고, 리전 이야기는 3부 끝에 짧게 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="진행 순서">
+    <div class="kicker">목차</div>
+    <h2>진행 순서</h2>
+    <table>
+      <tr><th></th><th>내용</th><th>교재</th><th>시간</th></tr>
+      <tr><td class="k">서론</td><td>제일 중요한 건 롤백, 배포 전략이란</td><td></td><td>7분</td></tr>
+      <tr><td class="k">1부</td><td>준비: 이미지 태그, 깃옵스, 롤아웃이 일어나는 원리</td><td>5.1 ~ 5.6, 6장, 18장</td><td>17분</td></tr>
+      <tr><td class="k">2부</td><td>배포 전략 한눈에</td><td>5.7, 6.3</td><td>3분</td></tr>
+      <tr><td class="k">3부</td><td>같은 쿠폰 배포를 롤링, 블루/그린, 카나리로 세 번 + 데모 + 7장 리전 보충</td><td>5.7, 5.8, 6.3, 7장</td><td>48분</td></tr>
+      <tr><td class="k">4부</td><td>되돌리기</td><td>7.5, 6.5, 18장</td><td>4분</td></tr>
+      <tr><td class="k">정리</td><td>처음 질문으로</td><td></td><td>1분</td></tr>
+      <tr><td class="r">토론</td><td>질문 4개</td><td></td><td>10분</td></tr>
+    </table>
+    <aside class="notes"><b>발표 노트</b><ul><li>순서입니다. 3부가 가장 깁니다. 3부 끝에 kind 클러스터로 짧게 데모를 하겠습니다.</li><li>중간에 궁금한 게 있으면 바로 말씀해 주세요.</li></ul></aside>
+  </section>

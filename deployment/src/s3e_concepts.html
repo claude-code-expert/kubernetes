@@ -1,0 +1,43 @@
+  <section class="slide" data-t="롤링 설정 한눈에">
+    <div class="kicker">3부 · 1회차 · 개념 정리 · 5.7, 6.3</div>
+    <h2>롤링 업데이트 설정 한눈에</h2>
+    <table class="tight">
+      <tr><th>설정</th><th>뜻</th><th>기본값</th><th>예시 서비스</th><th>잘못 두면</th></tr>
+      <tr><td class="k">maxSurge</td><td>교체 중 원래 개수보다 <b>더 떠 있어도 되는</b> 수</td><td>25%</td><td>25% (3개)</td><td>크면 자원이 모자라 Pending</td></tr>
+      <tr><td class="k">maxUnavailable</td><td>교체 중 원래 개수보다 <b>모자라도 되는</b> 수</td><td>25%</td><td>0</td><td>크면 교체 중 용량이 줄어 느려짐</td></tr>
+      <tr><td class="k">readinessProbe</td><td>이 파드에 <b>요청을 보내도 되나</b></td><td>없음</td><td>/readyz, 5초마다</td><td>없으면 뜨자마자 요청을 받는다</td></tr>
+      <tr><td class="k">livenessProbe</td><td>이 파드를 <b>재시작해야 하나</b></td><td>없음</td><td>/livez</td><td>readiness와 같은 경로면 부하 때 멀쩡한 파드를 죽인다</td></tr>
+      <tr><td class="k">minReadySeconds</td><td>Ready 후 몇 초 버텨야 <b>가용</b>으로 치나</td><td>0</td><td>10초</td><td>0이면 뜨자마자 죽는 파드도 통과</td></tr>
+      <tr><td class="k">progressDeadlineSeconds</td><td>이 시간 동안 진척 없으면 <b>실패로 표시</b></td><td>600초</td><td>300초</td><td>표시만 하고 되돌리지는 않는다</td></tr>
+      <tr><td class="k">revisionHistoryLimit</td><td>옛 ReplicaSet을 <b>몇 개 남기나</b></td><td>10</td><td>10</td><td>줄이면 undo로 돌아갈 곳이 없다</td></tr>
+      <tr><td class="k">terminationGracePeriodSeconds</td><td>종료 신호 뒤 강제 종료까지 <b>기다리는 시간</b></td><td>30초</td><td>45초</td><td>짧으면 하던 요청 중에 잘린다</td></tr>
+    </table>
+    <p class="note">preStop 훅은 종료 신호(SIGTERM) 전에 실행된다. 뒤의 "롤링 업데이트가 끊기는 이유"에서 자세히</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>1회차에 나온 설정들을 한 장에 모았습니다. 오늘 뒤에서 계속 나오는 용어라 여기서 한 번 정리하고 가겠습니다.</li><li>위의 두 줄이 롤링의 속도와 용량을 정합니다. maxSurge는 교체하는 동안 원래 개수보다 더 떠 있어도 되는 수, maxUnavailable은 원래 개수보다 모자라도 되는 수입니다. 둘 다 개수나 퍼센트로 쓸 수 있고 기본값은 둘 다 25%입니다. 퍼센트일 때 maxSurge는 올림, maxUnavailable은 내림으로 계산합니다. 그래서 레플리카 10개면 surge 3개, unavailable 2개가 기본입니다.</li><li>다음 두 줄은 프로브입니다. 이름이 비슷해서 헷갈리는데 묻는 게 다릅니다. readiness는 이 파드에 요청을 보내도 되느냐입니다. 실패하면 서비스 엔드포인트에서 빠지기만 하고 파드는 그대로 둡니다. liveness는 이 파드를 재시작해야 하느냐입니다. 실패하면 kubelet이 컨테이너를 재시작합니다. 둘을 같은 경로로 두면 부하가 몰려 응답이 느려질 때 멀쩡한 파드까지 재시작해서 상황이 더 나빠집니다.</li><li>minReadySeconds는 Ready가 된 뒤 몇 초를 더 버텨야 가용으로 칠지입니다. 기본값 0이면 뜨자마자 가용이라, 몇 초 뒤에 죽는 이미지도 롤아웃을 통과합니다. 롤링은 가용한 파드 수를 보고 다음 묶음으로 넘어가기 때문에 이 값이 롤링 속도에도 영향을 줍니다.</li><li>progressDeadlineSeconds는 이 시간 동안 롤아웃에 진척이 없으면 실패로 표시하는 값입니다. 기본 600초입니다. 표시만 하고 되돌리지는 않습니다. 이건 뒤에서 데모로 봅니다.</li><li>revisionHistoryLimit은 옛 레플리카셋을 몇 개 남길지입니다. 기본 10개입니다. 이게 rollout undo로 돌아갈 곳의 목록이라, 줄여 두면 돌아갈 곳이 없어집니다.</li><li>마지막 terminationGracePeriodSeconds는 파드를 끌 때 종료 신호를 보낸 뒤 강제로 죽이기까지 기다리는 시간입니다. 기본 30초입니다. 짧으면 하던 요청을 마치기 전에 잘립니다. 그 앞에 실행되는 preStop 훅은 3부 뒤쪽에서 따로 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="maxSurge와 maxUnavailable을 바꾸면">
+    <div class="kicker">3부 · 1회차 · 개념 정리 · 5.7</div>
+    <h2>maxSurge와 maxUnavailable을 바꾸면 (replicas 10)</h2>
+    <table class="tight">
+      <tr><th>maxSurge / maxUnavailable</th><th>교체 중 파드 수</th><th>한 번에 바꾸는 수</th><th>필요한 여유 자원</th><th>언제</th></tr>
+      <tr><td class="k">25% / 0 (예시 서비스)</td><td>10 → 최대 <b>13</b></td><td>3개</td><td>파드 3개분</td><td>용량을 절대 줄이면 안 될 때</td></tr>
+      <tr><td class="k">0 / 25%</td><td>10 → 최소 <b>8</b></td><td>2개</td><td>없음</td><td>노드 여유가 없을 때. 교체 중 처리량이 준다</td></tr>
+      <tr><td class="k">25% / 25% (기본값)</td><td>8 ~ 13</td><td>최대 5개</td><td>파드 3개분</td><td>보통의 경우. 빠르다</td></tr>
+      <tr><td class="k">1 / 1 (교재 5.7 예제)</td><td>9 ~ 11</td><td>최대 2개</td><td>파드 1개분</td><td>천천히, 조금씩</td></tr>
+      <tr><td class="k">100% / 0</td><td>10 → <b>20</b></td><td>10개 한 번에</td><td>두 배</td><td>빨리 끝내고 싶을 때. 블루/그린과 비슷해진다</td></tr>
+    </table>
+    <svg viewBox="0 0 1150 110" role="img" aria-label="maxSurge 25%, maxUnavailable 0일 때 파드 수가 10에서 13으로 늘었다가 10으로 돌아오는 과정">
+      <g font-size="14" fill="#9db0d6"><text x="0" y="20">25% / 0 일 때</text></g>
+      <g font-size="15" text-anchor="middle" fill="#eaf0ff">
+        <text x="120" y="60">옛 10</text>
+        <text x="300" y="60">옛 10 + <tspan fill="#34d399">새 3</tspan> = 13</text>
+        <text x="520" y="60">옛 7 + <tspan fill="#34d399">새 3</tspan> = 10</text>
+        <text x="740" y="60">옛 7 + <tspan fill="#34d399">새 6</tspan> = 13</text>
+        <text x="920" y="60">…</text>
+        <text x="1060" y="60"><tspan fill="#34d399">새 10</tspan></text>
+      </g>
+      <g font-size="13" text-anchor="middle" fill="#9db0d6"><text x="300" y="88">새 파드 먼저 생성</text><text x="520" y="88">새 3개 Ready → 옛 3개 끔</text><text x="740" y="88">다음 묶음</text><text x="1060" y="88">3, 3, 3, 1 네 번</text></g>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>두 값을 바꾸면 롤링이 어떻게 달라지는지 레플리카 10개 기준으로 비교해 봤습니다.</li><li>첫 줄이 예시 서비스 설정입니다. surge 25%, 3개까지 더 떠 있어도 되고, unavailable 0이라 하나도 모자라면 안 됩니다. 그래서 새 파드 3개를 먼저 만들어서 잠깐 13개가 되고, 새 파드가 Ready가 되면 옛 파드 3개를 끕니다. 아래 그림이 그 과정입니다. 용량은 절대 안 줄지만 노드에 파드 3개분의 여유가 있어야 합니다.</li><li>두 번째 줄은 반대입니다. surge 0이라 더 띄울 수 없고, unavailable 25%라 2개까지 모자라도 됩니다. 그래서 옛 파드 2개를 먼저 끄고 그 자리에 새 파드 2개를 띄웁니다. 노드 여유가 없어도 되는 대신 교체 중에는 8개로 요청을 받아서 처리량이 줄어듭니다.</li><li>세 번째 줄이 아무것도 안 적었을 때의 기본값입니다. 더 띄우기도 하고 모자라기도 해서 한 번에 5개까지 바꿀 수 있고 가장 빠릅니다. 네 번째 줄은 교재 5.7절 예제의 1과 1로, 한 번에 2개씩 천천히 바꿉니다.</li><li>마지막 줄처럼 surge를 100%로 두면 새 파드 10개를 한꺼번에 띄워서 잠깐 20개가 되고, 다 Ready가 되면 옛 10개를 끕니다. 빨리 끝나지만 자원이 두 배 들어서 블루/그린과 비슷한 모양이 됩니다. 다른 점은 블루/그린처럼 전환 시점을 사람이 정하지 못하고, 옛 파드를 바로 끈다는 겁니다.</li><li>정리하면 maxSurge를 키우면 여유 자원을 써서 빨라지고, maxUnavailable을 키우면 용량을 줄여서 빨라집니다. 서비스가 잠깐이라도 용량이 줄면 안 되는지, 노드에 여유가 있는지에 따라 고르면 됩니다.</li></ul></aside>
+  </section>

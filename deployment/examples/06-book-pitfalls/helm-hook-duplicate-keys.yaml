@@ -1,0 +1,7 @@
+# 교재 6.4 DB 백업 잡의 어노테이션 부분
+metadata:
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook": pre-rollback
+    "helm.sh/hook-delete-policy": hook-succeeded

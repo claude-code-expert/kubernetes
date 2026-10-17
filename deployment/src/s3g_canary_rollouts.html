@@ -1,0 +1,149 @@
+  <section class="slide" data-t="카나리 설정값">
+    <div class="kicker">3부 · 3회차 · 설정값 해설</div>
+    <h2>카나리 설정값 (Argo Rollouts)</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Rollout
+<span class="k">spec</span>:
+  replicas: 10
+  strategy:
+    <span class="k">canary</span>:
+      canaryService: order-api-canary
+      stableService: order-api-stable
+      trafficRouting: {…}     <span class="c"># 다음 장</span>
+      steps:
+      - setWeight: <span class="y">5</span>
+      - pause: {duration: <span class="y">10m</span>}
+      - analysis:
+          templates: [{templateName: error-rate}]
+      - setWeight: 25
+      - pause: <span class="y">{}</span>
+      - setWeight: 50
+      - pause: {duration: 10m}
+      maxSurge: 25%
+      maxUnavailable: 0</pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">canaryService</td><td>카나리 파드만 가리키는 서비스. 라우터가 여기로 보낸다</td><td>없음</td></tr>
+        <tr><td class="k">stableService</td><td>안정 버전만 가리키는 서비스</td><td>없음</td></tr>
+        <tr><td class="k">setWeight</td><td>새 버전에 보낼 비율(%). 라우터가 없으면 <b>파드 수로 흉내</b></td><td>-</td></tr>
+        <tr><td class="k">pause: {duration}</td><td>그 시간만큼 기다린 뒤 다음 단계</td><td>-</td></tr>
+        <tr><td class="k">pause: {}</td><td>시간 없음 = <b>promote할 때까지 무한 대기</b></td><td>-</td></tr>
+        <tr><td class="k">analysis</td><td>이 단계에서 판정. 실패하면 중단</td><td>-</td></tr>
+        <tr><td class="k">experiment</td><td>베이스라인과 카나리를 따로 띄워 비교</td><td>-</td></tr>
+        <tr><td class="k">maxSurge, maxUnavailable</td><td>단계 사이 파드를 늘리고 줄일 때. 롤링과 같은 뜻</td><td>25% / 25%</td></tr>
+        <tr><td class="k">dynamicStableScale</td><td>라우터가 있을 때 안정 버전 파드를 비율만큼 줄일지</td><td>false</td></tr>
+      </table>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>카나리 설정값입니다. 핵심은 steps입니다. 위에서부터 한 단계씩 실행합니다.</li><li>setWeight는 새 버전에 보낼 비율입니다. 여기서 알아 둘 게 있습니다. trafficRouting, 즉 트래픽을 나누는 장치를 연결하지 않으면 비율을 파드 수로 흉내 냅니다. 레플리카 10개에 setWeight 20이면 새 버전 2개, 옛 버전 8개로 맞춥니다. 그래서 5%처럼 파드 수로 안 떨어지는 비율은 정확히 안 나옵니다. 정확히 하려면 다음 장의 트래픽 라우터가 필요합니다.</li><li>pause는 두 가지가 있습니다. duration을 적으면 그 시간만큼 기다렸다가 다음 단계로 갑니다. 3회차의 대기 시간이 여기 들어갑니다. 중괄호만 쓰면 시간이 없는 거라서, 사람이 promote 명령을 줄 때까지 무한히 멈춰 있습니다. 25%까지는 자동으로 가고 거기서 사람이 한 번 보고 넘기고 싶을 때 씁니다.</li><li>analysis 단계에서 판정하고, 실패하면 거기서 중단합니다. 3회차의 베이스라인 비교는 analysis 대신 experiment 단계로 합니다.</li><li>canaryService와 stableService는 카나리 파드만, 안정 버전 파드만 가리키는 서비스입니다. 컨트롤러가 블루/그린 때처럼 해시를 붙여서 관리하고, 트래픽 라우터가 이 두 서비스로 비율을 나눠 보냅니다.</li><li>maxSurge와 maxUnavailable은 롤링에서 본 것과 같은 뜻으로, 단계 사이에서 파드를 늘리고 줄일 때 씁니다. dynamicStableScale은 라우터가 있을 때 쓰는 값인데, 기본 false라서 카나리가 5%를 받아도 안정 버전 파드는 10개를 그대로 둡니다. 3회차에서 프로덕션 파드를 10개로 둔 이유가 이겁니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="트래픽 나누기 설정">
+    <div class="kicker">3부 · 3회차 · 설정값 해설 · 문서 기준</div>
+    <h2>트래픽 나누기 설정: Gateway API로 연결하기</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px;line-height:1.42"><span class="c"># 1) ConfigMap argo-rollouts-config 에 플러그인 등록</span>
+trafficRouterPlugins: |-
+  - name: argoproj-labs/gatewayAPI
+    location: https://github.com/argoproj-labs/rollouts-…
+
+<span class="c"># 2) HTTPRoute: 두 서비스를 백엔드로</span>
+<span class="k">kind</span>: HTTPRoute
+<span class="k">metadata</span>: {name: order-api}
+<span class="k">spec</span>:
+  parentRefs: [{name: public}]
+  rules:
+  - backendRefs:
+    - {name: order-api-stable, port: 80}
+    - {name: order-api-canary, port: 80}
+
+<span class="c"># 3) Rollout에서 그 HTTPRoute를 가리킨다</span>
+trafficRouting:
+  plugins:
+    argoproj-labs/gatewayAPI:
+      httpRoute: <span class="y">order-api</span>
+      namespace: order</pre>
+      <div>
+        <ul>
+          <li>Argo Rollouts가 단계마다 HTTPRoute의 <b><code>weight</code>를 직접 고친다</b> (5 → 25 → 50 → 100)</li>
+          <li>그래서 파드 수와 상관없이 요청 비율로 나뉜다. 파드 1개로도 5%</li>
+          <li>컨트롤러가 HTTPRoute를 고칠 수 있게 RBAC 권한을 추가해야 한다</li>
+          <li>Istio, NGINX Ingress, AWS ALB는 플러그인 없이 바로 지원 (<code>trafficRouting.istio</code> 등)</li>
+          <li>중단하면 weight가 0으로 돌아간다</li>
+        </ul>
+        <p class="dim" style="font-size:16px;margin-top:12px">이 장은 문서 기준입니다. kind 실습은 라우터 없이 파드 수 방식으로 했습니다 (다음다음 장)</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>앞 장에서 라우터가 없으면 비율을 파드 수로 흉내 낸다고 했는데, 정확히 5%를 보내려면 트래픽을 나누는 장치를 연결해야 합니다. 3부 앞에서 본 Gateway API로 연결하는 방법입니다. 이 장은 문서를 보고 정리한 것이고, kind 실습은 라우터 없이 했습니다.</li><li>세 단계입니다. 먼저 Argo Rollouts 컨트롤러에 Gateway API 플러그인을 등록합니다. argo-rollouts-config라는 ConfigMap에 플러그인 이름과 내려받을 위치를 적습니다.</li><li>두 번째로 HTTPRoute를 만들고 백엔드로 stable 서비스와 canary 서비스 두 개를 둡니다. 앞 장의 stableService, canaryService입니다.</li><li>세 번째로 Rollout의 trafficRouting에 이 HTTPRoute 이름을 적습니다. 그러면 Argo Rollouts가 단계마다 HTTPRoute의 weight 값을 직접 고칩니다. setWeight 5면 stable 95, canary 5로 바꾸는 식입니다. 파드 수와 상관없이 요청 비율로 나뉘니까 카나리 파드 1개로도 정확히 5%가 됩니다.</li><li>컨트롤러가 HTTPRoute를 수정해야 하니 RBAC 권한을 추가해야 하고, Istio나 NGINX Ingress, AWS ALB는 플러그인 없이 바로 지원됩니다. 중단되면 weight가 0으로 돌아가서 트래픽이 전부 stable로 갑니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="AnalysisTemplate 설정값">
+    <div class="kicker">3부 · 3회차 · 설정값 해설</div>
+    <h2>AnalysisTemplate 설정값: 무엇으로, 몇 번, 언제 실패로 볼지</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: AnalysisTemplate
+<span class="k">spec</span>:
+  metrics:
+  - name: error-rate
+    initialDelay: <span class="y">1m</span>
+    interval: <span class="y">1m</span>
+    count: <span class="y">10</span>
+    successCondition: result[0] &lt; 0.005
+    failureLimit: <span class="y">0</span>
+    consecutiveErrorLimit: 4
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          카나리 5xx 비율 − 베이스라인 5xx 비율
+      <span class="c"># 또는</span>
+      <span class="c"># datadog: {apiVersion: v2, query: …}</span></pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">initialDelay</td><td>첫 측정 전에 기다리는 시간. 트래픽이 들어올 시간</td><td>0</td></tr>
+        <tr><td class="k">interval</td><td>몇 분마다 잴지</td><td>-</td></tr>
+        <tr><td class="k">count</td><td>몇 번 잴지. <span class="warn">없으면 안 끝난다</span></td><td>없음</td></tr>
+        <tr><td class="k">successCondition</td><td>합격 조건. <code>result</code>가 쿼리 결과</td><td>-</td></tr>
+        <tr><td class="k">failureCondition</td><td>불합격 조건 (둘 중 하나만 써도 된다)</td><td>-</td></tr>
+        <tr><td class="k">failureLimit</td><td>몇 번 불합격까지 봐줄지. 0이면 한 번에 실패</td><td>0</td></tr>
+        <tr><td class="k">consecutiveErrorLimit</td><td>쿼리 자체 에러(빈 결과 등)를 연속 몇 번 봐줄지</td><td>4</td></tr>
+        <tr><td class="k">provider</td><td>Prometheus, Datadog, 웹 호출, Job 등</td><td>-</td></tr>
+      </table>
+    </div>
+    <p class="note">Datadog을 쓰면 argo-rollouts 네임스페이스에 API 키, 앱 키를 담은 시크릿을 만들고 Datadog 쿼리를 그대로 쓴다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>판정을 정하는 AnalysisTemplate 설정값입니다. 무엇으로 재고, 몇 번 재고, 언제 실패로 볼지를 정합니다.</li><li>provider가 무엇으로 잴지입니다. Prometheus 쿼리, Datadog 쿼리, 웹 호출, 그리고 Job을 띄워서 그 결과로 판정하는 방법도 있습니다. 회사에서 Datadog을 쓰신다면 argo-rollouts 네임스페이스에 API 키 시크릿을 만들고 Datadog 쿼리를 그대로 적으면 됩니다.</li><li>시간 관련이 세 개입니다. initialDelay는 첫 측정 전에 기다리는 시간입니다. 기본값이 0이라서 안 적으면 카나리에 트래픽이 들어오기도 전에 잽니다. interval은 몇 분마다 잴지, count는 몇 번 잴지입니다. count를 안 적으면 측정이 끝나지 않아서 롤아웃이 그 단계에서 안 넘어갑니다. 1분 간격 10번이면 약 10분 동안 봅니다.</li><li>판정은 successCondition에 합격 조건을 적습니다. result가 쿼리 결과고, 예시는 카나리와 베이스라인 에러율 차이가 0.005, 즉 0.5%p보다 작아야 합격입니다.</li><li>failureLimit은 불합격을 몇 번까지 봐줄지입니다. 기본값이 0이라 한 번만 불합격이어도 실패입니다. 일시적인 흔들림에 멈추는 게 싫으면 1이나 2로 올립니다. consecutiveErrorLimit은 불합격이 아니라 쿼리 자체가 에러일 때입니다. 예를 들어 새 파드가 아직 5xx를 한 번도 안 내서 결과가 비어 있으면 에러가 되는데, 연속 4번까지 봐줍니다. 그래서 쿼리에 or vector(0)을 붙여서 비어 있으면 0으로 나오게 합니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="카나리 직접 돌려 보면">
+    <div class="kicker">3부 · 3회차 · kind에서 실제 출력</div>
+    <h2>카나리, 직접 돌려 보면 (라우터 없이, 레플리카 10)</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px">$ kubectl argo rollouts set image web-canary web=nginx:1.27
+Status:  ॥ Paused   Message: CanaryPauseStep
+Step: 1/4   SetWeight: 20   ActualWeight: 20
+Replicas: Desired 10  Current 10  <span class="y">Updated 2</span>
+
+$ kubectl argo rollouts promote web-canary
+Step: 3/4   SetWeight: 50   <span class="y">Updated 5</span>
+<span class="c">(pause 20s 뒤 자동으로)</span>
+Status:  ✔ Healthy   Step: 4/4   SetWeight: 100
+
+<span class="c"># 다음 배포: 20% 뒤에 항상 실패하는 판정을 넣었다</span>
+Status:  <span style="color:#fb7185">✖ Degraded</span>
+Message: RolloutAborted: … Metric "smoke" assessed
+         Failed due to failed (1) &gt; failureLimit (0)
+Step: 0/4   SetWeight: 0   <span class="y">Updated 0</span>
+Images:  nginx:1.27 (stable)
+
+$ kubectl get rollout web-canary \
+    -o jsonpath='{..containers[0].image}'
+<span class="y">nginx:1.27-alpine</span>   <span class="c"># 원하는 상태는 새 버전 그대로</span></pre>
+      <ul>
+        <li><code>setWeight: 20</code> → 10개 중 <b>새 2, 옛 8</b>. 라우터가 없어서 파드 수로 맞춘다</li>
+        <li><code>pause: {}</code> → promote 전까지 멈춤</li>
+        <li><code>pause: {duration: 20s}</code> → 20초 뒤 자동으로 100%</li>
+        <li>판정 실패 → <code>failureLimit 0</code>이라 한 번에 중단. 가중치 0, 10개 모두 옛 버전</li>
+        <li class="no">그래도 spec의 이미지는 새 버전 그대로. 깃옵스라면 깃도 그대로 → 4부 git revert</li>
+      </ul>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>kind에서 실제로 돌린 카나리입니다. 트래픽 라우터 없이 레플리카 10개로 했습니다.</li><li>새 이미지를 넣으면 첫 단계 setWeight 20에서 새 버전 2개, 옛 버전 8개가 됩니다. 라우터가 없으니 파드 수로 비율을 맞춘 겁니다. 다음 단계가 pause 중괄호라서 CanaryPauseStep으로 멈춰 있습니다.</li><li>promote를 하면 50% 단계로 가서 새 5개, 옛 5개가 되고, 거기는 pause 20초라 20초 뒤 자동으로 100%까지 가서 Healthy가 됩니다.</li><li>다음 배포에서는 20% 단계 뒤에 항상 실패하는 판정을 넣어 봤습니다. Job이 exit 1로 끝나게 해서요. 판정이 실패하자 RolloutAborted, failureLimit 0을 넘었다는 메시지와 함께 Degraded가 되고, 가중치가 0으로 돌아가서 10개 모두 옛 버전이 됐습니다. 3회차 시나리오가 이렇게 동작하는 겁니다.</li><li>마지막 줄이 중요합니다. 중단됐는데도 Rollout의 spec에 적힌 이미지는 새 버전 그대로입니다. 컨트롤러는 트래픽과 파드만 옛 버전으로 돌렸고, 원하는 상태는 안 바꿨습니다. 깃옵스라면 깃에도 새 버전이 그대로 있어서, 다음 날 git revert로 맞춰야 한다는 게 4부 얘기입니다.</li></ul></aside>
+  </section>

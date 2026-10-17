@@ -1,0 +1,53 @@
+  <section class="slide" data-t="2부 배포 전략">
+    <div class="kicker">2부 · 교재 5.7, 6.3</div>
+    <h1>2부<br><span class="em">배포 전략 한눈에</span></h1>
+    <p class="dim" style="margin-top:24px">새 버전을 누구에게, 얼마나, 어떤 순서로</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>2부입니다. 3부에서 직접 해 보기 전에 배포 전략 다섯 가지가 각각 뭔지 한 번 보고 가겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="전략 다섯 가지">
+    <div class="kicker">2부 · 5.7, 6.3</div>
+    <h2>배포 전략 다섯 가지</h2>
+    <svg viewBox="0 0 1150 440" role="img" aria-label="Recreate, 롤링, 블루/그린, 카나리, A/B 테스트에서 옛 버전과 새 버전이 시간에 따라 트래픽을 받는 모습">
+      <g font-size="18" fill="#eaf0ff" font-weight="700">
+        <text x="10" y="50">Recreate</text><text x="10" y="135">롤링</text><text x="10" y="220">블루/그린</text><text x="10" y="305">카나리</text><text x="10" y="390">A/B 테스트</text>
+      </g>
+      <g font-size="14" fill="#9db0d6">
+        <text x="10" y="72">전부 내리고 전부 올림</text><text x="10" y="157">조금씩 바꿔 끼움</text><text x="10" y="242">옆에 띄우고 한 번에 전환</text><text x="10" y="327">일부에게 먼저, 비교 후 확대</text><text x="10" y="412">사용자를 나눠 오래 비교</text>
+      </g>
+      <!-- recreate -->
+      <rect x="230" y="30" width="300" height="40" fill="#4f9cff" opacity=".85"/><rect x="530" y="30" width="80" height="40" fill="#fb7185" opacity=".35"/><rect x="610" y="30" width="520" height="40" fill="#34d399" opacity=".85"/>
+      <text x="570" y="56" font-size="14" fill="#fb7185" text-anchor="middle">중단</text>
+      <!-- rolling -->
+      <polygon points="230,115 600,115 900,155 230,155" fill="#4f9cff" opacity=".85"/><polygon points="600,115 1130,115 1130,155 900,155" fill="#34d399" opacity=".85"/>
+      <!-- blue green -->
+      <rect x="230" y="200" width="500" height="40" fill="#4f9cff" opacity=".85"/><rect x="730" y="200" width="400" height="40" fill="#34d399" opacity=".85"/>
+      <rect x="480" y="244" width="250" height="10" fill="#34d399" opacity=".4"/><text x="605" y="270" font-size="13" fill="#9db0d6" text-anchor="middle">그린을 미리 띄워 확인 (트래픽 없음)</text>
+      <!-- canary -->
+      <polygon points="230,285 500,285 500,285 1130,285 1130,325 230,325" fill="#4f9cff" opacity=".85"/>
+      <polygon points="500,321 700,321 700,310 900,310 900,295 1000,295 1000,285 1130,285 1130,325 500,325" fill="#34d399" opacity=".95"/>
+      <text x="600" y="345" font-size="13" fill="#9db0d6" text-anchor="middle">5%</text><text x="800" y="345" font-size="13" fill="#9db0d6" text-anchor="middle">25%</text><text x="950" y="345" font-size="13" fill="#9db0d6" text-anchor="middle">50%</text>
+      <!-- ab -->
+      <rect x="230" y="370" width="900" height="20" fill="#4f9cff" opacity=".85"/><rect x="230" y="390" width="900" height="20" fill="#a78bfa" opacity=".85"/>
+      <text x="680" y="385" font-size="13" fill="#070c18" text-anchor="middle">A안 50%</text><text x="680" y="405" font-size="13" fill="#070c18" text-anchor="middle">B안 50% (같은 사용자는 계속 같은 쪽)</text>
+      <g font-size="15" text-anchor="middle"><rect x="360" y="425" width="14" height="14" fill="#4f9cff"/><text x="420" y="437" fill="#9db0d6">옛 버전</text><rect x="480" y="425" width="14" height="14" fill="#34d399"/><text x="540" y="437" fill="#9db0d6">새 버전</text><text x="800" y="437" fill="#9db0d6">가로축: 시간 / 세로 두께: 트래픽 비율</text></g>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>다섯 가지를 한 그림에 그렸습니다. 가로는 시간이고, 막대 두께는 그 버전이 받는 트래픽 비율입니다. 파란색이 옛 버전, 초록색이 새 버전입니다.</li><li>Recreate는 전부 내리고 전부 올립니다. 중간에 끊깁니다. 롤링은 조금씩 바꿔 끼워서 한동안 두 버전이 섞입니다. 블루/그린은 새 버전을 옆에 미리 띄워 두고 한 번에 넘깁니다.</li><li>카나리는 일부에게 먼저 보여 주고, 괜찮으면 5%, 25%, 50%로 늘립니다. 마지막 A/B 테스트는 모양은 카나리와 비슷한데 목적이 다릅니다. 이건 3부에서 따로 보겠습니다.</li><li>교재 5.7절은 롤링, 블루/그린, 카나리 셋을 소개하고, 6.3절에서 디플로이먼트가 기본으로 주는 건 롤링과 Recreate 둘이라고 합니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="쿠버네티스가 기본으로 주는 것">
+    <div class="kicker">2부 · 6.3</div>
+    <h2>쿠버네티스가 기본으로 주는 건 둘뿐</h2>
+    <table>
+      <tr><th>전략</th><th>쿠버네티스에서</th><th>필요한 것</th></tr>
+      <tr><td class="k">Recreate</td><td>Deployment <code>strategy.type: Recreate</code></td><td>없음</td></tr>
+      <tr><td class="k">롤링</td><td>Deployment 기본값 <code>RollingUpdate</code></td><td>없음</td></tr>
+      <tr><td class="k">블루/그린</td><td>Deployment 두 개 + Service 셀렉터 전환</td><td>두 배 자원, 전환 절차</td></tr>
+      <tr><td class="k">카나리</td><td>레플리카 비율, 또는 인그레스, Gateway API, 서비스 메시로 가중치</td><td>트래픽 나누는 장치, 판정할 메트릭</td></tr>
+      <tr><td class="k">A/B</td><td>헤더, 쿠키로 사용자를 고정해서 나눔</td><td>라우팅 규칙, 분석 도구</td></tr>
+    </table>
+    <div class="card" style="margin-top:20px"><h3>Recreate는 언제 쓰나 (교재 6.3)</h3>
+      <p style="font-size:20px;margin:0">잠깐 전부 내려가도 괜찮은 서비스. 교재 예는 <b>큐 기반 서비스</b>: 새 파드가 뜰 때까지 메시지가 큐에서 기다린다. 6.4 예제의 MySQL도 Recreate다. <code>ReadWriteOnce</code> 볼륨은 다른 노드의 파드와 같이 붙을 수 없고, 같은 데이터 디렉터리를 MySQL 두 개가 쓰면 안 되기 때문</p></div>
+    <p class="note">블루/그린, 카나리, A/B는 오브젝트를 조합하거나 Argo Rollouts, Flagger 같은 컨트롤러를 쓴다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>쿠버네티스 디플로이먼트가 기본으로 주는 전략은 Recreate와 롤링 둘뿐입니다. 나머지는 오브젝트를 조합하거나 별도 컨트롤러를 씁니다.</li><li>오른쪽 열을 보시면, 아래로 갈수록 필요한 게 늘어납니다. 블루/그린은 자원이 두 배, 카나리는 트래픽을 나누는 장치와 판정할 메트릭이 있어야 합니다. 교재 5.10도 CD가 처음이면 롤링부터 하고 익숙해지면 블루/그린, 카나리를 보라고 합니다.</li><li>Recreate가 맞는 경우로 교재는 큐 기반 서비스를 듭니다. 잠깐 내려가도 메시지가 큐에서 기다리니까 괜찮습니다. 6.4 예제의 MySQL도 Recreate입니다. ReadWriteOnce 볼륨은 노드 하나에만 붙어서 다른 노드에 뜬 새 파드는 못 붙고, 같은 노드라 해도 MySQL 두 개가 같은 데이터 디렉터리를 쓰면 안 되니까 옛 파드를 먼저 내립니다.</li><li>3부에서는 Recreate를 빼고 나머지 셋으로 해 보겠습니다.</li></ul></aside>
+  </section>

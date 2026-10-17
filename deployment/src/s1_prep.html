@@ -1,0 +1,268 @@
+  <section class="slide" data-t="1부 준비">
+    <div class="kicker">1부 · 교재 5.1 ~ 5.6, 6장, 18장</div>
+    <h1>1부<br><span class="em">준비</span></h1>
+    <p class="dim" style="margin-top:24px">어떤 전략을 쓰든 되돌아갈 이름과 기록이 있어야 한다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>1부는 준비물입니다. 롤링이든 카나리든, 되돌리려면 돌아갈 이미지에 이름이 있어야 하고, 원래 상태가 어딘가에 적혀 있어야 하고, 쿠버네티스가 버전을 어떻게 바꾸는지 알아야 합니다.</li><li>5장 앞부분, 6장, 18장에서 가져왔습니다. 빠르게 가겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="손으로 배포하면">
+    <div class="kicker">1부 · 5장 도입, 5.1, 5.2</div>
+    <h2>손으로 배포하면 생기는 일</h2>
+    <div class="cols">
+      <div class="card rose"><h3>교재가 꼽는 문제</h3><ul>
+        <li class="no">에러가 나기 쉽다</li>
+        <li class="no">구성 드리프트: 실제 구성이 의도와 점점 달라진다</li>
+        <li class="no">배포 업데이트가 취약해진다</li>
+        <li class="no">앱을 전달하는 애질리티가 떨어진다</li>
+      </ul></div>
+      <div class="card green"><h3>교재의 출발점</h3><ul>
+        <li class="ok">깃 <code>main</code> 브랜치가 프로덕션</li>
+        <li class="ok">앱 코드와 매니페스트, 헬름 차트를 같은 저장소에</li>
+        <li class="ok">CI는 작은 변경을 자주 합치고 커밋마다 빌드</li>
+      </ul></div>
+    </div>
+    <p class="note">5장의 목표: 코드를 체크인한 뒤 프로덕션에 나가기까지 사람이 손대지 않는 것</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>5장은 앱을 손으로 업데이트할 때 생기는 문제로 시작합니다. 에러가 나기 쉽고, 실제 구성이 의도와 조금씩 달라지는 구성 드리프트가 생기고, 배포 업데이트가 취약해지고, 앱을 전달하는 애질리티가 떨어진다고 합니다.</li><li>여기부터는 제 생각입니다. 손으로 하면 배포가 부담스러워서 자주 못 하고, 그러다 보니 한 번에 많이 묶여 나갑니다. 한 번에 많이 나가면 깨졌을 때 원인 찾기도 되돌리기도 어렵습니다.</li><li>교재는 앱 코드와 매니페스트, 헬름 차트를 한 저장소에 두는 걸 출발점으로 잡습니다. 저장소를 어떻게 나눌지는 토론 Q4에서 다시 얘기하겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="테스트가 실패하면">
+    <div class="kicker">1부 · 5.3</div>
+    <h2>테스트가 실패하면 이미지를 만들지 않는다</h2>
+    <table>
+      <tr><th>단계</th><th>예시</th><th>누가</th><th>잡는 것</th></tr>
+      <tr><td class="k">단위 테스트</td><td><code>go test</code>, <code>npm test</code></td><td>개발자</td><td>로직 결함</td></tr>
+      <tr><td class="k">매니페스트 검사</td><td><code>helm lint</code>, 서버 dry-run</td><td>플랫폼</td><td>차트, 매니페스트 오류</td></tr>
+      <tr><td class="k">스모크 테스트</td><td>배포 직후 핵심 기능 확인</td><td>같이</td><td>떴는데 동작 안 하는 상태</td></tr>
+      <tr><td class="k">엔드투엔드</td><td>배포된 환경을 대상으로</td><td>같이</td><td>서비스 간 계약 위반</td></tr>
+    </table>
+    <p style="margin-top:20px">교재: 테스트가 실패한 코드를 이미지로 만들어 레지스트리에 올리면 "대형 사고로 이어질 것"</p>
+    <p class="dim">가끔 실패하는 테스트는 결국 무시당합니다. 없는 것보다 나쁠 수 있습니다.</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재는 테스트 실패를 빌드 실패로 보라고 합니다. 실패한 코드가 이미지가 돼서 레지스트리에 올라가면 누군가 그걸 배포할 수 있으니까요.</li><li>교재는 테스트를 개발자만의 일로 보지 않습니다. 두 번째 줄 매니페스트 검사는 플랫폼 쪽이 제일 싸게 기여할 수 있는 곳입니다. 서버 dry-run을 돌리면 뒤에서 볼 교재 예제의 레이블 키 오류 같은 건 바로 잡힙니다.</li><li>그리고 가끔 실패하는 테스트는 결국 다들 재실행 버튼을 누르게 만듭니다. 빨간 불을 무시하는 습관이 생기면 진짜 실패도 지나갑니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="이미지는 작게">
+    <div class="kicker">1부 · 5.4</div>
+    <h2>이미지는 작게</h2>
+    <p style="margin-top:-8px">작을수록 노드가 빨리 받는다. 되돌릴 때도 마찬가지</p>
+    <table>
+      <tr><th>방법</th><th>빼는 것</th><th>대가</th></tr>
+      <tr><td class="k">멀티스테이지 빌드</td><td>컴파일러, 메이븐 같은 빌드 도구</td><td>Dockerfile이 조금 길어진다</td></tr>
+      <tr><td class="k">distroless</td><td>셸, 패키지 매니저까지</td><td><span class="warn">익숙한 디버깅 도구를 못 쓴다</span></td></tr>
+      <tr><td class="k">경량 베이스</td><td>OS 레이어 (alpine, debian-slim)</td><td>alpine은 musl이라 가끔 호환 문제</td></tr>
+    </table>
+    <div class="card violet" style="margin-top:22px"><h3>보충: distroless 디버깅은 지금은 된다</h3>
+      <p style="font-size:20px;margin:0"><code>kubectl debug -it pod/web --image=busybox --target=web</code><br>임시 컨테이너를 붙여서 같은 프로세스를 들여다봅니다. v1.25에서 GA가 됐습니다.</p></div>
+    <aside class="notes"><b>발표 노트</b><ul><li>이미지를 작게 만드는 방법 세 가지입니다. 작으면 노드가 이미지를 받는 시간이 짧아서 파드가 빨리 뜹니다. 롤백할 때도 옛 이미지를 다시 받아야 하는 경우가 있습니다. 이미지가 작으면 되돌릴 때 옛 이미지도 빨리 받습니다.</li><li>교재는 보안도 이유로 듭니다. 이미지에 든 패키지가 적을수록 보안 스캐너에 걸리는 게 적다는 뜻인데, 오늘 주제와는 거리가 있어서 넘어가겠습니다.</li><li>교재는 distroless의 단점으로 디버거를 못 붙인다는 점을 듭니다. 지금은 kubectl debug로 임시 컨테이너를 옆에 붙일 수 있어서 이 이유로 distroless를 피할 필요는 많이 줄었습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="latest를 쓰면">
+    <div class="kicker">1부 · 5.5</div>
+    <h2>latest를 쓰면 돌아갈 곳이 없다</h2>
+    <div class="cols">
+      <div><table class="tight">
+        <tr><th>교재의 태깅 방법</th><th>추적할 수 있는 것</th></tr>
+        <tr><td class="k">빌드 ID</td><td>어느 빌드에서 나왔나</td></tr>
+        <tr><td class="k">시스템-빌드 ID</td><td>빌드 시스템이 여럿일 때</td></tr>
+        <tr><td class="k">깃 해시</td><td>어느 커밋에서 나왔나</td></tr>
+        <tr><td class="k">깃 해시-빌드 ID</td><td>둘 다 (대신 길다)</td></tr>
+      </table></div>
+      <div class="card rose"><h3>latest로 띄우면</h3><ul>
+        <li class="no">지금 뜬 게 어느 커밋인지 모른다</li>
+        <li class="no">그러니 직전 버전이 뭔지도 모른다</li>
+        <li class="no">노드마다 받은 시점이 다르면 같은 태그, 다른 코드</li>
+      </ul></div>
+    </div>
+    <p class="note">예시 서비스는 깃 해시를 태그로 씁니다: <code>order-api:3f9c2e1</code></p>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재가 제일 세게 말하는 부분입니다. latest는 태그로 절대 쓰지 말라고요.</li><li>롤백을 생각하면 이유가 분명합니다. latest로 띄우면 지금 뭐가 떠 있는지 모르고, 그러면 직전 버전도 모릅니다. 돌아갈 곳의 이름이 없는 겁니다.</li><li>왼쪽 네 가지 중 뭘 고르든 태그에서 커밋이나 빌드로 거꾸로 찾아갈 수 있으면 됩니다. 예시 서비스는 깃 해시를 씁니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="태그도 바뀔 수 있다">
+    <div class="kicker">1부 · 5.5, 5.6 보충</div>
+    <h2>태그도 바뀔 수 있다</h2>
+    <div class="cols">
+      <div>
+        <pre class="code"><span class="c"># 태그: 같은 이름으로 다시 push 하면 바뀐다</span>
+image: registry/order-api:<span class="y">3f9c2e1</span>
+
+<span class="c"># 다이제스트: 내용의 해시라 안 바뀐다</span>
+image: registry/order-api@<span class="y">sha256:9b1f…</span>
+
+<span class="c"># 같이 쓰면 사람은 태그, 런타임은 다이제스트</span>
+image: registry/order-api:3f9c2e1@sha256:9b1f…</pre>
+        <p class="dim" style="font-size:18px;margin-top:12px">레지스트리 쪽에서는 태그 불변(immutable tags) 설정으로 막을 수 있습니다</p>
+      </div>
+      <div class="card green"><h3>한 번 빌드해서 올려 보낸다</h3>
+        <p style="font-size:20px">교재 5.6: 컨테이너 이미지는 개발, 스테이징을 거쳐 프로덕션으로 <b>승격되는 불변 오브젝트</b></p>
+        <ul><li>dev, stg, prod가 같은 다이제스트를 받는다</li><li>환경마다 다른 건 설정으로 둔다</li><li>환경마다 다시 빌드하면 스테이징에서 본 게 프로덕션과 다른 빌드가 된다</li></ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재는 고유한 태그를 붙이라고 하는데, 태그 자체도 바뀔 수 있다는 건 따로 말하지 않습니다. 누가 같은 태그로 다시 push하면 가리키는 이미지가 달라집니다.</li><li>안 바뀌는 건 다이제스트입니다. 이미지 내용을 해시한 값이라 내용이 한 바이트만 달라도 값이 바뀝니다. 그래서 다이제스트로 받으면 늘 같은 이미지가 옵니다.</li><li>세 번째 줄처럼 태그 뒤에 @와 다이제스트를 같이 적을 수도 있습니다. 이러면 컨테이너 런타임은 다이제스트로 이미지를 받고 태그는 보지 않습니다. 태그는 사람이 읽으라고 남겨 두는 겁니다. 누가 3f9c2e1 태그를 다시 push해도 이 파드는 원래 이미지를 받습니다.</li><li>레지스트리에서 태그 불변 설정을 켜 두면 같은 태그로 다시 push하는 것 자체를 막을 수 있습니다.</li><li>오른쪽은 교재 5.6절 내용입니다. 이미지를 환경마다 다시 빌드하지 말고 같은 걸 올려 보내라는 겁니다. 다시 빌드하면 그 사이에 의존성 하나만 바뀌어도 스테이징에서 테스트한 게 의미가 없어집니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="CI가 직접 apply하면">
+    <div class="kicker">1부 · 5.9, 18.2</div>
+    <h2>CI가 직접 apply하면</h2>
+    <svg viewBox="0 0 1150 150" role="img" aria-label="전통적 배포: 코드 수정, 이미지 빌드와 푸시, 매니페스트 수정, kubectl apply">
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <g font-size="17" text-anchor="middle" fill="#eaf0ff">
+        <rect x="10" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#2c3b61"/><text x="105" y="66">코드 수정</text>
+        <rect x="240" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#2c3b61"/><text x="335" y="66">이미지 빌드, 푸시</text>
+        <rect x="470" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#2c3b61"/><text x="565" y="66">매니페스트 수정</text>
+        <rect x="700" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#fb7185"/><text x="795" y="66">kubectl apply</text>
+        <rect x="930" y="30" width="210" height="60" rx="9" fill="rgba(251,113,133,.1)" stroke="#fb7185"/><text x="1035" y="58">클러스터</text><text x="1035" y="80" font-size="14" fill="#9db0d6">CI가 cluster-admin</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" marker-end="url(#ar3)"><line x1="200" y1="60" x2="238" y2="60"/><line x1="430" y1="60" x2="468" y2="60"/><line x1="660" y1="60" x2="698" y2="60"/><line x1="890" y1="60" x2="928" y2="60"/></g>
+      <text x="575" y="130" font-size="17" fill="#9db0d6" text-anchor="middle">그림 18.2는 사람이, 5.9 실습은 CI가 이 단계를 밟는다</text>
+    </svg>
+    <div class="cols c3" style="margin-top:12px">
+      <div class="card rose"><h3>권한</h3><p>5.9 실습은 CI 계정에 <code>cluster-admin</code>을 준다. CI가 뚫리면 클러스터가 뚫린다</p></div>
+      <div class="card rose"><h3>드리프트</h3><p>누가 <code>kubectl edit</code>로 고치면 매니페스트와 클러스터가 달라진다</p></div>
+      <div class="card rose"><h3>롤백이 수작업</h3><p>사람이 매니페스트를 되돌려서 다시 적용해야 한다. 무엇이 바뀌었는지도 여기저기 흩어져 있다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>18장 그림 18.2는 전통적인 배포 흐름을 이렇게 그립니다. 개발자가 코드를 고치고, 이미지를 빌드해서 푸시하고, 매니페스트를 고치고, 클러스터에 적용합니다. 사람이 하는 일이고, 교재는 일부 단계는 도구로 자동화할 수 있다고 덧붙입니다.</li><li>5.9 실습은 이 단계를 CI가 합니다. 이미지를 만들고 kubectl apply까지 CI가 직접 합니다.</li><li>문제가 세 가지 있습니다. 실습대로 하면 CI가 cluster-admin 권한을 들고 있어서, CI가 뚫리면 클러스터가 뚫립니다. 누가 손으로 고치면 매니페스트와 실제가 달라집니다. 그리고 롤백은 사람이 매니페스트를 되돌려서 다시 적용해야 합니다.</li><li>세 번째가 오늘 주제와 제일 가깝습니다. 장애가 나면 제일 먼저 묻는 게 방금 뭐가 바뀌었냐인데, 그 답이 여러 파이프라인 로그에 흩어져 있습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="밀어 넣기와 당겨 가기">
+    <div class="kicker">1부 · 18장 보충</div>
+    <h2>밀어 넣기(push)와 당겨 가기(pull)</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="push 방식은 CI가 클러스터에 적용하고, pull 방식은 클러스터 안의 에이전트가 깃을 읽어 맞춘다">
+      <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker><marker id="ar4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#34d399"/></marker></defs>
+      <text x="270" y="28" font-size="20" fill="#fb7185" text-anchor="middle" font-weight="700">push (5.9 실습)</text>
+      <rect x="30" y="50" width="160" height="70" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="110" y="92" font-size="18" fill="#eaf0ff" text-anchor="middle">CI</text>
+      <rect x="350" y="50" width="180" height="70" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="440" y="92" font-size="18" fill="#eaf0ff" text-anchor="middle">클러스터</text>
+      <line x1="190" y1="85" x2="348" y2="85" stroke="#fb7185" stroke-width="2.5" marker-end="url(#ar4)"/>
+      <text x="270" y="150" font-size="16" fill="#fb7185" text-anchor="middle">CI가 cluster-admin 토큰을 갖고 있다</text>
+      <text x="270" y="175" font-size="16" fill="#9db0d6" text-anchor="middle">적용한 뒤로는 아무도 안 본다</text>
+      <line x1="575" y1="20" x2="575" y2="280" stroke="#2c3b61" stroke-dasharray="5 5"/>
+      <text x="870" y="28" font-size="20" fill="#34d399" text-anchor="middle" font-weight="700">pull (18장 깃옵스)</text>
+      <rect x="610" y="50" width="130" height="70" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="675" y="92" font-size="18" fill="#eaf0ff" text-anchor="middle">CI</text>
+      <rect x="790" y="50" width="130" height="70" rx="10" fill="#141d33" stroke="#fbbf24"/><text x="855" y="84" font-size="18" fill="#fbbf24" text-anchor="middle">깃</text><text x="855" y="106" font-size="14" fill="#9db0d6" text-anchor="middle">원하는 상태</text>
+      <rect x="960" y="40" width="180" height="170" rx="10" fill="#141d33" stroke="#34d399"/><text x="1050" y="70" font-size="18" fill="#eaf0ff" text-anchor="middle">클러스터</text>
+      <rect x="980" y="90" width="140" height="50" rx="8" fill="rgba(52,211,153,.12)" stroke="#34d399"/><text x="1050" y="121" font-size="16" fill="#34d399" text-anchor="middle">Flux / Argo CD</text>
+      <text x="1050" y="175" font-size="14" fill="#9db0d6" text-anchor="middle">실제 상태와 원하는 상태를</text><text x="1050" y="195" font-size="14" fill="#9db0d6" text-anchor="middle">계속 비교해서 맞춤</text>
+      <line x1="740" y1="85" x2="788" y2="85" stroke="#9db0d6" stroke-width="2" marker-end="url(#ar4)"/>
+      <path d="M980 115 C940 115, 940 100, 922 95" fill="none" stroke="#34d399" stroke-width="2.5" marker-end="url(#ar4g)"/>
+      <text x="675" y="150" font-size="16" fill="#9db0d6" text-anchor="middle">CI는 깃에 커밋만</text>
+      <text x="870" y="245" font-size="16" fill="#34d399" text-anchor="middle">클러스터 자격 증명이 밖으로 안 나간다</text>
+      <text x="870" y="270" font-size="16" fill="#34d399" text-anchor="middle">누가 손으로 고쳐도 다시 맞춘다</text>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>깃옵스에서는 방향이 반대입니다. 클러스터 안의 에이전트가 깃을 읽어 가서 클러스터를 맞춥니다. CI는 클러스터에 직접 적용하지 않습니다.</li><li>push와 pull이라는 말은 교재에 나오지 않습니다. 18장 내용을 제가 이렇게 나눠 본 겁니다.</li><li>그러면 5.9절의 cluster-admin 문제가 없어집니다. CI는 깃에 커밋할 권한만 있으면 되고, 클러스터 자격 증명은 클러스터 밖으로 안 나갑니다.</li><li>또 하나는 시간입니다. push는 적용하는 순간에만 맞춥니다. pull 에이전트는 그 뒤로도 계속 비교해서, 누가 kubectl edit로 고쳐도 다시 깃에 맞춥니다.</li><li>롤백 쪽에서 보면, 원래 상태가 깃에 적혀 있으니 되돌리려면 깃을 되돌리면 됩니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="깃옵스 4원칙">
+    <div class="kicker">1부 · 18.1</div>
+    <h2>깃옵스 4원칙, 교재와 원문이 조금 다르다</h2>
+    <table>
+      <tr><th>교재 18.1 (번역본)</th><th>OpenGitOps 원칙 v1.0</th><th>차이</th></tr>
+      <tr><td>선언형 구성</td><td class="k">Declarative</td><td>같음</td></tr>
+      <tr><td>구성 버저닝</td><td class="k" rowspan="2">Versioned and Immutable</td><td rowspan="2">원문은 하나. 뜻은 <b>저장된 버전이 불변이고 이력이 다 남는다</b>는 것 (번역본: "한번 변경하면 다시는 수정할 수 없다")</td></tr>
+      <tr><td>불변 구성</td></tr>
+      <tr><td class="r">(없음)</td><td class="k">Pulled Automatically</td><td><b>에이전트가 원하는 상태를 알아서 가져간다</b>. 앞 장의 pull이 이것</td></tr>
+      <tr><td>지속적인 상태 조정</td><td class="k">Continuously Reconciled</td><td>같음</td></tr>
+    </table>
+    <p style="margin-top:18px" class="dim">교재도 이 원칙을 OpenGitOps 프로젝트에서 가져왔다고 밝힌다. 번역본은 원문과 다르게 적었다</p>
+    <p class="dim">깃에 YAML을 두고 CI가 apply하는 건 원문 1, 2번은 지키지만 3, 4번을 못 지킨다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>18.1절은 깃옵스 원칙 네 개를 소개합니다. 교재는 이 원칙이 OpenGitOps 프로젝트에 정의된 것이라고 밝힙니다. OpenGitOps는 CNCF 깃옵스 워킹 그룹이 원칙을 정리해 둔 곳입니다.</li><li>그래서 원문과 나란히 놓아 봤습니다. 제가 가진 건 번역본뿐인데, 번역본은 원문과 다르게 적은 곳이 두 군데 있습니다.</li><li>첫째, 번역본은 구성 버저닝과 불변 구성을 두 원칙으로 나눴습니다. 원문에서는 Versioned and Immutable 하나입니다. 뜻도 조금 다릅니다. 번역본은 한번 변경하면 다시는 수정할 수 없다고 썼습니다. 원문은 원하는 상태가 버전으로 저장되고, 저장된 버전은 바뀌지 않고, 이력이 다 남는다는 뜻입니다. 고칠 때는 새 버전을 만들면 됩니다.</li><li>둘째, 원문의 세 번째 원칙 Pulled Automatically가 교재에는 없습니다. 에이전트가 원하는 상태를 알아서 가져간다는 원칙이고, 앞 장에서 본 pull이 바로 이겁니다.</li><li>이 차이가 문제가 되는 건, 교재 네 원칙만 보면 깃에 YAML을 두고 CI가 apply하는 것도 대체로 통과합니다. 원문 기준으로는 세 번째와 네 번째를 못 지킵니다. 이걸 깃옵스라고 불러도 되는지는 시간이 남으면 토론 때 얘기해 보면 좋겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="CI는 커밋까지만">
+    <div class="kicker">1부 · 18장, 6.5</div>
+    <h2>CI는 커밋까지만 한다</h2>
+    <pre class="code" style="font-size:18px"><span class="c"># CI 마지막 단계 (examples/ci/release.yaml)</span>
+cd order-api-deploy/overlays/prod
+kustomize edit set image order-api=registry/order-api:<span class="y">3f9c2e1</span>
+git commit -am "release order-api <span class="y">1.7.0</span> (<span class="y">3f9c2e1</span>) run <span class="y">#1482</span>"
+git push                              <span class="c"># CI 권한은 여기까지</span></pre>
+    <div class="cols" style="margin-top:18px">
+      <div class="card"><h3>이 커밋에 남는 것</h3><ul>
+        <li>무엇을: 이미지 태그 (1부)</li>
+        <li>어디에: overlay 경로 = 환경 (18.7: 환경은 브랜치 말고 폴더로)</li>
+        <li>누가: 앱 커밋과 파이프라인 실행 번호 (커밋 작성자는 봇)</li>
+        <li>언제: 커밋 시각</li>
+        <li>파이프라인 실행 번호 = 6.5의 release number</li>
+      </ul></div>
+      <div class="card violet"><h3>자동으로 하려면</h3><ul>
+        <li>Flux Image Automation</li>
+        <li>Argo CD Image Updater</li>
+        <li class="no">편하지만 어느 환경까지 자동으로 올릴지 따로 정해야 한다</li>
+      </ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>그러면 파이프라인은 어디서 끝나느냐. 5장 실습에서는 kubectl apply였는데 깃옵스에서는 배포 저장소에 커밋하는 것으로 끝납니다.</li><li>이 커밋에는 무엇을 어디에 올렸는지가 남습니다. 어디에는 overlays/prod 같은 폴더 경로로 나타납니다. 교재 18.7 모범 사례가 환경을 브랜치로 나누지 말고 폴더로 나누라고 하는데, 그 방식입니다. 커밋 작성자는 봇이라서, 누가 했는지는 커밋 메시지의 앱 커밋과 파이프라인 실행 번호로 거꾸로 찾아갑니다. 이 실행 번호가 6장의 release number입니다. 롤백할 때는 이 커밋을 되돌리면 됩니다.</li><li>이 커밋을 자동으로 해 주는 도구도 있습니다. 편하지만 어느 환경까지 자동으로 올릴지는 따로 정해 두셔야 합니다.</li><li>하나 덧붙이면, 교재 18.3의 네 가지 구조는 모두 매니페스트를 앱 코드와 같은 저장소에 둡니다. 여기서는 배포 저장소를 따로 둔 예를 썼습니다. 어느 쪽이 나은지는 토론 Q4에서 얘기해 보면 좋겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="쿠버네티스에는 릴리스가 없다">
+    <div class="kicker">1부 · 6.2</div>
+    <h2>쿠버네티스에는 릴리스가 없다</h2>
+    <div class="cols">
+      <div class="card"><h3>그래서 레이블로 적는다</h3><ul>
+        <li><code>metadata.labels</code>나 <code>spec.template.metadata.labels</code>에 릴리스 정보</li>
+        <li>이름 규칙은 <code>stable</code>, <code>canary</code>, <code>alpha</code> 정도</li>
+        <li>큰 조직은 <code>ring-0</code>, <code>ring-1</code> 식 링 배포</li>
+        <li>헬름은 릴리스 이력을 갖고 있어서 CD 도구가 많이 붙여 쓴다</li>
+      </ul></div>
+      <div class="card violet"><h3>레이블 내용보다 먼저 볼 것</h3>
+        <p style="font-size:20px">컨트롤러가 레이블과 <b>셀렉터</b>를 어떻게 다루는가</p>
+        <p style="font-size:20px">디플로이먼트, 레플리카셋, 잡, 데몬셋은 셀렉터로 파드를 고른다</p>
+        <p class="warn" style="font-size:20px">셀렉터는 한번 만들면 못 바꾼다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>6장에 이런 문장이 있습니다. 쿠버네티스에는 릴리스 컨트롤러가 없어서 릴리스라는 개념 자체가 없다는 겁니다.</li><li>무슨 뜻이냐면, 디플로이먼트는 지금 원하는 파드 모양 하나만 압니다. 이게 몇 번째 릴리스인지, 어느 파이프라인이 만들었는지, 카나리인지 정식인지는 쿠버네티스가 따로 들고 있지 않습니다.</li><li>그래서 그런 정보를 레이블에 적습니다. stable, canary 같은 이름을 붙이고, 조직이 크면 사내 사용자부터 ring-0, ring-1 식으로 나눠서 차례로 내보냅니다. 3부에서 볼 카나리도 레이블로 파드를 구분합니다.</li><li>헬름은 조금 다릅니다. 헬름은 릴리스 이력을 클러스터에 따로 저장해 둬서, CD 도구들이 이걸 릴리스 기록으로 많이 씁니다.</li><li>교재가 더 강조하는 건 셀렉터입니다. 디플로이먼트, 레플리카셋, 잡, 데몬셋은 레이블 셀렉터로 자기 파드를 고릅니다. 파드 레이블은 언제든 바꿀 수 있지만, 디플로이먼트의 셀렉터는 한번 만들면 못 바꿉니다. 이 차이가 다음 두 장에서 문제가 됩니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="6.4 예제의 함정">
+    <div class="kicker">1부 · 6.4 예제를 그대로 apply 하면</div>
+    <h2>6.4 예제의 함정</h2>
+    <table class="tight">
+      <tr><th>예제 부분</th><th>실제로 해 보면</th><th>고치면</th></tr>
+      <tr><td class="r">셀렉터에 <code>ver: 1.5.8</code></td><td>template의 ver만 올리면 <code>selector does not match template labels</code>, 셀렉터까지 올리면 <code>field is immutable</code>. <b>버전을 못 올리는 디플로이먼트</b></td><td>셀렉터에는 안 바뀌는 것만 (<code>app</code>, <code>tier</code>). 버전은 template 레이블에만</td></tr>
+      <tr><td class="r"><code>release number:</code></td><td>레이블 키에 공백이 들어가 API 서버가 거부</td><td><code>release-number</code></td></tr>
+      <tr><td class="r"><code>"helm.sh/hook"</code> 키 세 번</td><td>YAML 중복 키라 <b>마지막 하나만 남는다</b>. 백업 잡이 pre-rollback에만 걸린다</td><td><code>"helm.sh/hook": pre-upgrade,pre-delete,pre-rollback</code></td></tr>
+    </table>
+    <p class="note">셀렉터와 레이블 키는 kind(v1.37)에서 apply해서, 훅 중복 키는 YAML 파서로 확인했다. 에러 원문은 examples/README</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>이 장표는 6.4 종합 예제를 실제 클러스터에 그대로 넣어 보면 어디서 막히는지입니다. 결론부터 말하면, 셀렉터에 버전을 넣으면 그 버전 레이블을 다시는 올릴 수 없게 됩니다. 이미지만 바꾸는 배포는 되지만요.</li><li>6.4 예제에는 버전 레이블이 세 종류 나옵니다. ver는 파드 스펙의 버전, appver는 앱 전체의 버전, release number는 CD 파이프라인 실행 ID입니다. 문제가 되는 건 ver입니다.</li><li>먼저 배경입니다. 디플로이먼트의 spec.selector는 이 디플로이먼트가 관리할 파드를 고르는 조건이고, template.metadata.labels는 새로 만들 파드에 붙일 레이블입니다. 쿠버네티스는 이 둘이 맞는지 검사합니다. 템플릿으로 만든 파드를 셀렉터가 못 고르면 디플로이먼트가 자기가 만든 파드를 못 알아보니까요.</li><li>또 하나, apps/v1 디플로이먼트는 만든 뒤에 셀렉터를 바꿀 수 없습니다. 셀렉터를 바꾸면 이미 떠 있는 레플리카셋과 파드가 갑자기 관리 대상에서 빠지거나 다른 디플로이먼트 것과 섞일 수 있어서 아예 막아 둔 겁니다.</li><li>교재 예제는 셀렉터에 ver: 1.5.8을 넣었습니다. 다음 배포에서 파드 스펙 버전을 1.5.9로 올린다고 해 보겠습니다. template의 ver만 1.5.9로 바꾸면, 셀렉터는 1.5.8을 찾는데 새 파드는 1.5.9라서 selector does not match template labels 에러가 납니다.</li><li>그럼 셀렉터도 같이 1.5.9로 바꾸면 될까요? 이번엔 field is immutable, 셀렉터는 못 바꾼다는 에러가 납니다. 두 에러 모두 kind 클러스터에서 그대로 나왔습니다.</li><li>결국 이 디플로이먼트는 ver를 올릴 방법이 없습니다. 올리려면 디플로이먼트를 지우고 새로 만들어야 하는데, 그러면 무중단 롤링이 아니라 전부 내렸다가 올리는 배포가 됩니다.</li><li>그래서 셀렉터에는 app, tier처럼 디플로이먼트가 살아 있는 동안 절대 안 바뀌는 것만 넣고, 버전은 template 레이블에만 둡니다. template 레이블은 바꿔도 되고, 바꾸면 롤아웃이 일어납니다. 바로 다음 장이 그 얘기입니다.</li><li>두 번째 줄은 단순한 문법 문제입니다. 레이블 키에는 영문자, 숫자, 하이픈, 밑줄, 점만 쓸 수 있어서 release number처럼 공백이 있으면 API 서버가 받아 주지 않습니다. release-number로 쓰면 됩니다.</li><li>세 번째 줄은 헬름 훅입니다. helm.sh/hook 어노테이션은 이 잡을 언제 돌릴지 헬름에게 알려 주는 표시입니다. 교재는 업그레이드 전, 삭제 전, 롤백 전에 DB를 백업하려고 이 키를 세 줄로 나눠 썼습니다.</li><li>그런데 YAML은 같은 키가 여러 번 나오면 마지막 값만 남깁니다. 파서에 따라서는 에러를 내기도 합니다. 그래서 실제로는 pre-rollback만 남고, 업그레이드 전 백업은 돌지 않습니다. 여러 시점에 걸려면 쉼표로 이어서 한 줄로 씁니다.</li><li>이 헬름 훅 문제는 4부 헬름 장표에서 다시 나옵니다. 깃옵스로 되돌리면 Flux는 롤백이 아니라 업그레이드를 하고 Argo CD는 롤백 훅을 아예 안 돌려서, 교재 예제 그대로면 깃으로 되돌릴 때 백업이 안 돈다는 얘기입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="롤아웃은 template이 바뀔 때만">
+    <div class="kicker">1부 · 6.3</div>
+    <h2>롤아웃은 <code>spec.template</code>이 바뀔 때만</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="Deployment의 metadata 변경은 롤아웃을 일으키지 않고, template 변경은 새 ReplicaSet을 만든다">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <rect x="20" y="20" width="330" height="260" rx="12" fill="#141d33" stroke="#2c3b61"/>
+      <text x="40" y="54" font-size="20" fill="#eaf0ff" font-weight="700">Deployment</text>
+      <rect x="40" y="75" width="290" height="70" rx="8" fill="rgba(157,176,214,.08)" stroke="#9db0d6" stroke-dasharray="6 4"/>
+      <text x="55" y="104" font-size="17" fill="#9db0d6">metadata.labels</text><text x="55" y="130" font-size="15" fill="#9db0d6">바꿔도 아무 일 없음</text>
+      <rect x="40" y="165" width="290" height="95" rx="8" fill="rgba(79,156,255,.12)" stroke="#4f9cff"/>
+      <text x="55" y="194" font-size="17" fill="#4f9cff" font-weight="700">spec.template</text><text x="55" y="220" font-size="15" fill="#eaf0ff">이미지, env, 레이블, 어노테이션</text><text x="55" y="244" font-size="15" fill="#eaf0ff">바뀌면 해시가 바뀌고 롤아웃</text>
+      <line x1="330" y1="212" x2="440" y2="212" stroke="#9db0d6" stroke-width="2" marker-end="url(#ar2)"/>
+      <rect x="450" y="40" width="300" height="100" rx="10" fill="#141d33" stroke="#fb7185"/>
+      <text x="600" y="75" font-size="18" fill="#fb7185" text-anchor="middle" font-weight="700">ReplicaSet web-7d9f5c</text>
+      <text x="600" y="105" font-size="16" fill="#9db0d6" text-anchor="middle">옛 template: 3 → 2 → 1 → 0</text>
+      <text x="600" y="128" font-size="14" fill="#9db0d6" text-anchor="middle">지우지 않고 0으로 남긴다</text>
+      <rect x="450" y="170" width="300" height="100" rx="10" fill="#141d33" stroke="#34d399"/>
+      <text x="600" y="205" font-size="18" fill="#34d399" text-anchor="middle" font-weight="700">ReplicaSet web-5b8c4a</text>
+      <text x="600" y="235" font-size="16" fill="#9db0d6" text-anchor="middle">새 template: 0 → 1 → 2 → 3</text>
+      <g font-size="17" fill="#eaf0ff">
+        <text x="790" y="75">이름 뒤 문자열 = <tspan fill="#fbbf24">pod-template-hash</tspan></text>
+        <text x="790" y="115">revisionHistoryLimit (기본 10)</text>
+        <text x="790" y="140" fill="#9db0d6" font-size="15">만큼 옛 RS를 남겨 둔다</text>
+        <text x="790" y="195"><tspan fill="#fbbf24">kubectl rollout undo</tspan></text>
+        <text x="790" y="220" fill="#9db0d6" font-size="15">옛 RS의 template을 다시 적용</text>
+        <text x="790" y="245" fill="#9db0d6" font-size="15">(새 리비전 번호가 붙는다)</text>
+      </g>
+    </svg>
+    <p class="note">교재: metadata 레이블을 바꾸고 apply했는데 아무 변화가 없어 당황하는 경우가 흔하다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>디플로이먼트에는 두 부분이 있습니다. 디플로이먼트 자체의 metadata와, 파드를 찍어 내는 틀인 spec.template입니다. 디플로이먼트 컨트롤러가 롤아웃을 할지 볼 때는 spec.template만 봅니다.</li><li>컨트롤러는 template 내용을 해시합니다. 이미지, 환경 변수, 파드 레이블 중 하나라도 바뀌면 해시가 바뀌고, 그 해시로 새 레플리카셋을 만듭니다. 레플리카셋 이름 뒤에 붙은 문자열이 그 해시이고, 파드에도 pod-template-hash 레이블로 붙습니다.</li><li>그다음 새 레플리카셋은 0에서부터 늘리고 옛 레플리카셋은 줄입니다. 이게 롤링 업데이트입니다.</li><li>반대로 디플로이먼트 metadata 레이블만 바꾸면 template 해시가 그대로라서 아무 일도 안 일어납니다. kind에서 해 봤는데 레플리카셋이 하나 그대로였습니다. 교재도 이걸로 당황하는 경우가 흔하다고 합니다.</li><li>롤백 쪽에서 보면, 컨트롤러는 옛 레플리카셋을 지우지 않고 레플리카 0으로 남겨 둡니다. revisionHistoryLimit 기본값인 10개까지요. rollout undo는 이 옛 레플리카셋의 template을 디플로이먼트에 다시 넣는 겁니다. 그래서 새 리비전 번호가 붙습니다.</li><li>rollout restart도 같은 원리입니다. template 어노테이션에 재시작 시각을 적어서 해시를 바꿉니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="1부 정리">
+    <div class="kicker">1부 정리</div>
+    <h2>1부에서 준비한 것</h2>
+    <table>
+      <tr><th>준비물</th><th>예시 서비스에서는</th><th>교재</th></tr>
+      <tr><td class="k">돌아갈 이름</td><td><code>order-api:3f9c2e1@sha256:9b1f…</code>, 직전은 <code>2b7e0d4</code></td><td>5.5, 5.6</td></tr>
+      <tr><td class="k">원래 상태의 기록</td><td>배포 저장소 커밋 <code>a41d77c</code> "release 1.7.0 (3f9c2e1) run #1482"</td><td>18장, 6.5</td></tr>
+      <tr><td class="k">클러스터가 당겨 감</td><td>Flux가 깃을 보고 맞춘다. CI에는 클러스터 권한이 없다</td><td>18.1</td></tr>
+      <tr><td class="k">버전이 바뀌는 원리</td><td>template이 바뀌면 새 RS, 옛 RS는 0으로 남는다</td><td>6.3</td></tr>
+      <tr><td class="k">버전 표시</td><td><code>app.kubernetes.io/version: 1.7.0</code>, 셀렉터엔 <code>app</code>만</td><td>6.2, 6.4</td></tr>
+    </table>
+    <p style="margin-top:18px">이제 이 배포를 <b>어떻게</b> 내보낼지 고를 차례입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>1부 정리입니다. 돌아갈 이름, 원래 상태의 기록, 클러스터가 깃을 당겨 가는 구조, 그리고 버전이 바뀌는 원리까지 준비됐습니다.</li><li>이제 이 배포를 어떻게 내보낼지 고를 차례입니다. 배포 전략 다섯 가지를 먼저 한눈에 보겠습니다.</li></ul></aside>
+  </section>

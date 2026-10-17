@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7주차 · 릴리스 파이프라인</title>
+<style>
+  :root{
+    --bg:#070c18; --stage:#0e1526; --ink:#eaf0ff; --dim:#9db0d6; --line:#2c3b61;
+    --accent:#4f9cff; --green:#34d399; --amber:#fbbf24; --rose:#fb7185; --violet:#a78bfa;
+    --card:#141d33;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg)}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;
+       color:var(--ink);display:flex;flex-direction:column}
+
+  #wrap{flex:1;position:relative;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}
+  .slide{display:none;width:min(100%,1280px);aspect-ratio:16/9;background:var(--stage);
+         border:1px solid var(--line);border-radius:14px;padding:56px 64px;position:relative;
+         overflow:hidden;flex-direction:column;justify-content:center}
+  .slide.on{display:flex}
+  .kicker{font-size:15px;letter-spacing:.14em;color:var(--accent);font-weight:700;margin-bottom:18px}
+  .slide h1{font-size:52px;line-height:1.24;letter-spacing:-.02em;font-weight:800}
+  .slide h2{font-size:40px;line-height:1.3;letter-spacing:-.02em;font-weight:800;margin-bottom:26px}
+  .slide p{font-size:24px;line-height:1.7;color:var(--ink);margin-bottom:14px}
+  .slide p.dim{color:var(--dim)}
+  .slide ul{list-style:none;display:flex;flex-direction:column;gap:14px;margin-top:6px}
+  .slide li{font-size:23px;line-height:1.55;padding-left:26px;position:relative;color:var(--ink)}
+  .slide li::before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;
+                    border-radius:2px;background:var(--accent)}
+  .slide li.no::before{background:var(--rose)}
+  .slide li.ok::before{background:var(--green)}
+  b{color:#fff}
+  .em{color:var(--accent)}
+  .warn{color:var(--amber)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;
+       background:rgba(79,156,255,.14);color:#cfe2ff;padding:2px 8px;border-radius:6px}
+
+  .quote{border-left:5px solid var(--accent);background:rgba(79,156,255,.08);border-radius:0 12px 12px 0;
+         padding:20px 26px;font-size:24px;line-height:1.65;color:#dbe7ff}
+  .quote .src{display:block;margin-top:10px;font-size:16px;color:var(--accent);font-weight:700}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:6px}
+  .cols.c3{grid-template-columns:repeat(3,1fr);gap:20px}
+  .cols.c3 .card{padding:18px 20px}
+  .cols.c3 .card p{font-size:18.5px;line-height:1.55;color:var(--dim);margin-bottom:10px}
+  .cols.c3 .card li{font-size:17.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+  .card h3{font-size:19px;color:var(--accent);margin-bottom:12px;letter-spacing:.02em}
+  .card.rose h3{color:var(--rose)} .card.green h3{color:var(--green)} .card.violet h3{color:var(--violet)}
+  .card li{font-size:19px} .card li::before{top:11px;width:6px;height:6px}
+  table{width:100%;border-collapse:collapse;font-size:19.5px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:14px;letter-spacing:.06em;color:var(--dim);font-weight:700}
+  td.k{color:var(--accent);font-weight:700;white-space:nowrap}
+  td.r{color:var(--rose);font-weight:700;white-space:nowrap}
+  table.tight{font-size:17.5px}
+  table.tight th,table.tight td{padding:8px 10px}
+  .big{font-size:34px;line-height:1.5;font-weight:700}
+  .note{position:absolute;left:64px;bottom:26px;font-size:16px;color:var(--dim)}
+  .tag{display:inline-block;background:var(--card);border:1px solid var(--line);color:var(--dim);
+       border-radius:20px;padding:5px 14px;font-size:15px;margin-right:8px}
+  .tag.g{color:var(--green);border-color:rgba(52,211,153,.4)}
+  .tag.v{color:var(--violet);border-color:rgba(167,139,250,.4)}
+  .review-badge{display:inline-block;margin-right:10px;padding:4px 10px;border-radius:999px;
+    border:1px solid rgba(167,139,250,.55);background:rgba(167,139,250,.12);color:var(--violet);
+    font-size:13px;font-weight:800;letter-spacing:.04em;vertical-align:middle}
+  svg{width:100%;height:auto;display:block}
+
+  .notes{display:none}
+  body.notes-on .slide.on .notes{display:block;position:absolute;left:0;right:0;bottom:0;
+    background:rgba(5,8,15,.94);border-top:1px solid var(--line);padding:16px 64px 18px}
+  body.notes-on .slide{justify-content:flex-start;padding-top:44px;padding-bottom:210px}
+  .notes b{display:block;font-size:13px;letter-spacing:.1em;color:var(--amber);margin-bottom:8px}
+  .notes ul{gap:6px}
+  .notes li{font-size:17px;line-height:1.5;color:var(--dim);padding-left:20px}
+  .notes li::before{top:9px;width:6px;height:6px;background:var(--amber)}
+  #bar{flex-shrink:0;height:46px;display:flex;align-items:center;gap:14px;padding:0 16px;
+       background:#05080f;border-top:1px solid var(--line);font-size:13px;color:var(--dim);user-select:none}
+  #bar .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-weight:600}
+  #bar button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;
+              padding:5px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  #bar button:hover{border-color:var(--accent);color:var(--accent)}
+  #cnt{font-variant-numeric:tabular-nums;min-width:66px;text-align:center}
+  #pg{position:absolute;top:0;left:0;height:3px;background:var(--accent);z-index:5;transition:width .2s}
+  #toc{position:absolute;inset:0;background:rgba(7,12,24,.97);z-index:10;display:none;overflow:auto;padding:34px 46px}
+  #toc.open{display:block}
+  #toc h2{font-size:20px;color:var(--accent);margin-bottom:16px}
+  #toc ol{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:4px 26px}
+  #toc a{display:flex;gap:10px;padding:6px 10px;border-radius:8px;color:var(--ink);
+         text-decoration:none;font-size:14.5px;cursor:pointer}
+  #toc a:hover{background:var(--card);color:var(--accent)}
+  #toc a .n{color:var(--dim);width:26px;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+  .shared-selection{position:absolute;inset:0;z-index:30;pointer-events:none;overflow:hidden;border-radius:14px}
+  .shared-selection-mark{position:absolute;background:rgba(251,191,36,.42);border:1px solid rgba(251,191,36,.72);border-radius:4px;box-shadow:0 0 0 2px rgba(251,191,36,.1)}
+  body.presenter-mode{display:block;overflow:auto;background:#080d19;color:var(--ink);padding:0}
+  .presenter-shell{min-height:100vh;padding:18px;display:flex;flex-direction:column;gap:14px}
+  .presenter-header{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#111827;border:1px solid var(--line);border-radius:12px}
+  .presenter-header strong{font-size:16px;color:var(--accent)}
+  .presenter-spacer{flex:1}
+  .presenter-clock{font:700 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--amber);min-width:92px;text-align:center}
+  .presenter-btn{border:1px solid var(--line);background:#172033;color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
+  .presenter-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .presenter-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2fr) minmax(340px,1fr);grid-template-rows:minmax(260px,42vh) minmax(250px,1fr);gap:14px}
+  .presenter-panel{min-width:0;min-height:0;background:#0e1627;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:9px;overflow:hidden}
+  .presenter-panel.current{grid-row:1 / 3}
+  .presenter-label{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--dim)}
+  .presenter-preview{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:10px;background:#030712}
+  .presenter-frame{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:top left}
+  .presenter-frame .slide{display:flex!important;width:1280px;height:720px;max-width:none;aspect-ratio:auto;border-radius:12px;box-shadow:none;user-select:text;cursor:text}
+  .presenter-frame .notes{display:none!important}
+  .presenter-notes{overflow:auto;font-size:19px;line-height:1.62;white-space:pre-wrap;color:#e5e7eb;padding:4px 6px 12px}
+  .presenter-hint{font-size:12px;color:var(--dim)}
+  @media(max-width:1000px){.presenter-grid{grid-template-columns:1fr;grid-template-rows:58vh 34vh auto}.presenter-panel.current{grid-row:auto}.presenter-notes{min-height:220px}}
+
+  @media print{
+    html,body{overflow:visible;height:auto;background:#fff}
+    #bar,#pg,#toc{display:none!important}
+    #wrap{display:block;padding:0}
+    .slide{display:flex!important;page-break-after:always;border-radius:0;border:0;
+           width:100%;height:100vh;background:#0e1526}
+  }
+
+  pre.code{background:#06101d;border:1px solid var(--line);border-radius:12px;padding:16px 20px;
+    font:16px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;color:#c8d9e7;overflow:hidden;margin:0}
+  pre.code .k{color:#73b7ff} pre.code .c{color:#69849c} pre.code .y{color:#ffe08a}
+  .slide ol{margin-top:6px}
+  .slide p.note{font-size:16px;line-height:1.5;color:var(--dim);margin:0;right:64px}
+  .slide ol li{padding-left:6px} .slide ol li::before{display:none}
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="pg"></div>
+
+  <!-- 1 -->
+  <section class="slide on" data-t="표지">
+    <div class="kicker">KUBERNETES STUDY · WEEK 07</div>
+    <h1>릴리스 파이프라인</h1>
+    <p class="dim" style="margin-top:28px">『쿠버네티스 창시자에게 배우는 모범 사례 2판』<br>5장 지속적 통합, 테스팅, 배포 / 6장 버저닝, 릴리스, 롤아웃<br>7장 글로벌 애플리케이션 분산과 스테이징 / 18장 깃옵스와 배포</p>
+    <div style="margin-top:22px"><span class="tag">2026-10-04 (일) 20:00</span></div>
+    <aside class="notes"><b>발표 노트</b><ul><li>7주차 발표 맡은 명주입니다. 오늘은 5, 6, 7, 18장 네 장을 봅니다.</li><li>장 순서대로 가지 않고 흐름 하나로 묶었습니다. 그 흐름은 질문 하나로 시작하겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" data-t="질문">
+    <div class="kicker">서론</div>
+    <h1>릴리스 파이프라인에서<br><span class="em">제일 중요한 건</span> 뭘까요?</h1>
+    <p class="dim" style="margin-top:28px">하나만 고른다면</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>시작하기 전에 질문 하나 드리겠습니다. 릴리스 파이프라인에서 제일 중요한 게 뭐라고 생각하세요? 하나만 고른다면요.</li><li>채팅으로 답 주셔도 되고 말로 해 주셔도 됩니다. 잠깐 기다리겠습니다.</li><li>(누가 롤백이나 핫픽스라고 답하면) 네, 좋은 답입니다. 오늘 그 얘기를 길게 할 거라서 조금 뒤에 이어서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" data-t="흔히 나오는 답">
+    <div class="kicker">서론</div>
+    <h2>보통 이런 답이 나옵니다</h2>
+    <div class="cols c3">
+      <div class="card"><h3>테스트</h3><p>깨진 코드가 나가지 않게</p></div>
+      <div class="card"><h3>빠른 빌드</h3><p>커밋하고 금방 결과를 보게</p></div>
+      <div class="card"><h3>자동화</h3><p>사람 손이 안 타게</p></div>
+      <div class="card"><h3>무중단 배포</h3><p>배포 중에도 요청이 안 끊기게</p></div>
+      <div class="card"><h3>모니터링</h3><p>문제가 생기면 바로 알게</p></div>
+    </div>
+    <p style="margin-top:22px">다 맞는 말입니다. 그런데 하나 더 물어보겠습니다.</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>보통 이런 답이 나옵니다. 테스트, 빠른 빌드, 자동화, 무중단 배포, 모니터링.</li><li>다 맞습니다. 실제로 교재 5장이 이 이야기들을 합니다.</li><li>그런데 상황을 하나 가정해 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" data-t="배포 직후 에러가 났다">
+    <div class="kicker">서론</div>
+    <h2>금요일 오후 6시, 방금 배포가 끝났습니다</h2>
+    <pre class="code" style="font-size:21px">18:02  order-api 1.7.0 롤아웃 완료 (successfully rolled out)
+18:03  알람: 결제 API 5xx 비율 <span class="y">3.1%</span>
+18:05  CS 채널: "쿠폰 적용하면 결제가 안 돼요"</pre>
+    <p style="margin-top:28px" class="big">지금 제일 먼저 하고 싶은 건?</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>금요일 오후 6시에 배포가 끝났습니다. 롤아웃도 성공으로 끝났는데, 1분 뒤 결제 에러 알람이 옵니다. 평소 0.1%이던 5xx 비율이 3.1%입니다. 2분 뒤에는 CS 채널에 쿠폰 쓰면 결제가 안 된다는 문의가 들어옵니다.</li><li>이때 제일 먼저 하고 싶은 게 뭔가요? 원인 분석? 로그 확인?</li></ul></aside>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" data-t="되돌리고 싶다">
+    <div class="kicker">서론</div>
+    <h1>일단 <span class="em">되돌리고</span> 싶다</h1>
+    <p style="margin-top:28px">원인은 되돌린 다음에 봐도 됩니다</p>
+    <p class="dim">그런데 이 순간, 되돌리는 데 몇 분 걸리는지, 그동안 몇 명이 겪는지 알고 계신가요?</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>네, 일단 되돌리고 싶습니다. 원인은 되돌린 다음에 봐도 되니까요.</li><li>그런데 이 순간에 되돌리는 데 몇 분 걸리는지, 그동안 사용자가 몇 명이나 이 에러를 겪는지 바로 답할 수 있는 팀은 많지 않습니다.</li><li>그래서 제 답은 이겁니다. 릴리스 파이프라인에서 제일 중요한 건 롤백입니다.</li></ul></aside>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" data-t="앞의 답들을 롤백 쪽에서 다시 보면">
+    <div class="kicker">서론</div>
+    <h2>앞의 답들을 롤백 쪽에서 다시 보면</h2>
+    <table>
+      <tr><th>흔한 답</th><th>롤백 쪽에서 보면</th></tr>
+      <tr><td class="k">테스트</td><td>되돌릴 일을 줄인다</td></tr>
+      <tr><td class="k">빠른 빌드</td><td>고쳐서 다시 내보낼 때 빨리 나간다</td></tr>
+      <tr><td class="k">자동화</td><td>급할 때 손으로 치다 틀리지 않는다</td></tr>
+      <tr><td class="k">무중단 배포</td><td>되돌릴 때도 안 끊긴다</td></tr>
+      <tr><td class="k">모니터링</td><td>언제 되돌릴지 알려 준다</td></tr>
+    </table>
+    <p style="margin-top:20px">안 깨지는 배포는 없습니다. 그래서 깨졌을 때 <b>빨리, 싸게 되돌릴 수 있는지</b>가 제일 중요합니다.</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>앞에서 나온 답들을 롤백 쪽에서 다시 보면 이렇게 됩니다.</li><li>테스트는 되돌릴 일 자체를 줄이고, 무중단 배포는 되돌릴 때도 안 끊기게 해 주고, 모니터링은 언제 되돌릴지 알려 줍니다. 빠른 빌드는 고쳐서 다시 내보낼 때 도움이 됩니다.</li><li>배포가 한 번도 안 깨지는 팀은 없습니다. 그래서 깨졌을 때 빨리, 싸게 되돌릴 수 있느냐가 제일 중요하다고 생각합니다. 오늘은 네 장을 이 관점으로 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" data-t="배포 전략이란">
+    <div class="kicker">서론</div>
+    <h2>그럼 처음부터 되돌리기 쉽게 내보내면 된다</h2>
+    <div class="quote">배포 전략 = 새 버전을 <b>누구에게, 얼마나, 어떤 순서로</b> 보여 줄지 정하는 것</div>
+    <table style="margin-top:22px">
+      <tr><th>전략에 따라 달라지는 것</th><th>예</th></tr>
+      <tr><td class="k">버그를 몇 명이 겪나</td><td>전부 한 번에 vs 5%만 먼저</td></tr>
+      <tr><td class="k">언제 알아채나</td><td>사용자 문의로 vs 옛 버전과 비교해서 자동으로</td></tr>
+      <tr><td class="k">되돌리는 데 얼마나 걸리나</td><td>다시 배포 수 분 vs 전환 수 초</td></tr>
+      <tr><td class="k">무엇이 더 드나</td><td>자원 두 배, 트래픽 나누는 장치, 판정할 메트릭</td></tr>
+    </table>
+    <p style="margin-top:18px" class="dim">오늘은 같은 배포를 전략만 바꿔서 세 번 해 보고 이 차이를 직접 비교합니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>롤백이 제일 중요하다면, 처음부터 되돌리기 쉽게 내보내면 됩니다. 그게 배포 전략입니다.</li><li>배포 전략은 새 버전을 누구에게, 얼마나, 어떤 순서로 보여 줄지 정하는 겁니다. 전략에 따라 버그를 몇 명이 겪는지, 언제 알아채는지, 되돌리는 데 얼마나 걸리는지, 그리고 무엇이 더 드는지가 달라집니다.</li><li>오늘은 같은 쿠폰 배포를 롤링, 블루/그린, 카나리로 세 번 해 보고 이 네 가지를 직접 비교하겠습니다. 그 전에 전략을 쓰려면 갖춰야 할 준비물부터 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide" data-t="예시 서비스">
+    <div class="kicker">서론</div>
+    <h2>오늘 계속 쓸 예시</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:19px">서비스   order-api (주문 API)
+레플리카 10개, 초당 1,000 요청
+버전     1.6.3 → 1.7.0
+커밋     <span class="y">3f9c2e1</span> "쿠폰 할인 적용"
+변경     코드만 (쿠폰 컬럼은 1.6.3 배포 때
+         미리 추가해 둠)</pre>
+      <div class="card rose"><h3>숨어 있는 버그</h3>
+        <p style="font-size:20px">쿠폰 코드에 이모지나 일본어가 들어오면 문자열 처리에서 에러가 나서 <b>결제가 실패</b>한다</p>
+        <p style="font-size:20px">그런 요청은 전체의 <b>3%</b></p>
+        <p class="dim" style="font-size:18px">테스트는 영어 쿠폰 코드로만 했고, 스테이징에도 그런 데이터가 없었다</p></div>
+    </div>
+    <p style="margin-top:20px">아까 금요일 6시에 깨진 그 배포입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>오늘 계속 쓸 예시입니다. 주문 API이고, 레플리카 10개에 초당 1,000 요청을 받습니다. 쿠폰 할인을 적용하는 1.7.0 배포입니다. 쿠폰 컬럼은 그 전 1.6.3 배포 때 미리 추가해 뒀습니다. 왜 따로 했는지는 3부에서 봅니다.</li><li>이 버전에는 버그가 숨어 있습니다. 쿠폰 코드에 이모지나 일본어가 들어오면 결제가 실패합니다. 그런 요청이 3%입니다. 테스트는 영어 코드로만 했고 스테이징에도 그런 데이터가 없어서 못 잡았습니다.</li><li>이 버그는 교재 7.4에 나오는 예를 그대로 가져왔습니다. 교재는 "테스트할 때는 영어로만 입력하지만 실제 환경에서는 다양한 언어로 입력이 들어올 수 있다"고 씁니다. 7.4.3에도 비영어권에서는 문자열 처리 중 버그가 나기 쉬운 유니코드 문자가 더 많이 들어온다는 얘기가 있습니다.</li><li>아까 금요일 6시에 깨진 그 배포입니다. 3부에서 이 배포를 전략만 바꿔서 세 번 해 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide" data-t="전체 그림">
+    <div class="kicker">서론 · 전체 그림</div>
+    <h2>전체 그림: 커밋에서 사용자까지</h2>
+    <svg viewBox="0 0 1150 470" role="img" aria-label="개발자가 앱 저장소에 커밋하면 CI가 테스트하고 이미지를 레지스트리에 올리고 배포 저장소에 태그를 커밋한다. 클러스터 안의 Argo CD가 배포 저장소를 당겨 와 Rollout을 적용하고, Argo Rollouts가 옛 버전과 새 버전 ReplicaSet, stable과 canary 서비스, Gateway의 가중치를 관리해 사용자 요청을 나눈다. 판정은 AnalysisRun이 Prometheus나 Datadog을 조회해서 하고, 되돌릴 때는 배포 저장소에서 git revert를 한다.">
+      <defs>
+        <marker id="ov" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker>
+        <marker id="ovy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#fbbf24"/></marker>
+        <marker id="ovg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#34d399"/></marker>
+      </defs>
+
+      <!-- 클러스터 밖 -->
+      <text x="20" y="22" font-size="14" fill="#9db0d6" font-weight="700">클러스터 밖</text>
+      <g text-anchor="middle">
+        <rect x="20" y="35" width="120" height="62" rx="10" fill="#141d33" stroke="#2c3b61"/>
+        <text x="80" y="62" font-size="16" fill="#eaf0ff">개발자</text><text x="80" y="84" font-size="13" fill="#9db0d6">커밋 3f9c2e1</text>
+        <rect x="180" y="35" width="170" height="62" rx="10" fill="#141d33" stroke="#2c3b61"/>
+        <text x="265" y="62" font-size="16" fill="#eaf0ff">앱 저장소</text><text x="265" y="84" font-size="13" fill="#9db0d6">order-api 코드</text>
+        <rect x="390" y="35" width="200" height="62" rx="10" fill="#141d33" stroke="#4f9cff"/>
+        <text x="490" y="62" font-size="16" fill="#eaf0ff">CI</text><text x="490" y="84" font-size="13" fill="#9db0d6">테스트, 빌드, 서명</text>
+        <rect x="630" y="35" width="250" height="62" rx="10" fill="#141d33" stroke="#4f9cff"/>
+        <text x="755" y="62" font-size="16" fill="#eaf0ff">레지스트리</text><text x="755" y="84" font-size="13" fill="#9db0d6">order-api:3f9c2e1@sha256:…</text>
+        <rect x="390" y="135" width="200" height="62" rx="10" fill="#141d33" stroke="#a78bfa"/>
+        <text x="490" y="162" font-size="16" fill="#eaf0ff">배포 저장소</text><text x="490" y="184" font-size="13" fill="#9db0d6">overlays/prod newTag</text>
+        <rect x="960" y="35" width="170" height="62" rx="10" fill="#141d33" stroke="#2c3b61"/>
+        <text x="1045" y="62" font-size="16" fill="#eaf0ff">사용자</text><text x="1045" y="84" font-size="13" fill="#9db0d6">초당 1,000 요청</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" fill="none" marker-end="url(#ov)">
+        <line x1="140" y1="66" x2="178" y2="66"/>
+        <line x1="350" y1="66" x2="388" y2="66"/>
+        <line x1="590" y1="66" x2="628" y2="66"/>
+        <line x1="490" y1="97" x2="490" y2="133"/>
+      </g>
+      <text x="500" y="122" font-size="12" fill="#9db0d6">태그 커밋</text>
+
+      <!-- 클러스터 -->
+      <rect x="20" y="225" width="1110" height="235" rx="14" fill="rgba(79,156,255,.04)" stroke="#2c3b61" stroke-dasharray="6 5"/>
+      <text x="36" y="450" font-size="14" fill="#9db0d6" font-weight="700">클러스터 (order 네임스페이스)</text>
+      <g text-anchor="middle">
+        <rect x="40" y="265" width="160" height="62" rx="10" fill="#141d33" stroke="#a78bfa"/>
+        <text x="120" y="292" font-size="16" fill="#eaf0ff">Argo CD</text><text x="120" y="314" font-size="13" fill="#9db0d6">또는 Flux</text>
+        <rect x="235" y="265" width="170" height="62" rx="10" fill="#141d33" stroke="#34d399"/>
+        <text x="320" y="292" font-size="16" fill="#eaf0ff">Rollout</text><text x="320" y="314" font-size="13" fill="#9db0d6">Argo Rollouts가 관리</text>
+        <rect x="445" y="255" width="200" height="50" rx="9" fill="#141d33" stroke="#4f9cff"/>
+        <text x="545" y="276" font-size="15" fill="#4f9cff">ReplicaSet 1.6.3</text><text x="545" y="295" font-size="12" fill="#9db0d6">stable, 파드 10</text>
+        <rect x="445" y="320" width="200" height="50" rx="9" fill="#141d33" stroke="#34d399"/>
+        <text x="545" y="341" font-size="15" fill="#34d399">ReplicaSet 1.7.0</text><text x="545" y="360" font-size="12" fill="#9db0d6">canary, 파드 1</text>
+        <rect x="685" y="255" width="170" height="50" rx="9" fill="#141d33" stroke="#4f9cff"/>
+        <text x="770" y="285" font-size="14" fill="#eaf0ff">Service stable</text>
+        <rect x="685" y="320" width="170" height="50" rx="9" fill="#141d33" stroke="#34d399"/>
+        <text x="770" y="350" font-size="14" fill="#eaf0ff">Service canary</text>
+        <rect x="900" y="275" width="210" height="75" rx="10" fill="#141d33" stroke="#fbbf24"/>
+        <text x="1005" y="302" font-size="15" fill="#fbbf24">Gateway, HTTPRoute</text><text x="1005" y="326" font-size="14" fill="#eaf0ff">stable 95 : canary 5</text>
+        <rect x="445" y="395" width="200" height="50" rx="9" fill="#141d33" stroke="#fb7185"/>
+        <text x="545" y="416" font-size="15" fill="#fb7185">AnalysisRun</text><text x="545" y="435" font-size="12" fill="#9db0d6">1분마다 판정</text>
+        <rect x="685" y="395" width="170" height="50" rx="9" fill="#141d33" stroke="#2c3b61"/>
+        <text x="770" y="416" font-size="14" fill="#eaf0ff">Prometheus</text><text x="770" y="435" font-size="12" fill="#9db0d6">또는 Datadog</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" fill="none" marker-end="url(#ov)">
+        <path d="M470 197 C 380 230, 200 230, 140 263"/>
+        <line x1="200" y1="296" x2="233" y2="296"/>
+        <line x1="405" y1="290" x2="443" y2="280"/>
+        <line x1="405" y1="305" x2="443" y2="342"/>
+        <line x1="645" y1="280" x2="683" y2="280"/>
+        <line x1="645" y1="345" x2="683" y2="345"/>
+        <line x1="898" y1="300" x2="857" y2="282"/>
+        <line x1="898" y1="325" x2="857" y2="343"/>
+        <line x1="1045" y1="97" x2="1045" y2="273"/>
+        <line x1="645" y1="420" x2="683" y2="420"/>
+      </g>
+      <text x="250" y="222" font-size="12" fill="#9db0d6">당겨 감 (pull)</text>
+      <path d="M755 97 C 755 170, 620 200, 590 253" fill="none" stroke="#9db0d6" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ov)"/>
+      <text x="700" y="160" font-size="12" fill="#9db0d6">노드가 이미지를 받음</text>
+      <path d="M443 420 C 380 420, 330 390, 330 330" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ov)"/>
+      <text x="236" y="395" font-size="12" fill="#fb7185">판정 실패 → 가중치 0</text>
+      <line x1="300" y1="166" x2="388" y2="166" stroke="#fbbf24" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ovy)"/>
+      <text x="150" y="162" font-size="13" fill="#fbbf24" font-weight="700">되돌리기</text><text x="150" y="180" font-size="12" fill="#fbbf24">여기서 git revert</text>
+
+      <!-- 부 표시 -->
+      <g font-size="12" font-weight="800">
+        <rect x="392" y="6" width="42" height="20" rx="6" fill="#4f9cff"/><text x="413" y="20" fill="#070c18" text-anchor="middle">1부</text>
+        <rect x="592" y="138" width="42" height="20" rx="6" fill="#a78bfa"/><text x="613" y="152" fill="#070c18" text-anchor="middle">1부</text>
+                <rect x="160" y="268" width="38" height="18" rx="5" fill="#a78bfa"/><text x="179" y="281" fill="#070c18" text-anchor="middle">1부</text>
+        <rect x="362" y="268" width="40" height="18" rx="5" fill="#34d399"/><text x="382" y="281" fill="#070c18" text-anchor="middle">2·3부</text>
+        <rect x="1068" y="255" width="40" height="18" rx="5" fill="#fbbf24"/><text x="1088" y="268" fill="#070c18" text-anchor="middle">3부</text>
+        <rect x="602" y="398" width="40" height="18" rx="5" fill="#fb7185"/><text x="622" y="411" fill="#070c18" text-anchor="middle">3부</text>
+        <rect x="230" y="152" width="42" height="20" rx="6" fill="#fbbf24"/><text x="251" y="166" fill="#070c18" text-anchor="middle">4부</text>
+      </g>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>본론에 들어가기 전에 오늘 나오는 것들이 어떻게 이어지는지 한 장으로 보고 가겠습니다. 그림은 3회차 카나리 기준입니다. 상자마다 붙은 색 표시가 몇 부에서 다루는지입니다.</li><li>위쪽은 클러스터 밖입니다. 개발자가 앱 저장소에 커밋하면 CI가 테스트하고, 이미지를 빌드해서 서명하고, 레지스트리에 올립니다. 이미지 이름이 커밋 해시 태그와 다이제스트입니다. 그다음 CI가 하는 마지막 일이 배포 저장소에 새 태그를 커밋하는 겁니다. 여기까지가 1부입니다.</li><li>아래 큰 상자가 클러스터입니다. Argo CD, 또는 Flux가 클러스터 안에서 배포 저장소를 당겨 가서 Rollout 리소스를 적용합니다. CI는 클러스터 권한이 없고 깃에 커밋만 합니다. 이것도 1부에서 봅니다.</li><li>Rollout을 받은 Argo Rollouts 컨트롤러가 파드를 어떻게 바꿀지 정합니다. 옛 버전 ReplicaSet과 새 버전 ReplicaSet을 두고, 각각을 가리키는 stable 서비스와 canary 서비스를 둡니다. Gateway의 HTTPRoute가 사용자 요청을 95 대 5로 두 서비스에 나눠 보냅니다. 롤링, 블루/그린, 카나리가 이 부분을 어떻게 다르게 하는지가 2부와 3부입니다.</li><li>판정은 AnalysisRun이 1분마다 Prometheus나 Datadog에 물어봐서 합니다. 실패하면 컨트롤러가 가중치를 0으로 돌립니다. 노드는 파드를 띄울 때 레지스트리에서 이미지를 받습니다.</li><li>마지막으로 노란 점선이 되돌리기입니다. 배포 저장소에서 git revert를 하면 Argo CD가 그걸 당겨 가서 옛 버전으로 맞춥니다. 4부입니다. 발표 중간중간 이 그림에서 지금 어디를 보고 있는지 다시 짚겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide" data-t="오늘의 흐름">
+    <div class="kicker">오늘의 흐름</div>
+    <h2>오늘의 흐름</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="1부 준비, 2부 배포 전략 한눈에, 3부 같은 배포 세 번, 4부 되돌리기의 순서와 교재 범위">
+      <defs><marker id="ar0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <g text-anchor="middle">
+        <rect x="10" y="40" width="250" height="120" rx="12" fill="#141d33" stroke="#4f9cff"/>
+        <text x="135" y="80" font-size="20" fill="#4f9cff" font-weight="800">1부 준비</text><text x="135" y="110" font-size="17" fill="#eaf0ff">되돌아갈 이름과 기록</text><text x="135" y="136" font-size="15" fill="#9db0d6">태그, 깃옵스, RS</text>
+        <rect x="300" y="40" width="250" height="120" rx="12" fill="#141d33" stroke="#a78bfa"/>
+        <text x="425" y="80" font-size="20" fill="#a78bfa" font-weight="800">2부 배포 전략</text><text x="425" y="110" font-size="17" fill="#eaf0ff">다섯 가지 한눈에</text><text x="425" y="136" font-size="15" fill="#9db0d6">Recreate ~ A/B</text>
+        <rect x="590" y="40" width="300" height="120" rx="12" fill="#141d33" stroke="#34d399" stroke-width="2.5"/>
+        <text x="740" y="80" font-size="20" fill="#34d399" font-weight="800">3부 같은 배포, 세 번</text><text x="740" y="110" font-size="17" fill="#eaf0ff">롤링 → 블루/그린 → 카나리</text><text x="740" y="136" font-size="15" fill="#9db0d6">같은 버그, 다른 결과</text>
+        <rect x="930" y="40" width="210" height="120" rx="12" fill="#141d33" stroke="#fb7185"/>
+        <text x="1035" y="80" font-size="20" fill="#fb7185" font-weight="800">4부 되돌리기</text><text x="1035" y="110" font-size="17" fill="#eaf0ff">실제로 되돌릴 때</text><text x="1035" y="136" font-size="15" fill="#9db0d6">깃옵스, 체크리스트</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" marker-end="url(#ar0)"><line x1="260" y1="100" x2="298" y2="100"/><line x1="550" y1="100" x2="588" y2="100"/><line x1="890" y1="100" x2="928" y2="100"/></g>
+      <g font-size="16" text-anchor="middle" fill="#9db0d6">
+        <text x="135" y="192">5.1 ~ 5.6, 6장, 18장</text>
+        <text x="425" y="192">5.7, 6.3</text>
+        <text x="740" y="192">5.7, 5.8, 6.3, 7장</text>
+        <text x="1035" y="192">7.5, 6.5, 18장</text>
+      </g>
+      <text x="575" y="260" font-size="18" fill="#fbbf24" text-anchor="middle" font-weight="700">3부가 본론입니다</text>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>오늘 흐름입니다. 1부에서 배포 전략을 쓰려면 필요한 준비물을 보고, 2부에서 전략 다섯 가지를 한눈에 봅니다.</li><li>3부가 본론입니다. 같은 쿠폰 배포를 롤링, 블루/그린, 카나리로 세 번 해 보고, 같은 버그가 터졌을 때 결과가 어떻게 다른지 봅니다.</li><li>4부는 실제로 되돌릴 때 챙겨야 할 것들입니다. 교재 범위는 상자 아래에 적었습니다. 7장은 여러 리전에 배포하는 이야기가 많은데, 배포 전략과 이어지는 부분은 3부에서 쓰고, 리전 이야기는 3부 끝에 짧게 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide" data-t="진행 순서">
+    <div class="kicker">목차</div>
+    <h2>진행 순서</h2>
+    <table>
+      <tr><th></th><th>내용</th><th>교재</th><th>시간</th></tr>
+      <tr><td class="k">서론</td><td>제일 중요한 건 롤백, 배포 전략이란</td><td></td><td>7분</td></tr>
+      <tr><td class="k">1부</td><td>준비: 이미지 태그, 깃옵스, 롤아웃이 일어나는 원리</td><td>5.1 ~ 5.6, 6장, 18장</td><td>17분</td></tr>
+      <tr><td class="k">2부</td><td>배포 전략 한눈에</td><td>5.7, 6.3</td><td>3분</td></tr>
+      <tr><td class="k">3부</td><td>같은 쿠폰 배포를 롤링, 블루/그린, 카나리로 세 번 + 데모 + 7장 리전 보충</td><td>5.7, 5.8, 6.3, 7장</td><td>48분</td></tr>
+      <tr><td class="k">4부</td><td>되돌리기</td><td>7.5, 6.5, 18장</td><td>4분</td></tr>
+      <tr><td class="k">정리</td><td>처음 질문으로</td><td></td><td>1분</td></tr>
+      <tr><td class="r">토론</td><td>질문 4개</td><td></td><td>10분</td></tr>
+    </table>
+    <aside class="notes"><b>발표 노트</b><ul><li>순서입니다. 3부가 가장 깁니다. 3부 끝에 kind 클러스터로 짧게 데모를 하겠습니다.</li><li>중간에 궁금한 게 있으면 바로 말씀해 주세요.</li></ul></aside>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide" data-t="1부 준비">
+    <div class="kicker">1부 · 교재 5.1 ~ 5.6, 6장, 18장</div>
+    <h1>1부<br><span class="em">준비</span></h1>
+    <p class="dim" style="margin-top:24px">어떤 전략을 쓰든 되돌아갈 이름과 기록이 있어야 한다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>1부는 준비물입니다. 롤링이든 카나리든, 되돌리려면 돌아갈 이미지에 이름이 있어야 하고, 원래 상태가 어딘가에 적혀 있어야 하고, 쿠버네티스가 버전을 어떻게 바꾸는지 알아야 합니다.</li><li>5장 앞부분, 6장, 18장에서 가져왔습니다. 빠르게 가겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide" data-t="손으로 배포하면">
+    <div class="kicker">1부 · 5장 도입, 5.1, 5.2</div>
+    <h2>손으로 배포하면 생기는 일</h2>
+    <div class="cols">
+      <div class="card rose"><h3>교재가 꼽는 문제</h3><ul>
+        <li class="no">에러가 나기 쉽다</li>
+        <li class="no">구성 드리프트: 실제 구성이 의도와 점점 달라진다</li>
+        <li class="no">배포 업데이트가 취약해진다</li>
+        <li class="no">앱을 전달하는 애질리티가 떨어진다</li>
+      </ul></div>
+      <div class="card green"><h3>교재의 출발점</h3><ul>
+        <li class="ok">깃 <code>main</code> 브랜치가 프로덕션</li>
+        <li class="ok">앱 코드와 매니페스트, 헬름 차트를 같은 저장소에</li>
+        <li class="ok">CI는 작은 변경을 자주 합치고 커밋마다 빌드</li>
+      </ul></div>
+    </div>
+    <p class="note">5장의 목표: 코드를 체크인한 뒤 프로덕션에 나가기까지 사람이 손대지 않는 것</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>5장은 앱을 손으로 업데이트할 때 생기는 문제로 시작합니다. 에러가 나기 쉽고, 실제 구성이 의도와 조금씩 달라지는 구성 드리프트가 생기고, 배포 업데이트가 취약해지고, 앱을 전달하는 애질리티가 떨어진다고 합니다.</li><li>여기부터는 제 생각입니다. 손으로 하면 배포가 부담스러워서 자주 못 하고, 그러다 보니 한 번에 많이 묶여 나갑니다. 한 번에 많이 나가면 깨졌을 때 원인 찾기도 되돌리기도 어렵습니다.</li><li>교재는 앱 코드와 매니페스트, 헬름 차트를 한 저장소에 두는 걸 출발점으로 잡습니다. 저장소를 어떻게 나눌지는 토론 Q4에서 다시 얘기하겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide" data-t="테스트가 실패하면">
+    <div class="kicker">1부 · 5.3</div>
+    <h2>테스트가 실패하면 이미지를 만들지 않는다</h2>
+    <table>
+      <tr><th>단계</th><th>예시</th><th>누가</th><th>잡는 것</th></tr>
+      <tr><td class="k">단위 테스트</td><td><code>go test</code>, <code>npm test</code></td><td>개발자</td><td>로직 결함</td></tr>
+      <tr><td class="k">매니페스트 검사</td><td><code>helm lint</code>, 서버 dry-run</td><td>플랫폼</td><td>차트, 매니페스트 오류</td></tr>
+      <tr><td class="k">스모크 테스트</td><td>배포 직후 핵심 기능 확인</td><td>같이</td><td>떴는데 동작 안 하는 상태</td></tr>
+      <tr><td class="k">엔드투엔드</td><td>배포된 환경을 대상으로</td><td>같이</td><td>서비스 간 계약 위반</td></tr>
+    </table>
+    <p style="margin-top:20px">교재: 테스트가 실패한 코드를 이미지로 만들어 레지스트리에 올리면 "대형 사고로 이어질 것"</p>
+    <p class="dim">가끔 실패하는 테스트는 결국 무시당합니다. 없는 것보다 나쁠 수 있습니다.</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재는 테스트 실패를 빌드 실패로 보라고 합니다. 실패한 코드가 이미지가 돼서 레지스트리에 올라가면 누군가 그걸 배포할 수 있으니까요.</li><li>교재는 테스트를 개발자만의 일로 보지 않습니다. 두 번째 줄 매니페스트 검사는 플랫폼 쪽이 제일 싸게 기여할 수 있는 곳입니다. 서버 dry-run을 돌리면 뒤에서 볼 교재 예제의 레이블 키 오류 같은 건 바로 잡힙니다.</li><li>그리고 가끔 실패하는 테스트는 결국 다들 재실행 버튼을 누르게 만듭니다. 빨간 불을 무시하는 습관이 생기면 진짜 실패도 지나갑니다.</li></ul></aside>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide" data-t="이미지는 작게">
+    <div class="kicker">1부 · 5.4</div>
+    <h2>이미지는 작게</h2>
+    <p style="margin-top:-8px">작을수록 노드가 빨리 받는다. 되돌릴 때도 마찬가지</p>
+    <table>
+      <tr><th>방법</th><th>빼는 것</th><th>대가</th></tr>
+      <tr><td class="k">멀티스테이지 빌드</td><td>컴파일러, 메이븐 같은 빌드 도구</td><td>Dockerfile이 조금 길어진다</td></tr>
+      <tr><td class="k">distroless</td><td>셸, 패키지 매니저까지</td><td><span class="warn">익숙한 디버깅 도구를 못 쓴다</span></td></tr>
+      <tr><td class="k">경량 베이스</td><td>OS 레이어 (alpine, debian-slim)</td><td>alpine은 musl이라 가끔 호환 문제</td></tr>
+    </table>
+    <div class="card violet" style="margin-top:22px"><h3>보충: distroless 디버깅은 지금은 된다</h3>
+      <p style="font-size:20px;margin:0"><code>kubectl debug -it pod/web --image=busybox --target=web</code><br>임시 컨테이너를 붙여서 같은 프로세스를 들여다봅니다. v1.25에서 GA가 됐습니다.</p></div>
+    <aside class="notes"><b>발표 노트</b><ul><li>이미지를 작게 만드는 방법 세 가지입니다. 작으면 노드가 이미지를 받는 시간이 짧아서 파드가 빨리 뜹니다. 롤백할 때도 옛 이미지를 다시 받아야 하는 경우가 있습니다. 이미지가 작으면 되돌릴 때 옛 이미지도 빨리 받습니다.</li><li>교재는 보안도 이유로 듭니다. 이미지에 든 패키지가 적을수록 보안 스캐너에 걸리는 게 적다는 뜻인데, 오늘 주제와는 거리가 있어서 넘어가겠습니다.</li><li>교재는 distroless의 단점으로 디버거를 못 붙인다는 점을 듭니다. 지금은 kubectl debug로 임시 컨테이너를 옆에 붙일 수 있어서 이 이유로 distroless를 피할 필요는 많이 줄었습니다.</li></ul></aside>
+  </section>
+
+  <!-- 16 -->
+  <section class="slide" data-t="latest를 쓰면">
+    <div class="kicker">1부 · 5.5</div>
+    <h2>latest를 쓰면 돌아갈 곳이 없다</h2>
+    <div class="cols">
+      <div><table class="tight">
+        <tr><th>교재의 태깅 방법</th><th>추적할 수 있는 것</th></tr>
+        <tr><td class="k">빌드 ID</td><td>어느 빌드에서 나왔나</td></tr>
+        <tr><td class="k">시스템-빌드 ID</td><td>빌드 시스템이 여럿일 때</td></tr>
+        <tr><td class="k">깃 해시</td><td>어느 커밋에서 나왔나</td></tr>
+        <tr><td class="k">깃 해시-빌드 ID</td><td>둘 다 (대신 길다)</td></tr>
+      </table></div>
+      <div class="card rose"><h3>latest로 띄우면</h3><ul>
+        <li class="no">지금 뜬 게 어느 커밋인지 모른다</li>
+        <li class="no">그러니 직전 버전이 뭔지도 모른다</li>
+        <li class="no">노드마다 받은 시점이 다르면 같은 태그, 다른 코드</li>
+      </ul></div>
+    </div>
+    <p class="note">예시 서비스는 깃 해시를 태그로 씁니다: <code>order-api:3f9c2e1</code></p>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재가 제일 세게 말하는 부분입니다. latest는 태그로 절대 쓰지 말라고요.</li><li>롤백을 생각하면 이유가 분명합니다. latest로 띄우면 지금 뭐가 떠 있는지 모르고, 그러면 직전 버전도 모릅니다. 돌아갈 곳의 이름이 없는 겁니다.</li><li>왼쪽 네 가지 중 뭘 고르든 태그에서 커밋이나 빌드로 거꾸로 찾아갈 수 있으면 됩니다. 예시 서비스는 깃 해시를 씁니다.</li></ul></aside>
+  </section>
+
+  <!-- 17 -->
+  <section class="slide" data-t="태그도 바뀔 수 있다">
+    <div class="kicker">1부 · 5.5, 5.6 보충</div>
+    <h2>태그도 바뀔 수 있다</h2>
+    <div class="cols">
+      <div>
+        <pre class="code"><span class="c"># 태그: 같은 이름으로 다시 push 하면 바뀐다</span>
+image: registry/order-api:<span class="y">3f9c2e1</span>
+
+<span class="c"># 다이제스트: 내용의 해시라 안 바뀐다</span>
+image: registry/order-api@<span class="y">sha256:9b1f…</span>
+
+<span class="c"># 같이 쓰면 사람은 태그, 런타임은 다이제스트</span>
+image: registry/order-api:3f9c2e1@sha256:9b1f…</pre>
+        <p class="dim" style="font-size:18px;margin-top:12px">레지스트리 쪽에서는 태그 불변(immutable tags) 설정으로 막을 수 있습니다</p>
+      </div>
+      <div class="card green"><h3>한 번 빌드해서 올려 보낸다</h3>
+        <p style="font-size:20px">교재 5.6: 컨테이너 이미지는 개발, 스테이징을 거쳐 프로덕션으로 <b>승격되는 불변 오브젝트</b></p>
+        <ul><li>dev, stg, prod가 같은 다이제스트를 받는다</li><li>환경마다 다른 건 설정으로 둔다</li><li>환경마다 다시 빌드하면 스테이징에서 본 게 프로덕션과 다른 빌드가 된다</li></ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재는 고유한 태그를 붙이라고 하는데, 태그 자체도 바뀔 수 있다는 건 따로 말하지 않습니다. 누가 같은 태그로 다시 push하면 가리키는 이미지가 달라집니다.</li><li>안 바뀌는 건 다이제스트입니다. 이미지 내용을 해시한 값이라 내용이 한 바이트만 달라도 값이 바뀝니다. 그래서 다이제스트로 받으면 늘 같은 이미지가 옵니다.</li><li>세 번째 줄처럼 태그 뒤에 @와 다이제스트를 같이 적을 수도 있습니다. 이러면 컨테이너 런타임은 다이제스트로 이미지를 받고 태그는 보지 않습니다. 태그는 사람이 읽으라고 남겨 두는 겁니다. 누가 3f9c2e1 태그를 다시 push해도 이 파드는 원래 이미지를 받습니다.</li><li>레지스트리에서 태그 불변 설정을 켜 두면 같은 태그로 다시 push하는 것 자체를 막을 수 있습니다.</li><li>오른쪽은 교재 5.6절 내용입니다. 이미지를 환경마다 다시 빌드하지 말고 같은 걸 올려 보내라는 겁니다. 다시 빌드하면 그 사이에 의존성 하나만 바뀌어도 스테이징에서 테스트한 게 의미가 없어집니다.</li></ul></aside>
+  </section>
+
+  <!-- 18 -->
+  <section class="slide" data-t="CI가 직접 apply하면">
+    <div class="kicker">1부 · 5.9, 18.2</div>
+    <h2>CI가 직접 apply하면</h2>
+    <svg viewBox="0 0 1150 150" role="img" aria-label="전통적 배포: 코드 수정, 이미지 빌드와 푸시, 매니페스트 수정, kubectl apply">
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <g font-size="17" text-anchor="middle" fill="#eaf0ff">
+        <rect x="10" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#2c3b61"/><text x="105" y="66">코드 수정</text>
+        <rect x="240" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#2c3b61"/><text x="335" y="66">이미지 빌드, 푸시</text>
+        <rect x="470" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#2c3b61"/><text x="565" y="66">매니페스트 수정</text>
+        <rect x="700" y="30" width="190" height="60" rx="9" fill="#141d33" stroke="#fb7185"/><text x="795" y="66">kubectl apply</text>
+        <rect x="930" y="30" width="210" height="60" rx="9" fill="rgba(251,113,133,.1)" stroke="#fb7185"/><text x="1035" y="58">클러스터</text><text x="1035" y="80" font-size="14" fill="#9db0d6">CI가 cluster-admin</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" marker-end="url(#ar3)"><line x1="200" y1="60" x2="238" y2="60"/><line x1="430" y1="60" x2="468" y2="60"/><line x1="660" y1="60" x2="698" y2="60"/><line x1="890" y1="60" x2="928" y2="60"/></g>
+      <text x="575" y="130" font-size="17" fill="#9db0d6" text-anchor="middle">그림 18.2는 사람이, 5.9 실습은 CI가 이 단계를 밟는다</text>
+    </svg>
+    <div class="cols c3" style="margin-top:12px">
+      <div class="card rose"><h3>권한</h3><p>5.9 실습은 CI 계정에 <code>cluster-admin</code>을 준다. CI가 뚫리면 클러스터가 뚫린다</p></div>
+      <div class="card rose"><h3>드리프트</h3><p>누가 <code>kubectl edit</code>로 고치면 매니페스트와 클러스터가 달라진다</p></div>
+      <div class="card rose"><h3>롤백이 수작업</h3><p>사람이 매니페스트를 되돌려서 다시 적용해야 한다. 무엇이 바뀌었는지도 여기저기 흩어져 있다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>18장 그림 18.2는 전통적인 배포 흐름을 이렇게 그립니다. 개발자가 코드를 고치고, 이미지를 빌드해서 푸시하고, 매니페스트를 고치고, 클러스터에 적용합니다. 사람이 하는 일이고, 교재는 일부 단계는 도구로 자동화할 수 있다고 덧붙입니다.</li><li>5.9 실습은 이 단계를 CI가 합니다. 이미지를 만들고 kubectl apply까지 CI가 직접 합니다.</li><li>문제가 세 가지 있습니다. 실습대로 하면 CI가 cluster-admin 권한을 들고 있어서, CI가 뚫리면 클러스터가 뚫립니다. 누가 손으로 고치면 매니페스트와 실제가 달라집니다. 그리고 롤백은 사람이 매니페스트를 되돌려서 다시 적용해야 합니다.</li><li>세 번째가 오늘 주제와 제일 가깝습니다. 장애가 나면 제일 먼저 묻는 게 방금 뭐가 바뀌었냐인데, 그 답이 여러 파이프라인 로그에 흩어져 있습니다.</li></ul></aside>
+  </section>
+
+  <!-- 19 -->
+  <section class="slide" data-t="밀어 넣기와 당겨 가기">
+    <div class="kicker">1부 · 18장 보충</div>
+    <h2>밀어 넣기(push)와 당겨 가기(pull)</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="push 방식은 CI가 클러스터에 적용하고, pull 방식은 클러스터 안의 에이전트가 깃을 읽어 맞춘다">
+      <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker><marker id="ar4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#34d399"/></marker></defs>
+      <text x="270" y="28" font-size="20" fill="#fb7185" text-anchor="middle" font-weight="700">push (5.9 실습)</text>
+      <rect x="30" y="50" width="160" height="70" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="110" y="92" font-size="18" fill="#eaf0ff" text-anchor="middle">CI</text>
+      <rect x="350" y="50" width="180" height="70" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="440" y="92" font-size="18" fill="#eaf0ff" text-anchor="middle">클러스터</text>
+      <line x1="190" y1="85" x2="348" y2="85" stroke="#fb7185" stroke-width="2.5" marker-end="url(#ar4)"/>
+      <text x="270" y="150" font-size="16" fill="#fb7185" text-anchor="middle">CI가 cluster-admin 토큰을 갖고 있다</text>
+      <text x="270" y="175" font-size="16" fill="#9db0d6" text-anchor="middle">적용한 뒤로는 아무도 안 본다</text>
+      <line x1="575" y1="20" x2="575" y2="280" stroke="#2c3b61" stroke-dasharray="5 5"/>
+      <text x="870" y="28" font-size="20" fill="#34d399" text-anchor="middle" font-weight="700">pull (18장 깃옵스)</text>
+      <rect x="610" y="50" width="130" height="70" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="675" y="92" font-size="18" fill="#eaf0ff" text-anchor="middle">CI</text>
+      <rect x="790" y="50" width="130" height="70" rx="10" fill="#141d33" stroke="#fbbf24"/><text x="855" y="84" font-size="18" fill="#fbbf24" text-anchor="middle">깃</text><text x="855" y="106" font-size="14" fill="#9db0d6" text-anchor="middle">원하는 상태</text>
+      <rect x="960" y="40" width="180" height="170" rx="10" fill="#141d33" stroke="#34d399"/><text x="1050" y="70" font-size="18" fill="#eaf0ff" text-anchor="middle">클러스터</text>
+      <rect x="980" y="90" width="140" height="50" rx="8" fill="rgba(52,211,153,.12)" stroke="#34d399"/><text x="1050" y="121" font-size="16" fill="#34d399" text-anchor="middle">Flux / Argo CD</text>
+      <text x="1050" y="175" font-size="14" fill="#9db0d6" text-anchor="middle">실제 상태와 원하는 상태를</text><text x="1050" y="195" font-size="14" fill="#9db0d6" text-anchor="middle">계속 비교해서 맞춤</text>
+      <line x1="740" y1="85" x2="788" y2="85" stroke="#9db0d6" stroke-width="2" marker-end="url(#ar4)"/>
+      <path d="M980 115 C940 115, 940 100, 922 95" fill="none" stroke="#34d399" stroke-width="2.5" marker-end="url(#ar4g)"/>
+      <text x="675" y="150" font-size="16" fill="#9db0d6" text-anchor="middle">CI는 깃에 커밋만</text>
+      <text x="870" y="245" font-size="16" fill="#34d399" text-anchor="middle">클러스터 자격 증명이 밖으로 안 나간다</text>
+      <text x="870" y="270" font-size="16" fill="#34d399" text-anchor="middle">누가 손으로 고쳐도 다시 맞춘다</text>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>깃옵스에서는 방향이 반대입니다. 클러스터 안의 에이전트가 깃을 읽어 가서 클러스터를 맞춥니다. CI는 클러스터에 직접 적용하지 않습니다.</li><li>push와 pull이라는 말은 교재에 나오지 않습니다. 18장 내용을 제가 이렇게 나눠 본 겁니다.</li><li>그러면 5.9절의 cluster-admin 문제가 없어집니다. CI는 깃에 커밋할 권한만 있으면 되고, 클러스터 자격 증명은 클러스터 밖으로 안 나갑니다.</li><li>또 하나는 시간입니다. push는 적용하는 순간에만 맞춥니다. pull 에이전트는 그 뒤로도 계속 비교해서, 누가 kubectl edit로 고쳐도 다시 깃에 맞춥니다.</li><li>롤백 쪽에서 보면, 원래 상태가 깃에 적혀 있으니 되돌리려면 깃을 되돌리면 됩니다.</li></ul></aside>
+  </section>
+
+  <!-- 20 -->
+  <section class="slide" data-t="깃옵스 4원칙">
+    <div class="kicker">1부 · 18.1</div>
+    <h2>깃옵스 4원칙, 교재와 원문이 조금 다르다</h2>
+    <table>
+      <tr><th>교재 18.1 (번역본)</th><th>OpenGitOps 원칙 v1.0</th><th>차이</th></tr>
+      <tr><td>선언형 구성</td><td class="k">Declarative</td><td>같음</td></tr>
+      <tr><td>구성 버저닝</td><td class="k" rowspan="2">Versioned and Immutable</td><td rowspan="2">원문은 하나. 뜻은 <b>저장된 버전이 불변이고 이력이 다 남는다</b>는 것 (번역본: "한번 변경하면 다시는 수정할 수 없다")</td></tr>
+      <tr><td>불변 구성</td></tr>
+      <tr><td class="r">(없음)</td><td class="k">Pulled Automatically</td><td><b>에이전트가 원하는 상태를 알아서 가져간다</b>. 앞 장의 pull이 이것</td></tr>
+      <tr><td>지속적인 상태 조정</td><td class="k">Continuously Reconciled</td><td>같음</td></tr>
+    </table>
+    <p style="margin-top:18px" class="dim">교재도 이 원칙을 OpenGitOps 프로젝트에서 가져왔다고 밝힌다. 번역본은 원문과 다르게 적었다</p>
+    <p class="dim">깃에 YAML을 두고 CI가 apply하는 건 원문 1, 2번은 지키지만 3, 4번을 못 지킨다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>18.1절은 깃옵스 원칙 네 개를 소개합니다. 교재는 이 원칙이 OpenGitOps 프로젝트에 정의된 것이라고 밝힙니다. OpenGitOps는 CNCF 깃옵스 워킹 그룹이 원칙을 정리해 둔 곳입니다.</li><li>그래서 원문과 나란히 놓아 봤습니다. 제가 가진 건 번역본뿐인데, 번역본은 원문과 다르게 적은 곳이 두 군데 있습니다.</li><li>첫째, 번역본은 구성 버저닝과 불변 구성을 두 원칙으로 나눴습니다. 원문에서는 Versioned and Immutable 하나입니다. 뜻도 조금 다릅니다. 번역본은 한번 변경하면 다시는 수정할 수 없다고 썼습니다. 원문은 원하는 상태가 버전으로 저장되고, 저장된 버전은 바뀌지 않고, 이력이 다 남는다는 뜻입니다. 고칠 때는 새 버전을 만들면 됩니다.</li><li>둘째, 원문의 세 번째 원칙 Pulled Automatically가 교재에는 없습니다. 에이전트가 원하는 상태를 알아서 가져간다는 원칙이고, 앞 장에서 본 pull이 바로 이겁니다.</li><li>이 차이가 문제가 되는 건, 교재 네 원칙만 보면 깃에 YAML을 두고 CI가 apply하는 것도 대체로 통과합니다. 원문 기준으로는 세 번째와 네 번째를 못 지킵니다. 이걸 깃옵스라고 불러도 되는지는 시간이 남으면 토론 때 얘기해 보면 좋겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 21 -->
+  <section class="slide" data-t="CI는 커밋까지만">
+    <div class="kicker">1부 · 18장, 6.5</div>
+    <h2>CI는 커밋까지만 한다</h2>
+    <pre class="code" style="font-size:18px"><span class="c"># CI 마지막 단계 (examples/ci/release.yaml)</span>
+cd order-api-deploy/overlays/prod
+kustomize edit set image order-api=registry/order-api:<span class="y">3f9c2e1</span>
+git commit -am "release order-api <span class="y">1.7.0</span> (<span class="y">3f9c2e1</span>) run <span class="y">#1482</span>"
+git push                              <span class="c"># CI 권한은 여기까지</span></pre>
+    <div class="cols" style="margin-top:18px">
+      <div class="card"><h3>이 커밋에 남는 것</h3><ul>
+        <li>무엇을: 이미지 태그 (1부)</li>
+        <li>어디에: overlay 경로 = 환경 (18.7: 환경은 브랜치 말고 폴더로)</li>
+        <li>누가: 앱 커밋과 파이프라인 실행 번호 (커밋 작성자는 봇)</li>
+        <li>언제: 커밋 시각</li>
+        <li>파이프라인 실행 번호 = 6.5의 release number</li>
+      </ul></div>
+      <div class="card violet"><h3>자동으로 하려면</h3><ul>
+        <li>Flux Image Automation</li>
+        <li>Argo CD Image Updater</li>
+        <li class="no">편하지만 어느 환경까지 자동으로 올릴지 따로 정해야 한다</li>
+      </ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>그러면 파이프라인은 어디서 끝나느냐. 5장 실습에서는 kubectl apply였는데 깃옵스에서는 배포 저장소에 커밋하는 것으로 끝납니다.</li><li>이 커밋에는 무엇을 어디에 올렸는지가 남습니다. 어디에는 overlays/prod 같은 폴더 경로로 나타납니다. 교재 18.7 모범 사례가 환경을 브랜치로 나누지 말고 폴더로 나누라고 하는데, 그 방식입니다. 커밋 작성자는 봇이라서, 누가 했는지는 커밋 메시지의 앱 커밋과 파이프라인 실행 번호로 거꾸로 찾아갑니다. 이 실행 번호가 6장의 release number입니다. 롤백할 때는 이 커밋을 되돌리면 됩니다.</li><li>이 커밋을 자동으로 해 주는 도구도 있습니다. 편하지만 어느 환경까지 자동으로 올릴지는 따로 정해 두셔야 합니다.</li><li>하나 덧붙이면, 교재 18.3의 네 가지 구조는 모두 매니페스트를 앱 코드와 같은 저장소에 둡니다. 여기서는 배포 저장소를 따로 둔 예를 썼습니다. 어느 쪽이 나은지는 토론 Q4에서 얘기해 보면 좋겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 22 -->
+  <section class="slide" data-t="Argo CD 셋업">
+    <div class="kicker">1부 · 18.5, 18.6 · 직접 해 보기</div>
+    <h2>Argo CD 셋업: 설치부터 첫 동기화까지</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px"><span class="c"># 1) 설치: 네임스페이스와 매니페스트 하나</span>
+kubectl create ns argocd
+kubectl apply <span class="y">--server-side</span> -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/\
+argo-cd/stable/manifests/install.yaml
+
+<span class="c"># 2) 뜬 것 확인 (파드 7개)</span>
+kubectl -n argocd get pods
+
+<span class="c"># 3) 초기 admin 비밀번호와 UI</span>
+kubectl -n argocd get secret \
+  argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d
+kubectl -n argocd port-forward svc/argocd-server 8080:443
+
+<span class="c"># 4) 배포할 것을 등록 (다음 장)</span>
+kubectl apply -f application.yaml</pre>
+      <div>
+        <table class="tight">
+          <tr><th>파드</th><th>하는 일</th></tr>
+          <tr><td class="k">application-controller</td><td>깃과 클러스터를 비교하고 맞춘다 (핵심)</td></tr>
+          <tr><td class="k">repo-server</td><td>깃을 받아 매니페스트를 만든다 (kustomize, helm template)</td></tr>
+          <tr><td class="k">server</td><td>UI, API, CLI 접속</td></tr>
+          <tr><td class="k">redis</td><td>캐시</td></tr>
+          <tr><td class="k">dex, notifications, applicationset</td><td>SSO, 알림, Application 여러 개 생성</td></tr>
+        </table>
+        <p style="font-size:18px;margin-top:12px">kind v1.37에 v3.5.3을 설치해서 확인했습니다</p>
+        <p class="dim" style="font-size:17px">교재 18.5는 Flux로 실습한다. 이 덱의 예제도 Flux 기준이고, Argo CD로 하면 이렇게 된다</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재 18장 실습은 Flux로 하는데, 실무에서는 Argo CD도 많이 써서 Argo CD로 하면 어떻게 되는지 실제로 설치해 봤습니다. kind 클러스터에 Argo CD 3.5.3입니다.</li><li>설치는 네임스페이스를 만들고 매니페스트 하나를 적용하면 끝입니다. 여기서 --server-side를 붙인 이유가 있는데, 바로 뒤 Argo Rollouts 설치에서 자세히 말씀드리겠습니다. 큰 CRD는 일반 apply로는 안 들어가는 경우가 있습니다.</li><li>설치하면 파드가 7개 뜹니다. 핵심은 application-controller입니다. 깃에 적힌 상태와 클러스터 실제 상태를 계속 비교하고 맞추는 녀석입니다. repo-server는 깃을 받아서 kustomize나 helm template으로 최종 매니페스트를 만듭니다. Argo CD가 헬름을 진짜 릴리스가 아니라 템플릿으로만 렌더링한다는 게 여기서 나오는 겁니다. server는 UI와 API, 나머지는 SSO, 알림, Application을 여러 개 찍어 내는 기능입니다.</li><li>UI에 들어가려면 초기 admin 비밀번호를 시크릿에서 꺼내고 port-forward를 합니다. 그다음 무엇을 배포할지 Application이라는 리소스로 등록합니다. 다음 장이 그 설정값입니다.</li></ul></aside>
+  </section>
+
+  <!-- 23 -->
+  <section class="slide" data-t="Application 설정값">
+    <div class="kicker">1부 · 18장 · 설정값 해설</div>
+    <h2>Argo CD Application 설정값</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Application
+<span class="k">metadata</span>:
+  name: order-api
+  namespace: argocd
+<span class="k">spec</span>:
+  project: default
+  <span class="k">source</span>:
+    repoURL: …/order-api-deploy.git
+    targetRevision: main
+    path: <span class="y">overlays/prod</span>
+  <span class="k">destination</span>:
+    server: https://kubernetes.default.svc
+    namespace: order
+  <span class="k">syncPolicy</span>:
+    automated:
+      prune: <span class="y">true</span>
+      selfHeal: <span class="y">true</span>
+    syncOptions: [CreateNamespace=true]
+    retry: {limit: 3}</pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">source.path</td><td>저장소 안 어느 폴더를 볼지. 환경별 overlay</td><td>-</td></tr>
+        <tr><td class="k">targetRevision</td><td>브랜치, 태그, 커밋</td><td>HEAD</td></tr>
+        <tr><td class="k">destination</td><td>어느 클러스터, 어느 네임스페이스에</td><td>-</td></tr>
+        <tr><td class="k">automated</td><td>깃이 바뀌면 자동 적용. 없으면 UI에서 Sync를 눌러야</td><td>없음</td></tr>
+        <tr><td class="k">prune</td><td>깃에서 지운 리소스를 클러스터에서도 지움</td><td>false</td></tr>
+        <tr><td class="k">selfHeal</td><td>손으로 바꾼 걸 깃 값으로 되돌림</td><td><span class="warn">false</span></td></tr>
+        <tr><td class="k">CreateNamespace</td><td>네임스페이스가 없으면 만든다</td><td>false</td></tr>
+        <tr><td class="k">retry</td><td>적용 실패 시 재시도 횟수</td><td>없음</td></tr>
+      </table>
+    </div>
+    <p class="note">kind에서 해 본 것: selfHeal false로 replicas를 손으로 3으로 바꾸면 OutOfSync로 표시만 되고 3이 남았다. true로 바꾸자 바로 1로 돌아갔다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>Application 설정값입니다. 크게 세 덩어리입니다. source는 무엇을, destination은 어디에, syncPolicy는 어떻게 맞출지입니다.</li><li>source에서 path가 2부에서 말한 환경별 폴더입니다. overlays/prod를 가리키면 프로덕션 overlay를 배포합니다. targetRevision은 어느 브랜치나 태그를 볼지인데, 교재 18.7 권장대로 환경은 브랜치가 아니라 폴더로 나누니까 보통 main 하나만 봅니다.</li><li>syncPolicy가 제일 헷갈리는 부분입니다. automated를 안 적으면 깃이 바뀌어도 OutOfSync로 표시만 하고, 사람이 Sync 버튼을 눌러야 적용됩니다. automated를 적으면 자동으로 적용하는데, 그 안의 prune과 selfHeal은 따로 켜야 합니다. 둘 다 기본값이 false입니다.</li><li>prune은 깃에서 파일을 지웠을 때 클러스터에서도 지울지입니다. 안 켜면 지운 리소스가 클러스터에 계속 남습니다.</li><li>selfHeal은 누가 kubectl로 손대서 바꾼 걸 깃 값으로 되돌릴지입니다. 직접 해 봤습니다. selfHeal을 끈 채로 replicas를 손으로 3으로 바꾸니까 Argo CD는 OutOfSync라고 표시만 하고 3이 그대로 남았습니다. selfHeal을 켜자 바로 깃에 적힌 1로 돌아갔습니다. 깃옵스 4원칙의 지속적 조정을 지키려면 selfHeal을 켜야 합니다.</li><li>깃 변경을 얼마나 자주 보는지는 기본 3분입니다. 더 빨리 반영하려면 깃 웹훅을 Argo CD에 연결합니다.</li></ul></aside>
+  </section>
+
+  <!-- 24 -->
+  <section class="slide" data-t="쿠버네티스에는 릴리스가 없다">
+    <div class="kicker">1부 · 6.2</div>
+    <h2>쿠버네티스에는 릴리스가 없다</h2>
+    <div class="cols">
+      <div class="card"><h3>그래서 레이블로 적는다</h3><ul>
+        <li><code>metadata.labels</code>나 <code>spec.template.metadata.labels</code>에 릴리스 정보</li>
+        <li>이름 규칙은 <code>stable</code>, <code>canary</code>, <code>alpha</code> 정도</li>
+        <li>큰 조직은 <code>ring-0</code>, <code>ring-1</code> 식 링 배포</li>
+        <li>헬름은 릴리스 이력을 갖고 있어서 CD 도구가 많이 붙여 쓴다</li>
+      </ul></div>
+      <div class="card violet"><h3>레이블 내용보다 먼저 볼 것</h3>
+        <p style="font-size:20px">컨트롤러가 레이블과 <b>셀렉터</b>를 어떻게 다루는가</p>
+        <p style="font-size:20px">디플로이먼트, 레플리카셋, 잡, 데몬셋은 셀렉터로 파드를 고른다</p>
+        <p class="warn" style="font-size:20px">셀렉터는 한번 만들면 못 바꾼다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>6장에 이런 문장이 있습니다. 쿠버네티스에는 릴리스 컨트롤러가 없어서 릴리스라는 개념 자체가 없다는 겁니다.</li><li>무슨 뜻이냐면, 디플로이먼트는 지금 원하는 파드 모양 하나만 압니다. 이게 몇 번째 릴리스인지, 어느 파이프라인이 만들었는지, 카나리인지 정식인지는 쿠버네티스가 따로 들고 있지 않습니다.</li><li>그래서 그런 정보를 레이블에 적습니다. stable, canary 같은 이름을 붙이고, 조직이 크면 사내 사용자부터 ring-0, ring-1 식으로 나눠서 차례로 내보냅니다. 3부에서 볼 카나리도 레이블로 파드를 구분합니다.</li><li>헬름은 조금 다릅니다. 헬름은 릴리스 이력을 클러스터에 따로 저장해 둬서, CD 도구들이 이걸 릴리스 기록으로 많이 씁니다.</li><li>교재가 더 강조하는 건 셀렉터입니다. 디플로이먼트, 레플리카셋, 잡, 데몬셋은 레이블 셀렉터로 자기 파드를 고릅니다. 파드 레이블은 언제든 바꿀 수 있지만, 디플로이먼트의 셀렉터는 한번 만들면 못 바꿉니다. 이 차이가 다음 두 장에서 문제가 됩니다.</li></ul></aside>
+  </section>
+
+  <!-- 25 -->
+  <section class="slide" data-t="6.4 예제의 함정">
+    <div class="kicker">1부 · 6.4 예제를 그대로 apply 하면</div>
+    <h2>6.4 예제의 함정</h2>
+    <table class="tight">
+      <tr><th>예제 부분</th><th>실제로 해 보면</th><th>고치면</th></tr>
+      <tr><td class="r">셀렉터에 <code>ver: 1.5.8</code></td><td>template의 ver만 올리면 <code>selector does not match template labels</code>, 셀렉터까지 올리면 <code>field is immutable</code>. <b>버전을 못 올리는 디플로이먼트</b></td><td>셀렉터에는 안 바뀌는 것만 (<code>app</code>, <code>tier</code>). 버전은 template 레이블에만</td></tr>
+      <tr><td class="r"><code>release number:</code></td><td>레이블 키에 공백이 들어가 API 서버가 거부</td><td><code>release-number</code></td></tr>
+      <tr><td class="r"><code>"helm.sh/hook"</code> 키 세 번</td><td>YAML 중복 키라 <b>마지막 하나만 남는다</b>. 백업 잡이 pre-rollback에만 걸린다</td><td><code>"helm.sh/hook": pre-upgrade,pre-delete,pre-rollback</code></td></tr>
+    </table>
+    <p class="note">셀렉터와 레이블 키는 kind(v1.37)에서 apply해서, 훅 중복 키는 YAML 파서로 확인했다. 에러 원문은 examples/README</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>이 장표는 6.4 종합 예제를 실제 클러스터에 그대로 넣어 보면 어디서 막히는지입니다. 결론부터 말하면, 셀렉터에 버전을 넣으면 그 버전 레이블을 다시는 올릴 수 없게 됩니다. 이미지만 바꾸는 배포는 되지만요.</li><li>6.4 예제에는 버전 레이블이 세 종류 나옵니다. ver는 파드 스펙의 버전, appver는 앱 전체의 버전, release number는 CD 파이프라인 실행 ID입니다. 문제가 되는 건 ver입니다.</li><li>먼저 배경입니다. 디플로이먼트의 spec.selector는 이 디플로이먼트가 관리할 파드를 고르는 조건이고, template.metadata.labels는 새로 만들 파드에 붙일 레이블입니다. 쿠버네티스는 이 둘이 맞는지 검사합니다. 템플릿으로 만든 파드를 셀렉터가 못 고르면 디플로이먼트가 자기가 만든 파드를 못 알아보니까요.</li><li>또 하나, apps/v1 디플로이먼트는 만든 뒤에 셀렉터를 바꿀 수 없습니다. 셀렉터를 바꾸면 이미 떠 있는 레플리카셋과 파드가 갑자기 관리 대상에서 빠지거나 다른 디플로이먼트 것과 섞일 수 있어서 아예 막아 둔 겁니다.</li><li>교재 예제는 셀렉터에 ver: 1.5.8을 넣었습니다. 다음 배포에서 파드 스펙 버전을 1.5.9로 올린다고 해 보겠습니다. template의 ver만 1.5.9로 바꾸면, 셀렉터는 1.5.8을 찾는데 새 파드는 1.5.9라서 selector does not match template labels 에러가 납니다.</li><li>그럼 셀렉터도 같이 1.5.9로 바꾸면 될까요? 이번엔 field is immutable, 셀렉터는 못 바꾼다는 에러가 납니다. 두 에러 모두 kind 클러스터에서 그대로 나왔습니다.</li><li>결국 이 디플로이먼트는 ver를 올릴 방법이 없습니다. 올리려면 디플로이먼트를 지우고 새로 만들어야 하는데, 그러면 무중단 롤링이 아니라 전부 내렸다가 올리는 배포가 됩니다.</li><li>그래서 셀렉터에는 app, tier처럼 디플로이먼트가 살아 있는 동안 절대 안 바뀌는 것만 넣고, 버전은 template 레이블에만 둡니다. template 레이블은 바꿔도 되고, 바꾸면 롤아웃이 일어납니다. 바로 다음 장이 그 얘기입니다.</li><li>두 번째 줄은 단순한 문법 문제입니다. 레이블 키에는 영문자, 숫자, 하이픈, 밑줄, 점만 쓸 수 있어서 release number처럼 공백이 있으면 API 서버가 받아 주지 않습니다. release-number로 쓰면 됩니다.</li><li>세 번째 줄은 헬름 훅입니다. helm.sh/hook 어노테이션은 이 잡을 언제 돌릴지 헬름에게 알려 주는 표시입니다. 교재는 업그레이드 전, 삭제 전, 롤백 전에 DB를 백업하려고 이 키를 세 줄로 나눠 썼습니다.</li><li>그런데 YAML은 같은 키가 여러 번 나오면 마지막 값만 남깁니다. 파서에 따라서는 에러를 내기도 합니다. 그래서 실제로는 pre-rollback만 남고, 업그레이드 전 백업은 돌지 않습니다. 여러 시점에 걸려면 쉼표로 이어서 한 줄로 씁니다.</li><li>이 헬름 훅 문제는 4부 헬름 장표에서 다시 나옵니다. 깃옵스로 되돌리면 Flux는 롤백이 아니라 업그레이드를 하고 Argo CD는 롤백 훅을 아예 안 돌려서, 교재 예제 그대로면 깃으로 되돌릴 때 백업이 안 돈다는 얘기입니다.</li></ul></aside>
+  </section>
+
+  <!-- 26 -->
+  <section class="slide" data-t="롤아웃은 template이 바뀔 때만">
+    <div class="kicker">1부 · 6.3</div>
+    <h2>롤아웃은 <code>spec.template</code>이 바뀔 때만</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="Deployment의 metadata 변경은 롤아웃을 일으키지 않고, template 변경은 새 ReplicaSet을 만든다">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <rect x="20" y="20" width="330" height="260" rx="12" fill="#141d33" stroke="#2c3b61"/>
+      <text x="40" y="54" font-size="20" fill="#eaf0ff" font-weight="700">Deployment</text>
+      <rect x="40" y="75" width="290" height="70" rx="8" fill="rgba(157,176,214,.08)" stroke="#9db0d6" stroke-dasharray="6 4"/>
+      <text x="55" y="104" font-size="17" fill="#9db0d6">metadata.labels</text><text x="55" y="130" font-size="15" fill="#9db0d6">바꿔도 아무 일 없음</text>
+      <rect x="40" y="165" width="290" height="95" rx="8" fill="rgba(79,156,255,.12)" stroke="#4f9cff"/>
+      <text x="55" y="194" font-size="17" fill="#4f9cff" font-weight="700">spec.template</text><text x="55" y="220" font-size="15" fill="#eaf0ff">이미지, env, 레이블, 어노테이션</text><text x="55" y="244" font-size="15" fill="#eaf0ff">바뀌면 해시가 바뀌고 롤아웃</text>
+      <line x1="330" y1="212" x2="440" y2="212" stroke="#9db0d6" stroke-width="2" marker-end="url(#ar2)"/>
+      <rect x="450" y="40" width="300" height="100" rx="10" fill="#141d33" stroke="#fb7185"/>
+      <text x="600" y="75" font-size="18" fill="#fb7185" text-anchor="middle" font-weight="700">ReplicaSet web-7d9f5c</text>
+      <text x="600" y="105" font-size="16" fill="#9db0d6" text-anchor="middle">옛 template: 3 → 2 → 1 → 0</text>
+      <text x="600" y="128" font-size="14" fill="#9db0d6" text-anchor="middle">지우지 않고 0으로 남긴다</text>
+      <rect x="450" y="170" width="300" height="100" rx="10" fill="#141d33" stroke="#34d399"/>
+      <text x="600" y="205" font-size="18" fill="#34d399" text-anchor="middle" font-weight="700">ReplicaSet web-5b8c4a</text>
+      <text x="600" y="235" font-size="16" fill="#9db0d6" text-anchor="middle">새 template: 0 → 1 → 2 → 3</text>
+      <g font-size="17" fill="#eaf0ff">
+        <text x="790" y="75">이름 뒤 문자열 = <tspan fill="#fbbf24">pod-template-hash</tspan></text>
+        <text x="790" y="115">revisionHistoryLimit (기본 10)</text>
+        <text x="790" y="140" fill="#9db0d6" font-size="15">만큼 옛 RS를 남겨 둔다</text>
+        <text x="790" y="195"><tspan fill="#fbbf24">kubectl rollout undo</tspan></text>
+        <text x="790" y="220" fill="#9db0d6" font-size="15">옛 RS의 template을 다시 적용</text>
+        <text x="790" y="245" fill="#9db0d6" font-size="15">(새 리비전 번호가 붙는다)</text>
+      </g>
+    </svg>
+    <p class="note">교재: metadata 레이블을 바꾸고 apply했는데 아무 변화가 없어 당황하는 경우가 흔하다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>디플로이먼트에는 두 부분이 있습니다. 디플로이먼트 자체의 metadata와, 파드를 찍어 내는 틀인 spec.template입니다. 디플로이먼트 컨트롤러가 롤아웃을 할지 볼 때는 spec.template만 봅니다.</li><li>컨트롤러는 template 내용을 해시합니다. 이미지, 환경 변수, 파드 레이블 중 하나라도 바뀌면 해시가 바뀌고, 그 해시로 새 레플리카셋을 만듭니다. 레플리카셋 이름 뒤에 붙은 문자열이 그 해시이고, 파드에도 pod-template-hash 레이블로 붙습니다.</li><li>그다음 새 레플리카셋은 0에서부터 늘리고 옛 레플리카셋은 줄입니다. 이게 롤링 업데이트입니다.</li><li>반대로 디플로이먼트 metadata 레이블만 바꾸면 template 해시가 그대로라서 아무 일도 안 일어납니다. kind에서 해 봤는데 레플리카셋이 하나 그대로였습니다. 교재도 이걸로 당황하는 경우가 흔하다고 합니다.</li><li>롤백 쪽에서 보면, 컨트롤러는 옛 레플리카셋을 지우지 않고 레플리카 0으로 남겨 둡니다. revisionHistoryLimit 기본값인 10개까지요. rollout undo는 이 옛 레플리카셋의 template을 디플로이먼트에 다시 넣는 겁니다. 그래서 새 리비전 번호가 붙습니다.</li><li>rollout restart도 같은 원리입니다. template 어노테이션에 재시작 시각을 적어서 해시를 바꿉니다.</li></ul></aside>
+  </section>
+
+  <!-- 27 -->
+  <section class="slide" data-t="1부 정리">
+    <div class="kicker">1부 정리</div>
+    <h2>1부에서 준비한 것</h2>
+    <table>
+      <tr><th>준비물</th><th>예시 서비스에서는</th><th>교재</th></tr>
+      <tr><td class="k">돌아갈 이름</td><td><code>order-api:3f9c2e1@sha256:9b1f…</code>, 직전은 <code>2b7e0d4</code></td><td>5.5, 5.6</td></tr>
+      <tr><td class="k">원래 상태의 기록</td><td>배포 저장소 커밋 <code>a41d77c</code> "release 1.7.0 (3f9c2e1) run #1482"</td><td>18장, 6.5</td></tr>
+      <tr><td class="k">클러스터가 당겨 감</td><td>Flux가 깃을 보고 맞춘다. CI에는 클러스터 권한이 없다</td><td>18.1</td></tr>
+      <tr><td class="k">버전이 바뀌는 원리</td><td>template이 바뀌면 새 RS, 옛 RS는 0으로 남는다</td><td>6.3</td></tr>
+      <tr><td class="k">버전 표시</td><td><code>app.kubernetes.io/version: 1.7.0</code>, 셀렉터엔 <code>app</code>만</td><td>6.2, 6.4</td></tr>
+    </table>
+    <p style="margin-top:18px">이제 이 배포를 <b>어떻게</b> 내보낼지 고를 차례입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>1부 정리입니다. 돌아갈 이름, 원래 상태의 기록, 클러스터가 깃을 당겨 가는 구조, 그리고 버전이 바뀌는 원리까지 준비됐습니다.</li><li>이제 이 배포를 어떻게 내보낼지 고를 차례입니다. 배포 전략 다섯 가지를 먼저 한눈에 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 28 -->
+  <section class="slide" data-t="2부 배포 전략">
+    <div class="kicker">2부 · 교재 5.7, 6.3</div>
+    <h1>2부<br><span class="em">배포 전략 한눈에</span></h1>
+    <p class="dim" style="margin-top:24px">새 버전을 누구에게, 얼마나, 어떤 순서로</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>2부입니다. 3부에서 직접 해 보기 전에 배포 전략 다섯 가지가 각각 뭔지 한 번 보고 가겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 29 -->
+  <section class="slide" data-t="전략 다섯 가지">
+    <div class="kicker">2부 · 5.7, 6.3</div>
+    <h2>배포 전략 다섯 가지</h2>
+    <svg viewBox="0 0 1150 440" role="img" aria-label="Recreate, 롤링, 블루/그린, 카나리, A/B 테스트에서 옛 버전과 새 버전이 시간에 따라 트래픽을 받는 모습">
+      <g font-size="18" fill="#eaf0ff" font-weight="700">
+        <text x="10" y="50">Recreate</text><text x="10" y="135">롤링</text><text x="10" y="220">블루/그린</text><text x="10" y="305">카나리</text><text x="10" y="390">A/B 테스트</text>
+      </g>
+      <g font-size="14" fill="#9db0d6">
+        <text x="10" y="72">전부 내리고 전부 올림</text><text x="10" y="157">조금씩 바꿔 끼움</text><text x="10" y="242">옆에 띄우고 한 번에 전환</text><text x="10" y="327">일부에게 먼저, 비교 후 확대</text><text x="10" y="412">사용자를 나눠 오래 비교</text>
+      </g>
+      <!-- recreate -->
+      <rect x="230" y="30" width="300" height="40" fill="#4f9cff" opacity=".85"/><rect x="530" y="30" width="80" height="40" fill="#fb7185" opacity=".35"/><rect x="610" y="30" width="520" height="40" fill="#34d399" opacity=".85"/>
+      <text x="570" y="56" font-size="14" fill="#fb7185" text-anchor="middle">중단</text>
+      <!-- rolling -->
+      <polygon points="230,115 600,115 900,155 230,155" fill="#4f9cff" opacity=".85"/><polygon points="600,115 1130,115 1130,155 900,155" fill="#34d399" opacity=".85"/>
+      <!-- blue green -->
+      <rect x="230" y="200" width="500" height="40" fill="#4f9cff" opacity=".85"/><rect x="730" y="200" width="400" height="40" fill="#34d399" opacity=".85"/>
+      <rect x="480" y="244" width="250" height="10" fill="#34d399" opacity=".4"/><text x="605" y="270" font-size="13" fill="#9db0d6" text-anchor="middle">그린을 미리 띄워 확인 (트래픽 없음)</text>
+      <!-- canary -->
+      <polygon points="230,285 500,285 500,285 1130,285 1130,325 230,325" fill="#4f9cff" opacity=".85"/>
+      <polygon points="500,321 700,321 700,310 900,310 900,295 1000,295 1000,285 1130,285 1130,325 500,325" fill="#34d399" opacity=".95"/>
+      <text x="600" y="345" font-size="13" fill="#9db0d6" text-anchor="middle">5%</text><text x="800" y="345" font-size="13" fill="#9db0d6" text-anchor="middle">25%</text><text x="950" y="345" font-size="13" fill="#9db0d6" text-anchor="middle">50%</text>
+      <!-- ab -->
+      <rect x="230" y="370" width="900" height="20" fill="#4f9cff" opacity=".85"/><rect x="230" y="390" width="900" height="20" fill="#a78bfa" opacity=".85"/>
+      <text x="680" y="385" font-size="13" fill="#070c18" text-anchor="middle">A안 50%</text><text x="680" y="405" font-size="13" fill="#070c18" text-anchor="middle">B안 50% (같은 사용자는 계속 같은 쪽)</text>
+      <g font-size="15" text-anchor="middle"><rect x="360" y="425" width="14" height="14" fill="#4f9cff"/><text x="420" y="437" fill="#9db0d6">옛 버전</text><rect x="480" y="425" width="14" height="14" fill="#34d399"/><text x="540" y="437" fill="#9db0d6">새 버전</text><text x="800" y="437" fill="#9db0d6">가로축: 시간 / 세로 두께: 트래픽 비율</text></g>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>다섯 가지를 한 그림에 그렸습니다. 가로는 시간이고, 막대 두께는 그 버전이 받는 트래픽 비율입니다. 파란색이 옛 버전, 초록색이 새 버전입니다.</li><li>Recreate는 전부 내리고 전부 올립니다. 중간에 끊깁니다. 롤링은 조금씩 바꿔 끼워서 한동안 두 버전이 섞입니다. 블루/그린은 새 버전을 옆에 미리 띄워 두고 한 번에 넘깁니다.</li><li>카나리는 일부에게 먼저 보여 주고, 괜찮으면 5%, 25%, 50%로 늘립니다. 마지막 A/B 테스트는 모양은 카나리와 비슷한데 목적이 다릅니다. 이건 3부에서 따로 보겠습니다.</li><li>교재 5.7절은 롤링, 블루/그린, 카나리 셋을 소개하고, 6.3절에서 디플로이먼트가 기본으로 주는 건 롤링과 Recreate 둘이라고 합니다.</li></ul></aside>
+  </section>
+
+  <!-- 30 -->
+  <section class="slide" data-t="쿠버네티스가 기본으로 주는 것">
+    <div class="kicker">2부 · 6.3</div>
+    <h2>쿠버네티스가 기본으로 주는 건 둘뿐</h2>
+    <table>
+      <tr><th>전략</th><th>쿠버네티스에서</th><th>필요한 것</th></tr>
+      <tr><td class="k">Recreate</td><td>Deployment <code>strategy.type: Recreate</code></td><td>없음</td></tr>
+      <tr><td class="k">롤링</td><td>Deployment 기본값 <code>RollingUpdate</code></td><td>없음</td></tr>
+      <tr><td class="k">블루/그린</td><td>Deployment 두 개 + Service 셀렉터 전환</td><td>두 배 자원, 전환 절차</td></tr>
+      <tr><td class="k">카나리</td><td>레플리카 비율, 또는 인그레스, Gateway API, 서비스 메시로 가중치</td><td>트래픽 나누는 장치, 판정할 메트릭</td></tr>
+      <tr><td class="k">A/B</td><td>헤더, 쿠키로 사용자를 고정해서 나눔</td><td>라우팅 규칙, 분석 도구</td></tr>
+    </table>
+    <div class="card" style="margin-top:20px"><h3>Recreate는 언제 쓰나 (교재 6.3)</h3>
+      <p style="font-size:20px;margin:0">잠깐 전부 내려가도 괜찮은 서비스. 교재 예는 <b>큐 기반 서비스</b>: 새 파드가 뜰 때까지 메시지가 큐에서 기다린다. 6.4 예제의 MySQL도 Recreate다. <code>ReadWriteOnce</code> 볼륨은 다른 노드의 파드와 같이 붙을 수 없고, 같은 데이터 디렉터리를 MySQL 두 개가 쓰면 안 되기 때문</p></div>
+    <p class="note">블루/그린, 카나리, A/B는 오브젝트를 조합하거나 Argo Rollouts, Flagger 같은 컨트롤러를 쓴다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>쿠버네티스 디플로이먼트가 기본으로 주는 전략은 Recreate와 롤링 둘뿐입니다. 나머지는 오브젝트를 조합하거나 별도 컨트롤러를 씁니다.</li><li>오른쪽 열을 보시면, 아래로 갈수록 필요한 게 늘어납니다. 블루/그린은 자원이 두 배, 카나리는 트래픽을 나누는 장치와 판정할 메트릭이 있어야 합니다. 교재 5.10도 CD가 처음이면 롤링부터 하고 익숙해지면 블루/그린, 카나리를 보라고 합니다.</li><li>Recreate가 맞는 경우로 교재는 큐 기반 서비스를 듭니다. 잠깐 내려가도 메시지가 큐에서 기다리니까 괜찮습니다. 6.4 예제의 MySQL도 Recreate입니다. ReadWriteOnce 볼륨은 노드 하나에만 붙어서 다른 노드에 뜬 새 파드는 못 붙고, 같은 노드라 해도 MySQL 두 개가 같은 데이터 디렉터리를 쓰면 안 되니까 옛 파드를 먼저 내립니다.</li><li>3부에서는 Recreate를 빼고 나머지 셋으로 해 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 31 -->
+  <section class="slide" data-t="3부 같은 배포, 세 번">
+    <div class="kicker">3부 · 교재 5.7, 5.8, 6.3, 7.4</div>
+    <h1>3부<br><span class="em">같은 배포, 세 번</span></h1>
+    <p class="dim" style="margin-top:24px">롤링 → 블루/그린 → 카나리. 같은 버그가 있을 때 결과가 어떻게 다른가</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>3부입니다. 오늘의 본론입니다.</li><li>같은 1.7.0 배포를 롤링, 블루/그린, 카나리로 한 번씩 해 보겠습니다. 버그도 같고, 알람 기준도 같습니다. 바꾸는 건 전략 하나뿐입니다.</li></ul></aside>
+  </section>
+
+  <!-- 32 -->
+  <section class="slide" data-t="조건">
+    <div class="kicker">3부 · 세 번 모두 같은 조건</div>
+    <h2>세 번 모두 같은 조건</h2>
+    <table>
+      <tr><th></th><th>조건</th></tr>
+      <tr><td class="k">서비스</td><td>order-api, 레플리카 10개, 초당 1,000 요청</td></tr>
+      <tr><td class="k">평소</td><td>결제 5xx 비율 <b>0.1%</b></td></tr>
+      <tr><td class="k">버그</td><td>이모지, 일본어 쿠폰 코드 요청(전체의 3%)이 결제 실패. 새 버전 파드는 5xx 약 3.1%</td></tr>
+      <tr><td class="k">프로브</td><td>readiness, liveness는 <b>정상</b>으로 나온다. 서버는 멀쩡히 떠 있으니까</td></tr>
+      <tr><td class="k">알람</td><td>결제 5xx 비율이 1%를 넘은 채로 1분 지속되면 온콜 호출</td></tr>
+      <tr><td class="k">DB</td><td>쿠폰 컬럼은 1.6.3 배포 때 미리 추가해 둠 (뒤에서 설명할 확장 배포)</td></tr>
+    </table>
+    <p style="margin-top:20px">비교할 것: <b>몇 건이 실패했나, 언제 알았나, 어떻게 되돌렸나, 무엇이 더 들었나</b></p>
+    <aside class="notes"><b>발표 노트</b><ul><li>세 번 모두 조건은 같습니다. 레플리카 10개, 초당 1,000 요청, 그중 3%가 결제에 실패하는 버그입니다.</li><li>평소에도 결제 5xx가 0.1%쯤 있습니다. 새 버전 파드에서는 여기에 버그 3%가 더해져서 3.1%가 됩니다. 뒤에 나오는 숫자는 전부 이 두 값에서 나옵니다.</li><li>먼저 보셔야 할 건 프로브 줄입니다. 이 버그는 프로브로 안 잡힙니다. 서버는 멀쩡히 떠 있고 헬스 체크 경로도 200을 줍니다. 특정 입력에서만 실패하니까요. 실제 사고 대부분이 이런 모양입니다.</li><li>알람은 결제 5xx가 1%를 넘은 채로 1분 가면 울립니다. 비교할 건 네 가지입니다. 실패 건수, 알아챈 시점, 되돌린 방법, 추가로 든 것.</li></ul></aside>
+  </section>
+
+  <!-- 33 -->
+  <section class="slide" data-t="1회차 롤링">
+    <div class="kicker">3부 · 1회차 · 5.7, 6.3</div>
+    <h2>1회차: 롤링 업데이트</h2>
+    <div class="cols">
+      <div>
+        <pre class="code" style="font-size:16px"><span class="k">spec</span>:
+  minReadySeconds: <span class="y">10</span>   <span class="c"># Ready 후 10초 버티면 가용</span>
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: <span class="y">25%</span>    <span class="c"># 10 × 25% = 3개 더 (올림)</span>
+      maxUnavailable: <span class="y">0</span> <span class="c"># 용량은 안 줄인다</span>
+  template: …
+      readinessProbe:
+        httpGet: {path: /readyz, port: 8080}
+        periodSeconds: <span class="y">5</span></pre>
+        <p class="dim" style="font-size:16px;margin:8px 0 0">maxSurge: 원래 개수보다 더 떠 있어도 되는 수<br>maxUnavailable: 모자라도 되는 수</p>
+        <ul style="margin-top:10px">
+          <li>새 파드 3개 띄움 → Ready → 옛 파드 3개 내림, 이걸 반복</li>
+          <li>교체되는 동안 두 버전이 <b>같이</b> 요청을 받는다</li>
+          <li>교재 5.10: CD가 처음이면 롤링부터. 쓰기 쉽고 배포하기 편하다</li>
+        </ul>
+      </div>
+      <div class="card"><h3>디플로이먼트 안에서는</h3>
+        <p style="font-size:19px">이미지 태그가 바뀌면 template 해시가 바뀌고, 새 ReplicaSet이 생긴다 (1부)</p>
+        <pre class="code" style="font-size:15px;margin-top:10px">order-api-5b8c4a  (1.7.0)  0 → 3 → 6 → 9 → 10
+order-api-7d9f5c  (1.6.3) 10 → 7 → 4 → 1 → 0</pre>
+        <p class="dim" style="font-size:17px;margin-top:10px">옛 RS는 지우지 않고 0으로 남긴다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>1회차는 쿠버네티스 기본값인 롤링 업데이트입니다. 설정 두 개를 먼저 보겠습니다. maxSurge는 교체하는 동안 원래 개수보다 몇 개까지 더 떠 있어도 되는지, maxUnavailable은 몇 개까지 모자라도 되는지입니다.</li><li>원래 10개인데 maxSurge가 25%라 10의 25%, 2.5개를 올림해서 3개까지 더 떠 있어도 됩니다. 그래서 롤링이 시작되면 옛 파드를 끄기 전에 새 버전 파드 3개를 먼저 만듭니다. 이 순간 파드는 옛 10개와 새 3개, 13개입니다.</li><li>maxUnavailable이 0이라서 쓸 수 있는 파드가 10개 아래로 내려가면 안 됩니다. 그래서 새 파드 3개가 Ready가 된 뒤에야 옛 파드 3개를 끕니다. 그다음 다시 새 파드 3개를 만들고 옛 3개를 끄고, 이렇게 3개, 3개, 3개, 마지막 1개로 네 번 반복하면 전부 새 버전이 됩니다.</li><li>잠깐 13개가 되니까 노드에 파드 3개분의 여유 자원이 있어야 합니다. 여유가 없으면 새 파드가 Pending에 걸리고 롤아웃이 거기서 멈춥니다.</li><li>나머지 두 줄은 시간에 관한 설정입니다. readiness는 5초마다 /readyz를 보고, Ready가 된 뒤 10초를 버텨야 가용으로 칩니다. 이 두 값이 뒤에서 시간을 계산할 때 쓰입니다.</li><li>오른쪽처럼 새 레플리카셋은 0, 3, 6, 9, 10으로 늘고 옛 레플리카셋은 10, 7, 4, 1, 0으로 줄어듭니다.</li><li>그리고 교체되는 동안 두 버전이 같이 요청을 받습니다. 이게 무슨 문제를 만드는지 바로 다음 장에서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 34 -->
+  <section class="slide" data-t="롤링 설정 한눈에">
+    <div class="kicker">3부 · 1회차 · 개념 정리 · 5.7, 6.3</div>
+    <h2>롤링 업데이트 설정 한눈에</h2>
+    <table class="tight">
+      <tr><th>설정</th><th>뜻</th><th>기본값</th><th>예시 서비스</th><th>잘못 두면</th></tr>
+      <tr><td class="k">maxSurge</td><td>교체 중 원래 개수보다 <b>더 떠 있어도 되는</b> 수</td><td>25%</td><td>25% (3개)</td><td>크면 자원이 모자라 Pending</td></tr>
+      <tr><td class="k">maxUnavailable</td><td>교체 중 원래 개수보다 <b>모자라도 되는</b> 수</td><td>25%</td><td>0</td><td>크면 교체 중 용량이 줄어 느려짐</td></tr>
+      <tr><td class="k">readinessProbe</td><td>이 파드에 <b>요청을 보내도 되나</b></td><td>없음</td><td>/readyz, 5초마다</td><td>없으면 뜨자마자 요청을 받는다</td></tr>
+      <tr><td class="k">livenessProbe</td><td>이 파드를 <b>재시작해야 하나</b></td><td>없음</td><td>/livez</td><td>readiness와 같은 경로면 부하 때 멀쩡한 파드를 죽인다</td></tr>
+      <tr><td class="k">minReadySeconds</td><td>Ready 후 몇 초 버텨야 <b>가용</b>으로 치나</td><td>0</td><td>10초</td><td>0이면 뜨자마자 죽는 파드도 통과</td></tr>
+      <tr><td class="k">progressDeadlineSeconds</td><td>이 시간 동안 진척 없으면 <b>실패로 표시</b></td><td>600초</td><td>300초</td><td>표시만 하고 되돌리지는 않는다</td></tr>
+      <tr><td class="k">revisionHistoryLimit</td><td>옛 ReplicaSet을 <b>몇 개 남기나</b></td><td>10</td><td>10</td><td>줄이면 undo로 돌아갈 곳이 없다</td></tr>
+      <tr><td class="k">terminationGracePeriodSeconds</td><td>종료 신호 뒤 강제 종료까지 <b>기다리는 시간</b></td><td>30초</td><td>45초</td><td>짧으면 하던 요청 중에 잘린다</td></tr>
+    </table>
+    <p class="note">preStop 훅은 종료 신호(SIGTERM) 전에 실행된다. 뒤의 "롤링 업데이트가 끊기는 이유"에서 자세히</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>1회차에 나온 설정들을 한 장에 모았습니다. 오늘 뒤에서 계속 나오는 용어라 여기서 한 번 정리하고 가겠습니다.</li><li>위의 두 줄이 롤링의 속도와 용량을 정합니다. maxSurge는 교체하는 동안 원래 개수보다 더 떠 있어도 되는 수, maxUnavailable은 원래 개수보다 모자라도 되는 수입니다. 둘 다 개수나 퍼센트로 쓸 수 있고 기본값은 둘 다 25%입니다. 퍼센트일 때 maxSurge는 올림, maxUnavailable은 내림으로 계산합니다. 그래서 레플리카 10개면 surge 3개, unavailable 2개가 기본입니다.</li><li>다음 두 줄은 프로브입니다. 이름이 비슷해서 헷갈리는데 묻는 게 다릅니다. readiness는 이 파드에 요청을 보내도 되느냐입니다. 실패하면 서비스 엔드포인트에서 빠지기만 하고 파드는 그대로 둡니다. liveness는 이 파드를 재시작해야 하느냐입니다. 실패하면 kubelet이 컨테이너를 재시작합니다. 둘을 같은 경로로 두면 부하가 몰려 응답이 느려질 때 멀쩡한 파드까지 재시작해서 상황이 더 나빠집니다.</li><li>minReadySeconds는 Ready가 된 뒤 몇 초를 더 버텨야 가용으로 칠지입니다. 기본값 0이면 뜨자마자 가용이라, 몇 초 뒤에 죽는 이미지도 롤아웃을 통과합니다. 롤링은 가용한 파드 수를 보고 다음 묶음으로 넘어가기 때문에 이 값이 롤링 속도에도 영향을 줍니다.</li><li>progressDeadlineSeconds는 이 시간 동안 롤아웃에 진척이 없으면 실패로 표시하는 값입니다. 기본 600초입니다. 표시만 하고 되돌리지는 않습니다. 이건 뒤에서 데모로 봅니다.</li><li>revisionHistoryLimit은 옛 레플리카셋을 몇 개 남길지입니다. 기본 10개입니다. 이게 rollout undo로 돌아갈 곳의 목록이라, 줄여 두면 돌아갈 곳이 없어집니다.</li><li>마지막 terminationGracePeriodSeconds는 파드를 끌 때 종료 신호를 보낸 뒤 강제로 죽이기까지 기다리는 시간입니다. 기본 30초입니다. 짧으면 하던 요청을 마치기 전에 잘립니다. 그 앞에 실행되는 preStop 훅은 3부 뒤쪽에서 따로 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 35 -->
+  <section class="slide" data-t="maxSurge와 maxUnavailable을 바꾸면">
+    <div class="kicker">3부 · 1회차 · 개념 정리 · 5.7</div>
+    <h2>maxSurge와 maxUnavailable을 바꾸면 (replicas 10)</h2>
+    <table class="tight">
+      <tr><th>maxSurge / maxUnavailable</th><th>교체 중 파드 수</th><th>한 번에 바꾸는 수</th><th>필요한 여유 자원</th><th>언제</th></tr>
+      <tr><td class="k">25% / 0 (예시 서비스)</td><td>10 → 최대 <b>13</b></td><td>3개</td><td>파드 3개분</td><td>용량을 절대 줄이면 안 될 때</td></tr>
+      <tr><td class="k">0 / 25%</td><td>10 → 최소 <b>8</b></td><td>2개</td><td>없음</td><td>노드 여유가 없을 때. 교체 중 처리량이 준다</td></tr>
+      <tr><td class="k">25% / 25% (기본값)</td><td>8 ~ 13</td><td>최대 5개</td><td>파드 3개분</td><td>보통의 경우. 빠르다</td></tr>
+      <tr><td class="k">1 / 1 (교재 5.7 예제)</td><td>9 ~ 11</td><td>최대 2개</td><td>파드 1개분</td><td>천천히, 조금씩</td></tr>
+      <tr><td class="k">100% / 0</td><td>10 → <b>20</b></td><td>10개 한 번에</td><td>두 배</td><td>빨리 끝내고 싶을 때. 블루/그린과 비슷해진다</td></tr>
+    </table>
+    <svg viewBox="0 0 1150 110" role="img" aria-label="maxSurge 25%, maxUnavailable 0일 때 파드 수가 10에서 13으로 늘었다가 10으로 돌아오는 과정">
+      <g font-size="14" fill="#9db0d6"><text x="0" y="20">25% / 0 일 때</text></g>
+      <g font-size="15" text-anchor="middle" fill="#eaf0ff">
+        <text x="120" y="60">옛 10</text>
+        <text x="300" y="60">옛 10 + <tspan fill="#34d399">새 3</tspan> = 13</text>
+        <text x="520" y="60">옛 7 + <tspan fill="#34d399">새 3</tspan> = 10</text>
+        <text x="740" y="60">옛 7 + <tspan fill="#34d399">새 6</tspan> = 13</text>
+        <text x="920" y="60">…</text>
+        <text x="1060" y="60"><tspan fill="#34d399">새 10</tspan></text>
+      </g>
+      <g font-size="13" text-anchor="middle" fill="#9db0d6"><text x="300" y="88">새 파드 먼저 생성</text><text x="520" y="88">새 3개 Ready → 옛 3개 끔</text><text x="740" y="88">다음 묶음</text><text x="1060" y="88">3, 3, 3, 1 네 번</text></g>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>두 값을 바꾸면 롤링이 어떻게 달라지는지 레플리카 10개 기준으로 비교해 봤습니다.</li><li>첫 줄이 예시 서비스 설정입니다. surge 25%, 3개까지 더 떠 있어도 되고, unavailable 0이라 하나도 모자라면 안 됩니다. 그래서 새 파드 3개를 먼저 만들어서 잠깐 13개가 되고, 새 파드가 Ready가 되면 옛 파드 3개를 끕니다. 아래 그림이 그 과정입니다. 용량은 절대 안 줄지만 노드에 파드 3개분의 여유가 있어야 합니다.</li><li>두 번째 줄은 반대입니다. surge 0이라 더 띄울 수 없고, unavailable 25%라 2개까지 모자라도 됩니다. 그래서 옛 파드 2개를 먼저 끄고 그 자리에 새 파드 2개를 띄웁니다. 노드 여유가 없어도 되는 대신 교체 중에는 8개로 요청을 받아서 처리량이 줄어듭니다.</li><li>세 번째 줄이 아무것도 안 적었을 때의 기본값입니다. 더 띄우기도 하고 모자라기도 해서 한 번에 5개까지 바꿀 수 있고 가장 빠릅니다. 네 번째 줄은 교재 5.7절 예제의 1과 1로, 한 번에 2개씩 천천히 바꿉니다.</li><li>마지막 줄처럼 surge를 100%로 두면 새 파드 10개를 한꺼번에 띄워서 잠깐 20개가 되고, 다 Ready가 되면 옛 10개를 끕니다. 빨리 끝나지만 자원이 두 배 들어서 블루/그린과 비슷한 모양이 됩니다. 다른 점은 블루/그린처럼 전환 시점을 사람이 정하지 못하고, 옛 파드를 바로 끈다는 겁니다.</li><li>정리하면 maxSurge를 키우면 여유 자원을 써서 빨라지고, maxUnavailable을 키우면 용량을 줄여서 빨라집니다. 서비스가 잠깐이라도 용량이 줄면 안 되는지, 노드에 여유가 있는지에 따라 고르면 됩니다.</li></ul></aside>
+  </section>
+
+  <!-- 36 -->
+  <section class="slide" data-t="롤링 중에는 두 버전이 섞인다">
+    <div class="kicker">3부 · 1회차 · 5.7</div>
+    <h2>롤링 중에는 두 버전이 섞인다</h2>
+    <svg viewBox="0 0 1150 250" role="img" aria-label="한 사용자의 요청이 롤링 중에 새 버전과 옛 버전 파드로 번갈아 가서, 새 버전에서 적용한 쿠폰을 옛 버전이 모른다">
+      <defs><marker id="arm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <rect x="20" y="95" width="150" height="60" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="95" y="122" font-size="17" fill="#eaf0ff" text-anchor="middle">사용자 한 명</text><text x="95" y="143" font-size="13" fill="#9db0d6" text-anchor="middle">같은 주문</text>
+      <rect x="260" y="95" width="130" height="60" rx="10" fill="#141d33" stroke="#9db0d6"/><text x="325" y="131" font-size="17" fill="#eaf0ff" text-anchor="middle">Service</text>
+      <line x1="170" y1="125" x2="258" y2="125" stroke="#9db0d6" stroke-width="2" marker-end="url(#arm)"/>
+      <rect x="500" y="20" width="250" height="70" rx="10" fill="#141d33" stroke="#34d399"/><text x="625" y="50" font-size="17" fill="#34d399" text-anchor="middle" font-weight="700">파드 1.7.0 (새)</text><text x="625" y="74" font-size="14" fill="#9db0d6" text-anchor="middle">① 쿠폰 적용 → 할인 저장</text>
+      <rect x="500" y="160" width="250" height="70" rx="10" fill="#141d33" stroke="#4f9cff"/><text x="625" y="190" font-size="17" fill="#4f9cff" text-anchor="middle" font-weight="700">파드 1.6.3 (옛)</text><text x="625" y="214" font-size="14" fill="#9db0d6" text-anchor="middle">② 결제 → 할인 컬럼을 안 읽음</text>
+      <line x1="390" y1="115" x2="498" y2="60" stroke="#34d399" stroke-width="2" marker-end="url(#arm)"/>
+      <line x1="390" y1="135" x2="498" y2="190" stroke="#4f9cff" stroke-width="2" marker-end="url(#arm)"/>
+      <g font-size="16" fill="#eaf0ff">
+        <text x="790" y="55">커넥션마다 파드를 고른다</text>
+        <text x="790" y="80" fill="#9db0d6" font-size="14">(다음 요청은 다른 버전일 수 있다)</text>
+        <text x="790" y="190" fill="#fbbf24" font-weight="700">할인 없이 결제된다</text>
+        <text x="790" y="215" fill="#9db0d6" font-size="14">컬럼은 1.6.3 때 추가했지만 옛 코드는 안 읽는다</text>
+      </g>
+    </svg>
+    <div class="cols" style="margin-top:6px">
+      <ul>
+        <li>교체되는 3분 동안 새 버전 30% → 60% → 90%. 그만큼 요청이 두 버전에 나뉜다</li>
+        <li>새로고침할 때마다 쿠폰 입력칸이 <b>보였다 안 보였다</b> 한다</li>
+      </ul>
+      <p style="font-size:19px">교재 5.7: 롤링 업데이트에서 또 한 가지 문제가 될 수 있는 부분은 <b>롤링 중에 두 버전의 애플리케이션이 동시 실행</b>된다는 점이다</p>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>1회차 결과를 보기 전에, 롤링에서 버그와 별개로 꼭 알아야 할 게 하나 있습니다. 롤링이 진행되는 동안에는 옛 버전과 새 버전이 섞여서 같이 요청을 받습니다.</li><li>서비스는 Ready인 파드 전부에 요청을 나눠 보냅니다. 커넥션을 새로 맺을 때마다 파드를 고르기 때문에, 같은 사용자의 요청이라도 한 번은 새 버전으로, 다음 번은 옛 버전으로 갈 수 있습니다.</li><li>그림처럼 사용자가 장바구니에서 쿠폰을 적용합니다. 이 요청은 1.7.0 파드가 받아서 할인 금액을 새 컬럼에 저장합니다. 바로 이어서 결제 버튼을 누르는데, 이번엔 1.6.3 파드로 갑니다. 쿠폰 컬럼은 1.6.3 배포 때 추가해 뒀으니 DB에는 있습니다. 하지만 1.6.3 코드는 그 컬럼을 읽지 않습니다. 그래서 에러 없이 할인 없는 금액으로 결제됩니다. 에러가 안 나니 알람에도 안 잡힙니다.</li><li>사용자 눈에는 더 이상하게 보입니다. 새로고침할 때마다 쿠폰 입력칸이 보였다 안 보였다 합니다. 새 버전 화면과 옛 버전 화면이 번갈아 오니까요.</li><li>이 구간이 얼마나 되느냐면, 예시 설정에서는 3분 동안 새 버전 비율이 30%, 60%, 90%로 올라갑니다. 그 3분 내내 이런 일이 생길 수 있습니다. 교재 5.7도 롤링 업데이트의 문제로 두 버전이 동시에 실행된다는 점을 꼽고, 그래서 DB 스키마가 두 버전을 다 지원해야 한다고 합니다.</li><li>이건 코드에 버그가 없어도 생기는 문제입니다. 그러면 섞여도 괜찮으려면 뭘 지켜야 하는지 다음 장에서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 37 -->
+  <section class="slide" data-t="섞여도 괜찮으려면">
+    <div class="kicker">3부 · 1회차 · 5.7, 5.10</div>
+    <h2>섞여도 괜찮으려면: 하위 호환</h2>
+    <table class="tight">
+      <tr><th>무엇이 섞이나</th><th>괜찮은 변경</th><th>안 되는 변경</th></tr>
+      <tr><td class="k">API (다른 서비스, 프론트)</td><td>응답에 필드 추가, 선택 파라미터 추가</td><td>필드 삭제, 이름이나 의미 변경, 필수 파라미터 추가</td></tr>
+      <tr><td class="k">DB</td><td>NULL 허용 컬럼 추가 (확장)</td><td>컬럼 삭제, 이름 변경, NOT NULL 추가를 같은 배포에서</td></tr>
+      <tr><td class="k">큐 메시지, 이벤트</td><td>필드 추가, 옛 컨슈머가 모르는 필드는 무시</td><td>형식 변경. 옛 컨슈머가 새 메시지를 못 읽는다</td></tr>
+      <tr><td class="k">캐시, 세션</td><td>새 키 추가</td><td>같은 키에 다른 형식 저장. 옛 버전이 읽다가 깨진다</td></tr>
+    </table>
+    <div class="cols" style="margin-top:16px">
+      <div class="card"><h3>그래서 보통 이렇게 한다</h3><ul>
+        <li>새 버전은 <b>옛 버전과 같이 돌아도 되게</b> 짠다 (바로 앞 버전과 호환)</li>
+        <li>새 기능은 플래그를 끈 채로 배포하고, 전부 교체된 뒤에 켠다</li>
+        <li>DB는 확장, 이전, 축소를 따로 배포 (뒤에서)</li>
+      </ul></div>
+      <div class="card violet"><h3>다른 전략에서는</h3><ul>
+        <li>블루/그린: 한 번에 넘겨서 섞이는 시간이 짧다. 그래도 DB는 공유하고 keep-alive는 남는다</li>
+        <li>카나리: 일부러 오래 섞는다. 호환이 더 필요하다</li>
+      </ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>섞여도 괜찮으려면 새 버전이 옛 버전과 같이 돌아도 문제없어야 합니다. 이걸 하위 호환이라고 합니다. 표는 무엇이 섞이는지와 어떤 변경은 괜찮고 어떤 변경은 안 되는지입니다.</li><li>첫 줄 API입니다. 다른 서비스나 프론트가 우리 API를 부를 때, 롤링 중에는 옛 버전이 대답할 수도 있고 새 버전이 대답할 수도 있습니다. 응답에 필드를 추가하는 건 괜찮습니다. 옛 클라이언트는 모르는 필드를 무시하니까요. 반대로 필드를 지우거나 이름을 바꾸면, 새 버전 응답을 받은 쪽이 깨집니다.</li><li>DB는 3부 뒤쪽 "컬럼 추가는 세 번에 나눠서"에서 자세히 볼 확장, 축소 얘기입니다. NULL을 허용하는 컬럼을 추가하는 건 옛 버전이 몰라도 됩니다. 하지만 컬럼을 지우거나 이름을 바꾸는 걸 같은 배포에서 하면, 아직 떠 있는 옛 파드가 없는 컬럼을 찾다가 에러를 냅니다.</li><li>큐 메시지와 캐시도 자주 잊습니다. 새 버전이 큐에 새 형식으로 메시지를 넣으면, 아직 옛 버전인 컨슈머가 그걸 못 읽습니다. 캐시도 같은 키에 새 형식으로 저장하면 옛 버전이 읽다가 깨집니다.</li><li>그래서 보통 이렇게 합니다. 새 버전은 바로 앞 버전과 같이 돌아도 되게 짭니다. 새 기능은 플래그를 끈 채로 배포하고, 전부 교체된 뒤에 켭니다. 그러면 쿠폰 입력칸이 보였다 안 보였다 하는 일이 없습니다. DB는 확장, 이전, 축소를 따로 배포합니다.</li><li>다른 전략과 비교하면, 블루/그린은 한 번에 넘기니까 섞이는 시간이 짧습니다. 그래도 DB는 두 환경이 공유하고, keep-alive 커넥션은 한동안 옛 버전에 남습니다. 카나리는 오히려 일부러 오래 섞어 두는 방식이라 호환을 더 꼼꼼히 챙겨야 합니다. 어느 전략이든 이 표는 지켜야 합니다.</li></ul></aside>
+  </section>
+
+  <!-- 38 -->
+  <section class="slide" data-t="1회차 결과">
+    <div class="kicker">3부 · 1회차 결과</div>
+    <h2>1회차 결과: 롤아웃은 "성공"했다</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16.5px">17:59  롤링 시작
+18:01  새 버전 60%, 에러율 1% 넘음
+18:02  <span class="y">successfully rolled out</span>
+       모든 파드 Ready, 에러율 3.1%
+18:03  알람
+18:06  원인 모른 채 롤백 결정, git revert
+18:07  Flux 동기화, 거꾸로 롤링 시작
+18:10  1.6.3으로 복귀</pre>
+      <div>
+        <svg viewBox="0 0 520 220" role="img" aria-label="롤링 중 에러율이 계단식으로 3%까지 오르고, 롤백 중 다시 계단식으로 내려간다">
+          <line x1="40" y1="190" x2="510" y2="190" stroke="#2c3b61"/><line x1="40" y1="20" x2="40" y2="190" stroke="#2c3b61"/>
+          <line x1="40" y1="133" x2="510" y2="133" stroke="#fbbf24" stroke-dasharray="4 4"/><text x="505" y="126" font-size="12" fill="#fbbf24" text-anchor="end">알람 1%</text>
+          <polyline points="40,190 80,190 80,170 120,170 120,150 160,150 160,130 200,130 200,105 200,76 380,76 380,105 420,105 420,130 460,130 460,160 490,160 490,190 510,190" fill="rgba(251,113,133,.18)" stroke="#fb7185" stroke-width="2.5"/>
+          <text x="46" y="30" font-size="13" fill="#9db0d6">에러율 3%</text><line x1="40" y1="76" x2="46" y2="76" stroke="#9db0d6"/>
+          <g font-size="12" fill="#9db0d6" text-anchor="middle"><text x="80" y="208">17:59</text><text x="200" y="208">18:02</text><text x="380" y="208">18:07</text><text x="490" y="208">18:10</text></g>
+        </svg>
+        <table class="tight"><tr><td class="k">실패한 결제</td><td><b>약 1만 4천 건</b></td></tr><tr><td class="k">알아챈 방법</td><td>알람 (사용자가 먼저 겪은 뒤)</td></tr><tr><td class="k">되돌리기</td><td>거꾸로 롤링 한 번, 약 4분</td></tr><tr><td class="k">추가 자원</td><td>교체 중 파드 3개</td></tr></table>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>결과입니다. 18시 2분을 보세요. successfully rolled out, 롤아웃은 성공했습니다. 쿠버네티스 입장에서는 아무 문제가 없었습니다.</li><li>에러율은 교체된 비율만큼 계단식으로 올라 3.1%가 됐고, 알람은 사용자가 이미 겪고 있을 때 울렸습니다. 되돌리기도 롤링 한 번이라 또 몇 분 걸렸습니다. 결제 약 1만 4천 건이 실패했습니다.</li><li>시각마다 왜 그렇게 됐는지는 다음 장에서 설정으로 풀어 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 39 -->
+  <section class="slide" data-t="1회차 타임라인 뜯어보기">
+    <div class="kicker">3부 · 1회차 · 설정으로 읽기</div>
+    <h2>1회차 타임라인, 설정으로 읽기</h2>
+    <table class="tight">
+      <tr><th>시각</th><th>일어난 일</th><th>그렇게 만든 설정</th><th>왜</th></tr>
+      <tr><td class="k">17:59</td><td>새 파드 3개 생성, 파드 13개</td><td><code>maxSurge: 25%</code>, <code>maxUnavailable: 0</code></td><td>2.5를 올림해서 3개. 옛 파드는 그대로</td></tr>
+      <tr><td class="k">~18:01</td><td>3개씩 교체, 새 버전 30% → 60%</td><td>readiness <code>periodSeconds: 5</code>, <code>minReadySeconds: 10</code></td><td>한 묶음 약 40초, 네 묶음 약 3분</td></tr>
+      <tr><td class="k">~18:01</td><td>전체 에러율 1% 넘음</td><td>서비스가 Ready 파드에 고르게 나눔</td><td>60%면 약 1.8% (30%일 땐 0.9%)</td></tr>
+      <tr><td class="k">18:02</td><td><code>successfully rolled out</code>, 3.1%</td><td>readiness가 <code>/readyz</code>만 본다</td><td>쿠폰 버그는 프로브가 모른다</td></tr>
+      <tr><td class="k">18:03</td><td>알람</td><td>"5xx 1% 초과가 1분 지속"</td><td>1분 조건 + 수집 간격</td></tr>
+      <tr><td class="k">18:06</td><td>롤백 결정, <code>git revert</code></td><td>사람</td><td>확인하고 판단하는 데 3분</td></tr>
+      <tr><td class="k">18:07</td><td>Flux 동기화, 거꾸로 롤링 시작</td><td><code>flux reconcile</code></td><td>interval을 안 기다린다</td></tr>
+      <tr><td class="k">18:10</td><td>1.6.3 복귀</td><td>같은 롤링 설정</td><td>되돌리기도 롤링이라 약 3분</td></tr>
+    </table>
+    <p class="note">실패 건수: 초당 30건(1,000 × 3%) × 5분 + 올라가고 내려가는 6분 동안 평균 초당 15건 ≈ 9,000 + 5,400 ≈ 1만 4천 건</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>앞 장 타임라인을 시각마다 어떤 설정 때문에 그렇게 됐는지 풀어 보겠습니다.</li><li>17시 59분, 롤링이 시작되면 디플로이먼트는 maxSurge만큼 새 파드를 먼저 만듭니다. 레플리카 10개에 25%면 2.5개인데, surge는 올림이라 3개입니다. maxUnavailable이 0이라서 옛 파드는 새 파드가 가용해지기 전까지 하나도 안 내립니다. 그래서 잠깐 파드가 13개가 됩니다.</li><li>새 파드가 가용해지려면 세 단계를 거칩니다. 컨테이너가 뜨고, readiness 프로브를 통과하고, minReadySeconds 10초 동안 Ready 상태를 유지해야 합니다. readiness가 5초마다 확인하니까 한 묶음에 40초 정도 걸립니다. 3개, 3개, 3개, 마지막 1개, 네 묶음이라 전체가 3분쯤 걸립니다.</li><li>그 사이 에러율이 계단처럼 오르는 건, 서비스가 Ready인 파드 전부에 요청을 나눠 주기 때문입니다. 새 파드 비율만큼 요청이 새 버전으로 가고, 그쪽은 3.1%가 실패합니다. 첫 묶음 뒤 새 버전이 30%일 때 전체는 0.9% 정도라 아직 1% 아래입니다. 두 번째 묶음이 끝나 60%가 되는 18시 1분쯤 약 1.8%로 1%를 넘습니다.</li><li>18시 2분에 롤아웃이 성공으로 끝납니다. readiness는 /readyz 경로가 200을 주는지만 봅니다. 서버는 멀쩡히 떠 있으니까 통과합니다. 쿠폰 코드에 이모지가 들어왔을 때만 나는 버그는 프로브가 알 방법이 없습니다.</li><li>18시 3분 알람은 알람 조건 때문입니다. 5xx가 1%를 넘은 채로 1분 가야 울리는데, 18시 1분쯤 1%를 넘었으니 1분 조건에 메트릭 수집 간격이 더해져서 18시 3분입니다.</li><li>18시 6분까지 3분은 사람 시간입니다. 알람을 받고, 대시보드를 보고, 방금 나간 배포 때문이라고 판단하는 데 걸립니다. 원인은 모르는 채로 18시 6분에 배포 저장소에서 git revert를 합니다.</li><li>18시 7분에 flux reconcile로 바로 동기화하고 거꾸로 롤링이 시작됩니다. 이 명령을 안 쓰면 Kustomization interval, 예를 들어 5분을 기다려야 해서 그만큼 더 늦어집니다.</li><li>되돌리기도 같은 롤링 설정으로 거꾸로 교체하니까 또 3분쯤 걸려서 18시 10분에 끝납니다. 옛 이미지가 노드에 캐시돼 있어서 이 정도고, 캐시가 없으면 이미지를 받는 시간이 더해집니다.</li><li>계산은 이렇습니다. 초당 1,000건 중 3%가 버그를 맞으니, 전부 새 버전이면 초당 30건이 실패합니다. 18시 2분부터 7분까지 5분, 300초 동안은 전부 새 버전이라 30 × 300 = 9,000건입니다. 교체 중 3분과 되돌리는 중 3분, 합쳐 360초는 새 버전 비율이 0에서 100%로 오르내려서 평균 절반, 초당 15건으로 잡으면 5,400건입니다. 합쳐서 약 1만 4천 건입니다.</li></ul></aside>
+  </section>
+
+  <!-- 40 -->
+  <section class="slide" data-t="1회차 되돌리기">
+    <div class="kicker">3부 · 1회차 · 6.3</div>
+    <h2>롤링의 롤백은 롤링을 한 번 더 하는 것</h2>
+    <div class="cols">
+      <div class="card"><h3>되돌리는 방법</h3><ul>
+        <li><code>kubectl rollout undo</code>: 0으로 남겨 둔 옛 RS의 template을 다시 적용 → 거꾸로 롤링</li>
+        <li>깃옵스라면 배포 저장소에서 <code>git revert</code> → Flux가 맞춤</li>
+        <li>걸리는 시간 = 롤아웃 시간. 옛 이미지를 노드가 다시 받아야 하면 더 길다</li>
+      </ul></div>
+      <div class="card rose"><h3>롤링에서 주의할 것</h3><ul>
+        <li class="no">프로브가 못 잡는 버그는 롤아웃을 끝까지 통과한다</li>
+        <li class="no">롤아웃이 멈춰도 쿠버네티스는 되돌리지 않는다 (다음 장)</li>
+        <li class="no">되돌리는 동안에도 교체가 일어나서 요청이 끊길 수 있다 (뒤에서 따로 봅니다)</li>
+      </ul></div>
+    </div>
+    <p class="note">깃옵스에서 <code>rollout undo</code>만 하면 에이전트가 깃에 적힌 새 버전으로 다시 돌려놓는다. 4부에서 자세히 본다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>롤링의 롤백은 롤링을 한 번 더 하는 겁니다. rollout undo는 0으로 남겨 둔 옛 레플리카셋의 template을 다시 적용해서 거꾸로 교체합니다. 깃옵스라면 배포 저장소에서 git revert를 합니다.</li><li>그래서 되돌리는 시간이 롤아웃 시간과 같습니다. 옛 이미지를 노드가 다시 받아야 하면 더 깁니다. 1부에서 이미지를 작게 하자고 한 게 여기서 효과가 있습니다.</li><li>롤링에서 주의할 게 세 가지 있는데, 첫째는 방금 본 대로 프로브가 못 잡는 버그는 그냥 통과한다는 겁니다. 둘째는 바로 다음 장에서 보고, 셋째는 세 번을 다 비교한 뒤에 따로 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 41 -->
+  <section class="slide" data-t="실패해도 되돌리지 않는다">
+    <div class="kicker">3부 · 6.3 보충</div>
+    <h2>롤아웃이 실패해도 쿠버네티스는 되돌리지 않는다</h2>
+    <div class="cols">
+      <div>
+        <pre class="code" style="font-size:16px">$ kubectl rollout status deploy/web --timeout=90s
+Waiting for deployment "web" rollout to finish:
+  1 out of 3 new replicas have been updated...
+<span style="color:#fb7185">error: deployment "web" exceeded its
+  progress deadline</span>
+$ echo $?
+<span class="y">1</span>
+
+$ kubectl get deploy web -o jsonpath=\
+  '{.status.conditions[?(@.type=="Progressing")].reason}'
+<span class="y">ProgressDeadlineExceeded</span></pre>
+        <p class="dim" style="font-size:16px;margin-top:8px">kind에서 없는 태그로 바꿔서 확인한 출력. 데모 예제는 <code>progressDeadlineSeconds: 60</code></p>
+      </div>
+      <div>
+        <ul>
+          <li><code>progressDeadlineSeconds</code>(기본 600초)를 넘기면 상태 조건만 <code>Progressing=False</code>로 바뀐다</li>
+          <li class="no">옛 파드와 새 파드가 <b>섞인 채로</b> 멈춰 있다</li>
+          <li>되돌리는 건 바깥에서: 파이프라인이 <code>rollout status</code> 종료 코드를 보고 판단</li>
+          <li>깃옵스라면 Flux의 헬스 체크, Argo CD의 Health 상태가 이 조건을 읽는다</li>
+        </ul>
+        <p class="dim" style="font-size:18px;margin-top:14px">6.3: 이력이 남아서 "언제든 이전 버전으로 되돌릴 수 있다". 되돌릴 <b>수</b> 있을 뿐, 알아서 되돌리지는 않는다</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>의외로 많이들 모르는 부분입니다. 롤아웃이 실패하면 쿠버네티스가 알아서 되돌릴 것 같은데, 안 되돌립니다.</li><li>progressDeadlineSeconds를 넘기면 상태 조건 하나만 바뀌고, 옛 파드와 새 파드가 섞인 채로 멈춰 있습니다. kind에서 없는 태그로 바꿔 봤습니다. 데모 예제는 progressDeadlineSeconds를 60초로 줄여 둬서 1분이면 실패로 표시됩니다. 종료 코드 1이 나오고, 파드 하나는 ErrImagePull, 옛 파드 세 개는 그대로 Running이었습니다. unavailable이 0이라 서비스는 계속 됐습니다.</li><li>그래서 되돌리는 판단은 바깥에서 해야 합니다. 파이프라인이 종료 코드를 보고 판단하거나, 조금 뒤에 볼 카나리 컨트롤러가 합니다.</li><li>깃옵스 도구도 이 조건을 읽기만 합니다. 배경부터 보면, Flux Kustomization에 wait: true를 켜거나 healthChecks로 디플로이먼트를 지정하면, Flux가 적용한 뒤 그 리소스가 준비될 때까지 기다립니다.</li><li>디플로이먼트가 ProgressDeadlineExceeded로 멈추면 Flux는 Kustomization을 Ready=False로 표시하고 이유를 적어 둡니다. Argo CD도 같은 조건을 보고 앱을 Degraded로 표시합니다.</li><li>둘 다 표시만 합니다. 옛 버전으로 되돌리지는 않습니다. 깃에 새 버전이 적혀 있으니 계속 그 상태로 맞추려고 할 뿐입니다. 이 상태를 보고 알림을 보내거나 git revert를 하는 건 사람이나 다른 도구의 몫입니다.</li></ul></aside>
+  </section>
+
+  <!-- 42 -->
+  <section class="slide" data-t="2회차 블루/그린">
+    <div class="kicker">3부 · 2회차 · 5.7</div>
+    <h2>2회차: 블루/그린</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px"><span class="c"># Deployment order-api-blue   slot=blue   (1.6.3) 10개</span>
+<span class="c"># Deployment order-api-green  slot=green  (1.7.0) 10개</span>
+
+<span class="k">kind</span>: Service
+<span class="k">metadata</span>: {name: order-api}
+<span class="k">spec</span>:
+  selector:
+    app: order-api
+    <span class="y">slot: blue</span>     <span class="c"># green으로 바꾸면 전환</span>
+---
+<span class="c"># 전환 전에 그린만 따로 보는 서비스</span>
+<span class="k">kind</span>: Service
+<span class="k">metadata</span>: {name: order-api-preview}
+<span class="k">spec</span>:
+  selector: {app: order-api, slot: green}
+
+<span class="c"># 전환도 롤백도 이 한 줄</span>
+kubectl patch svc order-api -p \
+ '{"spec":{"selector":{"app":"order-api","slot":"green"}}}'</pre>
+      <div>
+        <ul>
+          <li>그린 10개를 옆에 띄우고, preview 서비스로 <b>트래픽 없이</b> 먼저 확인</li>
+          <li>확인이 끝나면 셀렉터 한 줄로 <b>한 번에</b> 넘긴다</li>
+          <li>블루는 그대로 떠 있다. 되돌리기도 셀렉터 한 줄</li>
+          <li>교재 5.7: 트래픽을 언제 새 환경으로 넘길지 조절할 수 있어서 롤아웃을 <b>예측 가능하게</b> 제어한다</li>
+        </ul>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>2회차는 블루/그린입니다. 쿠버네티스로 가장 단순하게 하면 디플로이먼트 두 개와 서비스 셀렉터 한 줄입니다.</li><li>그린 10개를 옆에 띄우고, preview 서비스로 트래픽 없이 먼저 확인합니다. 확인이 끝나면 셀렉터를 green으로 바꿔서 한 번에 넘깁니다.</li><li>블루는 그대로 떠 있어서 되돌리기도 셀렉터 한 줄입니다. kind에서 해 보니 nginx 1.26에서 1.27로 갔다가 다시 돌아오는 게 바로 됐습니다.</li></ul></aside>
+  </section>
+
+  <!-- 43 -->
+  <section class="slide" data-t="2회차 결과">
+    <div class="kicker">3부 · 2회차 결과</div>
+    <h2>2회차 결과: 되돌리는 데 2초, 그 전까지는 전원이 새 버전</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16.5px">17:55  그린 10개 기동
+17:58  preview로 스모크 테스트 통과
+       (쿠폰 코드는 영어로만 테스트)
+18:02  셀렉터 전환 → 즉시 에러율 3.1%
+18:04  알람
+18:05  셀렉터 되돌림 (2초)
+       블루가 바로 받는다</pre>
+      <div>
+        <svg viewBox="0 0 520 220" role="img" aria-label="전환 순간 에러율이 바로 3%가 되고, 되돌리는 순간 바로 0으로 떨어진다">
+          <line x1="40" y1="190" x2="510" y2="190" stroke="#2c3b61"/><line x1="40" y1="20" x2="40" y2="190" stroke="#2c3b61"/>
+          <line x1="40" y1="133" x2="510" y2="133" stroke="#fbbf24" stroke-dasharray="4 4"/><text x="505" y="126" font-size="12" fill="#fbbf24" text-anchor="end">알람 1%</text>
+          <polyline points="40,190 200,190 200,76 320,76 320,190 510,190" fill="rgba(251,113,133,.18)" stroke="#fb7185" stroke-width="2.5"/>
+          <g font-size="12" fill="#9db0d6" text-anchor="middle"><text x="200" y="208">18:02</text><text x="320" y="208">18:05</text></g>
+        </svg>
+        <table class="tight"><tr><td class="k">실패한 결제</td><td><b>약 5천 4백 건</b></td></tr><tr><td class="k">알아챈 방법</td><td>알람 (전환 직후 전부가 겪은 뒤)</td></tr><tr><td class="k">되돌리기</td><td>셀렉터 전환, 수 초</td></tr><tr><td class="k">추가 자원</td><td>파드 10개 더 (블루를 둔 동안)</td></tr></table>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>결과입니다. 스모크 테스트는 영어 쿠폰으로만 해서 통과했고, 전환하는 순간 전부가 새 버전을 받아 에러율이 바로 3.1%가 됐습니다.</li><li>대신 되돌리기도 순간입니다. 셀렉터를 되돌리면 블루가 바로 받습니다. 실패는 약 5천 4백 건입니다. 롤링보다 적은 건 되돌리는 시간이 짧아서고, 겪은 비율은 여전히 100%입니다.</li><li>이것도 다음 장에서 시각별로 풀어 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 44 -->
+  <section class="slide" data-t="2회차 타임라인 뜯어보기">
+    <div class="kicker">3부 · 2회차 · 설정으로 읽기</div>
+    <h2>2회차 타임라인, 설정으로 읽기</h2>
+    <table class="tight">
+      <tr><th>시각</th><th>일어난 일</th><th>그렇게 만든 설정</th><th>왜</th></tr>
+      <tr><td class="k">17:55</td><td>그린 10개 기동</td><td>Deployment <code>order-api-green</code>, <code>slot: green</code></td><td>셀렉터가 blue라 요청을 안 받는다</td></tr>
+      <tr><td class="k">17:58</td><td>스모크 테스트 통과</td><td>서비스 <code>order-api-preview</code> (<code>slot: green</code>)</td><td>테스트 쿠폰이 영어뿐</td></tr>
+      <tr><td class="k">18:02</td><td>전환, 바로 에러율 3.1%</td><td><code>kubectl patch svc</code> 셀렉터 변경</td><td>새 요청은 전부 그린으로</td></tr>
+      <tr><td class="k">18:02~</td><td>일부 요청은 한동안 블루로</td><td>keep-alive 커넥션</td><td>맺은 커넥션은 옛 파드에 남는다</td></tr>
+      <tr><td class="k">18:04</td><td>알람</td><td>"5xx 1% 초과가 1분 지속"</td><td>1분 조건 + 수집 간격</td></tr>
+      <tr><td class="k">18:05</td><td>셀렉터 되돌림, 바로 복구</td><td>블루를 내리지 않음</td><td>되돌리기가 싸서 1분 만에 결정</td></tr>
+    </table>
+    <p class="note">실패 건수: 초당 30건 × 3분(18:02~18:05) ≈ 5,400건. 블루를 이미 내렸다면 18:05에 블루를 다시 띄워야 해서 롤링의 되돌리기와 비슷해진다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>2회차도 시각마다 풀어 보겠습니다.</li><li>17시 55분에 그린 10개를 띄웁니다. 서비스 셀렉터가 slot: blue라서 그린은 떠 있어도 실제 사용자 요청을 하나도 안 받습니다. 블루/그린에서 새 버전을 미리 띄워 둘 수 있는 이유가 이 셀렉터입니다.</li><li>17시 58분 스모크 테스트는 preview 서비스로 합니다. preview는 slot: green만 고르는 서비스라서 그린에만 요청을 보낼 수 있습니다. 문제는 테스트에 쓴 쿠폰 코드가 영어뿐이었다는 겁니다. 그래서 통과했습니다. preview로 미리 볼 수는 있었지만 영어 쿠폰만 넣어 봐서 이 버그는 못 봤습니다.</li><li>18시 2분에 셀렉터를 green으로 바꿉니다. 그러면 쿠버네티스가 서비스의 EndpointSlice를 그린 파드 목록으로 바꾸고, 노드마다 kube-proxy가 이걸 반영합니다. 보통 1초 안팎입니다. 그 뒤로 새 요청은 전부 그린으로 가서 에러율이 바로 3.1%가 됩니다.</li><li>다만 이미 맺어 둔 keep-alive 커넥션은 끊길 때까지 블루에 붙어 있습니다. 그래서 전환이 칼로 자르듯 되지는 않고, 한동안 일부 요청은 블루로 갑니다.</li><li>18시 4분 알람은 1회차와 같은 조건입니다. 이번엔 전환하자마자 3.1%라서 1분 조건과 메트릭 수집 간격만큼만 늦습니다.</li><li>18시 5분에 셀렉터를 blue로 되돌립니다. 블루 10개가 Ready로 떠 있으니 셀렉터 한 줄이면 바로 복구됩니다. 되돌리기가 싸니까 원인을 찾기 전에 1분 만에 되돌리자는 결정이 쉬웠습니다.</li><li>만약 블루를 전환 직후에 내렸다면, 18시 5분에 블루를 다시 띄워야 합니다. 그러면 롤링의 되돌리기와 비슷하게 몇 분이 걸립니다. 다음 장이 그 얘기입니다.</li><li>계산은 이렇습니다. 전환하는 순간부터 전부 그린이 받으니, 초당 1,000건 중 3%, 초당 30건이 실패합니다. 18시 2분 전환부터 18시 5분 되돌림까지 3분, 180초라서 30 × 180 = 5,400건입니다. keep-alive로 블루에 남은 요청은 작아서 뺐습니다.</li></ul></aside>
+  </section>
+
+  <!-- 45 -->
+  <section class="slide" data-t="블루는 언제 내리나">
+    <div class="kicker">3부 · 2회차 · 5.7</div>
+    <h2>블루는 언제 내리나</h2>
+    <div class="cols">
+      <div class="card"><h3>너무 빨리 내리면</h3><ul>
+        <li class="no">문제가 늦게 드러나면 되돌릴 곳이 없다. 다시 배포해야 한다</li>
+        <li class="no">Argo Rollouts 블루/그린의 <code>scaleDownDelaySeconds</code> 기본값은 <b>30초</b></li>
+        <li>→ 문제가 보이는 데 걸리는 시간만큼은 둬야 한다 (다음 카나리에서 다시)</li>
+      </ul></div>
+      <div class="card rose"><h3>교재가 꼽는 주의점</h3><ul>
+        <li class="no">두 환경을 동시에 띄울 용량이 필요하다</li>
+        <li class="no">진행 중인 트랜잭션, 스키마 호환 때문에 DB 마이그레이션이 어렵다. <b>DB는 보통 공유</b>한다</li>
+        <li class="no">실수로 두 환경을 다 지울 수 있다</li>
+      </ul></div>
+    </div>
+    <p class="note">셀렉터를 바꿔도 이미 맺은 keep-alive 커넥션은 한동안 옛 파드에 남는다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>블루/그린의 가치는 옛 버전이 살아 있어서 되돌리는 게 전환이 된다는 점입니다. 그러면 블루를 언제 내릴지 정해야 합니다.</li><li>너무 빨리 내리면 문제가 늦게 드러났을 때 되돌릴 곳이 없습니다. Argo Rollouts로 블루/그린을 하면 옛 버전을 내리는 기본값이 30초입니다. 그대로 두면 30초 뒤부터는 되돌리기가 재배포가 됩니다. 얼마나 둬야 하는지는 카나리에서 대기 시간을 보면서 같이 보겠습니다.</li><li>교재가 꼽는 주의점도 있습니다. 용량이 두 배 들고, DB는 보통 두 환경이 공유해서 여전히 두 버전을 다 지원해야 합니다.</li></ul></aside>
+  </section>
+
+  <!-- 46 -->
+  <section class="slide" data-t="Argo Rollouts 셋업">
+    <div class="kicker">3부 · 2회차 · 직접 해 보기</div>
+    <h2>Argo Rollouts 셋업</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="c"># 1) 컨트롤러 설치</span>
+kubectl create ns argo-rollouts
+kubectl apply <span class="y">--server-side</span> -n argo-rollouts \
+  -f https://github.com/argoproj/argo-rollouts/\
+releases/latest/download/install.yaml
+
+<span class="c"># 2) kubectl 플러그인 (상태 보기, promote, abort)</span>
+brew install argoproj/tap/kubectl-argo-rollouts
+kubectl argo rollouts version
+
+<span class="c"># 3) Deployment를 Rollout으로</span>
+<span class="c">#    kind와 strategy만 바꾸고 template은 그대로</span>
+apiVersion: argoproj.io/v1alpha1
+kind: <span class="y">Rollout</span>
+spec:
+  template: …   <span class="c"># Deployment와 같다</span>
+  strategy:
+    blueGreen: …  <span class="c"># 또는 canary</span></pre>
+      <div>
+        <div class="card rose"><h3>설치하다 걸린 것</h3>
+          <p style="font-size:18px">그냥 <code>kubectl apply</code>를 하면 CRD 두 개가 거부된다</p>
+          <pre class="code" style="font-size:14px;margin-top:6px">CustomResourceDefinition "rollouts.argoproj.io"
+is invalid: metadata.annotations:
+Too long: may not be more than 262144 bytes</pre>
+          <p style="font-size:17px;margin-top:8px">일반 apply는 적용한 내용을 어노테이션에 통째로 저장하는데, CRD가 커서 256KB를 넘는다. <code>--server-side</code>는 어노테이션을 안 써서 들어간다</p></div>
+        <p style="font-size:17px;margin-top:12px">설치되는 것: 컨트롤러 1개, CRD 5개 (Rollout, AnalysisTemplate, ClusterAnalysisTemplate, AnalysisRun, Experiment)</p>
+        <p class="dim" style="font-size:16px">kind v1.37, Argo Rollouts v1.10.0에서 확인. 기존 Deployment를 지우지 않고 <code>workloadRef</code>로 가리키는 방법도 있다</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>2회차에서 블루/그린을 서비스 셀렉터를 손으로 바꿔서 했는데, 이걸 컨트롤러가 대신 해 주는 게 Argo Rollouts입니다. kind에 1.10.0을 직접 설치해 봤습니다.</li><li>설치는 네임스페이스와 매니페스트 하나입니다. 그런데 공식 문서대로 그냥 kubectl apply를 했더니 CRD 두 개가 거부됐습니다. 메시지가 오른쪽입니다. 어노테이션이 너무 길다는 건데, 일반 kubectl apply는 적용한 내용 전체를 last-applied라는 어노테이션에 저장합니다. 다음 apply 때 비교하려고요. Rollout CRD는 스키마가 커서 이 어노테이션이 256KB 한도를 넘습니다. --server-side로 적용하면 비교를 API 서버가 해서 이 어노테이션을 안 쓰니까 들어갑니다. 큰 CRD를 설치할 때 자주 만나는 문제라 알아 두시면 좋습니다.</li><li>설치되는 건 컨트롤러 하나와 CRD 다섯 개입니다. Rollout이 디플로이먼트 대신 쓸 리소스고, AnalysisTemplate과 AnalysisRun이 판정, Experiment가 카나리에서 본 베이스라인 비교입니다.</li><li>상태를 보거나 promote, abort를 하려면 kubectl 플러그인을 따로 설치합니다.</li><li>디플로이먼트를 Rollout으로 바꾸는 건 간단합니다. apiVersion과 kind를 바꾸고 strategy 자리에 blueGreen이나 canary를 적습니다. 파드 template은 디플로이먼트와 똑같습니다. 기존 디플로이먼트를 그대로 두고 Rollout이 workloadRef로 가리키게 해서 조금씩 옮기는 방법도 있습니다.</li></ul></aside>
+  </section>
+
+  <!-- 47 -->
+  <section class="slide" data-t="블루/그린 설정값">
+    <div class="kicker">3부 · 2회차 · 설정값 해설</div>
+    <h2>블루/그린 설정값 (Argo Rollouts)</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Rollout
+<span class="k">spec</span>:
+  replicas: 10
+  strategy:
+    <span class="k">blueGreen</span>:
+      activeService: <span class="y">order-api</span>
+      previewService: <span class="y">order-api-preview</span>
+      autoPromotionEnabled: <span class="y">false</span>
+      scaleDownDelaySeconds: <span class="y">600</span>
+      previewReplicaCount: 10
+      prePromotionAnalysis:
+        templates: [{templateName: smoke}]
+---
+<span class="k">kind</span>: Service
+<span class="k">metadata</span>: {name: order-api}
+<span class="k">spec</span>:
+  selector: {app: order-api}
+  <span class="c"># 해시는 컨트롤러가 붙인다</span></pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">activeService</td><td>실제 사용자 트래픽을 받는 서비스</td><td>필수</td></tr>
+        <tr><td class="k">previewService</td><td>그린만 따로 보는 서비스. 전환 전 확인용</td><td>없음</td></tr>
+        <tr><td class="k">autoPromotionEnabled</td><td>그린이 준비되면 자동 전환할지. false면 promote까지 대기</td><td><span class="warn">true</span></td></tr>
+        <tr><td class="k">autoPromotionSeconds</td><td>준비된 뒤 몇 초 기다렸다 자동 전환</td><td>없음</td></tr>
+        <tr><td class="k">scaleDownDelaySeconds</td><td>전환 뒤 블루를 남겨 두는 시간 = 빨리 되돌릴 수 있는 시간</td><td><span class="warn">30초</span></td></tr>
+        <tr><td class="k">previewReplicaCount</td><td>전환 전 그린을 몇 개 띄울지</td><td>replicas</td></tr>
+        <tr><td class="k">prePromotionAnalysis</td><td>전환 전에 자동 판정. 실패하면 전환 안 함</td><td>없음</td></tr>
+        <tr><td class="k">postPromotionAnalysis</td><td>전환 후 판정. 실패하면 블루로 되돌림</td><td>없음</td></tr>
+      </table>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>블루/그린 설정값입니다. 2회차에서 손으로 했던 게 각 필드에 어떻게 대응되는지 보겠습니다.</li><li>activeService는 실제 사용자 트래픽을 받는 서비스이고, previewService는 그린만 따로 보는 서비스입니다. 2회차의 order-api와 order-api-preview입니다. 서비스 셀렉터에는 app만 적어 두면 되고, 블루냐 그린이냐는 컨트롤러가 해시를 붙여서 정합니다. 다음 장에서 실제로 보여 드리겠습니다.</li><li>autoPromotionEnabled는 기본값이 true입니다. 그대로 두면 그린이 Ready가 되자마자 자동으로 넘어가서, preview로 확인할 틈이 없습니다. 2회차처럼 확인하고 넘기려면 false로 두고 promote 명령으로 넘깁니다. 일정 시간 뒤 자동으로 넘기고 싶으면 autoPromotionSeconds를 씁니다.</li><li>제일 조심할 값이 scaleDownDelaySeconds입니다. 전환 뒤 블루를 얼마나 남겨 둘지인데, 기본값이 30초입니다. 블루/그린의 장점이 되돌리기가 전환이라는 건데, 30초가 지나면 블루가 내려가서 되돌리기가 재배포가 됩니다. 3회차에서 본 대기 시간 기준으로 정하는데, 예시에서는 10분으로 뒀습니다.</li><li>prePromotionAnalysis를 걸면 전환 전에 자동으로 판정해서, 실패하면 전환을 안 합니다. 2회차에서 사람이 하던 스모크 테스트를 여기에 넣는 겁니다. postPromotionAnalysis는 전환 후에 판정해서 실패하면 블루로 되돌립니다.</li></ul></aside>
+  </section>
+
+  <!-- 48 -->
+  <section class="slide" data-t="블루/그린 직접 돌려 보면">
+    <div class="kicker">3부 · 2회차 · kind에서 실제 출력</div>
+    <h2>블루/그린, 직접 돌려 보면</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:13.5px;line-height:1.4">$ kubectl argo rollouts set image web-bg web=nginx:1.27
+$ kubectl argo rollouts get rollout web-bg
+Status:   <span class="y">॥ Paused</span>
+Message:  BlueGreenPause
+Images:   nginx:1.26 (stable, active)
+          nginx:1.27 (preview)
+  revision:2  web-bg-55b5689b6b  preview
+  revision:1  web-bg-5fb69d4965  stable,active
+
+$ kubectl get svc web-bg-active \
+    -o jsonpath='{.spec.selector}'
+{"app":"web-bg",
+ "rollouts-pod-template-hash":"<span class="y">5fb69d4965</span>"}
+
+$ kubectl argo rollouts promote web-bg
+  revision:2  web-bg-55b5689b6b  stable,active
+  revision:1  web-bg-5fb69d4965  <span class="y">delay:9m51s</span>
+
+$ kubectl argo rollouts undo web-bg
+active → 블루로 0초 (해시 5fb69d4965)</pre>
+      <ul>
+        <li>새 이미지를 넣으면 그린 3개가 뜨고 <b>멈춘다</b> (autoPromotionEnabled false)</li>
+        <li>컨트롤러가 서비스 셀렉터에 <code>rollouts-pod-template-hash</code>를 붙인다. active는 블루 해시, preview는 그린 해시</li>
+        <li>promote하면 active의 해시만 그린으로 바뀐다. 2회차에서 손으로 하던 셀렉터 전환이 이것</li>
+        <li>블루는 <code>delay:9m51s</code>로 남아 있다 (scaleDownDelaySeconds 600)</li>
+        <li>그동안 undo하면 셀렉터만 되돌아가서 바로 복구</li>
+      </ul>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>kind에서 실제로 돌린 출력입니다. 레플리카 3개짜리 nginx로 해 봤습니다.</li><li>새 이미지를 넣으면 그린 3개가 뜨고, autoPromotionEnabled를 false로 뒀기 때문에 Paused, BlueGreenPause 상태로 멈춥니다. 블루는 stable, active이고 그린은 preview입니다. 이 상태에서 preview 서비스로 그린을 확인할 수 있습니다.</li><li>서비스 셀렉터를 보면 제가 적지 않은 rollouts-pod-template-hash가 붙어 있습니다. 컨트롤러가 붙인 겁니다. active 서비스에는 블루 레플리카셋의 해시가, preview 서비스에는 그린의 해시가 들어가 있습니다. 블루와 그린을 이 해시로 구분하는 겁니다.</li><li>promote를 하면 active 서비스의 해시만 그린 것으로 바뀝니다. 2회차에서 kubectl patch로 셀렉터를 바꾸던 게 정확히 이 동작입니다.</li><li>블루는 바로 안 내려가고 delay 9분 51초로 남아 있습니다. scaleDownDelaySeconds 600초가 동작하는 겁니다. 이 사이에 undo를 하면 셀렉터만 블루 해시로 되돌아가서 1초도 안 걸려 복구됐습니다. 2회차 되돌리기 2초가 실제로 이렇게 됩니다.</li></ul></aside>
+  </section>
+
+  <!-- 49 -->
+  <section class="slide" data-t="3회차 카나리">
+    <div class="kicker">3부 · 3회차 · 5.7</div>
+    <h2>3회차: 카나리</h2>
+    <ul>
+      <li>교재 5.7: 블루/그린과 흡사하지만 새 릴리스로 넘기는 트래픽을 <b>더 정교하게</b> 제어한다</li>
+      <li>예: 새 버전을 전체 유저의 10%에게만 먼저 열고, 별문제 없으면 점점 늘린다</li>
+      <li>교재가 남긴 질문 셋</li>
+    </ul>
+    <table style="margin-top:14px">
+      <tr><th>교재 5.7의 질문</th><th>이번 회차에서 답할 것</th></tr>
+      <tr><td class="k">일정 비율에만 트래픽을 흘리는 기능은?</td><td>어디서 나누나 (레플리카, Gateway API, 메시)</td></tr>
+      <tr><td class="k">새 릴리스가 정상 상태인지 어떻게 확신하나?</td><td><b>무엇과 비교하나</b> (프로덕션, 베이스라인, 카나리)</td></tr>
+      <tr><td class="k">양호, 불량을 판단하는 메트릭은?</td><td>무엇을 재나, 얼마나 기다리나</td></tr>
+    </table>
+    <aside class="notes"><b>발표 노트</b><ul><li>3회차는 카나리입니다. 교재는 블루/그린과 비슷하지만 넘기는 트래픽을 더 정교하게 조절한다고 설명합니다. 10%에게만 먼저 열고 괜찮으면 늘리는 거죠.</li><li>그리고 질문 세 개를 남기는데 답은 안 줍니다. 비율을 어떻게 나누는지, 정상인지 어떻게 확신하는지, 무슨 메트릭으로 판단하는지.</li><li>이번 회차는 이 세 질문에 답하면서 가겠습니다. 두 번째, 무엇과 비교하느냐에 시간을 제일 많이 쓰겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 50 -->
+  <section class="slide" data-t="베이스라인">
+    <div class="kicker">3부 · 3회차 · 5.7 보충</div>
+    <h2>카나리는 <span class="em">베이스라인</span>과 비교한다</h2>
+    <svg viewBox="0 0 1150 250" role="img" aria-label="트래픽을 프로덕션 90%, 베이스라인 5%, 카나리 5%로 나누고 카나리를 베이스라인과 비교한다">
+      <defs><marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <rect x="20" y="95" width="150" height="60" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="95" y="131" font-size="18" fill="#eaf0ff" text-anchor="middle">요청</text>
+      <line x1="170" y1="115" x2="300" y2="50" stroke="#9db0d6" stroke-width="2" marker-end="url(#arb)"/>
+      <line x1="170" y1="125" x2="300" y2="125" stroke="#9db0d6" stroke-width="2" marker-end="url(#arb)"/>
+      <line x1="170" y1="135" x2="300" y2="200" stroke="#9db0d6" stroke-width="2" marker-end="url(#arb)"/>
+      <g font-size="15" fill="#9db0d6"><text x="215" y="70">90%</text><text x="215" y="118">5%</text><text x="215" y="190">5%</text></g>
+      <rect x="305" y="20" width="360" height="60" rx="10" fill="#141d33" stroke="#4f9cff"/><text x="325" y="46" font-size="18" fill="#4f9cff" font-weight="700">프로덕션 1.6.3</text><text x="325" y="68" font-size="14" fill="#9db0d6">파드 10개 (요청 90%), 며칠째 떠 있음, 캐시 따뜻함</text>
+      <rect x="305" y="95" width="360" height="60" rx="10" fill="#141d33" stroke="#4f9cff" stroke-dasharray="6 4"/><text x="325" y="121" font-size="18" fill="#4f9cff" font-weight="700">베이스라인 1.6.3</text><text x="325" y="143" font-size="14" fill="#9db0d6">파드 1개, 방금 새로 띄움</text>
+      <rect x="305" y="170" width="360" height="60" rx="10" fill="#141d33" stroke="#34d399"/><text x="325" y="196" font-size="18" fill="#34d399" font-weight="700">카나리 1.7.0</text><text x="325" y="218" font-size="14" fill="#9db0d6">파드 1개, 방금 새로 띄움</text>
+      <path d="M665 125 C720 125, 720 200, 665 200" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+      <text x="735" y="150" font-size="18" fill="#fbbf24" font-weight="700">이 둘을 비교</text>
+      <text x="735" y="178" font-size="15" fill="#eaf0ff">같은 크기, 같은 나이, 같은 시각, 같은 트래픽</text>
+      <text x="735" y="202" font-size="15" fill="#eaf0ff">다른 건 버전 하나 → 차이 = 버전 때문</text>
+      <text x="735" y="55" font-size="15" fill="#9db0d6">프로덕션과 바로 비교하면</text>
+      <text x="735" y="78" font-size="15" fill="#9db0d6">새 파드라서 느린 것과 새 버전이라 느린 것이 섞인다</text>
+    </svg>
+    <div class="cols" style="margin-top:6px">
+      <p style="font-size:19px"><b>배포 전후 비교</b>는 더 나쁘다. 그 사이 시간대, 트래픽, 다른 팀 배포가 바뀐다</p>
+      <p style="font-size:19px">베이스라인은 판정이 끝나면 카나리와 같이 내린다</p>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>이번 회차에서 먼저 보셔야 할 부분입니다. 카나리를 무엇과 비교하느냐입니다.</li><li>배경부터 보면, 카나리 판정은 결국 비교입니다. 새 버전 파드의 에러율이나 레이턴시가 옛 버전보다 나쁜지를 봅니다. 그래서 비교 상대를 잘못 고르면 멀쩡한 배포를 멈추거나, 나쁜 배포를 통과시킵니다.</li><li>흔히 카나리를 나머지 프로덕션과 비교합니다. 그런데 프로덕션 파드는 며칠째 떠 있어서 캐시가 따뜻하고, JVM이면 워밍업도 끝났고, 개수도 훨씬 많습니다. 카나리는 방금 떴습니다. 그러면 카나리가 느린 게 새 파드라서인지 새 버전이라서인지 구분이 안 됩니다.</li><li>그래서 옛 버전으로 카나리와 같은 크기의 파드를 하나 더 방금 새로 띄웁니다. 이게 베이스라인입니다. 트래픽도 카나리와 같은 비율로 줍니다. 그림에서는 프로덕션 90%, 베이스라인 5%, 카나리 5%입니다. 프로덕션 파드는 10개 그대로 둡니다. 트래픽 라우터로 비율을 나누면 Argo Rollouts가 기존 파드 수를 줄이지 않습니다.</li><li>그러면 베이스라인과 카나리는 같은 크기, 같은 나이, 같은 시각, 같은 트래픽이고 다른 건 버전 하나입니다. 그래서 둘 사이에 차이가 나면 버전 때문이라고 말할 수 있습니다.</li><li>배포 전 30분과 배포 후 30분을 비교하는 건 더 나쁩니다. 그 사이에 시간대도 바뀌고 다른 팀 배포도 나가니까요. 베이스라인은 판정이 끝나면 카나리와 같이 내립니다.</li></ul></aside>
+  </section>
+
+  <!-- 51 -->
+  <section class="slide" data-t="무엇을 재나">
+    <div class="kicker">3부 · 3회차 · 5.7</div>
+    <h2>무엇을 재나</h2>
+    <div class="cols">
+      <div class="card green"><h3>고르는 기준</h3><ul>
+        <li class="ok"><b>적게</b>: 지표가 많으면 우연히 하나는 나빠 보인다</li>
+        <li class="ok"><b>사용자가 느끼는 것</b>: 에러율, 레이턴시(p99), 결제 성공률</li>
+        <li class="ok"><b>카나리 파드만 따로</b> 셀 수 있게: 레이블 (<code>role=canary</code>, <code>role=baseline</code>)</li>
+        <li class="ok">CPU, 메모리는 판정보다 참고용</li>
+      </ul></div>
+      <div class="card"><h3>예시 서비스라면</h3>
+        <table class="tight">
+          <tr><th>지표</th><th>불합격 조건</th></tr>
+          <tr><td class="k">결제 5xx 비율</td><td>카나리 − 베이스라인 &gt; 0.5%p</td></tr>
+          <tr><td class="k">결제 p99</td><td>카나리 &gt; 베이스라인 × 1.2</td></tr>
+        </table>
+        <p class="dim" style="font-size:17px;margin-top:10px">6장에서 본 레이블이 여기서 판정 도구의 입력이 된다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>무엇을 잴지입니다. 기준은 세 가지로 잡았습니다.</li><li>적게 고릅니다. 지표를 스무 개 보면 우연히 하나쯤은 나빠 보여서 멀쩡한 배포를 자꾸 멈추게 됩니다. 사용자가 느끼는 걸로 고릅니다. 에러율, 레이턴시, 결제 성공률 같은 것들이요. 그리고 카나리 파드만 따로 셀 수 있어야 합니다. 그래서 파드에 role 레이블을 붙입니다.</li><li>예시 서비스에서는 결제 5xx 비율과 p99 두 개만 봅니다. 둘 다 베이스라인과의 차이로 판정합니다.</li></ul></aside>
+  </section>
+
+  <!-- 52 -->
+  <section class="slide" data-t="카나리는 어디서 나누나">
+    <div class="kicker">3부 · 5.7</div>
+    <h2>카나리 트래픽을 나누는 방법</h2>
+    <table class="tight">
+      <tr><th>나누는 곳</th><th>방법</th><th>단위</th><th>한계</th></tr>
+      <tr><td class="k">레플리카 비율</td><td>같은 셀렉터에 v1 9개 + v2 1개</td><td>파드 수 (약 10%)</td><td>1%를 하려면 파드 100개, 커넥션 단위라 흔들림</td></tr>
+      <tr><td class="k">인그레스 <span class="dim">(예전 방식)</span></td><td>ingress-nginx <code>canary-weight</code> 어노테이션 등</td><td>요청 %</td><td>구현체마다 문법이 다르다. 커뮤니티 ingress-nginx는 2026년 3월 유지보수 종료</td></tr>
+      <tr><td class="k">Gateway API</td><td><code>HTTPRoute</code>의 <code>weight</code></td><td>요청 %</td><td>표준 API (v1.0 GA)</td></tr>
+      <tr><td class="k">헤더, 쿠키</td><td>사내 사용자나 특정 사용자만</td><td>사람</td><td>교재의 A/B, 다크 릴리스</td></tr>
+      <tr><td class="k">서비스 메시</td><td>Istio, Linkerd 트래픽 분할</td><td>요청 %, 서비스 간 호출까지</td><td>메시 운영 부담 (5주차)</td></tr>
+    </table>
+    <pre class="code" style="font-size:16px;margin-top:14px"><span class="k">kind</span>: HTTPRoute        <span class="c"># gateway.networking.k8s.io/v1</span>
+<span class="k">spec</span>:
+  rules:
+  - backendRefs:
+    - {name: order-api-stable, port: 80, weight: <span class="y">95</span>}
+    - {name: order-api-canary, port: 80, weight: <span class="y">5</span>}</pre>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재는 카나리를 일정 비율의 트래픽을 새 버전으로 보내는 거라고 하고, 대부분의 인그레스와 서비스 메시가 이 기능을 준다고 합니다. 쿠버네티스에서는 어디서 나누느냐에 따라 정밀도가 다릅니다.</li><li>제일 단순한 건 레플리카 비율입니다. 같은 셀렉터에 옛 버전 9개, 새 버전 1개를 두면 서비스가 둘을 구분하지 않고 나눠 줍니다. 그런데 1%를 하려면 파드가 100개 있어야 합니다.</li><li>비율이 흔들리는 이유도 있습니다. 배경부터 보면, 서비스로 가는 요청은 kube-proxy가 커넥션을 맺을 때 파드를 하나 고릅니다. 요청마다 고르는 게 아닙니다.</li><li>그래서 keep-alive를 쓰는 클라이언트나 HTTP/2처럼 커넥션 하나로 요청을 계속 보내는 클라이언트는 처음 고른 파드에 계속 붙습니다. 그런 클라이언트가 몇 개 없으면 10%로 잡아도 실제로는 0%나 30%가 될 수 있습니다.</li><li>요청 단위로 나누려면 인그레스나 게이트웨이가 필요합니다. 지금 표준은 Gateway API의 HTTPRoute weight입니다. 커뮤니티 ingress-nginx는 2026년 3월에 유지보수가 끝나서 지금은 은퇴한 프로젝트입니다. 그래서 표에 예전 방식으로 적었습니다. 새로 만든다면 Gateway API를 쓰면 됩니다. 서비스 메시는 5주차에 봤듯이 서비스끼리 호출까지 나눌 수 있습니다.</li><li>헤더, 쿠키 줄은 비율이 아니라 사람으로 나눕니다. 예를 들어 사내 직원 요청에만 헤더를 붙여 새 버전으로 보내는 식입니다. 교재가 A/B나 다크 릴리스라고 부르는 게 이 방식이고, 뒤에서 A/B와 카나리를 따로 비교합니다.</li></ul></aside>
+  </section>
+
+  <!-- 53 -->
+  <section class="slide" data-t="얼마나 기다리나">
+    <div class="kicker">3부 · 3회차 · 5.8, 7.4.2, 7.4.4</div>
+    <h2>단계마다 얼마나 기다리나</h2>
+    <div class="cols">
+      <div>
+        <pre class="code" style="font-size:17px">5%   ─ 10분 ─┐ 판정
+25%  ─ 10분 ─┤ 판정
+50%  ─ 10분 ─┤ 판정
+100%         ┘</pre>
+        <ul style="margin-top:14px">
+          <li>교재 7.4.4 time-to-smoke: 배포 뒤 문제가 보이기까지 걸리는 시간</li>
+          <li>교재 경험칙: <b>과거 평균의 2배</b>를 기다린다</li>
+          <li>예: 지난 사고들이 평균 5분 만에 드러났다면 단계마다 10분</li>
+        </ul>
+      </div>
+      <div class="card"><h3>왜 기다려야 하나</h3><ul>
+        <li>교재 7.4.2: 버그는 확률적이다 (요청의 1%에만 영향)</li>
+        <li>메모리 누수처럼 1시간 넘게 걸려야 보이는 것도 있다</li>
+        <li>5.8: 스테이징은 프로덕션과 리소스, 구성, 트래픽, 데이터가 다르다. 그래서 프로덕션에서 조금씩 확인한다</li>
+        <li class="no">트래픽이 적으면 5%로는 표본이 모자란다 → 더 오래</li>
+      </ul></div>
+    </div>
+    <p class="note">블루/그린에서 블루를 남겨 둘 시간도 같은 기준으로 정한다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>단계마다 얼마나 기다리느냐입니다. 7장이 여러 리전에 배포할 때 쓰는 기준을 그대로 가져왔습니다. time-to-smoke, 연기가 날 때까지의 시간이라는 말인데, 배포 뒤 문제가 보이기까지 걸리는 시간입니다.</li><li>교재 경험칙은 과거 평균의 두 배입니다. 지난 사고들이 평균 5분 만에 드러났다면 단계마다 10분 기다립니다. 이걸 쓰려면 사고마다 배포 후 몇 분 만에 알았는지 적어 둬야 합니다.</li><li>기다리는 이유는 교재 7장과 5.8에 있습니다. 버그는 확률적이고, 늦게 보이는 것도 있고, 스테이징은 프로덕션과 다르니까 프로덕션에서 조금씩 확인하는 겁니다. 아까 블루를 언제 내리냐는 질문도 이 기준으로 답하면 됩니다.</li></ul></aside>
+  </section>
+
+  <!-- 54 -->
+  <section class="slide" data-t="카나리 설정값">
+    <div class="kicker">3부 · 3회차 · 설정값 해설</div>
+    <h2>카나리 설정값 (Argo Rollouts)</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Rollout
+<span class="k">spec</span>:
+  replicas: 10
+  strategy:
+    <span class="k">canary</span>:
+      canaryService: order-api-canary
+      stableService: order-api-stable
+      trafficRouting: {…}     <span class="c"># 다음 장</span>
+      steps:
+      - setWeight: <span class="y">5</span>
+      - pause: {duration: <span class="y">10m</span>}
+      - analysis:
+          templates: [{templateName: error-rate}]
+      - setWeight: 25
+      - pause: <span class="y">{}</span>
+      - setWeight: 50
+      - pause: {duration: 10m}
+      maxSurge: 25%
+      maxUnavailable: 0</pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">canaryService</td><td>카나리 파드만 가리키는 서비스. 라우터가 여기로 보낸다</td><td>없음</td></tr>
+        <tr><td class="k">stableService</td><td>안정 버전만 가리키는 서비스</td><td>없음</td></tr>
+        <tr><td class="k">setWeight</td><td>새 버전에 보낼 비율(%). 라우터가 없으면 <b>파드 수로 흉내</b></td><td>-</td></tr>
+        <tr><td class="k">pause: {duration}</td><td>그 시간만큼 기다린 뒤 다음 단계</td><td>-</td></tr>
+        <tr><td class="k">pause: {}</td><td>시간 없음 = <b>promote할 때까지 무한 대기</b></td><td>-</td></tr>
+        <tr><td class="k">analysis</td><td>이 단계에서 판정. 실패하면 중단</td><td>-</td></tr>
+        <tr><td class="k">experiment</td><td>베이스라인과 카나리를 따로 띄워 비교</td><td>-</td></tr>
+        <tr><td class="k">maxSurge, maxUnavailable</td><td>단계 사이 파드를 늘리고 줄일 때. 롤링과 같은 뜻</td><td>25% / 25%</td></tr>
+        <tr><td class="k">dynamicStableScale</td><td>라우터가 있을 때 안정 버전 파드를 비율만큼 줄일지</td><td>false</td></tr>
+      </table>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>카나리 설정값입니다. 핵심은 steps입니다. 위에서부터 한 단계씩 실행합니다.</li><li>setWeight는 새 버전에 보낼 비율입니다. 여기서 알아 둘 게 있습니다. trafficRouting, 즉 트래픽을 나누는 장치를 연결하지 않으면 비율을 파드 수로 흉내 냅니다. 레플리카 10개에 setWeight 20이면 새 버전 2개, 옛 버전 8개로 맞춥니다. 그래서 5%처럼 파드 수로 안 떨어지는 비율은 정확히 안 나옵니다. 정확히 하려면 다음 장의 트래픽 라우터가 필요합니다.</li><li>pause는 두 가지가 있습니다. duration을 적으면 그 시간만큼 기다렸다가 다음 단계로 갑니다. 3회차의 대기 시간이 여기 들어갑니다. 중괄호만 쓰면 시간이 없는 거라서, 사람이 promote 명령을 줄 때까지 무한히 멈춰 있습니다. 25%까지는 자동으로 가고 거기서 사람이 한 번 보고 넘기고 싶을 때 씁니다.</li><li>analysis 단계에서 판정하고, 실패하면 거기서 중단합니다. 3회차의 베이스라인 비교는 analysis 대신 experiment 단계로 합니다.</li><li>canaryService와 stableService는 카나리 파드만, 안정 버전 파드만 가리키는 서비스입니다. 컨트롤러가 블루/그린 때처럼 해시를 붙여서 관리하고, 트래픽 라우터가 이 두 서비스로 비율을 나눠 보냅니다.</li><li>maxSurge와 maxUnavailable은 롤링에서 본 것과 같은 뜻으로, 단계 사이에서 파드를 늘리고 줄일 때 씁니다. dynamicStableScale은 라우터가 있을 때 쓰는 값인데, 기본 false라서 카나리가 5%를 받아도 안정 버전 파드는 10개를 그대로 둡니다. 3회차에서 프로덕션 파드를 10개로 둔 이유가 이겁니다.</li></ul></aside>
+  </section>
+
+  <!-- 55 -->
+  <section class="slide" data-t="트래픽 나누기 설정">
+    <div class="kicker">3부 · 3회차 · 설정값 해설 · 문서 기준</div>
+    <h2>트래픽 나누기 설정: Gateway API로 연결하기</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px;line-height:1.42"><span class="c"># 1) ConfigMap argo-rollouts-config 에 플러그인 등록</span>
+trafficRouterPlugins: |-
+  - name: argoproj-labs/gatewayAPI
+    location: https://github.com/argoproj-labs/rollouts-…
+
+<span class="c"># 2) HTTPRoute: 두 서비스를 백엔드로</span>
+<span class="k">kind</span>: HTTPRoute
+<span class="k">metadata</span>: {name: order-api}
+<span class="k">spec</span>:
+  parentRefs: [{name: public}]
+  rules:
+  - backendRefs:
+    - {name: order-api-stable, port: 80}
+    - {name: order-api-canary, port: 80}
+
+<span class="c"># 3) Rollout에서 그 HTTPRoute를 가리킨다</span>
+trafficRouting:
+  plugins:
+    argoproj-labs/gatewayAPI:
+      httpRoute: <span class="y">order-api</span>
+      namespace: order</pre>
+      <div>
+        <ul>
+          <li>Argo Rollouts가 단계마다 HTTPRoute의 <b><code>weight</code>를 직접 고친다</b> (5 → 25 → 50 → 100)</li>
+          <li>그래서 파드 수와 상관없이 요청 비율로 나뉜다. 파드 1개로도 5%</li>
+          <li>컨트롤러가 HTTPRoute를 고칠 수 있게 RBAC 권한을 추가해야 한다</li>
+          <li>Istio, NGINX Ingress, AWS ALB는 플러그인 없이 바로 지원 (<code>trafficRouting.istio</code> 등)</li>
+          <li>중단하면 weight가 0으로 돌아간다</li>
+        </ul>
+        <p class="dim" style="font-size:16px;margin-top:12px">이 장은 문서 기준입니다. kind 실습은 라우터 없이 파드 수 방식으로 했습니다 (다음다음 장)</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>앞 장에서 라우터가 없으면 비율을 파드 수로 흉내 낸다고 했는데, 정확히 5%를 보내려면 트래픽을 나누는 장치를 연결해야 합니다. 3부 앞에서 본 Gateway API로 연결하는 방법입니다. 이 장은 문서를 보고 정리한 것이고, kind 실습은 라우터 없이 했습니다.</li><li>세 단계입니다. 먼저 Argo Rollouts 컨트롤러에 Gateway API 플러그인을 등록합니다. argo-rollouts-config라는 ConfigMap에 플러그인 이름과 내려받을 위치를 적습니다.</li><li>두 번째로 HTTPRoute를 만들고 백엔드로 stable 서비스와 canary 서비스 두 개를 둡니다. 앞 장의 stableService, canaryService입니다.</li><li>세 번째로 Rollout의 trafficRouting에 이 HTTPRoute 이름을 적습니다. 그러면 Argo Rollouts가 단계마다 HTTPRoute의 weight 값을 직접 고칩니다. setWeight 5면 stable 95, canary 5로 바꾸는 식입니다. 파드 수와 상관없이 요청 비율로 나뉘니까 카나리 파드 1개로도 정확히 5%가 됩니다.</li><li>컨트롤러가 HTTPRoute를 수정해야 하니 RBAC 권한을 추가해야 하고, Istio나 NGINX Ingress, AWS ALB는 플러그인 없이 바로 지원됩니다. 중단되면 weight가 0으로 돌아가서 트래픽이 전부 stable로 갑니다.</li></ul></aside>
+  </section>
+
+  <!-- 56 -->
+  <section class="slide" data-t="AnalysisTemplate 설정값">
+    <div class="kicker">3부 · 3회차 · 설정값 해설</div>
+    <h2>AnalysisTemplate 설정값: 무엇으로, 몇 번, 언제 실패로 볼지</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: AnalysisTemplate
+<span class="k">spec</span>:
+  metrics:
+  - name: error-rate
+    initialDelay: <span class="y">1m</span>
+    interval: <span class="y">1m</span>
+    count: <span class="y">10</span>
+    successCondition: result[0] &lt; 0.005
+    failureLimit: <span class="y">0</span>
+    consecutiveErrorLimit: 4
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          카나리 5xx 비율 − 베이스라인 5xx 비율
+      <span class="c"># 또는</span>
+      <span class="c"># datadog: {apiVersion: v2, query: …}</span></pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">initialDelay</td><td>첫 측정 전에 기다리는 시간. 트래픽이 들어올 시간</td><td>0</td></tr>
+        <tr><td class="k">interval</td><td>몇 분마다 잴지</td><td>-</td></tr>
+        <tr><td class="k">count</td><td>몇 번 잴지. <span class="warn">없으면 안 끝난다</span></td><td>없음</td></tr>
+        <tr><td class="k">successCondition</td><td>합격 조건. <code>result</code>가 쿼리 결과</td><td>-</td></tr>
+        <tr><td class="k">failureCondition</td><td>불합격 조건 (둘 중 하나만 써도 된다)</td><td>-</td></tr>
+        <tr><td class="k">failureLimit</td><td>몇 번 불합격까지 봐줄지. 0이면 한 번에 실패</td><td>0</td></tr>
+        <tr><td class="k">consecutiveErrorLimit</td><td>쿼리 자체 에러(빈 결과 등)를 연속 몇 번 봐줄지</td><td>4</td></tr>
+        <tr><td class="k">provider</td><td>Prometheus, Datadog, 웹 호출, Job 등</td><td>-</td></tr>
+      </table>
+    </div>
+    <p class="note">Datadog을 쓰면 argo-rollouts 네임스페이스에 API 키, 앱 키를 담은 시크릿을 만들고 Datadog 쿼리를 그대로 쓴다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>판정을 정하는 AnalysisTemplate 설정값입니다. 무엇으로 재고, 몇 번 재고, 언제 실패로 볼지를 정합니다.</li><li>provider가 무엇으로 잴지입니다. Prometheus 쿼리, Datadog 쿼리, 웹 호출, 그리고 Job을 띄워서 그 결과로 판정하는 방법도 있습니다. 회사에서 Datadog을 쓰신다면 argo-rollouts 네임스페이스에 API 키 시크릿을 만들고 Datadog 쿼리를 그대로 적으면 됩니다.</li><li>시간 관련이 세 개입니다. initialDelay는 첫 측정 전에 기다리는 시간입니다. 기본값이 0이라서 안 적으면 카나리에 트래픽이 들어오기도 전에 잽니다. interval은 몇 분마다 잴지, count는 몇 번 잴지입니다. count를 안 적으면 측정이 끝나지 않아서 롤아웃이 그 단계에서 안 넘어갑니다. 1분 간격 10번이면 약 10분 동안 봅니다.</li><li>판정은 successCondition에 합격 조건을 적습니다. result가 쿼리 결과고, 예시는 카나리와 베이스라인 에러율 차이가 0.005, 즉 0.5%p보다 작아야 합격입니다.</li><li>failureLimit은 불합격을 몇 번까지 봐줄지입니다. 기본값이 0이라 한 번만 불합격이어도 실패입니다. 일시적인 흔들림에 멈추는 게 싫으면 1이나 2로 올립니다. consecutiveErrorLimit은 불합격이 아니라 쿼리 자체가 에러일 때입니다. 예를 들어 새 파드가 아직 5xx를 한 번도 안 내서 결과가 비어 있으면 에러가 되는데, 연속 4번까지 봐줍니다. 그래서 쿼리에 or vector(0)을 붙여서 비어 있으면 0으로 나오게 합니다.</li></ul></aside>
+  </section>
+
+  <!-- 57 -->
+  <section class="slide" data-t="Argo Rollouts로 베이스라인 비교">
+    <div class="kicker">3부 · 3회차 · 5.7 보충</div>
+    <h2>자동으로 판정하기: Argo Rollouts</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px;line-height:1.4"><span class="k">kind</span>: Rollout          <span class="c"># argoproj.io/v1alpha1</span>
+<span class="k">spec</span>:
+  strategy:
+    canary:
+      trafficRouting: {…}  <span class="c"># 가중치를 쓰려면 필요</span>
+      steps:               <span class="c"># 25%, 50% 단계는 examples/04</span>
+      - experiment:        <span class="c"># 베이스라인과 카나리를 같이 띄움</span>
+          duration: 10m
+          templates:
+          - {name: baseline, specRef: stable, weight: 5}
+          - {name: canary,   specRef: canary, weight: 5}
+          analyses:
+          - {name: compare, templateName: canary-vs-baseline}
+---
+<span class="k">kind</span>: AnalysisTemplate
+<span class="k">metadata</span>: {name: canary-vs-baseline}
+<span class="k">spec</span>:
+  metrics:
+  - name: error-rate-diff
+    <span class="y">initialDelay: 1m</span>        <span class="c"># 트래픽이 먼저 들어오게</span>
+    interval: 1m
+    count: 10
+    <span class="y">failureLimit: 0</span>        <span class="c"># 한 번만 넘어도 실패</span>
+    <span class="y">successCondition: result[0] &lt; 0.005</span>
+    provider:
+      prometheus:
+        query: 카나리 5xx 비율 − 베이스라인 5xx 비율  <span class="c"># 5xx 없으면 0</span></pre>
+      <div>
+        <ul>
+          <li>experiment 단계가 베이스라인(옛 버전)과 카나리(새 버전)를 같은 크기로 띄운다</li>
+          <li>1분 기다린 뒤, 1분마다 두 집단의 에러율 차이를 10번 잰다</li>
+          <li><code>failureLimit: 0</code>: 한 번만 기준을 넘어도 <b>자동으로 중단하고 가중치를 0으로</b></li>
+          <li>experiment의 <code>weight</code>는 <code>trafficRouting</code>이 있어야 쓸 수 있다</li>
+          <li>6.3에서 본 대로 쿠버네티스는 알아서 되돌리지 않는다. 그 판단을 이런 컨트롤러가 맡는다</li>
+          <li>Flagger도 같은 일을 한다. Argo Rollouts는 Flux와 같이 써도 된다</li>
+        </ul>
+        <p class="dim" style="font-size:16px;margin-top:10px">예제 전체는 examples/04-argo-rollouts. 필드는 쓰는 버전의 문서로 확인</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>이걸 사람이 대시보드를 보면서 하면 금요일 저녁에 아무도 안 봅니다. 그래서 자동으로 판정하는 도구를 씁니다. 예시는 Argo Rollouts입니다.</li><li>배경부터 보면, Argo Rollouts는 Deployment 대신 Rollout이라는 리소스를 씁니다. 파드 템플릿은 Deployment와 같고, strategy 부분에 카나리 단계를 순서대로 적습니다. 컨트롤러가 이 단계를 하나씩 실행합니다.</li><li>첫 단계가 experiment입니다. 여기서 베이스라인과 카나리를 같이 띄웁니다. specRef: stable은 지금 돌고 있는 옛 버전 템플릿으로, specRef: canary는 새 버전 템플릿으로 파드를 만든다는 뜻입니다. 둘 다 트래픽을 5%씩 받습니다. 이렇게 요청 비율로 가중치를 주려면 trafficRouting에 Gateway API나 Istio 같은 라우터가 설정돼 있어야 합니다.</li><li>experiment가 도는 동안 아래 AnalysisTemplate이 1분마다 프로메테우스에 물어봅니다. 카나리 5xx 비율에서 베이스라인 5xx 비율을 뺀 값이 0.5%p보다 작은지를 봅니다. count 10, interval 1m이라 약 10분 동안 재고, experiment 기간과 맞습니다. initialDelay 1m은 첫 측정 전에 트래픽이 먼저 들어오게 기다리는 시간입니다. 가중치가 막 붙은 직후에 재면 요청이 거의 없어서 값이 의미가 없으니까요.</li><li>실제 쿼리는 5xx가 한 건도 없을 때를 챙겨야 합니다. 5xx가 없으면 프로메테우스가 빈 결과를 돌려줘서 뺄셈이 안 됩니다. 그래서 예제 파일에서는 5xx 쪽을 or vector(0)으로 감싸서 0으로 칩니다.</li><li>failureLimit은 실패를 몇 번까지 봐줄지입니다. 0으로 두면 한 번만 기준을 넘어도 분석이 실패하고, 롤아웃이 바로 중단되면서 가중치가 0으로 돌아갑니다. 1로 두면 두 번째 실패에서 멈춥니다.</li><li>통과하면 다음 단계로 가서 25%, 50%로 늘립니다. 장표에서는 줄였고 전체는 examples/04에 있습니다.</li><li>1회차에서 롤아웃이 성공으로 끝나 버린 걸 기억하시죠. 쿠버네티스는 버전이 괜찮은지 판단하지 않습니다. 그 판단을 메트릭으로 해 주는 게 이 컨트롤러입니다. Flagger도 같은 일을 하고, Argo Rollouts는 Argo CD 없이 Flux와 같이 써도 됩니다.</li></ul></aside>
+  </section>
+
+  <!-- 58 -->
+  <section class="slide" data-t="카나리 직접 돌려 보면">
+    <div class="kicker">3부 · 3회차 · kind에서 실제 출력</div>
+    <h2>카나리, 직접 돌려 보면 (라우터 없이, 레플리카 10)</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px">$ kubectl argo rollouts set image web-canary web=nginx:1.27
+Status:  ॥ Paused   Message: CanaryPauseStep
+Step: 1/4   SetWeight: 20   ActualWeight: 20
+Replicas: Desired 10  Current 10  <span class="y">Updated 2</span>
+
+$ kubectl argo rollouts promote web-canary
+Step: 3/4   SetWeight: 50   <span class="y">Updated 5</span>
+<span class="c">(pause 20s 뒤 자동으로)</span>
+Status:  ✔ Healthy   Step: 4/4   SetWeight: 100
+
+<span class="c"># 다음 배포: 20% 뒤에 항상 실패하는 판정을 넣었다</span>
+Status:  <span style="color:#fb7185">✖ Degraded</span>
+Message: RolloutAborted: … Metric "smoke" assessed
+         Failed due to failed (1) &gt; failureLimit (0)
+Step: 0/4   SetWeight: 0   <span class="y">Updated 0</span>
+Images:  nginx:1.27 (stable)
+
+$ kubectl get rollout web-canary \
+    -o jsonpath='{..containers[0].image}'
+<span class="y">nginx:1.27-alpine</span>   <span class="c"># 원하는 상태는 새 버전 그대로</span></pre>
+      <ul>
+        <li><code>setWeight: 20</code> → 10개 중 <b>새 2, 옛 8</b>. 라우터가 없어서 파드 수로 맞춘다</li>
+        <li><code>pause: {}</code> → promote 전까지 멈춤</li>
+        <li><code>pause: {duration: 20s}</code> → 20초 뒤 자동으로 100%</li>
+        <li>판정 실패 → <code>failureLimit 0</code>이라 한 번에 중단. 가중치 0, 10개 모두 옛 버전</li>
+        <li class="no">그래도 spec의 이미지는 새 버전 그대로. 깃옵스라면 깃도 그대로 → 4부 git revert</li>
+      </ul>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>kind에서 실제로 돌린 카나리입니다. 트래픽 라우터 없이 레플리카 10개로 했습니다.</li><li>새 이미지를 넣으면 첫 단계 setWeight 20에서 새 버전 2개, 옛 버전 8개가 됩니다. 라우터가 없으니 파드 수로 비율을 맞춘 겁니다. 다음 단계가 pause 중괄호라서 CanaryPauseStep으로 멈춰 있습니다.</li><li>promote를 하면 50% 단계로 가서 새 5개, 옛 5개가 되고, 거기는 pause 20초라 20초 뒤 자동으로 100%까지 가서 Healthy가 됩니다.</li><li>다음 배포에서는 20% 단계 뒤에 항상 실패하는 판정을 넣어 봤습니다. Job이 exit 1로 끝나게 해서요. 판정이 실패하자 RolloutAborted, failureLimit 0을 넘었다는 메시지와 함께 Degraded가 되고, 가중치가 0으로 돌아가서 10개 모두 옛 버전이 됐습니다. 3회차 시나리오가 이렇게 동작하는 겁니다.</li><li>마지막 줄이 중요합니다. 중단됐는데도 Rollout의 spec에 적힌 이미지는 새 버전 그대로입니다. 컨트롤러는 트래픽과 파드만 옛 버전으로 돌렸고, 원하는 상태는 안 바꿨습니다. 깃옵스라면 깃에도 새 버전이 그대로 있어서, 다음 날 git revert로 맞춰야 한다는 게 4부 얘기입니다.</li></ul></aside>
+  </section>
+
+  <!-- 59 -->
+  <section class="slide" data-t="3회차 결과">
+    <div class="kicker">3부 · 3회차 결과</div>
+    <h2>3회차 결과: 약 90건, 알람은 안 울렸다</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16.5px">18:01  베이스라인 1개(1.6.3), 카나리 1개(1.7.0)
+18:02  둘 다 Ready, 가중치 5% / 5% / 90%
+18:03  판정 1: 카나리 3.1%, 베이스라인 0.1%
+       차이 3.0%p &gt; 0.5%p → 실패
+18:03  failureLimit 0 → 첫 판정에서
+       자동 중단, 카나리 가중치 0
+18:04  슬랙 알림 "canary aborted"
+       온콜 호출 없음</pre>
+      <div>
+        <svg viewBox="0 0 520 220" role="img" aria-label="전체 에러율은 알람 기준에 닿지 않고, 카나리 구간에서만 잠깐 3%가 된다">
+          <line x1="40" y1="190" x2="510" y2="190" stroke="#2c3b61"/><line x1="40" y1="20" x2="40" y2="190" stroke="#2c3b61"/>
+          <line x1="40" y1="133" x2="510" y2="133" stroke="#fbbf24" stroke-dasharray="4 4"/><text x="505" y="126" font-size="12" fill="#fbbf24" text-anchor="end">알람 1%</text>
+          <polyline points="40,190 200,190 200,76 250,76 250,190 510,190" fill="none" stroke="#34d399" stroke-width="2" stroke-dasharray="5 4"/>
+          <polyline points="40,190 200,190 200,176 250,176 250,190 510,190" fill="rgba(251,113,133,.25)" stroke="#fb7185" stroke-width="2.5"/>
+          <text x="258" y="80" font-size="12" fill="#34d399">카나리 파드만 보면 3%</text><text x="258" y="172" font-size="12" fill="#fb7185">전체 0.25%</text>
+          <g font-size="12" fill="#9db0d6" text-anchor="middle"><text x="200" y="208">18:02</text><text x="250" y="208">18:03</text></g>
+        </svg>
+        <table class="tight"><tr><td class="k">실패한 결제</td><td><b>약 90건</b></td></tr><tr><td class="k">알아챈 방법</td><td>베이스라인과 비교해서 자동으로</td></tr><tr><td class="k">되돌리기</td><td>가중치 0, 자동</td></tr><tr><td class="k">추가 자원</td><td>파드 2개, 트래픽 나누는 장치, 메트릭</td></tr></table>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>결과입니다. 5%에게만 보여 줘서 전체 에러율은 0.25%였습니다. 평소 0.1%에 카나리 몫 0.15%가 더해진 값이라 알람 기준 1%에 닿지도 않았습니다. 카나리 파드만 따로 보면 3%라서 베이스라인과 비교하자마자 차이가 보였고, 자동으로 멈췄습니다.</li><li>실패는 약 90건입니다. 롤링의 1만 4천 건과 비교하면 150분의 1 정도입니다. 대신 트래픽을 나누는 장치와 판정할 메트릭이 미리 있어야 합니다.</li><li>설정별로는 다음 장에서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 60 -->
+  <section class="slide" data-t="3회차 타임라인 뜯어보기">
+    <div class="kicker">3부 · 3회차 · 설정으로 읽기</div>
+    <h2>3회차 타임라인, 설정으로 읽기</h2>
+    <table class="tight">
+      <tr><th>시각</th><th>일어난 일</th><th>그렇게 만든 설정</th><th>왜</th></tr>
+      <tr><td class="k">18:01</td><td>베이스라인 1개, 카나리 1개 생성</td><td>experiment <code>specRef: stable</code> / <code>canary</code></td><td>같은 크기, 같은 나이</td></tr>
+      <tr><td class="k">18:02</td><td>둘 다 Ready, 가중치 5 / 5 / 90</td><td><code>weight: 5</code> + <code>trafficRouting</code></td><td>각각 초당 50건</td></tr>
+      <tr><td class="k">18:02~</td><td>카나리 3.1%, 베이스라인 0.1%</td><td>파드 레이블 <code>role: canary</code> / <code>baseline</code></td><td>전체는 약 0.25%</td></tr>
+      <tr><td class="k">18:03</td><td>첫 측정 실패</td><td><code>initialDelay: 1m</code>, <code>result[0] &lt; 0.005</code></td><td>차이 3.0%p &gt; 0.5%p</td></tr>
+      <tr><td class="k">18:03</td><td>자동 중단, 카나리 가중치 0</td><td><code>failureLimit: 0</code></td><td>한 번 실패로 중단</td></tr>
+      <tr><td class="k">18:04</td><td>슬랙 알림, 온콜 호출 없음</td><td>Rollouts 알림, 알람 기준 1%</td><td>0.25%라 알람에 안 닿는다</td></tr>
+      <tr><td class="k">다음 날</td><td>원하는 상태를 1.6.3에 맞춤</td><td>배포 저장소 <code>git revert</code> (4부)</td><td>깃은 아직 1.7.0, Rollout은 Degraded</td></tr>
+    </table>
+    <p class="note">실패 건수: 초당 50건 × 3% = 초당 1.5건 × 약 1분(18:02~18:03) ≈ 90건</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>3회차도 시각마다 보겠습니다.</li><li>18시 1분에 Argo Rollouts의 experiment 단계가 파드 두 개를 새로 만듭니다. 베이스라인은 specRef stable, 즉 지금 돌고 있는 1.6.3 스펙으로 만들고, 카나리는 specRef canary, 새 1.7.0 스펙으로 만듭니다. 둘 다 방금 뜬 파드라 조건이 같습니다. 앞에서 본 베이스라인 비교를 이 설정이 해 줍니다.</li><li>18시 2분에 두 파드가 Ready가 되면 가중치가 적용됩니다. weight 5는 혼자서는 동작하지 않고, trafficRouting으로 연결한 게이트웨이나 서비스 메시가 실제로 요청의 5%씩을 두 파드로 보냅니다. 초당 1,000건 중 50건씩입니다.</li><li>이때 카나리 파드의 에러율은 3.1%, 베이스라인은 0.1%입니다. 분석 쿼리가 role 레이블로 두 집단을 따로 세기 때문에 차이가 보입니다. 전체 에러율로 보면 원래 0.1%에 5%의 3%, 0.15%가 더해져서 0.25% 정도라 전체만 보면 거의 티가 안 납니다.</li><li>18시 3분, initialDelay 1m이라 가중치가 붙고 1분 뒤에 첫 측정을 합니다. 그 뒤로는 interval 1m마다 잽니다. 조건은 카나리 에러율에서 베이스라인 에러율을 뺀 값이 0.005, 즉 0.5%p보다 작아야 합니다. 차이가 3.0%p라 실패입니다.</li><li>failureLimit이 0이라서 한 번만 실패해도 분석이 실패로 끝납니다. 그러면 experiment가 실패하고, Rollout이 중단되고, 카나리 쪽 가중치가 0이 돼서 트래픽이 전부 옛 버전으로 돌아갑니다. 사람이 아무것도 안 했습니다.</li><li>18시 4분에 Argo Rollouts 알림이 슬랙으로 옵니다. 전체 에러율이 0.25%라 온콜 알람 기준 1%에 닿지 않아서 전화는 안 옵니다. 금요일 저녁이지만 급한 일은 끝났습니다.</li><li>남은 일은 다음 날 해도 됩니다. 중단된 뒤에도 깃에는 여전히 1.7.0이 적혀 있고, Rollout은 Degraded 상태로 남습니다. 다음 날 배포 저장소에서 git revert로 원하는 상태를 1.6.3에 맞춥니다. 4부에서 보는 방법 그대로입니다.</li><li>계산은 이렇습니다. 카나리가 받는 건 초당 1,000건의 5%, 초당 50건입니다. 그중 3%가 버그를 맞으니 초당 1.5건이 실패합니다. 18시 2분에 가중치가 붙고 18시 3분에 중단됐으니 60초입니다. 1.5 × 60 = 90, 약 90건입니다.</li></ul></aside>
+  </section>
+
+  <!-- 61 -->
+  <section class="slide" data-t="같은 버그, 세 번의 결과">
+    <div class="kicker">3부 · 비교</div>
+    <h2>같은 버그, 세 번의 결과</h2>
+    <table>
+      <tr><th></th><th>롤링</th><th>블루/그린</th><th>카나리</th></tr>
+      <tr><td class="k">실패한 결제</td><td>약 1만 4천 건</td><td>약 5천 4백 건</td><td><b>약 90건</b></td></tr>
+      <tr><td class="k">겪은 비율</td><td>0 → 100%로 점점</td><td>전환 순간 100%</td><td>5%</td></tr>
+      <tr><td class="k">알아챈 방법</td><td>알람, CS</td><td>알람</td><td>베이스라인 비교 (자동)</td></tr>
+      <tr><td class="k">되돌리기</td><td>거꾸로 롤링, 수 분</td><td>셀렉터 전환, 수 초</td><td>가중치 0, 자동</td></tr>
+      <tr><td class="k">추가 자원</td><td>교체 중 몇 개</td><td>두 배 (블루를 둔 동안)</td><td>카나리, 베이스라인 몇 개</td></tr>
+      <tr><td class="k">미리 있어야 할 것</td><td>좋은 프로브</td><td>두 배 용량, 전환 절차</td><td>트래픽 나누는 장치, 메트릭, 판정 컨트롤러</td></tr>
+    </table>
+    <p style="margin-top:18px">블루/그린은 <b>되돌리는 시간</b>을 줄이고, 카나리는 <b>겪는 사람</b>을 줄인다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>세 번을 한 표로 모았습니다.</li><li>블루/그린과 카나리가 줄이는 게 다릅니다. 블루/그린은 되돌리는 시간을 줄입니다. 겪는 비율은 여전히 100%입니다. 카나리는 겪는 사람 자체를 줄입니다. 5%만 겪었고, 그것도 자동으로 멈췄습니다.</li><li>숫자를 한 번에 다시 보면 이렇습니다. 롤링은 전부 새 버전인 300초에 초당 30건, 오르내리는 360초에 초당 15건이라 약 1만 4천 건입니다. 블루/그린은 초당 30건이 180초라 5,400건입니다. 카나리는 초당 50건의 3%, 1.5건이 60초라 약 90건입니다.</li><li>하나 감안할 게 있습니다. 롤링은 알람에서 결정까지 3분, 블루/그린은 1분으로 잡았습니다. 롤링도 1분 만에 결정했다면 약 1만 1천 건이고, 나머지 차이가 되돌리는 방식에서 나옵니다.</li><li>대신 아래 줄처럼 미리 있어야 할 게 늘어납니다. 롤링은 좋은 프로브만 있으면 되지만, 카나리는 트래픽을 나누는 장치, 메트릭, 판정 컨트롤러까지 필요합니다.</li><li>여러분 서비스라면 어느 쪽이 맞을까요? 트래픽이 적으면 카나리 5%로는 판정할 표본이 모자라서 블루/그린이 나을 수도 있습니다.</li></ul></aside>
+  </section>
+
+  <!-- 62 -->
+  <section class="slide" data-t="롤링 업데이트가 끊기는 이유">
+    <div class="kicker">3부 · 공통 · 5.7 보충</div>
+    <h2>파드가 죽을 때 두 일이 동시에 시작된다</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="파드 삭제 시 엔드포인트 제거와 SIGTERM이 같이 시작돼서, 엔드포인트가 늦게 빠지면 종료 중인 파드로 요청이 간다">
+      <rect x="20" y="115" width="170" height="70" rx="10" fill="#141d33" stroke="#fb7185"/><text x="105" y="145" font-size="18" fill="#fb7185" text-anchor="middle" font-weight="700">파드 삭제</text><text x="105" y="170" font-size="14" fill="#9db0d6" text-anchor="middle">deletionTimestamp</text>
+      <line x1="190" y1="140" x2="250" y2="70" stroke="#9db0d6" stroke-width="2"/><line x1="190" y1="160" x2="250" y2="230" stroke="#9db0d6" stroke-width="2"/>
+      <text x="260" y="45" font-size="17" fill="#4f9cff" font-weight="700">A. 네트워크 쪽</text>
+      <g font-size="15" fill="#eaf0ff">
+        <rect x="260" y="55" width="200" height="40" rx="7" fill="#141d33" stroke="#4f9cff"/><text x="360" y="80" text-anchor="middle">엔드포인트에서 빠짐</text>
+        <rect x="480" y="55" width="200" height="40" rx="7" fill="#141d33" stroke="#4f9cff"/><text x="580" y="80" text-anchor="middle">kube-proxy 규칙 갱신</text>
+        <rect x="700" y="55" width="210" height="40" rx="7" fill="#141d33" stroke="#4f9cff"/><text x="805" y="80" text-anchor="middle">인그레스, LB가 알아챔</text>
+      </g>
+      <text x="940" y="80" font-size="15" fill="#9db0d6">곳마다 조금씩 늦다</text>
+      <text x="260" y="215" font-size="17" fill="#34d399" font-weight="700">B. kubelet 쪽</text>
+      <g font-size="15" fill="#eaf0ff">
+        <rect x="260" y="225" width="200" height="40" rx="7" fill="#141d33" stroke="#34d399"/><text x="360" y="250" text-anchor="middle">preStop 훅 실행</text>
+        <rect x="480" y="225" width="200" height="40" rx="7" fill="#141d33" stroke="#34d399"/><text x="580" y="250" text-anchor="middle">SIGTERM</text>
+        <rect x="700" y="225" width="210" height="40" rx="7" fill="#141d33" stroke="#fb7185"/><text x="805" y="250" text-anchor="middle">시간 초과 시 SIGKILL</text>
+      </g>
+      <rect x="470" y="120" width="560" height="60" rx="10" fill="rgba(251,191,36,.10)" stroke="#fbbf24" stroke-dasharray="7 5"/>
+      <text x="750" y="146" font-size="17" fill="#fbbf24" text-anchor="middle" font-weight="700">B가 A보다 빠르면 이미 닫힌 프로세스로 요청이 온다</text>
+      <text x="750" y="170" font-size="15" fill="#fbbf24" text-anchor="middle">connection refused, 502</text>
+    </svg>
+    <p class="note">교재 5.7: "롤링 업데이트 중에는 클라이언트와의 커넥션이 끊어질 수 있으니 주의하자. 그래서 레디니스 프로브와 preStop 라이프 사이클 훅이 필요하다"</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>세 번을 비교했으니, 어느 전략이든 파드를 바꿀 때 공통으로 챙길 것을 하나 보겠습니다. 1회차 되돌리기에서 미뤄 둔, 교체 중에 요청이 끊기는 문제입니다. 롤링은 물론이고, 블루/그린에서 블루를 내릴 때나 카나리 파드를 내릴 때도 똑같이 생깁니다.</li><li>교재는 롤링 중에 커넥션이 끊길 수 있으니 레디니스와 preStop이 필요하다고만 합니다. 왜 끊기는지 그림으로 보겠습니다.</li><li>파드를 지우면 두 일이 동시에 시작됩니다. 위는 네트워크 쪽입니다. 파드가 EndpointSlice에서 먼저 종료 중, 준비 안 됨으로 표시되고 그다음 빠집니다. kube-proxy와 로드밸런서가 그걸 알아채는 데 또 시간이 걸립니다. 아래는 kubelet 쪽입니다. preStop을 부르고 SIGTERM을 보냅니다. 둘 사이에 순서가 없습니다.</li><li>아래가 더 빠르면 앱은 이미 종료 중인데 로드밸런서는 아직 그 파드로 요청을 보냅니다. 롤링 업데이트가 끊기는 가장 흔한 이유입니다.</li><li>위쪽에는 클러스터 밖도 들어갑니다. 클라우드 로드밸런서가 타깃을 빼는 데는 수 초에서 수십 초가 걸립니다. 그래서 외부 LB를 쓰는 환경에서 더 잘 보입니다. 데모에서 다시 봅니다.</li></ul></aside>
+  </section>
+
+  <!-- 63 -->
+  <section class="slide" data-t="끊기지 않게 하려면">
+    <div class="kicker">3부 · 공통 · 5.7 예제 보강</div>
+    <h2>끊기지 않게 하려면</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16px"><span class="k">spec</span>:
+  <span class="y">minReadySeconds: 10</span>   <span class="c"># ① 10초 버텨야 가용</span>
+  strategy:
+    rollingUpdate: {maxSurge: 25%, <span class="y">maxUnavailable: 0</span>}
+  template:
+    spec:
+      <span class="y">terminationGracePeriodSeconds: 45</span>  <span class="c"># ②</span>
+      containers:
+      - name: order-api
+        readinessProbe:           <span class="c"># 트래픽 받을 준비</span>
+          httpGet: {path: /readyz, port: 8080}
+          periodSeconds: 5
+        lifecycle:
+          preStop:
+            <span class="y">sleep: {seconds: 10}</span>  <span class="c"># ③ A가 끝날 시간</span></pre>
+      <div>
+        <ul>
+          <li><b>③ preStop sleep</b>: SIGTERM 전에 기다려서 엔드포인트가 먼저 빠지게 한다. v1.30부터 <code>sleep</code>을 바로 쓸 수 있다 (전에는 <code>exec</code>로 sleep을 불러야 해서 이미지에 sleep이 있어야 했다)</li>
+          <li>교재 예제의 <code>nginx -s quit</code>은 하던 요청을 마치고 닫는 쪽. sleep과 목적이 다르다</li>
+          <li class="no"><b>② grace period</b>는 preStop과 종료 시간을 합친 것보다 길게. 짧으면 SIGKILL</li>
+          <li class="no">liveness를 readiness와 같은 경로로 두면, 부하로 느려질 때 멀쩡한 파드를 재시작한다</li>
+        </ul>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재 5.7절 YAML에 몇 줄을 더했습니다. 노란 부분이 추가한 곳이고, 장표에는 필요한 줄만 남겼습니다. maxSurge 25%, readiness 5초, minReadySeconds 10초는 1회차 설정과 같습니다. 데모용 전체 파일은 examples/01-rolling에 있습니다.</li><li>먼저 보셔야 할 건 3번 preStop sleep입니다. SIGTERM 보내기 전에 10초 기다리면 그 사이 네트워크 쪽이 먼저 정리됩니다. 1.30부터 sleep을 바로 쓸 수 있고, 그전에는 exec로 sleep을 불러야 해서 distroless 이미지에서는 못 썼습니다.</li><li>교재 예제의 nginx quit은 하던 요청을 마치고 닫는 겁니다. sleep과 목적이 달라서 둘 다 필요할 수 있습니다.</li><li>1번 minReadySeconds는 Ready가 되자마자 가용으로 치지 않고 몇 초 버티는지 봅니다. 뜨자마자 죽는 이미지가 롤아웃을 끝까지 통과하는 걸 막아 줍니다. maxUnavailable 0은 새 파드가 가용이 되기 전에는 옛 파드를 내리지 않는다는 뜻입니다.</li><li>2번 grace period는 preStop sleep과 앱이 종료하는 시간을 합친 것보다 길어야 합니다. 짧으면 앱이 하던 요청을 마치기 전에 SIGKILL을 받습니다.</li><li>그리고 liveness를 readiness와 같은 경로로 두면 부하가 몰릴 때 멀쩡한 파드를 재시작해서 상황이 더 나빠집니다.</li></ul></aside>
+  </section>
+
+  <!-- 64 -->
+  <section class="slide" data-t="A/B 테스트는 카나리가 아니다">
+    <div class="kicker">3부 · 5.7, 5.8</div>
+    <h2>A/B 테스트와 카나리는 묻는 게 다르다</h2>
+    <table class="tight">
+      <tr><th></th><th>카나리</th><th>A/B 테스트</th></tr>
+      <tr><td class="k">묻는 것</td><td>새 버전이 <b>안전한가</b></td><td>두 안 중 <b>어느 쪽이 나은가</b></td></tr>
+      <tr><td class="k">비교 대상</td><td>베이스라인 (같은 코드의 옛 버전)</td><td>A안과 B안 (둘 다 정상 동작)</td></tr>
+      <tr><td class="k">지표</td><td>에러율, 레이턴시</td><td>전환율, 클릭률, 매출</td></tr>
+      <tr><td class="k">기간</td><td>분, 시간</td><td>일, 주 (통계적으로 유의할 때까지)</td></tr>
+      <tr><td class="k">사용자 나누기</td><td>요청마다 나눠도 된다 (한 사용자 요청이 두 버전을 오가도 괜찮은지는 확인)</td><td><b>같은 사용자는 계속 같은 쪽</b> (쿠키, 헤더, 사용자 ID)</td></tr>
+      <tr><td class="k">끝나면</td><td>100%로 가거나 되돌린다</td><td>이긴 안을 남긴다</td></tr>
+    </table>
+    <div class="cols" style="margin-top:16px">
+      <p style="font-size:18px">교재 5.7은 특정 사용자에게만 내보내는 카나리를 "A/B 또는 다크 릴리스"라고도 부른다고 쓴다. <b>나누는 방법은 같아도 목적이 다르다</b></p>
+      <p style="font-size:18px"><b>섀도잉</b>(5.8 트래픽 섀도잉): 실제 요청을 복사해 새 버전에도 보내고 응답은 버린다. 사용자 영향 없이 확인. Gateway API <code>RequestMirror</code>, Istio mirror</p>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>카나리와 자주 섞이는 게 A/B 테스트입니다. 트래픽을 나눈다는 모양은 같은데 묻는 게 다릅니다.</li><li>카나리는 새 버전이 안전한지를 묻고, 에러율 같은 걸 보고, 분이나 시간 단위로 끝납니다. A/B는 둘 다 정상인 두 안 중에 어느 쪽이 나은지를 묻고, 전환율 같은 비즈니스 지표를 보고, 통계적으로 의미가 나올 때까지 며칠이나 몇 주를 봅니다.</li><li>그래서 A/B는 같은 사용자가 계속 같은 쪽을 봐야 합니다. 들어올 때마다 화면이 바뀌면 비교가 안 되니까요. 카나리는 요청마다 나눠도 됩니다. 다만 한 사용자의 요청이 두 버전을 오가도 괜찮은지는 확인해야 합니다. 새 버전이 만든 세션이나 응답 형식을 옛 버전이 못 읽으면 카나리도 사용자를 고정해야 합니다.</li><li>교재는 특정 사용자에게만 내보내는 카나리를 A/B 또는 다크 릴리스라고도 부른다고 하는데, 나누는 방법이 같을 뿐 목적은 다르다고 정리하면 됩니다. 사용자에게 아예 안 보이게 확인하고 싶으면 5.8에 나오는 트래픽 섀도잉, 요청을 복사해서 새 버전에도 보내고 응답은 버리는 방법이 있습니다.</li></ul></aside>
+  </section>
+
+  <!-- 65 -->
+  <section class="slide" data-t="기능 플래그였다면">
+    <div class="kicker">3부 · 7.4 참고 상자</div>
+    <h2>기능 플래그였다면: 배포와 릴리스를 떼어 놓기</h2>
+    <div class="cols">
+      <div>
+        <div class="quote" style="font-size:19px">기능 플래그를 사용하면 릴리스할 때마다 일단 새 기능이 롤아웃되지만, 기능 플래그의 디폴트 값은 '꺼짐(off)' 상태다 … 전체 유저의 10%만 대상으로 기능을 활성화하고 그 다음에 20%를 대상으로 활성화하는 식으로 플래그를 점점 켜 나간다<span class="src">교재 7.4 참고 상자</span></div>
+        <pre class="code" style="font-size:16px;margin-top:14px">17:59  롤링으로 1.7.0 배포 (쿠폰 기능 꺼짐) → 에러 없음
+18:02  쿠폰 기능 5% 켬
+18:03  켠 사용자만 본 결제 에러율 3.1%
+       (전체는 약 0.25%)
+18:03  플래그 끔 (수 초, 배포 없음)</pre>
+      </div>
+      <div class="card"><h3>플래그 종류</h3>
+        <table class="tight">
+          <tr><td class="k">릴리스</td><td>덜 된 기능 숨기기. 짧게 쓰고 지운다</td></tr>
+          <tr><td class="k">실험</td><td>A/B 테스트</td></tr>
+          <tr><td class="k">운영</td><td>부하가 크면 기능 끄기</td></tr>
+          <tr><td class="k">권한</td><td>특정 사용자에게만</td></tr>
+        </table>
+        <p class="dim" style="font-size:17px;margin-top:10px">대가: 켜짐, 꺼짐 조합만큼 테스트할 경우가 늘어난다. 다 켠 플래그는 치워야 한다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>네 번째 방법도 있습니다. 교재 7장 참고 상자에 짧게 나오는 기능 플래그입니다. 코드를 내보내는 배포와 기능을 여는 릴리스를 떼어 놓는 겁니다.</li><li>1.7.0을 쿠폰 기능이 꺼진 채로 롤링으로 배포하면 아무 일도 안 일어납니다. 나중에 기능을 5%에게 켰다가 에러가 나면 플래그만 끕니다. 배포도 롤백도 없이 몇 초면 끝납니다.</li><li>에러는 어떻게 알아챘을까요. 5%만 켰으니 전체 에러율은 0.25% 정도라 전체 알람으로는 안 보입니다. 플래그를 켠 사용자만 따로 본 결제 에러율로 알아챘습니다. 카나리처럼 켠 쪽과 안 켠 쪽을 나눠 비교해야 합니다.</li><li>대가도 있습니다. 플래그가 늘면 켜짐과 꺼짐 조합만큼 테스트할 경우가 늘어나고, 다 켠 플래그를 안 치우면 코드에 계속 남습니다.</li></ul></aside>
+  </section>
+
+  <!-- 66 -->
+  <section class="slide" data-t="컬럼 추가는 세 번에 나눠서">
+    <div class="kicker">3부 · 5.7, 5.10</div>
+    <h2>컬럼 추가는 세 번에 나눠서 배포한다</h2>
+    <svg viewBox="0 0 1150 230" role="img" aria-label="확장, 이전, 축소의 세 단계로 나눠 배포해서 두 버전이 같이 도는 동안 스키마가 양쪽을 지원하게 한다">
+      <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <g text-anchor="middle">
+        <rect x="20" y="20" width="340" height="150" rx="12" fill="#141d33" stroke="#34d399"/>
+        <text x="190" y="55" font-size="21" fill="#34d399" font-weight="800">1. 확장 (expand)</text>
+        <text x="190" y="88" font-size="16" fill="#eaf0ff">coupon_discount 컬럼 추가 (1.6.3)</text><text x="190" y="112" font-size="16" fill="#eaf0ff">NULL 허용, 기본값</text>
+        <text x="190" y="145" font-size="15" fill="#9db0d6">옛 코드는 모르고 지나간다</text>
+        <rect x="405" y="20" width="340" height="150" rx="12" fill="#141d33" stroke="#fbbf24"/>
+        <text x="575" y="55" font-size="21" fill="#fbbf24" font-weight="800">2. 이전 (migrate)</text>
+        <text x="575" y="88" font-size="16" fill="#eaf0ff">새 코드 배포 (1.7.0, 3f9c2e1)</text><text x="575" y="112" font-size="16" fill="#eaf0ff">필요하면 데이터 채우기</text>
+        <text x="575" y="145" font-size="15" fill="#9db0d6">이 동안 옛 버전과 새 버전이 같이 돈다</text>
+        <rect x="790" y="20" width="340" height="150" rx="12" fill="#141d33" stroke="#fb7185"/>
+        <text x="960" y="55" font-size="21" fill="#fb7185" font-weight="800">3. 축소 (contract)</text>
+        <text x="960" y="88" font-size="16" fill="#eaf0ff">쿠폰 없는 옛 코드 경로 제거</text><text x="960" y="112" font-size="16" fill="#eaf0ff">NOT NULL 제약 추가</text>
+        <text x="960" y="145" font-size="15" fill="#9db0d6">여기부터는 롤백이 어려워진다</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" marker-end="url(#ar5)"><line x1="360" y1="95" x2="403" y2="95"/><line x1="745" y1="95" x2="788" y2="95"/></g>
+      <text x="575" y="210" font-size="17" fill="#eaf0ff" text-anchor="middle">각각 <tspan fill="#fbbf24" font-weight="700">따로 배포</tspan>한다. 어느 단계에서 멈춰도 두 버전이 다 돈다</text>
+    </svg>
+    <p class="note">교재 5.7: "데이터베이스 스키마는 두 버전의 애플리케이션을 모두 지원할 수 있어야 한다 … 롤링 업데이트가 끝나면 옛 컬럼은 삭제한다"</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>예시 서비스의 쿠폰 기능에는 DB 컬럼이 하나 필요합니다. 이 컬럼은 그 전 1.6.3 배포 때 먼저 추가해 뒀습니다. 왜 그랬는지 보겠습니다. 롤링이든 카나리든 옛 버전과 새 버전이 잠깐은 같이 돕니다. 교재 5.7절도 스키마가 두 버전을 다 지원해야 한다고 합니다.</li><li>보통 이걸 확장, 이전, 축소 세 번에 나눕니다. 먼저 컬럼만 추가하는 배포, 다음에 새 코드 배포, 마지막에 옛 것을 치우는 배포입니다.</li><li>롤백과 관련해서는 3번을 조심해야 합니다. 쿠폰 없는 옛 코드 경로를 지우고 NOT NULL 제약을 걸고 나면, 옛 버전은 새 제약을 모르는 채로 돌게 되고 되돌리기가 어려워집니다. 교재 예처럼 컬럼 이름을 바꾸는 경우라면 옛 컬럼을 지우는 게 축소입니다. 어느 쪽이든 축소는 새 버전이 충분히 안정된 뒤에 따로 합니다.</li><li>질문 하나 드리면, 컬럼 이름을 바꾸는 거라면 몇 번 배포해야 할까요? 새 컬럼 추가, 양쪽에 쓰기, 새 컬럼에서 읽기, 옛 컬럼 삭제까지 보통 서너 번입니다.</li></ul></aside>
+  </section>
+
+  <!-- 67 -->
+  <section class="slide" data-t="데모">
+    <div class="kicker">3부 · 데모 (약 5분)</div>
+    <h2>kind 클러스터에서 직접 보기</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14.5px"><span class="c"># 0) 준비 (examples/README.md)</span>
+kind create cluster --name week07
+kubectl apply -f examples/01-rolling/
+
+<span class="c"># 1) 요청을 계속 보내 둔다</span>
+kubectl run poller --image=curlimages/curl --command -- \
+  sh -c 'while true; do curl -s -o /dev/null \
+  -w "%{http_code}\n" http://web; sleep .2; done'
+
+<span class="c"># 2) 이미지 교체, RS 두 개가 바뀌는 걸 본다</span>
+kubectl set image deploy/web web=nginx:1.27
+kubectl get rs -l app=web -w
+
+<span class="c"># 3) 없는 태그로 바꿔서 멈추기만 하는지 본다</span>
+kubectl set image deploy/web web=nginx:no-such-tag
+kubectl rollout status deploy/web --timeout=90s; echo $?
+
+<span class="c"># 4) 되돌린다</span>
+kubectl rollout history deploy/web
+kubectl rollout undo deploy/web</pre>
+      <div>
+        <table class="tight">
+          <tr><th>#</th><th>미리 돌려 본 결과</th></tr>
+          <tr><td class="k">2</td><td>RS 두 개가 교차, poller <b>160번 모두 200</b></td></tr>
+          <tr><td class="k">2′</td><td>preStop을 빼도 <b>343번 모두 200</b>. kind는 노드가 하나라 A가 짧다. 외부 LB를 거치면 드러난다</td></tr>
+          <tr><td class="k">3</td><td><code>ErrImagePull</code> 1개, 옛 파드 3개 Running, 종료 코드 <b>1</b>, poller는 계속 200</td></tr>
+          <tr><td class="k">4</td><td>직전 리비전 번호가 없어지고 <b>새 번호</b>로 다시 붙는다</td></tr>
+        </table>
+        <p class="dim" style="font-size:17px;margin-top:14px">kind v0.33, Kubernetes v1.37. 데모가 막히면 이 표로 설명</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>5분 정도 직접 보여 드리겠습니다. kind 클러스터에 nginx 디플로이먼트를 띄우고 요청을 계속 보내 둔 상태에서 이미지를 바꿉니다.</li><li>2번에서는 레플리카셋 두 개가 바뀌는 것과 poller가 200만 찍는 걸 봅니다. 미리 해 보니 preStop을 빼도 에러가 안 났습니다. kind는 노드가 하나라 엔드포인트 제거가 거의 바로 반영돼서 그렇습니다. 앞에서 본 문제는 외부 로드밸런서처럼 A가 긴 환경에서 보입니다.</li><li>3번은 없는 태그로 바꿔서, 쿠버네티스가 되돌리지 않고 멈춰 있기만 하는 걸 봅니다. 4번에서 undo를 하면 직전 리비전 번호가 목록에서 없어지고, 같은 내용이 새 번호로 다시 붙습니다. 번호는 그동안 몇 번 배포했는지에 따라 다릅니다.</li></ul></aside>
+  </section>
+
+  <!-- 68 -->
+  <section class="slide" data-t="3부 정리">
+    <div class="kicker">3부 정리</div>
+    <h2>어떤 전략을 고를까</h2>
+    <table>
+      <tr><th>상황</th><th>전략</th></tr>
+      <tr><td class="k">처음 시작, 트래픽 적음</td><td>롤링 + 좋은 프로브 + preStop (교재 5.10)</td></tr>
+      <tr><td class="k">되돌리는 시간을 줄이고 싶음, 용량 여유 있음</td><td>블루/그린. 블루는 문제가 보일 때까지 남겨 둔다</td></tr>
+      <tr><td class="k">트래픽 많음, 메트릭과 트래픽 나누는 장치가 있음</td><td>카나리 + 베이스라인 비교 + 자동 판정</td></tr>
+      <tr><td class="k">기능 단위로 조절하고 싶음</td><td>기능 플래그. 배포는 롤링으로</td></tr>
+      <tr><td class="k">잠깐 내려가도 됨 (큐 기반), 두 파드가 같은 데이터를 쓰면 안 됨</td><td>Recreate</td></tr>
+    </table>
+    <p style="margin-top:18px">어느 전략이든 <b>두 버전이 같이 돈다</b>(블루/그린도 DB는 공유). 그래서 확장, 이전, 축소는 전략과 상관없이 필요하다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>3부 정리입니다. 상황별로 이렇게 고르면 될 것 같습니다.</li><li>처음이면 교재 말대로 롤링부터 하고, 프로브와 preStop을 제대로 챙깁니다. 되돌리는 시간을 줄이고 싶고 용량이 있으면 블루/그린, 트래픽이 많고 메트릭이 갖춰져 있으면 카나리입니다. 기능 단위로 조절하고 싶으면 플래그를 같이 씁니다.</li><li>어느 전략이든 공통으로 걸리는 게 하나 있습니다. 두 버전이 같이 돈다는 겁니다. 블루/그린도 DB는 공유하니까요. 그래서 앞에서 본 확장, 이전, 축소는 전략과 상관없이 필요합니다. 4부로 가기 전에 교재 7장의 리전 이야기를 짧게 보겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 69 -->
+  <section class="slide" data-t="7장 리전 이야기">
+    <div class="kicker">3부 보충 · 교재 7장</div>
+    <h2>7장 리전 이야기는 짧게</h2>
+    <p style="font-size:21px">해외 서비스를 하는 분은 많지 않지만 교재 범위라 짧게 보고 넘어가겠습니다. 3부의 카나리를 <b>리전 하나를 한 단계로</b> 키운 게 7장의 롤아웃입니다.</p>
+    <table class="tight" style="margin-top:10px">
+      <tr><th>교재</th><th>내용</th></tr>
+      <tr><td class="k">7장 도입</td><td>리전을 여러 개 두는 이유: 규모, 레이턴시, 로컬리티(개인정보 규제)</td></tr>
+      <tr><td class="k">7.4.2 ~ 7.4.4</td><td>카나리 리전(사내 트래픽, 며칠) → 비슷하고 작은 곳 → 비슷하고 큰 곳 → 성격이 다른 곳 → 나머지. 입력이나 부하가 크게 다른 리전은 한 번에 하나씩</td></tr>
+      <tr><td class="k">7.1, 7.2</td><td>이미지는 쓰는 곳 가까이(지리 복제, 리전별 레지스트리). 리전별 설정은 복사하지 말고 공통 하나에 차이만 덮어쓰기</td></tr>
+      <tr><td class="k">7.3, 7.5</td><td>DNS로 나누면 캐시 때문에 트래픽을 옮겨도 늦게 따라온다(교재: 하루가 걸릴 수도). 문제가 생기면 롤아웃 안 한 리전으로 옮기고, 그 시간을 재서 연습한다</td></tr>
+    </table>
+    <p class="note">리전이 하나뿐이면 리전을 클러스터나 가용 영역으로 바꿔 읽어도 같은 얘기입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>여기서 7장 얘기를 짧게 하고 가겠습니다. 교재 7장은 여러 리전에 나눠 배포하는 내용입니다. 해외 서비스를 하시는 분은 많지 않을 것 같지만 교재 범위라 짧게 보고 넘어가겠습니다.</li><li>배포 전략 관점에서 보면 7장의 롤아웃은 3부에서 본 카나리를 크게 키운 겁니다. 3부에서는 한 클러스터 안에서 요청 5%로 나눴다면, 7장은 리전 하나를 한 단계로 씁니다.</li><li>순서는 카나리 리전부터입니다. 사내 팀이나 위험이 적은 고객의 트래픽을 받는 곳이고 며칠 둡니다. 그다음 비슷하고 작은 곳, 비슷하고 큰 곳, 성격이 다른 곳 순서입니다. 교재는 입력이나 부하가 크게 다른 리전은 한 번에 하나씩만 내라고 합니다. 여러 곳에 한꺼번에 내면 문제가 났을 때 어느 리전의 차이 때문인지 가리기 어렵습니다. 단계 사이 대기 시간은 3부에서 본 time-to-smoke를 그대로 씁니다.</li><li>그 밖에 챙길 게 두 가지입니다. 이미지를 쓰는 곳 가까이에 둬야 노드가 죽었을 때 빨리 복구되고, 리전별 설정은 복사하지 말고 공통 하나에 차이만 덮어써야 어긋나지 않습니다.</li><li>마지막으로 7.5절입니다. 문제가 생기면 롤아웃 안 한 리전으로 트래픽을 먼저 옮기라고 하는데, DNS로 나누고 있으면 캐시 때문에 다 빠지는 데 하루가 걸릴 수도 있다고 합니다. 그래서 몇 분 걸리는지 평소에 재서 연습하라고 합니다. 여기까지가 7장이고, 다시 배포 얘기로 돌아가겠습니다.</li></ul></aside>
+  </section>
+
+  <!-- 70 -->
+  <section class="slide" data-t="4부 되돌리기">
+    <div class="kicker">4부 · 교재 7.5, 6.3, 6.5, 18장</div>
+    <h1>4부<br><span class="em">되돌리기</span></h1>
+    <p class="dim" style="margin-top:24px">실제로 되돌릴 때 챙길 것</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>4부입니다. 3부에서 전략마다 되돌리는 방법을 봤는데, 실제로 되돌릴 때 전략과 상관없이 챙겨야 하는 것들이 있습니다.</li></ul></aside>
+  </section>
+
+  <!-- 71 -->
+  <section class="slide" data-t="되돌리는 방법 세 가지">
+    <div class="kicker">4부 · 6.3, 18장</div>
+    <h2>깃옵스에서 되돌리는 방법 세 가지</h2>
+    <table class="tight">
+      <tr><th>방법</th><th>되돌리는 것</th><th>속도</th><th>깃옵스에서는</th></tr>
+      <tr><td class="k">트래픽 전환</td><td>사용자가 보는 버전 (블루/그린 셀렉터, 카나리 가중치 0)</td><td>수 초</td><td>전략이 허락할 때만. 코드는 그대로</td></tr>
+      <tr><td class="k">git revert</td><td>원하는 상태</td><td>동기화 + 롤아웃</td><td><b>기본은 이것</b>. 기록이 남는다</td></tr>
+      <tr><td class="r">kubectl rollout undo</td><td>클러스터의 실제 상태</td><td>롤아웃 시간</td><td><span class="warn">깃은 그대로라 에이전트가 새 버전으로 다시 돌려놓는다</span></td></tr>
+    </table>
+    <pre class="code" style="font-size:16px;margin-top:16px"><span class="c"># 기본: 깃을 되돌리고 바로 동기화</span>
+git revert a41d77c &amp;&amp; git push
+flux reconcile kustomization order-api --with-source   <span class="c"># interval을 기다리지 않는다</span>
+
+<span class="c"># 급해서 클러스터를 직접 만져야 한다면, 에이전트부터 멈춘다</span>
+flux suspend kustomization order-api        <span class="c"># Argo CD는 auto-sync 끄기</span>
+kubectl -n order rollout undo deploy/order-api
+<span class="c"># 그다음 깃을 맞추고 다시 켠다</span></pre>
+    <aside class="notes"><b>발표 노트</b><ul><li>깃옵스에서 되돌리는 방법은 세 가지입니다. 블루/그린이나 카나리처럼 옛 버전이 떠 있으면 트래픽 전환이 제일 빠릅니다. 기본은 git revert이고, 바로 flux reconcile을 해서 동기화 주기를 기다리지 않습니다.</li><li>세 번째 rollout undo가 함정입니다. undo로 되돌려도 깃에는 새 버전이 적혀 있어서, Flux나 selfHeal을 켠 Argo CD가 다시 새 버전으로 돌려놓습니다. 급하게 되돌렸는데 몇 분 뒤에 장애가 다시 나는 겁니다.</li><li>그래서 직접 만져야 한다면 에이전트를 먼저 멈추고, 되돌린 뒤 깃을 맞추고, 다시 켭니다. Argo CD에서 selfHeal이 꺼져 있으면 undo가 남는 대신 깃과 클러스터가 다른 채로 남습니다. 어느 쪽이든 깃을 맞춰야 끝납니다.</li></ul></aside>
+  </section>
+
+  <!-- 72 -->
+  <section class="slide" data-t="Argo CD에서 되돌릴 때">
+    <div class="kicker">4부 · 18장 · kind에서 확인</div>
+    <h2>Argo CD에서 되돌릴 때</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14.5px">$ argocd app history guestbook
+ID  DATE                  REVISION
+0   2026-10-04 11:20:45   HEAD (8088f4c)
+
+$ argocd app rollback guestbook 0
+<span style="color:#fb7185">rpc error: code = FailedPrecondition
+desc = rollback cannot be initiated
+       when auto-sync is enabled</span>
+
+<span class="c"># 기본: 깃을 되돌린다</span>
+git revert a41d77c &amp;&amp; git push
+argocd app sync order-api      <span class="c"># 3분 주기를 기다리지 않고</span>
+
+<span class="c"># 급할 때: 자동 동기화를 끄고 되돌린 뒤 깃을 맞춘다</span>
+argocd app set order-api --sync-policy none
+argocd app rollback order-api &lt;ID&gt;
+git revert … &amp;&amp; git push
+argocd app set order-api --sync-policy automated</pre>
+      <table class="tight">
+        <tr><th>상황</th><th>Argo CD에서</th></tr>
+        <tr><td class="k">auto-sync 켜짐</td><td><code>app rollback</code>은 거부된다. 깃이 다시 덮어쓰기 때문</td></tr>
+        <tr><td class="k">selfHeal 켜짐</td><td><code>kubectl rollout undo</code>도 다시 새 버전으로 덮어쓴다</td></tr>
+        <tr><td class="k">selfHeal 꺼짐</td><td>undo는 남지만 OutOfSync로 깃과 어긋난 채</td></tr>
+        <tr><td class="k">Rollout이 중단됨</td><td>Application Health가 Degraded. 표시만 하고 되돌리지 않는다</td></tr>
+        <tr><td class="k">헬름 차트</td><td>pre-rollback 훅은 실행 안 한다 (helm template으로 렌더링)</td></tr>
+      </table>
+    </div>
+    <p class="note">Flux로 하면: flux suspend → kubectl rollout undo → git revert → flux resume (앞 장)</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>Argo CD를 쓸 때 되돌리는 방법입니다. kind에서 직접 해 봤습니다.</li><li>Argo CD에도 rollback 명령이 있습니다. app history로 이력을 보고 app rollback에 이력 번호를 주면 그때 상태로 되돌립니다. 그런데 자동 동기화를 켜 둔 상태에서 해 보니 거부됐습니다. 메시지가 왼쪽 빨간 줄입니다. 자동 동기화가 켜져 있으면 rollback을 시작할 수 없다는 겁니다. 되돌려 봤자 깃에는 새 버전이 적혀 있어서 바로 다시 덮어쓰니까, 아예 막아 둔 겁니다.</li><li>그래서 기본은 Flux와 같습니다. 배포 저장소에서 git revert를 하고, 3분 주기를 기다리지 않게 argocd app sync로 바로 동기화합니다.</li><li>정말 급해서 깃 커밋을 기다릴 수 없으면, 자동 동기화를 끄고 app rollback으로 되돌린 다음, 깃을 맞추고 자동 동기화를 다시 켭니다. Flux의 suspend, resume과 같은 순서입니다.</li><li>오른쪽 표는 상황별로 정리한 겁니다. selfHeal이 켜져 있으면 kubectl rollout undo도 다시 덮어씁니다. 1부에서 selfHeal을 켜자 replicas가 바로 깃 값으로 돌아간 것과 같은 동작입니다. Argo Rollouts가 중단되면 Application은 Degraded로 표시만 하고 되돌리지는 않습니다. 헬름 차트는 템플릿으로만 렌더링해서 pre-rollback 훅이 안 돕니다.</li></ul></aside>
+  </section>
+
+  <!-- 73 -->
+  <section class="slide" data-t="되돌아갈 곳이 남아 있나">
+    <div class="kicker">4부 · 5.5, 6.3 보충</div>
+    <h2>되돌아갈 곳이 남아 있나</h2>
+    <table class="tight">
+      <tr><th>되돌아갈 곳</th><th>어디에 있나</th><th>없어지는 경우</th></tr>
+      <tr><td class="k">옛 ReplicaSet</td><td>클러스터, <code>revisionHistoryLimit</code>(기본 10)</td><td>한도를 줄여 뒀거나 배포가 잦아서 밀려남</td></tr>
+      <tr><td class="k">옛 이미지</td><td>레지스트리</td><td><span class="warn">"최근 N개만 보관" 수명 주기 정책이 지움</span>. undo 했더니 <code>ImagePullBackOff</code></td></tr>
+      <tr><td class="k">옛 태그가 가리키는 것</td><td>레지스트리</td><td>같은 태그로 다시 push (<code>latest</code>, 태그 불변 미설정)</td></tr>
+      <tr><td class="k">블루 환경</td><td>클러스터</td><td>너무 빨리 내림 (3부 "블루는 언제 내리나")</td></tr>
+      <tr><td class="k">옛 원하는 상태</td><td>깃</td><td>거의 안 없어진다</td></tr>
+    </table>
+    <p class="note">노드 캐시에 옛 이미지가 남아 있으면 undo는 되는데, 새 노드로 스케줄되는 순간 실패한다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>rollout undo가 있어도 돌아갈 이미지가 지워져 있으면 소용없습니다. 쿠버네티스에서 돌아갈 곳은 여러 군데에 흩어져 있습니다.</li><li>실무에서 자주 걸리는 건 두 번째입니다. 레지스트리 비용을 줄이려고 최근 이미지 몇 개만 남기는 정책을 걸어 두면, 롤백하려는 이미지가 이미 지워져 있습니다. 노드 캐시에 남아 있어서 당장은 되다가 새 노드로 갈 때 터지는 경우도 있습니다. 개수 기준보다 배포 저장소에서 쓰고 있는 태그는 안 지우는 방식이 낫습니다.</li><li>깃은 거의 안 없어집니다. 다만 깃이 가리키는 이미지는 레지스트리에 있어야 합니다.</li></ul></aside>
+  </section>
+
+  <!-- 74 -->
+  <section class="slide" data-t="롤백해도 데이터는 안 돌아간다">
+    <div class="kicker">4부 · 5.7, 5.10</div>
+    <h2>롤백해도 데이터는 안 돌아간다</h2>
+    <svg viewBox="0 0 1150 190" role="img" aria-label="롤백하면 옛 코드가 새 버전이 만든 데이터와 만나 테스트한 적 없는 조합이 된다">
+      <g text-anchor="middle">
+        <rect x="20" y="30" width="300" height="110" rx="12" fill="#141d33" stroke="#9db0d6"/><text x="170" y="68" font-size="19" fill="#eaf0ff" font-weight="700">배포 전</text><text x="170" y="98" font-size="16" fill="#9db0d6">옛 코드 + 옛 데이터</text><text x="170" y="122" font-size="15" fill="#34d399">테스트함</text>
+        <rect x="425" y="30" width="300" height="110" rx="12" fill="#141d33" stroke="#9db0d6"/><text x="575" y="68" font-size="19" fill="#eaf0ff" font-weight="700">배포 후</text><text x="575" y="98" font-size="16" fill="#9db0d6">새 코드 + 새 데이터</text><text x="575" y="122" font-size="15" fill="#34d399">테스트함</text>
+        <rect x="830" y="30" width="300" height="110" rx="12" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-dasharray="7 5"/><text x="980" y="68" font-size="19" fill="#fbbf24" font-weight="700">롤백 후</text><text x="980" y="98" font-size="16" fill="#eaf0ff">옛 코드 + <tspan fill="#fbbf24">새 데이터</tspan></text><text x="980" y="122" font-size="15" fill="#fb7185">테스트한 적 없음</text>
+      </g>
+      <text x="575" y="178" font-size="16" fill="#9db0d6" text-anchor="middle">코드는 돌아가도, 새 버전이 쓴 데이터와 메시지는 안 돌아간다</text>
+    </svg>
+    <div class="cols" style="margin-top:8px">
+      <div class="card"><h3>예시 서비스라면</h3><ul>
+        <li class="ok">쿠폰 컬럼은 1.6.3 때 먼저 추가해 뒀다. 옛 코드는 무시하고 지나간다</li>
+        <li class="no">축소(NOT NULL 추가, 옛 경로 삭제)까지 끝냈다면 옛 코드가 새 제약과 부딪힌다</li>
+        <li class="no">새 버전이 큐에 넣은 새 형식 메시지를 옛 컨슈머가 못 읽는다</li>
+      </ul></div>
+      <div class="card violet"><h3>고쳐서 다시 내보내는 게 나을 때</h3><ul>
+        <li>되돌릴 수 없는 변경이 이미 나갔을 때</li>
+        <li>수정이 작고 확실하고, 트래픽은 이미 옛 버전으로 돌려 뒀을 때</li>
+        <li class="no">교재 7.5: 급하게 만든 "조치 완료" 빌드가 문제를 더 키우기도 한다. 같은 배포 전략으로 내보낸다</li>
+      </ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>롤백하면 코드는 옛 버전으로 돌아가지만 새 버전이 쓴 데이터는 그대로 남습니다. 옛 코드와 새 데이터 조합은 테스트한 적이 없습니다.</li><li>예시 서비스는 쿠폰 컬럼을 1.6.3 배포 때 먼저 추가해 뒀기 때문에 옛 코드가 새 컬럼을 무시하고 잘 돕니다. 3부에서 확장 배포를 따로 한 게 여기서 효과를 봅니다. 그런데 축소까지 끝냈거나 새 형식 메시지를 큐에 넣었다면 얘기가 다릅니다.</li><li>그럴 때는 고쳐서 다시 내보내는 게 나을 수 있습니다. 교재 7.5는 급하게 만든 수정 빌드가 더 나쁠 수 있다고 경고하니까, 수정 빌드도 카나리 같은 같은 전략으로 내보냅니다.</li></ul></aside>
+  </section>
+
+  <!-- 75 -->
+  <section class="slide" data-t="헬름으로 묶어서 되돌리기">
+    <div class="kicker">4부 · 6.4, 6.5</div>
+    <h2>같이 되돌릴 것은 한 차트로 묶는다</h2>
+    <div class="cols">
+      <div>
+        <ul>
+          <li>교재 6.5: 함께 롤백하거나 업그레이드할 서비스는 <b>같은 헬름 차트</b>로</li>
+          <li><code>helm rollback</code> 한 번에 웹, DB 디플로이먼트, 잡 매니페스트가 같이 이전 버전으로 (데이터는 아니다)</li>
+          <li>6.4 예제는 헬름 훅으로 업그레이드, 삭제, 롤백 직전에 DB를 백업한다</li>
+          <li class="no">교재는 훅 키를 세 번 써서 <b>pre-rollback만 남는다</b> (1부)</li>
+          <li class="no">깃으로 되돌리면 Flux는 <b>upgrade</b>를 한다 (pre-rollback은 실패 대응으로 롤백할 때만). Argo CD는 <code>helm template</code>이라 롤백 훅이 없다</li>
+          <li class="no">→ 교재 예제 그대로면 깃으로 되돌릴 때 <b>백업이 안 돈다</b></li>
+        </ul>
+      </div>
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Job
+<span class="k">metadata</span>:
+  name: db-backup
+  annotations:
+    "helm.sh/hook": <span class="y">pre-upgrade,pre-delete,pre-rollback</span>
+    "helm.sh/hook-delete-policy": hook-succeeded
+<span class="k">spec</span>:
+  template:
+    spec:
+      containers:
+      - name: mysqldump
+        image: evillgenius/mysqldump:v1
+      restartPolicy: Never</pre>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>6장 모범 사례 중 롤백과 바로 이어지는 게 이겁니다. 같이 되돌려야 하는 서비스는 같은 헬름 차트로 묶으라는 겁니다. 그러면 helm rollback 한 번에 웹, DB 디플로이먼트, 잡 매니페스트가 같이 이전 버전으로 돌아갑니다. 데이터까지 돌아가는 건 아닙니다. 앞 장에서 본 그대로입니다. 6.4 예제는 훅으로 업그레이드, 삭제, 롤백 직전에 DB를 백업합니다.</li><li>그런데 1부에서 봤듯이 교재는 훅 키를 세 번 써서 마지막 pre-rollback만 남습니다.</li><li>여기에 깃옵스가 겹치면 더 복잡해집니다. 도구마다 나눠 보겠습니다.</li><li>Flux helm-controller는 깃에서 차트 버전이나 값을 되돌리면 옛 버전으로 upgrade를 합니다. 그래서 pre-upgrade 훅이 걸립니다. pre-rollback 훅은 업그레이드가 실패해서 Flux의 실패 대응 설정이 helm rollback을 할 때만 걸립니다.</li><li>Argo CD는 헬름 차트를 helm template으로 매니페스트로 바꿔서 적용합니다. 헬름 릴리스 자체를 만들지 않아서 pre-rollback 훅은 아예 돌지 않습니다. pre-upgrade 같은 일부 훅은 Argo CD 동기화 훅으로 바꿔서 돌려 주지만 롤백 훅은 대응하는 게 없습니다.</li><li>그래서 교재 예제처럼 pre-rollback만 남아 있으면, 깃으로 되돌릴 때는 어느 도구든 백업이 돌지 않습니다. 오른쪽처럼 쉼표로 이어 쓰면 적어도 Flux에서는 pre-upgrade로 백업이 돕니다.</li></ul></aside>
+  </section>
+
+  <!-- 76 -->
+  <section class="slide" data-t="롤백 체크리스트">
+    <div class="kicker">4부 · 7.5</div>
+    <h2>롤백 체크리스트 예시</h2>
+    <div class="cols">
+      <div class="card"><h3>배포 전에</h3><ul>
+        <li>직전 버전 태그와 배포 저장소 커밋</li>
+        <li>그 이미지가 레지스트리에 있나</li>
+        <li>이번 변경에 축소(옛 컬럼 삭제 등)가 있나</li>
+        <li>메시지 형식, 외부 API 계약이 바뀌었나</li>
+      </ul></div>
+      <div class="card rose"><h3>되돌릴 때</h3><ol style="font-size:19px;line-height:1.6;padding-left:22px;color:var(--ink)">
+        <li>옛 버전이 떠 있으면 트래픽부터 전환</li>
+        <li>배포 저장소에서 <code>git revert</code>, 바로 reconcile</li>
+        <li>급하면 에이전트 멈춤 → undo → 깃 맞춤 → 재개</li>
+        <li>에러율이 원래대로 왔는지 확인</li>
+        <li>걸린 시간과 막힌 곳 기록</li></ol></div>
+    </div>
+    <p class="note">교재 7.5: 아무리 뻔한 단계라도 빠짐없이 적는다. 급할 때는 가장 쉬운 단계부터 잊어버린다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>지금까지 내용을 체크리스트로 만들면 이렇게 됩니다. 교재 7.5절이 뻔한 단계까지 다 적으라고 해서 정말 뻔한 것까지 넣었습니다.</li><li>왼쪽은 배포 전에 볼 것입니다. 이번 변경에 되돌릴 수 없는 게 있는지를 배포 전에 알면, 이번엔 롤백보다 고쳐서 내보내는 쪽으로 가야겠다는 걸 미리 정할 수 있습니다.</li><li>오른쪽 마지막 줄, 걸린 시간과 막힌 곳은 꼭 적어 둡니다. 이게 쌓여야 3부에서 본 카나리 대기 시간도 정할 수 있습니다. 여러분 팀 체크리스트에 뭐가 더 있는지 토론 때 듣고 싶습니다.</li></ul></aside>
+  </section>
+
+  <!-- 77 -->
+  <section class="slide" data-t="롤백도 미리 연습한다">
+    <div class="kicker">4부 · 7.5, 5.8, 5.9.4</div>
+    <h2>롤백도 미리 연습한다</h2>
+    <div class="cols">
+      <div class="card"><h3>7.5: 급하지 않을 때 연습한다</h3><ul>
+        <li>트래픽 옮기기, 걸린 시간 기록</li>
+        <li>데이터 전체 복구</li>
+        <li>이전 버전으로 롤백</li>
+        <li>틀린 부분을 적어 두고 자동화한다</li>
+      </ul></div>
+      <div class="card violet"><h3>5.8: 카오스 실험</h3><ol style="font-size:19px;line-height:1.6;padding-left:22px;color:var(--ink)">
+        <li>정상 상태에 대한 가설</li><li>실제로 일어날 법한 이벤트 준비</li><li>대조군과 비교</li><li>가설 검증</li></ol>
+        <p style="font-size:18px;margin-top:10px">영향 범위는 작게, 실험은 자동화. 도구 예: Chaos Toolkit, KubeMonkey (5.9.4)</p></div>
+    </div>
+    <p class="note">연습하면 어디서 막히는지 미리 알 수 있다. 카오스는 8주차 20장에서 자세히</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>절차를 문서로만 두면 막상 돌릴 때 어디서 막히는지 모릅니다. 교재 7.5절은 급하지 않을 때 연습하라고 하고, 무엇을 연습할지도 적어 둡니다.</li><li>5.8절 카오스 실험도 같은 얘기입니다. 가설을 세우고 대조군과 비교합니다. 3부 카나리의 베이스라인이 여기서도 대조군으로 나옵니다.</li><li>연습해 보면 어디서 막히는지 미리 알 수 있습니다. 카오스는 다음 주에 남희 님이 자세히 다룹니다.</li></ul></aside>
+  </section>
+
+  <!-- 78 -->
+  <section class="slide" data-t="전체 그림 다시 보기">
+    <div class="kicker">정리 · 전체 그림</div>
+    <h2>전체 그림 다시 보기</h2>
+    <svg viewBox="0 0 1150 470" role="img" aria-label="개발자가 앱 저장소에 커밋하면 CI가 테스트하고 이미지를 레지스트리에 올리고 배포 저장소에 태그를 커밋한다. 클러스터 안의 Argo CD가 배포 저장소를 당겨 와 Rollout을 적용하고, Argo Rollouts가 옛 버전과 새 버전 ReplicaSet, stable과 canary 서비스, Gateway의 가중치를 관리해 사용자 요청을 나눈다. 판정은 AnalysisRun이 Prometheus나 Datadog을 조회해서 하고, 되돌릴 때는 배포 저장소에서 git revert를 한다.">
+      <defs>
+        <marker id="ov" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker>
+        <marker id="ovy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#fbbf24"/></marker>
+        <marker id="ovg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#34d399"/></marker>
+      </defs>
+
+      <!-- 클러스터 밖 -->
+      <text x="20" y="22" font-size="14" fill="#9db0d6" font-weight="700">클러스터 밖</text>
+      <g text-anchor="middle">
+        <rect x="20" y="35" width="120" height="62" rx="10" fill="#141d33" stroke="#2c3b61"/>
+        <text x="80" y="62" font-size="16" fill="#eaf0ff">개발자</text><text x="80" y="84" font-size="13" fill="#9db0d6">커밋 3f9c2e1</text>
+        <rect x="180" y="35" width="170" height="62" rx="10" fill="#141d33" stroke="#2c3b61"/>
+        <text x="265" y="62" font-size="16" fill="#eaf0ff">앱 저장소</text><text x="265" y="84" font-size="13" fill="#9db0d6">order-api 코드</text>
+        <rect x="390" y="35" width="200" height="62" rx="10" fill="#141d33" stroke="#4f9cff"/>
+        <text x="490" y="62" font-size="16" fill="#eaf0ff">CI</text><text x="490" y="84" font-size="13" fill="#9db0d6">테스트, 빌드, 서명</text>
+        <rect x="630" y="35" width="250" height="62" rx="10" fill="#141d33" stroke="#4f9cff"/>
+        <text x="755" y="62" font-size="16" fill="#eaf0ff">레지스트리</text><text x="755" y="84" font-size="13" fill="#9db0d6">order-api:3f9c2e1@sha256:…</text>
+        <rect x="390" y="135" width="200" height="62" rx="10" fill="#141d33" stroke="#a78bfa"/>
+        <text x="490" y="162" font-size="16" fill="#eaf0ff">배포 저장소</text><text x="490" y="184" font-size="13" fill="#9db0d6">overlays/prod newTag</text>
+        <rect x="960" y="35" width="170" height="62" rx="10" fill="#141d33" stroke="#2c3b61"/>
+        <text x="1045" y="62" font-size="16" fill="#eaf0ff">사용자</text><text x="1045" y="84" font-size="13" fill="#9db0d6">초당 1,000 요청</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" fill="none" marker-end="url(#ov)">
+        <line x1="140" y1="66" x2="178" y2="66"/>
+        <line x1="350" y1="66" x2="388" y2="66"/>
+        <line x1="590" y1="66" x2="628" y2="66"/>
+        <line x1="490" y1="97" x2="490" y2="133"/>
+      </g>
+      <text x="500" y="122" font-size="12" fill="#9db0d6">태그 커밋</text>
+
+      <!-- 클러스터 -->
+      <rect x="20" y="225" width="1110" height="235" rx="14" fill="rgba(79,156,255,.04)" stroke="#2c3b61" stroke-dasharray="6 5"/>
+      <text x="36" y="450" font-size="14" fill="#9db0d6" font-weight="700">클러스터 (order 네임스페이스)</text>
+      <g text-anchor="middle">
+        <rect x="40" y="265" width="160" height="62" rx="10" fill="#141d33" stroke="#a78bfa"/>
+        <text x="120" y="292" font-size="16" fill="#eaf0ff">Argo CD</text><text x="120" y="314" font-size="13" fill="#9db0d6">또는 Flux</text>
+        <rect x="235" y="265" width="170" height="62" rx="10" fill="#141d33" stroke="#34d399"/>
+        <text x="320" y="292" font-size="16" fill="#eaf0ff">Rollout</text><text x="320" y="314" font-size="13" fill="#9db0d6">Argo Rollouts가 관리</text>
+        <rect x="445" y="255" width="200" height="50" rx="9" fill="#141d33" stroke="#4f9cff"/>
+        <text x="545" y="276" font-size="15" fill="#4f9cff">ReplicaSet 1.6.3</text><text x="545" y="295" font-size="12" fill="#9db0d6">stable, 파드 10</text>
+        <rect x="445" y="320" width="200" height="50" rx="9" fill="#141d33" stroke="#34d399"/>
+        <text x="545" y="341" font-size="15" fill="#34d399">ReplicaSet 1.7.0</text><text x="545" y="360" font-size="12" fill="#9db0d6">canary, 파드 1</text>
+        <rect x="685" y="255" width="170" height="50" rx="9" fill="#141d33" stroke="#4f9cff"/>
+        <text x="770" y="285" font-size="14" fill="#eaf0ff">Service stable</text>
+        <rect x="685" y="320" width="170" height="50" rx="9" fill="#141d33" stroke="#34d399"/>
+        <text x="770" y="350" font-size="14" fill="#eaf0ff">Service canary</text>
+        <rect x="900" y="275" width="210" height="75" rx="10" fill="#141d33" stroke="#fbbf24"/>
+        <text x="1005" y="302" font-size="15" fill="#fbbf24">Gateway, HTTPRoute</text><text x="1005" y="326" font-size="14" fill="#eaf0ff">stable 95 : canary 5</text>
+        <rect x="445" y="395" width="200" height="50" rx="9" fill="#141d33" stroke="#fb7185"/>
+        <text x="545" y="416" font-size="15" fill="#fb7185">AnalysisRun</text><text x="545" y="435" font-size="12" fill="#9db0d6">1분마다 판정</text>
+        <rect x="685" y="395" width="170" height="50" rx="9" fill="#141d33" stroke="#2c3b61"/>
+        <text x="770" y="416" font-size="14" fill="#eaf0ff">Prometheus</text><text x="770" y="435" font-size="12" fill="#9db0d6">또는 Datadog</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" fill="none" marker-end="url(#ov)">
+        <path d="M470 197 C 380 230, 200 230, 140 263"/>
+        <line x1="200" y1="296" x2="233" y2="296"/>
+        <line x1="405" y1="290" x2="443" y2="280"/>
+        <line x1="405" y1="305" x2="443" y2="342"/>
+        <line x1="645" y1="280" x2="683" y2="280"/>
+        <line x1="645" y1="345" x2="683" y2="345"/>
+        <line x1="898" y1="300" x2="857" y2="282"/>
+        <line x1="898" y1="325" x2="857" y2="343"/>
+        <line x1="1045" y1="97" x2="1045" y2="273"/>
+        <line x1="645" y1="420" x2="683" y2="420"/>
+      </g>
+      <text x="250" y="222" font-size="12" fill="#9db0d6">당겨 감 (pull)</text>
+      <path d="M755 97 C 755 170, 620 200, 590 253" fill="none" stroke="#9db0d6" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ov)"/>
+      <text x="700" y="160" font-size="12" fill="#9db0d6">노드가 이미지를 받음</text>
+      <path d="M443 420 C 380 420, 330 390, 330 330" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ov)"/>
+      <text x="236" y="395" font-size="12" fill="#fb7185">판정 실패 → 가중치 0</text>
+      <line x1="300" y1="166" x2="388" y2="166" stroke="#fbbf24" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ovy)"/>
+      <text x="150" y="162" font-size="13" fill="#fbbf24" font-weight="700">되돌리기</text><text x="150" y="180" font-size="12" fill="#fbbf24">여기서 git revert</text>
+
+      <!-- 부 표시 -->
+      <g font-size="12" font-weight="800">
+        <rect x="392" y="6" width="42" height="20" rx="6" fill="#4f9cff"/><text x="413" y="20" fill="#070c18" text-anchor="middle">1부</text>
+        <rect x="592" y="138" width="42" height="20" rx="6" fill="#a78bfa"/><text x="613" y="152" fill="#070c18" text-anchor="middle">1부</text>
+                <rect x="160" y="268" width="38" height="18" rx="5" fill="#a78bfa"/><text x="179" y="281" fill="#070c18" text-anchor="middle">1부</text>
+        <rect x="362" y="268" width="40" height="18" rx="5" fill="#34d399"/><text x="382" y="281" fill="#070c18" text-anchor="middle">2·3부</text>
+        <rect x="1068" y="255" width="40" height="18" rx="5" fill="#fbbf24"/><text x="1088" y="268" fill="#070c18" text-anchor="middle">3부</text>
+        <rect x="602" y="398" width="40" height="18" rx="5" fill="#fb7185"/><text x="622" y="411" fill="#070c18" text-anchor="middle">3부</text>
+        <rect x="230" y="152" width="42" height="20" rx="6" fill="#fbbf24"/><text x="251" y="166" fill="#070c18" text-anchor="middle">4부</text>
+      </g>
+    </svg>
+    <aside class="notes"><b>발표 노트</b><ul><li>처음에 본 전체 그림을 다시 보겠습니다. 이제 상자마다 무엇을 하는지 아실 겁니다.</li><li>1부는 위쪽입니다. 이미지에 이름을 붙이고, 원하는 상태를 배포 저장소에 커밋하고, 클러스터 안의 Argo CD가 당겨 가게 했습니다.</li><li>2부와 3부는 클러스터 안의 가운데입니다. 같은 배포를 롤링, 블루/그린, 카나리로 해 봤고, 카나리에서는 베이스라인과 비교하는 판정이 자동으로 멈춰 줬습니다.</li><li>4부는 노란 점선입니다. 되돌릴 때는 클러스터를 직접 만지지 않고 배포 저장소에서 git revert를 하면, Argo CD가 그걸 당겨 가서 맞춥니다.</li></ul></aside>
+  </section>
+
+  <!-- 79 -->
+  <section class="slide" data-t="처음 질문으로">
+    <div class="kicker">정리</div>
+    <h2>릴리스 파이프라인에서 제일 중요한 건?</h2>
+    <table class="tight">
+      <tr><th></th><th>롤백을 위해 한 것</th><th>교재</th></tr>
+      <tr><td class="k">1부 준비</td><td>돌아갈 이름(SHA 태그, 다이제스트), 기록(깃), 옛 RS가 남는 원리</td><td>5.1 ~ 5.6, 6장, 18장</td></tr>
+      <tr><td class="k">2부 전략 한눈에</td><td>누구에게, 얼마나, 어떤 순서로 보여 줄지 고르는 선택지</td><td>5.7, 6.3</td></tr>
+      <tr><td class="k">3부 같은 배포, 세 번</td><td>롤링 1만 4천 건 → 블루/그린 5천 4백 건 → 카나리 약 90건</td><td>5.7, 5.8, 7장</td></tr>
+      <tr><td class="k">4부 되돌리기</td><td>git revert, 돌아갈 곳 확인, 데이터, 헬름 훅, 연습</td><td>7.5, 6.5, 18장</td></tr>
+    </table>
+    <p style="margin-top:22px" class="big">제 답은 <span class="em">롤백</span>이고, 배포 전략은 롤백을 싸게 만드는 방법입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>처음 질문으로 돌아가겠습니다. 릴리스 파이프라인에서 제일 중요한 게 뭘까요.</li><li>제 답은 롤백이고, 오늘 본 배포 전략들은 롤백을 싸게 만드는 방법이었습니다. 같은 버그였는데 전략만 바꿔서 실패가 1만 4천 건에서 약 90건이 됐습니다.</li><li>오늘은 네 장을 이 관점으로 묶어 봤습니다.</li></ul></aside>
+  </section>
+
+  <!-- 80 -->
+  <section class="slide" data-t="토론">
+    <div class="kicker">토론</div>
+    <h2>같이 얘기해 보고 싶은 것</h2>
+    <ul>
+      <li><b>Q1.</b> 우리 서비스라면 롤링, 블루/그린, 카나리 중 뭘 고를까? 카나리를 못 쓰게 막는 건 뭘까 (트래픽 양, 메트릭, 트래픽 나누는 장치)</li>
+      <li><b>Q2.</b> 쿠버네티스는 실패한 롤아웃을 자동으로 되돌리지 않는다. 맞는 설계일까? 자동 롤백이 오히려 위험한 경우는</li>
+      <li><b>Q3.</b> <span class="dim">(시간이 되면)</span> 확장/축소로 배포한다면 롤백은 여전히 필요할까? 고쳐서 다시 내보내는 것만으로 충분할까</li>
+      <li><b>Q4.</b> <span class="dim">(시간이 되면)</span> 교재는 5장, 18장 모두 앱 코드와 매니페스트를 한 저장소에 둔다. 배포 저장소를 따로 두는 게 나을까</li>
+    </ul>
+    <p class="note">정답이 있는 질문은 아닙니다. 각자 쓰는 환경 기준으로 얘기해 주세요</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>토론 질문 네 개입니다. Q1, Q2를 먼저 하고, Q3, Q4는 시간이 되면 하겠습니다.</li><li>Q1은 오늘 본론이라 먼저 해 보면 좋겠습니다. 여러분 서비스에서 카나리를 못 쓰게 막는 게 뭔지 궁금합니다.</li><li>Q2는 자동 롤백이 있으면 편할 것 같은데 왜 없는지, 있으면 오히려 위험한 때는 언제인지 얘기해 보면 좋겠습니다.</li><li>의견이 다 나온 뒤에: 제 생각은 이렇습니다. 롤아웃이 느린 이유가 이미지 오류일 수도 있지만 노드가 부족하거나 이미지 받는 게 느려서일 수도 있어서 컨트롤러가 실패라고 단정하기 어렵습니다. 그래서 판단을 메트릭을 보는 쪽에 맡긴 것 같습니다.</li></ul></aside>
+  </section>
+
+  <!-- 81 -->
+  <section class="slide" data-t="참고 자료">
+    <div class="kicker">참고 자료</div>
+    <h2>참고 자료</h2>
+    <div class="cols">
+      <ul style="gap:10px">
+        <li style="font-size:19px">『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5, 6, 7, 18장</li>
+        <li style="font-size:19px">Kubernetes 문서: Deployments, Pod Lifecycle(종료), Container Lifecycle Hooks, kubectl debug</li>
+        <li style="font-size:19px">Gateway API 문서</li>
+      </ul>
+      <ul style="gap:10px">
+        <li style="font-size:19px">Flux, Argo CD, Argo Rollouts 문서</li>
+        <li style="font-size:19px">OpenGitOps 원칙 v1.0 (opengitops.dev)</li>
+        <li style="font-size:19px">예제와 실행 결과: <code>week-07/명주/examples/</code>, 교재 모범 사례 요약은 README</li>
+      </ul>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>참고한 자료입니다. 예제는 kind에서 돌려 봤고 실행 결과를 examples README에 적어 뒀습니다. 교재 각 장의 모범 사례 요약은 README에 있습니다.</li></ul></aside>
+  </section>
+
+  <!-- 82 -->
+  <section class="slide" data-t="마무리">
+    <div class="kicker">마무리</div>
+    <h1 style="font-size:44px;line-height:1.45">같은 버그,<br>롤링 1만 4천 건, 블루/그린 5천 4백 건, <span class="em">카나리 약 90건</span></h1>
+    <p class="dim" style="margin-top:26px">감사합니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>같은 버그였는데 전략에 따라 1만 4천 건, 5천 4백 건, 약 90건이 됐습니다. 이 세 숫자만 기억해 주시면 될 것 같습니다.</li><li>들어 주셔서 감사합니다.</li></ul></aside>
+  </section>
+
+  <div id="toc"><h2>목차</h2><ol id="toclist"></ol></div>
+</div>
+
+<div id="bar">
+  <button id="prev">이전</button>
+  <button id="next">다음</button>
+  <span id="cnt">1 / 1</span>
+  <span class="t" id="title"></span>
+  <button id="notebtn">노트</button>
+  <button id="tocbtn">목차</button>
+  <button id="presenterbtn">발표자</button>
+  <span>방향키 이동 · N 노트 · O 목차 · P 발표자 화면</span>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var params = new URLSearchParams(location.search);
+  var presenterMode = params.get('presenter') === '1';
+  var initial = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+  var i = initial;
+
+  function textNodes(root){
+    var nodes = [];
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node){
+        return node.parentElement && !node.parentElement.closest('.notes')
+          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    return nodes;
+  }
+
+  function selectionOffsets(root, range){
+    var nodes = textNodes(root);
+    var start = 0;
+    var end = 0;
+    var total = 0;
+    var foundStart = false;
+    var foundEnd = false;
+    nodes.forEach(function(node){
+      var len = node.nodeValue.length;
+      if (!foundStart && node === range.startContainer) {
+        start = total + range.startOffset;
+        foundStart = true;
+      }
+      if (!foundEnd && node === range.endContainer) {
+        end = total + range.endOffset;
+        foundEnd = true;
+      }
+      total += len;
+    });
+    return foundStart && foundEnd ? {start:start, end:end} : null;
+  }
+
+  function rangeFromOffsets(root, start, end){
+    var nodes = textNodes(root);
+    var range = document.createRange();
+    var total = 0;
+    var startNode = null;
+    var endNode = null;
+    var startOffset = 0;
+    var endOffset = 0;
+    nodes.some(function(node){
+      var next = total + node.nodeValue.length;
+      if (!startNode && start <= next) {
+        startNode = node;
+        startOffset = Math.max(0, start - total);
+      }
+      if (!endNode && end <= next) {
+        endNode = node;
+        endOffset = Math.max(0, end - total);
+        return true;
+      }
+      total = next;
+      return false;
+    });
+    if (!startNode || !endNode) return null;
+    range.setStart(startNode, Math.min(startOffset, startNode.nodeValue.length));
+    range.setEnd(endNode, Math.min(endOffset, endNode.nodeValue.length));
+    return range;
+  }
+
+  if (presenterMode) {
+    var sourceSlides = slides;
+    document.body.className = 'presenter-mode';
+    document.body.innerHTML = '<div class="presenter-shell">' +
+      '<header class="presenter-header"><strong>발표자 화면</strong><span id="pcount"></span>' +
+      '<span class="presenter-spacer"></span><span class="presenter-clock" id="pclock">00:00</span>' +
+      '<button class="presenter-btn" id="ptimer">시작</button><button class="presenter-btn" id="preset">초기화</button>' +
+      '<button class="presenter-btn" id="pprev">이전</button><button class="presenter-btn" id="pnext">다음</button></header>' +
+      '<main class="presenter-grid"><section class="presenter-panel current"><div class="presenter-label">현재 슬라이드</div>' +
+      '<div class="presenter-preview" id="pcurrent"></div><div class="presenter-hint">문장을 마우스로 드래그하면 발표 화면에 강조됩니다. Esc를 누르면 강조가 지워집니다.</div></section>' +
+      '<section class="presenter-panel"><div class="presenter-label">다음 슬라이드</div><div class="presenter-preview" id="pnextview"></div></section>' +
+      '<section class="presenter-panel"><div class="presenter-label">발표 노트</div><div class="presenter-notes" id="pnotes"></div></section></main></div>';
+
+    var currentHost = document.getElementById('pcurrent');
+    var nextHost = document.getElementById('pnextview');
+    var pcount = document.getElementById('pcount');
+    var pnotes = document.getElementById('pnotes');
+    var currentClone = null;
+    var timerStarted = null;
+    var timerElapsed = 0;
+    var timerId = null;
+
+    function makePreview(host, index){
+      host.innerHTML = '';
+      if (index < 0 || index >= sourceSlides.length) return null;
+      var frame = document.createElement('div');
+      frame.className = 'presenter-frame';
+      var clone = sourceSlides[index].cloneNode(true);
+      clone.classList.add('on');
+      var note = clone.querySelector('.notes');
+      if (note) note.remove();
+      frame.appendChild(clone);
+      host.appendChild(frame);
+      scalePreview(host);
+      return clone;
+    }
+
+    function scalePreview(host){
+      var frame = host.querySelector('.presenter-frame');
+      if (!frame) return;
+      var scale = Math.min(host.clientWidth / 1280, host.clientHeight / 720);
+      frame.style.transform = 'scale(' + scale + ')';
+      frame.style.left = Math.max(0, (host.clientWidth - 1280 * scale) / 2) + 'px';
+      frame.style.top = Math.max(0, (host.clientHeight - 720 * scale) / 2) + 'px';
+    }
+
+    function send(message){
+      if (window.opener && !window.opener.closed) window.opener.postMessage(message, '*');
+    }
+
+    function renderPresenter(){
+      currentClone = makePreview(currentHost, i);
+      makePreview(nextHost, i + 1);
+      pcount.textContent = (i + 1) + ' / ' + sourceSlides.length + ' · ' + (sourceSlides[i].dataset.t || '');
+      var note = sourceSlides[i].querySelector('.notes');
+      pnotes.innerHTML = note ? note.innerHTML : '<span style="color:var(--dim)">발표 노트가 없습니다.</span>';
+      history.replaceState(null, '', location.pathname + '?presenter=1#' + (i + 1));
+      send({type:'presenter-go', index:i});
+      send({type:'presenter-selection', index:i, clear:true});
+    }
+
+    function presenterGo(n){
+      i = Math.max(0, Math.min(sourceSlides.length - 1, n));
+      window.getSelection().removeAllRanges();
+      renderPresenter();
+    }
+
+    function updateClock(){
+      var elapsed = timerElapsed + (timerStarted ? Date.now() - timerStarted : 0);
+      var seconds = Math.floor(elapsed / 1000);
+      document.getElementById('pclock').textContent = String(Math.floor(seconds / 60)).padStart(2,'0') + ':' + String(seconds % 60).padStart(2,'0');
+    }
+
+    document.getElementById('pnext').addEventListener('click', function(){ presenterGo(i + 1); });
+    document.getElementById('pprev').addEventListener('click', function(){ presenterGo(i - 1); });
+    document.getElementById('ptimer').addEventListener('click', function(e){
+      if (timerStarted) {
+        timerElapsed += Date.now() - timerStarted;
+        timerStarted = null;
+        clearInterval(timerId);
+        timerId = null;
+        e.currentTarget.textContent = '시작';
+      } else {
+        timerStarted = Date.now();
+        timerId = setInterval(updateClock, 500);
+        e.currentTarget.textContent = '일시정지';
+      }
+      updateClock();
+    });
+    document.getElementById('preset').addEventListener('click', function(){
+      timerElapsed = 0;
+      if (timerStarted) timerStarted = Date.now();
+      updateClock();
+    });
+
+    document.addEventListener('selectionchange', function(){
+      var selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed || !currentClone) {
+        send({type:'presenter-selection', index:i, clear:true});
+        return;
+      }
+      var range = selection.getRangeAt(0);
+      if (!currentClone.contains(range.commonAncestorContainer)) return;
+      var offsets = selectionOffsets(currentClone, range);
+      if (offsets) send({type:'presenter-selection', index:i, start:offsets.start, end:offsets.end});
+    });
+
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { presenterGo(i + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { presenterGo(i - 1); e.preventDefault(); }
+      else if (e.key === 'Home') { presenterGo(0); }
+      else if (e.key === 'End') { presenterGo(sourceSlides.length - 1); }
+      else if (e.key === 'Escape') { window.getSelection().removeAllRanges(); send({type:'presenter-selection', index:i, clear:true}); }
+    });
+    window.addEventListener('resize', function(){ scalePreview(currentHost); scalePreview(nextHost); });
+    renderPresenter();
+    return;
+  }
+
+  var cnt = document.getElementById('cnt');
+  var title = document.getElementById('title');
+  var pg = document.getElementById('pg');
+  var toc = document.getElementById('toc');
+  var list = document.getElementById('toclist');
+  var presenterWindow = null;
+  var sharedSelection = null;
+
+  function clearSharedSelection(){
+    if (sharedSelection) sharedSelection.remove();
+    sharedSelection = null;
+  }
+
+  function drawSharedSelection(start, end){
+    clearSharedSelection();
+    var slide = slides[i];
+    var range = rangeFromOffsets(slide, start, end);
+    if (!range || range.collapsed) return;
+    var slideRect = slide.getBoundingClientRect();
+    var layer = document.createElement('div');
+    layer.className = 'shared-selection';
+    Array.prototype.forEach.call(range.getClientRects(), function(rect){
+      if (!rect.width || !rect.height) return;
+      var mark = document.createElement('div');
+      mark.className = 'shared-selection-mark';
+      mark.style.left = (rect.left - slideRect.left) + 'px';
+      mark.style.top = (rect.top - slideRect.top) + 'px';
+      mark.style.width = rect.width + 'px';
+      mark.style.height = rect.height + 'px';
+      layer.appendChild(mark);
+    });
+    slide.appendChild(layer);
+    sharedSelection = layer;
+  }
+
+  function openPresenter(){
+    var url = new URL(location.href);
+    url.searchParams.set('presenter', '1');
+    url.hash = String(i + 1);
+    presenterWindow = window.open(url.href, 'kubernetes-presenter', 'popup=yes,width=1500,height=950');
+    if (presenterWindow) presenterWindow.focus();
+  }
+
+  slides.forEach(function(s, n){
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.innerHTML = '<span class="n">' + (n+1) + '</span>' + (s.dataset.t || '');
+    a.addEventListener('click', function(){ go(n); toc.classList.remove('open'); });
+    li.appendChild(a); list.appendChild(li);
+  });
+
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    clearSharedSelection();
+    slides.forEach(function(s, k){ s.classList.toggle('on', k === i); });
+    cnt.textContent = (i+1) + ' / ' + slides.length;
+    title.textContent = slides[i].dataset.t || '';
+    pg.style.width = ((i+1) / slides.length * 100) + '%';
+  }
+
+  document.getElementById('next').addEventListener('click', function(){ go(i+1); });
+  document.getElementById('prev').addEventListener('click', function(){ go(i-1); });
+  document.getElementById('tocbtn').addEventListener('click', function(){ toc.classList.toggle('open'); });
+  document.getElementById('notebtn').addEventListener('click', function(){ document.body.classList.toggle('notes-on'); });
+  document.getElementById('presenterbtn').addEventListener('click', openPresenter);
+
+  window.addEventListener('message', function(e){
+    var data = e.data || {};
+    if (data.type === 'presenter-go') go(data.index);
+    else if (data.type === 'presenter-selection') {
+      if (data.clear || data.index !== i) clearSharedSelection();
+      else drawSharedSelection(data.start, data.end);
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { go(i+1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(i-1); e.preventDefault(); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(slides.length - 1); }
+    else if (e.key === 'o' || e.key === 'O') { toc.classList.toggle('open'); }
+    else if (e.key === 'n' || e.key === 'N') { document.body.classList.toggle('notes-on'); }
+    else if ((e.key === 'p' || e.key === 'P') && !e.metaKey && !e.ctrlKey) { openPresenter(); }
+    else if (e.key === 'Escape') { toc.classList.remove('open'); clearSharedSelection(); }
+  });
+
+  go(initial);
+})();
+</script>
+</body>
+</html>

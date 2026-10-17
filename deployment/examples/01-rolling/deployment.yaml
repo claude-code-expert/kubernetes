@@ -1,0 +1,39 @@
+# 3부 · 끊기지 않게 하려면 (교재 5.7 YAML 보강)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  replicas: 3
+  minReadySeconds: 5             # Ready 후 5초 버텨야 가용으로 센다
+  progressDeadlineSeconds: 60    # 데모용으로 짧게 (기본 600)
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: web                   # 셀렉터에는 바뀌지 않는 것만
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0          # 용량을 줄이지 않는다
+  template:
+    metadata:
+      labels:
+        app: web
+        app.kubernetes.io/version: "1.26"
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: web
+          image: nginx:1.26
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet: {path: /, port: 80}
+            periodSeconds: 2
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5       # v1.30+ · 엔드포인트가 먼저 빠질 시간

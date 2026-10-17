@@ -1,0 +1,52 @@
+  <section class="slide" data-t="롤링 중에는 두 버전이 섞인다">
+    <div class="kicker">3부 · 1회차 · 5.7</div>
+    <h2>롤링 중에는 두 버전이 섞인다</h2>
+    <svg viewBox="0 0 1150 250" role="img" aria-label="한 사용자의 요청이 롤링 중에 새 버전과 옛 버전 파드로 번갈아 가서, 새 버전에서 적용한 쿠폰을 옛 버전이 모른다">
+      <defs><marker id="arm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <rect x="20" y="95" width="150" height="60" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="95" y="122" font-size="17" fill="#eaf0ff" text-anchor="middle">사용자 한 명</text><text x="95" y="143" font-size="13" fill="#9db0d6" text-anchor="middle">같은 주문</text>
+      <rect x="260" y="95" width="130" height="60" rx="10" fill="#141d33" stroke="#9db0d6"/><text x="325" y="131" font-size="17" fill="#eaf0ff" text-anchor="middle">Service</text>
+      <line x1="170" y1="125" x2="258" y2="125" stroke="#9db0d6" stroke-width="2" marker-end="url(#arm)"/>
+      <rect x="500" y="20" width="250" height="70" rx="10" fill="#141d33" stroke="#34d399"/><text x="625" y="50" font-size="17" fill="#34d399" text-anchor="middle" font-weight="700">파드 1.7.0 (새)</text><text x="625" y="74" font-size="14" fill="#9db0d6" text-anchor="middle">① 쿠폰 적용 → 할인 저장</text>
+      <rect x="500" y="160" width="250" height="70" rx="10" fill="#141d33" stroke="#4f9cff"/><text x="625" y="190" font-size="17" fill="#4f9cff" text-anchor="middle" font-weight="700">파드 1.6.3 (옛)</text><text x="625" y="214" font-size="14" fill="#9db0d6" text-anchor="middle">② 결제 → 할인 컬럼을 안 읽음</text>
+      <line x1="390" y1="115" x2="498" y2="60" stroke="#34d399" stroke-width="2" marker-end="url(#arm)"/>
+      <line x1="390" y1="135" x2="498" y2="190" stroke="#4f9cff" stroke-width="2" marker-end="url(#arm)"/>
+      <g font-size="16" fill="#eaf0ff">
+        <text x="790" y="55">커넥션마다 파드를 고른다</text>
+        <text x="790" y="80" fill="#9db0d6" font-size="14">(다음 요청은 다른 버전일 수 있다)</text>
+        <text x="790" y="190" fill="#fbbf24" font-weight="700">할인 없이 결제된다</text>
+        <text x="790" y="215" fill="#9db0d6" font-size="14">컬럼은 1.6.3 때 추가했지만 옛 코드는 안 읽는다</text>
+      </g>
+    </svg>
+    <div class="cols" style="margin-top:6px">
+      <ul>
+        <li>교체되는 3분 동안 새 버전 30% → 60% → 90%. 그만큼 요청이 두 버전에 나뉜다</li>
+        <li>새로고침할 때마다 쿠폰 입력칸이 <b>보였다 안 보였다</b> 한다</li>
+      </ul>
+      <p style="font-size:19px">교재 5.7: 롤링 업데이트에서 또 한 가지 문제가 될 수 있는 부분은 <b>롤링 중에 두 버전의 애플리케이션이 동시 실행</b>된다는 점이다</p>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>1회차 결과를 보기 전에, 롤링에서 버그와 별개로 꼭 알아야 할 게 하나 있습니다. 롤링이 진행되는 동안에는 옛 버전과 새 버전이 섞여서 같이 요청을 받습니다.</li><li>서비스는 Ready인 파드 전부에 요청을 나눠 보냅니다. 커넥션을 새로 맺을 때마다 파드를 고르기 때문에, 같은 사용자의 요청이라도 한 번은 새 버전으로, 다음 번은 옛 버전으로 갈 수 있습니다.</li><li>그림처럼 사용자가 장바구니에서 쿠폰을 적용합니다. 이 요청은 1.7.0 파드가 받아서 할인 금액을 새 컬럼에 저장합니다. 바로 이어서 결제 버튼을 누르는데, 이번엔 1.6.3 파드로 갑니다. 쿠폰 컬럼은 1.6.3 배포 때 추가해 뒀으니 DB에는 있습니다. 하지만 1.6.3 코드는 그 컬럼을 읽지 않습니다. 그래서 에러 없이 할인 없는 금액으로 결제됩니다. 에러가 안 나니 알람에도 안 잡힙니다.</li><li>사용자 눈에는 더 이상하게 보입니다. 새로고침할 때마다 쿠폰 입력칸이 보였다 안 보였다 합니다. 새 버전 화면과 옛 버전 화면이 번갈아 오니까요.</li><li>이 구간이 얼마나 되느냐면, 예시 설정에서는 3분 동안 새 버전 비율이 30%, 60%, 90%로 올라갑니다. 그 3분 내내 이런 일이 생길 수 있습니다. 교재 5.7도 롤링 업데이트의 문제로 두 버전이 동시에 실행된다는 점을 꼽고, 그래서 DB 스키마가 두 버전을 다 지원해야 한다고 합니다.</li><li>이건 코드에 버그가 없어도 생기는 문제입니다. 그러면 섞여도 괜찮으려면 뭘 지켜야 하는지 다음 장에서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="섞여도 괜찮으려면">
+    <div class="kicker">3부 · 1회차 · 5.7, 5.10</div>
+    <h2>섞여도 괜찮으려면: 하위 호환</h2>
+    <table class="tight">
+      <tr><th>무엇이 섞이나</th><th>괜찮은 변경</th><th>안 되는 변경</th></tr>
+      <tr><td class="k">API (다른 서비스, 프론트)</td><td>응답에 필드 추가, 선택 파라미터 추가</td><td>필드 삭제, 이름이나 의미 변경, 필수 파라미터 추가</td></tr>
+      <tr><td class="k">DB</td><td>NULL 허용 컬럼 추가 (확장)</td><td>컬럼 삭제, 이름 변경, NOT NULL 추가를 같은 배포에서</td></tr>
+      <tr><td class="k">큐 메시지, 이벤트</td><td>필드 추가, 옛 컨슈머가 모르는 필드는 무시</td><td>형식 변경. 옛 컨슈머가 새 메시지를 못 읽는다</td></tr>
+      <tr><td class="k">캐시, 세션</td><td>새 키 추가</td><td>같은 키에 다른 형식 저장. 옛 버전이 읽다가 깨진다</td></tr>
+    </table>
+    <div class="cols" style="margin-top:16px">
+      <div class="card"><h3>그래서 보통 이렇게 한다</h3><ul>
+        <li>새 버전은 <b>옛 버전과 같이 돌아도 되게</b> 짠다 (바로 앞 버전과 호환)</li>
+        <li>새 기능은 플래그를 끈 채로 배포하고, 전부 교체된 뒤에 켠다</li>
+        <li>DB는 확장, 이전, 축소를 따로 배포 (뒤에서)</li>
+      </ul></div>
+      <div class="card violet"><h3>다른 전략에서는</h3><ul>
+        <li>블루/그린: 한 번에 넘겨서 섞이는 시간이 짧다. 그래도 DB는 공유하고 keep-alive는 남는다</li>
+        <li>카나리: 일부러 오래 섞는다. 호환이 더 필요하다</li>
+      </ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>섞여도 괜찮으려면 새 버전이 옛 버전과 같이 돌아도 문제없어야 합니다. 이걸 하위 호환이라고 합니다. 표는 무엇이 섞이는지와 어떤 변경은 괜찮고 어떤 변경은 안 되는지입니다.</li><li>첫 줄 API입니다. 다른 서비스나 프론트가 우리 API를 부를 때, 롤링 중에는 옛 버전이 대답할 수도 있고 새 버전이 대답할 수도 있습니다. 응답에 필드를 추가하는 건 괜찮습니다. 옛 클라이언트는 모르는 필드를 무시하니까요. 반대로 필드를 지우거나 이름을 바꾸면, 새 버전 응답을 받은 쪽이 깨집니다.</li><li>DB는 3부 뒤쪽 "컬럼 추가는 세 번에 나눠서"에서 자세히 볼 확장, 축소 얘기입니다. NULL을 허용하는 컬럼을 추가하는 건 옛 버전이 몰라도 됩니다. 하지만 컬럼을 지우거나 이름을 바꾸는 걸 같은 배포에서 하면, 아직 떠 있는 옛 파드가 없는 컬럼을 찾다가 에러를 냅니다.</li><li>큐 메시지와 캐시도 자주 잊습니다. 새 버전이 큐에 새 형식으로 메시지를 넣으면, 아직 옛 버전인 컨슈머가 그걸 못 읽습니다. 캐시도 같은 키에 새 형식으로 저장하면 옛 버전이 읽다가 깨집니다.</li><li>그래서 보통 이렇게 합니다. 새 버전은 바로 앞 버전과 같이 돌아도 되게 짭니다. 새 기능은 플래그를 끈 채로 배포하고, 전부 교체된 뒤에 켭니다. 그러면 쿠폰 입력칸이 보였다 안 보였다 하는 일이 없습니다. DB는 확장, 이전, 축소를 따로 배포합니다.</li><li>다른 전략과 비교하면, 블루/그린은 한 번에 넘기니까 섞이는 시간이 짧습니다. 그래도 DB는 두 환경이 공유하고, keep-alive 커넥션은 한동안 옛 버전에 남습니다. 카나리는 오히려 일부러 오래 섞어 두는 방식이라 호환을 더 꼼꼼히 챙겨야 합니다. 어느 전략이든 이 표는 지켜야 합니다.</li></ul></aside>
+  </section>

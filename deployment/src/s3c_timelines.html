@@ -1,0 +1,51 @@
+  <section class="slide" data-t="1회차 타임라인 뜯어보기">
+    <div class="kicker">3부 · 1회차 · 설정으로 읽기</div>
+    <h2>1회차 타임라인, 설정으로 읽기</h2>
+    <table class="tight">
+      <tr><th>시각</th><th>일어난 일</th><th>그렇게 만든 설정</th><th>왜</th></tr>
+      <tr><td class="k">17:59</td><td>새 파드 3개 생성, 파드 13개</td><td><code>maxSurge: 25%</code>, <code>maxUnavailable: 0</code></td><td>2.5를 올림해서 3개. 옛 파드는 그대로</td></tr>
+      <tr><td class="k">~18:01</td><td>3개씩 교체, 새 버전 30% → 60%</td><td>readiness <code>periodSeconds: 5</code>, <code>minReadySeconds: 10</code></td><td>한 묶음 약 40초, 네 묶음 약 3분</td></tr>
+      <tr><td class="k">~18:01</td><td>전체 에러율 1% 넘음</td><td>서비스가 Ready 파드에 고르게 나눔</td><td>60%면 약 1.8% (30%일 땐 0.9%)</td></tr>
+      <tr><td class="k">18:02</td><td><code>successfully rolled out</code>, 3.1%</td><td>readiness가 <code>/readyz</code>만 본다</td><td>쿠폰 버그는 프로브가 모른다</td></tr>
+      <tr><td class="k">18:03</td><td>알람</td><td>"5xx 1% 초과가 1분 지속"</td><td>1분 조건 + 수집 간격</td></tr>
+      <tr><td class="k">18:06</td><td>롤백 결정, <code>git revert</code></td><td>사람</td><td>확인하고 판단하는 데 3분</td></tr>
+      <tr><td class="k">18:07</td><td>Flux 동기화, 거꾸로 롤링 시작</td><td><code>flux reconcile</code></td><td>interval을 안 기다린다</td></tr>
+      <tr><td class="k">18:10</td><td>1.6.3 복귀</td><td>같은 롤링 설정</td><td>되돌리기도 롤링이라 약 3분</td></tr>
+    </table>
+    <p class="note">실패 건수: 초당 30건(1,000 × 3%) × 5분 + 올라가고 내려가는 6분 동안 평균 초당 15건 ≈ 9,000 + 5,400 ≈ 1만 4천 건</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>앞 장 타임라인을 시각마다 어떤 설정 때문에 그렇게 됐는지 풀어 보겠습니다.</li><li>17시 59분, 롤링이 시작되면 디플로이먼트는 maxSurge만큼 새 파드를 먼저 만듭니다. 레플리카 10개에 25%면 2.5개인데, surge는 올림이라 3개입니다. maxUnavailable이 0이라서 옛 파드는 새 파드가 가용해지기 전까지 하나도 안 내립니다. 그래서 잠깐 파드가 13개가 됩니다.</li><li>새 파드가 가용해지려면 세 단계를 거칩니다. 컨테이너가 뜨고, readiness 프로브를 통과하고, minReadySeconds 10초 동안 Ready 상태를 유지해야 합니다. readiness가 5초마다 확인하니까 한 묶음에 40초 정도 걸립니다. 3개, 3개, 3개, 마지막 1개, 네 묶음이라 전체가 3분쯤 걸립니다.</li><li>그 사이 에러율이 계단처럼 오르는 건, 서비스가 Ready인 파드 전부에 요청을 나눠 주기 때문입니다. 새 파드 비율만큼 요청이 새 버전으로 가고, 그쪽은 3.1%가 실패합니다. 첫 묶음 뒤 새 버전이 30%일 때 전체는 0.9% 정도라 아직 1% 아래입니다. 두 번째 묶음이 끝나 60%가 되는 18시 1분쯤 약 1.8%로 1%를 넘습니다.</li><li>18시 2분에 롤아웃이 성공으로 끝납니다. readiness는 /readyz 경로가 200을 주는지만 봅니다. 서버는 멀쩡히 떠 있으니까 통과합니다. 쿠폰 코드에 이모지가 들어왔을 때만 나는 버그는 프로브가 알 방법이 없습니다.</li><li>18시 3분 알람은 알람 조건 때문입니다. 5xx가 1%를 넘은 채로 1분 가야 울리는데, 18시 1분쯤 1%를 넘었으니 1분 조건에 메트릭 수집 간격이 더해져서 18시 3분입니다.</li><li>18시 6분까지 3분은 사람 시간입니다. 알람을 받고, 대시보드를 보고, 방금 나간 배포 때문이라고 판단하는 데 걸립니다. 원인은 모르는 채로 18시 6분에 배포 저장소에서 git revert를 합니다.</li><li>18시 7분에 flux reconcile로 바로 동기화하고 거꾸로 롤링이 시작됩니다. 이 명령을 안 쓰면 Kustomization interval, 예를 들어 5분을 기다려야 해서 그만큼 더 늦어집니다.</li><li>되돌리기도 같은 롤링 설정으로 거꾸로 교체하니까 또 3분쯤 걸려서 18시 10분에 끝납니다. 옛 이미지가 노드에 캐시돼 있어서 이 정도고, 캐시가 없으면 이미지를 받는 시간이 더해집니다.</li><li>계산은 이렇습니다. 초당 1,000건 중 3%가 버그를 맞으니, 전부 새 버전이면 초당 30건이 실패합니다. 18시 2분부터 7분까지 5분, 300초 동안은 전부 새 버전이라 30 × 300 = 9,000건입니다. 교체 중 3분과 되돌리는 중 3분, 합쳐 360초는 새 버전 비율이 0에서 100%로 오르내려서 평균 절반, 초당 15건으로 잡으면 5,400건입니다. 합쳐서 약 1만 4천 건입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="2회차 타임라인 뜯어보기">
+    <div class="kicker">3부 · 2회차 · 설정으로 읽기</div>
+    <h2>2회차 타임라인, 설정으로 읽기</h2>
+    <table class="tight">
+      <tr><th>시각</th><th>일어난 일</th><th>그렇게 만든 설정</th><th>왜</th></tr>
+      <tr><td class="k">17:55</td><td>그린 10개 기동</td><td>Deployment <code>order-api-green</code>, <code>slot: green</code></td><td>셀렉터가 blue라 요청을 안 받는다</td></tr>
+      <tr><td class="k">17:58</td><td>스모크 테스트 통과</td><td>서비스 <code>order-api-preview</code> (<code>slot: green</code>)</td><td>테스트 쿠폰이 영어뿐</td></tr>
+      <tr><td class="k">18:02</td><td>전환, 바로 에러율 3.1%</td><td><code>kubectl patch svc</code> 셀렉터 변경</td><td>새 요청은 전부 그린으로</td></tr>
+      <tr><td class="k">18:02~</td><td>일부 요청은 한동안 블루로</td><td>keep-alive 커넥션</td><td>맺은 커넥션은 옛 파드에 남는다</td></tr>
+      <tr><td class="k">18:04</td><td>알람</td><td>"5xx 1% 초과가 1분 지속"</td><td>1분 조건 + 수집 간격</td></tr>
+      <tr><td class="k">18:05</td><td>셀렉터 되돌림, 바로 복구</td><td>블루를 내리지 않음</td><td>되돌리기가 싸서 1분 만에 결정</td></tr>
+    </table>
+    <p class="note">실패 건수: 초당 30건 × 3분(18:02~18:05) ≈ 5,400건. 블루를 이미 내렸다면 18:05에 블루를 다시 띄워야 해서 롤링의 되돌리기와 비슷해진다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>2회차도 시각마다 풀어 보겠습니다.</li><li>17시 55분에 그린 10개를 띄웁니다. 서비스 셀렉터가 slot: blue라서 그린은 떠 있어도 실제 사용자 요청을 하나도 안 받습니다. 블루/그린에서 새 버전을 미리 띄워 둘 수 있는 이유가 이 셀렉터입니다.</li><li>17시 58분 스모크 테스트는 preview 서비스로 합니다. preview는 slot: green만 고르는 서비스라서 그린에만 요청을 보낼 수 있습니다. 문제는 테스트에 쓴 쿠폰 코드가 영어뿐이었다는 겁니다. 그래서 통과했습니다. preview로 미리 볼 수는 있었지만 영어 쿠폰만 넣어 봐서 이 버그는 못 봤습니다.</li><li>18시 2분에 셀렉터를 green으로 바꿉니다. 그러면 쿠버네티스가 서비스의 EndpointSlice를 그린 파드 목록으로 바꾸고, 노드마다 kube-proxy가 이걸 반영합니다. 보통 1초 안팎입니다. 그 뒤로 새 요청은 전부 그린으로 가서 에러율이 바로 3.1%가 됩니다.</li><li>다만 이미 맺어 둔 keep-alive 커넥션은 끊길 때까지 블루에 붙어 있습니다. 그래서 전환이 칼로 자르듯 되지는 않고, 한동안 일부 요청은 블루로 갑니다.</li><li>18시 4분 알람은 1회차와 같은 조건입니다. 이번엔 전환하자마자 3.1%라서 1분 조건과 메트릭 수집 간격만큼만 늦습니다.</li><li>18시 5분에 셀렉터를 blue로 되돌립니다. 블루 10개가 Ready로 떠 있으니 셀렉터 한 줄이면 바로 복구됩니다. 되돌리기가 싸니까 원인을 찾기 전에 1분 만에 되돌리자는 결정이 쉬웠습니다.</li><li>만약 블루를 전환 직후에 내렸다면, 18시 5분에 블루를 다시 띄워야 합니다. 그러면 롤링의 되돌리기와 비슷하게 몇 분이 걸립니다. 다음 장이 그 얘기입니다.</li><li>계산은 이렇습니다. 전환하는 순간부터 전부 그린이 받으니, 초당 1,000건 중 3%, 초당 30건이 실패합니다. 18시 2분 전환부터 18시 5분 되돌림까지 3분, 180초라서 30 × 180 = 5,400건입니다. keep-alive로 블루에 남은 요청은 작아서 뺐습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="3회차 타임라인 뜯어보기">
+    <div class="kicker">3부 · 3회차 · 설정으로 읽기</div>
+    <h2>3회차 타임라인, 설정으로 읽기</h2>
+    <table class="tight">
+      <tr><th>시각</th><th>일어난 일</th><th>그렇게 만든 설정</th><th>왜</th></tr>
+      <tr><td class="k">18:01</td><td>베이스라인 1개, 카나리 1개 생성</td><td>experiment <code>specRef: stable</code> / <code>canary</code></td><td>같은 크기, 같은 나이</td></tr>
+      <tr><td class="k">18:02</td><td>둘 다 Ready, 가중치 5 / 5 / 90</td><td><code>weight: 5</code> + <code>trafficRouting</code></td><td>각각 초당 50건</td></tr>
+      <tr><td class="k">18:02~</td><td>카나리 3.1%, 베이스라인 0.1%</td><td>파드 레이블 <code>role: canary</code> / <code>baseline</code></td><td>전체는 약 0.25%</td></tr>
+      <tr><td class="k">18:03</td><td>첫 측정 실패</td><td><code>initialDelay: 1m</code>, <code>result[0] &lt; 0.005</code></td><td>차이 3.0%p &gt; 0.5%p</td></tr>
+      <tr><td class="k">18:03</td><td>자동 중단, 카나리 가중치 0</td><td><code>failureLimit: 0</code></td><td>한 번 실패로 중단</td></tr>
+      <tr><td class="k">18:04</td><td>슬랙 알림, 온콜 호출 없음</td><td>Rollouts 알림, 알람 기준 1%</td><td>0.25%라 알람에 안 닿는다</td></tr>
+      <tr><td class="k">다음 날</td><td>원하는 상태를 1.6.3에 맞춤</td><td>배포 저장소 <code>git revert</code> (4부)</td><td>깃은 아직 1.7.0, Rollout은 Degraded</td></tr>
+    </table>
+    <p class="note">실패 건수: 초당 50건 × 3% = 초당 1.5건 × 약 1분(18:02~18:03) ≈ 90건</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>3회차도 시각마다 보겠습니다.</li><li>18시 1분에 Argo Rollouts의 experiment 단계가 파드 두 개를 새로 만듭니다. 베이스라인은 specRef stable, 즉 지금 돌고 있는 1.6.3 스펙으로 만들고, 카나리는 specRef canary, 새 1.7.0 스펙으로 만듭니다. 둘 다 방금 뜬 파드라 조건이 같습니다. 앞에서 본 베이스라인 비교를 이 설정이 해 줍니다.</li><li>18시 2분에 두 파드가 Ready가 되면 가중치가 적용됩니다. weight 5는 혼자서는 동작하지 않고, trafficRouting으로 연결한 게이트웨이나 서비스 메시가 실제로 요청의 5%씩을 두 파드로 보냅니다. 초당 1,000건 중 50건씩입니다.</li><li>이때 카나리 파드의 에러율은 3.1%, 베이스라인은 0.1%입니다. 분석 쿼리가 role 레이블로 두 집단을 따로 세기 때문에 차이가 보입니다. 전체 에러율로 보면 원래 0.1%에 5%의 3%, 0.15%가 더해져서 0.25% 정도라 전체만 보면 거의 티가 안 납니다.</li><li>18시 3분, initialDelay 1m이라 가중치가 붙고 1분 뒤에 첫 측정을 합니다. 그 뒤로는 interval 1m마다 잽니다. 조건은 카나리 에러율에서 베이스라인 에러율을 뺀 값이 0.005, 즉 0.5%p보다 작아야 합니다. 차이가 3.0%p라 실패입니다.</li><li>failureLimit이 0이라서 한 번만 실패해도 분석이 실패로 끝납니다. 그러면 experiment가 실패하고, Rollout이 중단되고, 카나리 쪽 가중치가 0이 돼서 트래픽이 전부 옛 버전으로 돌아갑니다. 사람이 아무것도 안 했습니다.</li><li>18시 4분에 Argo Rollouts 알림이 슬랙으로 옵니다. 전체 에러율이 0.25%라 온콜 알람 기준 1%에 닿지 않아서 전화는 안 옵니다. 금요일 저녁이지만 급한 일은 끝났습니다.</li><li>남은 일은 다음 날 해도 됩니다. 중단된 뒤에도 깃에는 여전히 1.7.0이 적혀 있고, Rollout은 Degraded 상태로 남습니다. 다음 날 배포 저장소에서 git revert로 원하는 상태를 1.6.3에 맞춥니다. 4부에서 보는 방법 그대로입니다.</li><li>계산은 이렇습니다. 카나리가 받는 건 초당 1,000건의 5%, 초당 50건입니다. 그중 3%가 버그를 맞으니 초당 1.5건이 실패합니다. 18시 2분에 가중치가 붙고 18시 3분에 중단됐으니 60초입니다. 1.5 × 60 = 90, 약 90건입니다.</li></ul></aside>
+  </section>
+

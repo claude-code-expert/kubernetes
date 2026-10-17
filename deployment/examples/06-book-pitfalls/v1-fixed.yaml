@@ -1,0 +1,28 @@
+# 고친 버전 1: 공백 키를 고치고, 셀렉터는 교재 그대로 ver 를 둔다
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gb-web-deploy
+  labels:
+    app: guest-book
+    appver: 1.6.9
+    environment: production
+    release: guest-book-stable
+    release-number: 34e57f01
+spec:
+  selector:
+    matchLabels:
+      app: gb-web
+      ver: 1.5.8
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: gb-web
+        ver: 1.5.8
+        environment: production
+    spec:
+      containers:
+        - name: gb-web-cont
+          image: nginx:1.26

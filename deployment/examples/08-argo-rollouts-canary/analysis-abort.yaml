@@ -1,0 +1,20 @@
+# 자동 중단 확인용: 항상 실패하는 판정 (실제로는 Prometheus, Datadog 쿼리를 쓴다)
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata: {name: always-fail}
+spec:
+  metrics:
+    - name: smoke
+      count: 1
+      failureLimit: 0
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: check
+                    image: busybox:1.36
+                    command: [sh, -c, "echo '쿠폰 결제 실패율 3.1%'; exit 1"]

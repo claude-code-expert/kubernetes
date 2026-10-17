@@ -1,0 +1,19 @@
+# 1부 CI는 커밋까지만 · 프로덕션: CI(ci/release.yaml)가 바꾸는 곳은 newTag 한 줄
+# 교재 18.7: 환경은 브랜치 말고 폴더로 나눈다
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+namespace: order
+images:
+  - name: order-api
+    newName: registry.example.com/order-api
+    newTag: 3f9c2e1
+labels:
+  - pairs:
+      release: order-api-stable
+      release-number: "1482"
+    includeTemplates: true
+replicas:
+  - name: order-api
+    count: 10

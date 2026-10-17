@@ -1,0 +1,34 @@
+# 교재 6.4 종합 예제(웹 디플로이먼트)를 옮겨 적고 문제 지점만 주석으로 표시했다.
+# 교재 원문 확인용이며 그대로 적용하면 실패한다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gb-web-deploy
+  labels:
+    app: guest-book
+    appver: 1.6.9
+    environment: production
+    release: guest-book-stable
+    release number: 34e57f01          # ← 레이블 키에 공백
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
+      maxSurge: 2
+  selector:
+    matchLabels:
+      app: gb-web
+      ver: 1.5.8                      # ← 셀렉터에 버전
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: gb-web
+        ver: 1.5.8
+        environment: production
+    spec:
+      containers:
+        - name: gb-web-cont
+          image: evillgenius/gb-web:v1.5.5

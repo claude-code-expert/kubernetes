@@ -1,0 +1,18 @@
+# 3부 보충 7장 · 카나리 리전: 이번 배포에서 바뀐 곳은 newTag 한 줄
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+namespace: order
+images:
+  - name: order-api
+    newName: kr.registry.example.com/order-api
+    newTag: 3f9c2e1
+labels:
+  - pairs:
+      release: order-api-canary
+      release-number: "1482"
+    includeTemplates: true
+replicas:
+  - name: order-api
+    count: 3

@@ -1,0 +1,24 @@
+# 1부 · Argo CD Application (kind v1.37, Argo CD v3.5.3 에서 확인)
+# 예제는 공개 저장소의 guestbook. 실제로는 배포 저장소 overlays/prod 를 가리킨다
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook
+  namespace: argocd                      # Application 은 argocd 네임스페이스에 만든다
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/argoproj/argocd-example-apps.git
+    targetRevision: HEAD                 # 브랜치, 태그, 커밋
+    path: guestbook                      # 저장소 안의 경로 (overlay 폴더)
+  destination:
+    server: https://kubernetes.default.svc   # 이 클러스터
+    namespace: guestbook
+  syncPolicy:
+    automated:                           # 없으면 수동 Sync
+      prune: true                        # 깃에서 지운 리소스를 클러스터에서도 지움 (기본 false)
+      selfHeal: false                    # 손으로 바꾼 걸 되돌릴지 (기본 false) → 아래에서 켜 본다
+    syncOptions:
+      - CreateNamespace=true             # 대상 네임스페이스가 없으면 만든다
+    retry:
+      limit: 3                           # 적용 실패 시 재시도

@@ -1,0 +1,75 @@
+  <section class="slide" data-t="Argo CD 셋업">
+    <div class="kicker">1부 · 18.5, 18.6 · 직접 해 보기</div>
+    <h2>Argo CD 셋업: 설치부터 첫 동기화까지</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px"><span class="c"># 1) 설치: 네임스페이스와 매니페스트 하나</span>
+kubectl create ns argocd
+kubectl apply <span class="y">--server-side</span> -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/\
+argo-cd/stable/manifests/install.yaml
+
+<span class="c"># 2) 뜬 것 확인 (파드 7개)</span>
+kubectl -n argocd get pods
+
+<span class="c"># 3) 초기 admin 비밀번호와 UI</span>
+kubectl -n argocd get secret \
+  argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d
+kubectl -n argocd port-forward svc/argocd-server 8080:443
+
+<span class="c"># 4) 배포할 것을 등록 (다음 장)</span>
+kubectl apply -f application.yaml</pre>
+      <div>
+        <table class="tight">
+          <tr><th>파드</th><th>하는 일</th></tr>
+          <tr><td class="k">application-controller</td><td>깃과 클러스터를 비교하고 맞춘다 (핵심)</td></tr>
+          <tr><td class="k">repo-server</td><td>깃을 받아 매니페스트를 만든다 (kustomize, helm template)</td></tr>
+          <tr><td class="k">server</td><td>UI, API, CLI 접속</td></tr>
+          <tr><td class="k">redis</td><td>캐시</td></tr>
+          <tr><td class="k">dex, notifications, applicationset</td><td>SSO, 알림, Application 여러 개 생성</td></tr>
+        </table>
+        <p style="font-size:18px;margin-top:12px">kind v1.37에 v3.5.3을 설치해서 확인했습니다</p>
+        <p class="dim" style="font-size:17px">교재 18.5는 Flux로 실습한다. 이 덱의 예제도 Flux 기준이고, Argo CD로 하면 이렇게 된다</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재 18장 실습은 Flux로 하는데, 실무에서는 Argo CD도 많이 써서 Argo CD로 하면 어떻게 되는지 실제로 설치해 봤습니다. kind 클러스터에 Argo CD 3.5.3입니다.</li><li>설치는 네임스페이스를 만들고 매니페스트 하나를 적용하면 끝입니다. 여기서 --server-side를 붙인 이유가 있는데, 바로 뒤 Argo Rollouts 설치에서 자세히 말씀드리겠습니다. 큰 CRD는 일반 apply로는 안 들어가는 경우가 있습니다.</li><li>설치하면 파드가 7개 뜹니다. 핵심은 application-controller입니다. 깃에 적힌 상태와 클러스터 실제 상태를 계속 비교하고 맞추는 녀석입니다. repo-server는 깃을 받아서 kustomize나 helm template으로 최종 매니페스트를 만듭니다. Argo CD가 헬름을 진짜 릴리스가 아니라 템플릿으로만 렌더링한다는 게 여기서 나오는 겁니다. server는 UI와 API, 나머지는 SSO, 알림, Application을 여러 개 찍어 내는 기능입니다.</li><li>UI에 들어가려면 초기 admin 비밀번호를 시크릿에서 꺼내고 port-forward를 합니다. 그다음 무엇을 배포할지 Application이라는 리소스로 등록합니다. 다음 장이 그 설정값입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="Application 설정값">
+    <div class="kicker">1부 · 18장 · 설정값 해설</div>
+    <h2>Argo CD Application 설정값</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Application
+<span class="k">metadata</span>:
+  name: order-api
+  namespace: argocd
+<span class="k">spec</span>:
+  project: default
+  <span class="k">source</span>:
+    repoURL: …/order-api-deploy.git
+    targetRevision: main
+    path: <span class="y">overlays/prod</span>
+  <span class="k">destination</span>:
+    server: https://kubernetes.default.svc
+    namespace: order
+  <span class="k">syncPolicy</span>:
+    automated:
+      prune: <span class="y">true</span>
+      selfHeal: <span class="y">true</span>
+    syncOptions: [CreateNamespace=true]
+    retry: {limit: 3}</pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">source.path</td><td>저장소 안 어느 폴더를 볼지. 환경별 overlay</td><td>-</td></tr>
+        <tr><td class="k">targetRevision</td><td>브랜치, 태그, 커밋</td><td>HEAD</td></tr>
+        <tr><td class="k">destination</td><td>어느 클러스터, 어느 네임스페이스에</td><td>-</td></tr>
+        <tr><td class="k">automated</td><td>깃이 바뀌면 자동 적용. 없으면 UI에서 Sync를 눌러야</td><td>없음</td></tr>
+        <tr><td class="k">prune</td><td>깃에서 지운 리소스를 클러스터에서도 지움</td><td>false</td></tr>
+        <tr><td class="k">selfHeal</td><td>손으로 바꾼 걸 깃 값으로 되돌림</td><td><span class="warn">false</span></td></tr>
+        <tr><td class="k">CreateNamespace</td><td>네임스페이스가 없으면 만든다</td><td>false</td></tr>
+        <tr><td class="k">retry</td><td>적용 실패 시 재시도 횟수</td><td>없음</td></tr>
+      </table>
+    </div>
+    <p class="note">kind에서 해 본 것: selfHeal false로 replicas를 손으로 3으로 바꾸면 OutOfSync로 표시만 되고 3이 남았다. true로 바꾸자 바로 1로 돌아갔다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>Application 설정값입니다. 크게 세 덩어리입니다. source는 무엇을, destination은 어디에, syncPolicy는 어떻게 맞출지입니다.</li><li>source에서 path가 2부에서 말한 환경별 폴더입니다. overlays/prod를 가리키면 프로덕션 overlay를 배포합니다. targetRevision은 어느 브랜치나 태그를 볼지인데, 교재 18.7 권장대로 환경은 브랜치가 아니라 폴더로 나누니까 보통 main 하나만 봅니다.</li><li>syncPolicy가 제일 헷갈리는 부분입니다. automated를 안 적으면 깃이 바뀌어도 OutOfSync로 표시만 하고, 사람이 Sync 버튼을 눌러야 적용됩니다. automated를 적으면 자동으로 적용하는데, 그 안의 prune과 selfHeal은 따로 켜야 합니다. 둘 다 기본값이 false입니다.</li><li>prune은 깃에서 파일을 지웠을 때 클러스터에서도 지울지입니다. 안 켜면 지운 리소스가 클러스터에 계속 남습니다.</li><li>selfHeal은 누가 kubectl로 손대서 바꾼 걸 깃 값으로 되돌릴지입니다. 직접 해 봤습니다. selfHeal을 끈 채로 replicas를 손으로 3으로 바꾸니까 Argo CD는 OutOfSync라고 표시만 하고 3이 그대로 남았습니다. selfHeal을 켜자 바로 깃에 적힌 1로 돌아갔습니다. 깃옵스 4원칙의 지속적 조정을 지키려면 selfHeal을 켜야 합니다.</li><li>깃 변경을 얼마나 자주 보는지는 기본 3분입니다. 더 빨리 반영하려면 깃 웹훅을 Argo CD에 연결합니다.</li></ul></aside>
+  </section>

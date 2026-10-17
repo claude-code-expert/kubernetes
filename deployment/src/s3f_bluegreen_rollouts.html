@@ -1,0 +1,107 @@
+  <section class="slide" data-t="Argo Rollouts 셋업">
+    <div class="kicker">3부 · 2회차 · 직접 해 보기</div>
+    <h2>Argo Rollouts 셋업</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="c"># 1) 컨트롤러 설치</span>
+kubectl create ns argo-rollouts
+kubectl apply <span class="y">--server-side</span> -n argo-rollouts \
+  -f https://github.com/argoproj/argo-rollouts/\
+releases/latest/download/install.yaml
+
+<span class="c"># 2) kubectl 플러그인 (상태 보기, promote, abort)</span>
+brew install argoproj/tap/kubectl-argo-rollouts
+kubectl argo rollouts version
+
+<span class="c"># 3) Deployment를 Rollout으로</span>
+<span class="c">#    kind와 strategy만 바꾸고 template은 그대로</span>
+apiVersion: argoproj.io/v1alpha1
+kind: <span class="y">Rollout</span>
+spec:
+  template: …   <span class="c"># Deployment와 같다</span>
+  strategy:
+    blueGreen: …  <span class="c"># 또는 canary</span></pre>
+      <div>
+        <div class="card rose"><h3>설치하다 걸린 것</h3>
+          <p style="font-size:18px">그냥 <code>kubectl apply</code>를 하면 CRD 두 개가 거부된다</p>
+          <pre class="code" style="font-size:14px;margin-top:6px">CustomResourceDefinition "rollouts.argoproj.io"
+is invalid: metadata.annotations:
+Too long: may not be more than 262144 bytes</pre>
+          <p style="font-size:17px;margin-top:8px">일반 apply는 적용한 내용을 어노테이션에 통째로 저장하는데, CRD가 커서 256KB를 넘는다. <code>--server-side</code>는 어노테이션을 안 써서 들어간다</p></div>
+        <p style="font-size:17px;margin-top:12px">설치되는 것: 컨트롤러 1개, CRD 5개 (Rollout, AnalysisTemplate, ClusterAnalysisTemplate, AnalysisRun, Experiment)</p>
+        <p class="dim" style="font-size:16px">kind v1.37, Argo Rollouts v1.10.0에서 확인. 기존 Deployment를 지우지 않고 <code>workloadRef</code>로 가리키는 방법도 있다</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>2회차에서 블루/그린을 서비스 셀렉터를 손으로 바꿔서 했는데, 이걸 컨트롤러가 대신 해 주는 게 Argo Rollouts입니다. kind에 1.10.0을 직접 설치해 봤습니다.</li><li>설치는 네임스페이스와 매니페스트 하나입니다. 그런데 공식 문서대로 그냥 kubectl apply를 했더니 CRD 두 개가 거부됐습니다. 메시지가 오른쪽입니다. 어노테이션이 너무 길다는 건데, 일반 kubectl apply는 적용한 내용 전체를 last-applied라는 어노테이션에 저장합니다. 다음 apply 때 비교하려고요. Rollout CRD는 스키마가 커서 이 어노테이션이 256KB 한도를 넘습니다. --server-side로 적용하면 비교를 API 서버가 해서 이 어노테이션을 안 쓰니까 들어갑니다. 큰 CRD를 설치할 때 자주 만나는 문제라 알아 두시면 좋습니다.</li><li>설치되는 건 컨트롤러 하나와 CRD 다섯 개입니다. Rollout이 디플로이먼트 대신 쓸 리소스고, AnalysisTemplate과 AnalysisRun이 판정, Experiment가 카나리에서 본 베이스라인 비교입니다.</li><li>상태를 보거나 promote, abort를 하려면 kubectl 플러그인을 따로 설치합니다.</li><li>디플로이먼트를 Rollout으로 바꾸는 건 간단합니다. apiVersion과 kind를 바꾸고 strategy 자리에 blueGreen이나 canary를 적습니다. 파드 template은 디플로이먼트와 똑같습니다. 기존 디플로이먼트를 그대로 두고 Rollout이 workloadRef로 가리키게 해서 조금씩 옮기는 방법도 있습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="블루/그린 설정값">
+    <div class="kicker">3부 · 2회차 · 설정값 해설</div>
+    <h2>블루/그린 설정값 (Argo Rollouts)</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Rollout
+<span class="k">spec</span>:
+  replicas: 10
+  strategy:
+    <span class="k">blueGreen</span>:
+      activeService: <span class="y">order-api</span>
+      previewService: <span class="y">order-api-preview</span>
+      autoPromotionEnabled: <span class="y">false</span>
+      scaleDownDelaySeconds: <span class="y">600</span>
+      previewReplicaCount: 10
+      prePromotionAnalysis:
+        templates: [{templateName: smoke}]
+---
+<span class="k">kind</span>: Service
+<span class="k">metadata</span>: {name: order-api}
+<span class="k">spec</span>:
+  selector: {app: order-api}
+  <span class="c"># 해시는 컨트롤러가 붙인다</span></pre>
+      <table class="tight">
+        <tr><th>필드</th><th>뜻</th><th>기본값</th></tr>
+        <tr><td class="k">activeService</td><td>실제 사용자 트래픽을 받는 서비스</td><td>필수</td></tr>
+        <tr><td class="k">previewService</td><td>그린만 따로 보는 서비스. 전환 전 확인용</td><td>없음</td></tr>
+        <tr><td class="k">autoPromotionEnabled</td><td>그린이 준비되면 자동 전환할지. false면 promote까지 대기</td><td><span class="warn">true</span></td></tr>
+        <tr><td class="k">autoPromotionSeconds</td><td>준비된 뒤 몇 초 기다렸다 자동 전환</td><td>없음</td></tr>
+        <tr><td class="k">scaleDownDelaySeconds</td><td>전환 뒤 블루를 남겨 두는 시간 = 빨리 되돌릴 수 있는 시간</td><td><span class="warn">30초</span></td></tr>
+        <tr><td class="k">previewReplicaCount</td><td>전환 전 그린을 몇 개 띄울지</td><td>replicas</td></tr>
+        <tr><td class="k">prePromotionAnalysis</td><td>전환 전에 자동 판정. 실패하면 전환 안 함</td><td>없음</td></tr>
+        <tr><td class="k">postPromotionAnalysis</td><td>전환 후 판정. 실패하면 블루로 되돌림</td><td>없음</td></tr>
+      </table>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>블루/그린 설정값입니다. 2회차에서 손으로 했던 게 각 필드에 어떻게 대응되는지 보겠습니다.</li><li>activeService는 실제 사용자 트래픽을 받는 서비스이고, previewService는 그린만 따로 보는 서비스입니다. 2회차의 order-api와 order-api-preview입니다. 서비스 셀렉터에는 app만 적어 두면 되고, 블루냐 그린이냐는 컨트롤러가 해시를 붙여서 정합니다. 다음 장에서 실제로 보여 드리겠습니다.</li><li>autoPromotionEnabled는 기본값이 true입니다. 그대로 두면 그린이 Ready가 되자마자 자동으로 넘어가서, preview로 확인할 틈이 없습니다. 2회차처럼 확인하고 넘기려면 false로 두고 promote 명령으로 넘깁니다. 일정 시간 뒤 자동으로 넘기고 싶으면 autoPromotionSeconds를 씁니다.</li><li>제일 조심할 값이 scaleDownDelaySeconds입니다. 전환 뒤 블루를 얼마나 남겨 둘지인데, 기본값이 30초입니다. 블루/그린의 장점이 되돌리기가 전환이라는 건데, 30초가 지나면 블루가 내려가서 되돌리기가 재배포가 됩니다. 3회차에서 본 대기 시간 기준으로 정하는데, 예시에서는 10분으로 뒀습니다.</li><li>prePromotionAnalysis를 걸면 전환 전에 자동으로 판정해서, 실패하면 전환을 안 합니다. 2회차에서 사람이 하던 스모크 테스트를 여기에 넣는 겁니다. postPromotionAnalysis는 전환 후에 판정해서 실패하면 블루로 되돌립니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="블루/그린 직접 돌려 보면">
+    <div class="kicker">3부 · 2회차 · kind에서 실제 출력</div>
+    <h2>블루/그린, 직접 돌려 보면</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:13.5px;line-height:1.4">$ kubectl argo rollouts set image web-bg web=nginx:1.27
+$ kubectl argo rollouts get rollout web-bg
+Status:   <span class="y">॥ Paused</span>
+Message:  BlueGreenPause
+Images:   nginx:1.26 (stable, active)
+          nginx:1.27 (preview)
+  revision:2  web-bg-55b5689b6b  preview
+  revision:1  web-bg-5fb69d4965  stable,active
+
+$ kubectl get svc web-bg-active \
+    -o jsonpath='{.spec.selector}'
+{"app":"web-bg",
+ "rollouts-pod-template-hash":"<span class="y">5fb69d4965</span>"}
+
+$ kubectl argo rollouts promote web-bg
+  revision:2  web-bg-55b5689b6b  stable,active
+  revision:1  web-bg-5fb69d4965  <span class="y">delay:9m51s</span>
+
+$ kubectl argo rollouts undo web-bg
+active → 블루로 0초 (해시 5fb69d4965)</pre>
+      <ul>
+        <li>새 이미지를 넣으면 그린 3개가 뜨고 <b>멈춘다</b> (autoPromotionEnabled false)</li>
+        <li>컨트롤러가 서비스 셀렉터에 <code>rollouts-pod-template-hash</code>를 붙인다. active는 블루 해시, preview는 그린 해시</li>
+        <li>promote하면 active의 해시만 그린으로 바뀐다. 2회차에서 손으로 하던 셀렉터 전환이 이것</li>
+        <li>블루는 <code>delay:9m51s</code>로 남아 있다 (scaleDownDelaySeconds 600)</li>
+        <li>그동안 undo하면 셀렉터만 되돌아가서 바로 복구</li>
+      </ul>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>kind에서 실제로 돌린 출력입니다. 레플리카 3개짜리 nginx로 해 봤습니다.</li><li>새 이미지를 넣으면 그린 3개가 뜨고, autoPromotionEnabled를 false로 뒀기 때문에 Paused, BlueGreenPause 상태로 멈춥니다. 블루는 stable, active이고 그린은 preview입니다. 이 상태에서 preview 서비스로 그린을 확인할 수 있습니다.</li><li>서비스 셀렉터를 보면 제가 적지 않은 rollouts-pod-template-hash가 붙어 있습니다. 컨트롤러가 붙인 겁니다. active 서비스에는 블루 레플리카셋의 해시가, preview 서비스에는 그린의 해시가 들어가 있습니다. 블루와 그린을 이 해시로 구분하는 겁니다.</li><li>promote를 하면 active 서비스의 해시만 그린 것으로 바뀝니다. 2회차에서 kubectl patch로 셀렉터를 바꾸던 게 정확히 이 동작입니다.</li><li>블루는 바로 안 내려가고 delay 9분 51초로 남아 있습니다. scaleDownDelaySeconds 600초가 동작하는 겁니다. 이 사이에 undo를 하면 셀렉터만 블루 해시로 되돌아가서 1초도 안 걸려 복구됐습니다. 2회차 되돌리기 2초가 실제로 이렇게 됩니다.</li></ul></aside>
+  </section>

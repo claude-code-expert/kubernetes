@@ -1,0 +1,34 @@
+  <section class="slide" data-t="Argo CD에서 되돌릴 때">
+    <div class="kicker">4부 · 18장 · kind에서 확인</div>
+    <h2>Argo CD에서 되돌릴 때</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14.5px">$ argocd app history guestbook
+ID  DATE                  REVISION
+0   2026-10-04 11:20:45   HEAD (8088f4c)
+
+$ argocd app rollback guestbook 0
+<span style="color:#fb7185">rpc error: code = FailedPrecondition
+desc = rollback cannot be initiated
+       when auto-sync is enabled</span>
+
+<span class="c"># 기본: 깃을 되돌린다</span>
+git revert a41d77c &amp;&amp; git push
+argocd app sync order-api      <span class="c"># 3분 주기를 기다리지 않고</span>
+
+<span class="c"># 급할 때: 자동 동기화를 끄고 되돌린 뒤 깃을 맞춘다</span>
+argocd app set order-api --sync-policy none
+argocd app rollback order-api &lt;ID&gt;
+git revert … &amp;&amp; git push
+argocd app set order-api --sync-policy automated</pre>
+      <table class="tight">
+        <tr><th>상황</th><th>Argo CD에서</th></tr>
+        <tr><td class="k">auto-sync 켜짐</td><td><code>app rollback</code>은 거부된다. 깃이 다시 덮어쓰기 때문</td></tr>
+        <tr><td class="k">selfHeal 켜짐</td><td><code>kubectl rollout undo</code>도 다시 새 버전으로 덮어쓴다</td></tr>
+        <tr><td class="k">selfHeal 꺼짐</td><td>undo는 남지만 OutOfSync로 깃과 어긋난 채</td></tr>
+        <tr><td class="k">Rollout이 중단됨</td><td>Application Health가 Degraded. 표시만 하고 되돌리지 않는다</td></tr>
+        <tr><td class="k">헬름 차트</td><td>pre-rollback 훅은 실행 안 한다 (helm template으로 렌더링)</td></tr>
+      </table>
+    </div>
+    <p class="note">Flux로 하면: flux suspend → kubectl rollout undo → git revert → flux resume (앞 장)</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>Argo CD를 쓸 때 되돌리는 방법입니다. kind에서 직접 해 봤습니다.</li><li>Argo CD에도 rollback 명령이 있습니다. app history로 이력을 보고 app rollback에 이력 번호를 주면 그때 상태로 되돌립니다. 그런데 자동 동기화를 켜 둔 상태에서 해 보니 거부됐습니다. 메시지가 왼쪽 빨간 줄입니다. 자동 동기화가 켜져 있으면 rollback을 시작할 수 없다는 겁니다. 되돌려 봤자 깃에는 새 버전이 적혀 있어서 바로 다시 덮어쓰니까, 아예 막아 둔 겁니다.</li><li>그래서 기본은 Flux와 같습니다. 배포 저장소에서 git revert를 하고, 3분 주기를 기다리지 않게 argocd app sync로 바로 동기화합니다.</li><li>정말 급해서 깃 커밋을 기다릴 수 없으면, 자동 동기화를 끄고 app rollback으로 되돌린 다음, 깃을 맞추고 자동 동기화를 다시 켭니다. Flux의 suspend, resume과 같은 순서입니다.</li><li>오른쪽 표는 상황별로 정리한 겁니다. selfHeal이 켜져 있으면 kubectl rollout undo도 다시 덮어씁니다. 1부에서 selfHeal을 켜자 replicas가 바로 깃 값으로 돌아간 것과 같은 동작입니다. Argo Rollouts가 중단되면 Application은 Degraded로 표시만 하고 되돌리지는 않습니다. 헬름 차트는 템플릿으로만 렌더링해서 pre-rollback 훅이 안 돕니다.</li></ul></aside>
+  </section>

@@ -1,0 +1,45 @@
+# 3부 · 블루/그린: 디플로이먼트 두 개 + 서비스 셀렉터 한 줄
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-blue
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: web-bg, slot: blue}
+  template:
+    metadata:
+      labels: {app: web-bg, slot: blue}
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.26
+          readinessProbe: {httpGet: {path: /, port: 80}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-green
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: web-bg, slot: green}
+  template:
+    metadata:
+      labels: {app: web-bg, slot: green}
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27
+          readinessProbe: {httpGet: {path: /, port: 80}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-bg
+spec:
+  selector:
+    app: web-bg
+    slot: blue          # 전환: kubectl patch svc web-bg -p '{"spec":{"selector":{"app":"web-bg","slot":"green"}}}'
+  ports:
+    - port: 80

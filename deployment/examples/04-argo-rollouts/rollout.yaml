@@ -1,0 +1,82 @@
+# 3부 · Argo Rollouts로 베이스라인 비교
+# 전제: Argo Rollouts 컨트롤러, Prometheus, 트래픽 라우터(Gateway API 플러그인이나 Istio 등).
+#       experiment 템플릿의 weight 와 setWeight 로 요청 비율을 나누려면 trafficRouting 이 있어야 한다.
+#       Argo CD 없이 Flux 와 같이 써도 된다.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: order-api
+spec:
+  replicas: 10
+  selector:
+    matchLabels: {app: order-api}
+  template:
+    metadata:
+      labels: {app: order-api}
+    spec:
+      containers:
+        - name: order-api
+          image: registry.example.com/order-api:3f9c2e1
+  strategy:
+    canary:
+      canaryService: order-api-canary
+      stableService: order-api-stable
+      trafficRouting:
+        istio:                       # Gateway API 를 쓰면 plugins 로 설정
+          virtualService:
+            name: order-api
+            routes: [primary]
+      steps:
+        # 1) 베이스라인(옛 버전)과 카나리(새 버전)를 같은 크기로 띄우고 5%씩 준다
+        - experiment:
+            duration: 10m
+            templates:
+              - name: baseline
+                specRef: stable           # 지금 돌고 있는 옛 버전 템플릿
+                replicas: 1
+                weight: 5
+                metadata:
+                  labels: {role: baseline}
+              - name: canary
+                specRef: canary           # 새 버전 템플릿
+                replicas: 1
+                weight: 5
+                metadata:
+                  labels: {role: canary}
+            analyses:
+              - name: compare
+                templateName: canary-vs-baseline
+        # 2) 통과하면 늘린다
+        - setWeight: 25
+        - pause: {duration: 10m}
+        - setWeight: 50
+        - pause: {duration: 10m}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-vs-baseline
+spec:
+  metrics:
+    - name: error-rate-diff
+      initialDelay: 1m               # 가중치가 붙고 트래픽이 들어온 뒤에 첫 측정
+      interval: 1m
+      count: 10                      # 약 10분 동안 잰다 (experiment duration 과 같게)
+      failureLimit: 0                # 한 번만 기준을 넘어도 실패 → 롤아웃 중단, 가중치 0
+      successCondition: result[0] < 0.005   # 카나리 − 베이스라인 < 0.5%p
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          # 5xx 가 한 건도 없으면 분자 시리즈가 비어서 결과가 빈 값이 된다 → or vector(0) 으로 0 처리
+          query: |
+            (
+              (sum(rate(http_requests_total{app="order-api",role="canary",code=~"5.."}[2m])) or vector(0))
+              /
+              sum(rate(http_requests_total{app="order-api",role="canary"}[2m]))
+            )
+            -
+            (
+              (sum(rate(http_requests_total{app="order-api",role="baseline",code=~"5.."}[2m])) or vector(0))
+              /
+              sum(rate(http_requests_total{app="order-api",role="baseline"}[2m]))
+            )

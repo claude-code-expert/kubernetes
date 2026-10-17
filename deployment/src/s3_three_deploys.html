@@ -1,0 +1,588 @@
+  <section class="slide" data-t="3부 같은 배포, 세 번">
+    <div class="kicker">3부 · 교재 5.7, 5.8, 6.3, 7.4</div>
+    <h1>3부<br><span class="em">같은 배포, 세 번</span></h1>
+    <p class="dim" style="margin-top:24px">롤링 → 블루/그린 → 카나리. 같은 버그가 있을 때 결과가 어떻게 다른가</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>3부입니다. 오늘의 본론입니다.</li><li>같은 1.7.0 배포를 롤링, 블루/그린, 카나리로 한 번씩 해 보겠습니다. 버그도 같고, 알람 기준도 같습니다. 바꾸는 건 전략 하나뿐입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="조건">
+    <div class="kicker">3부 · 세 번 모두 같은 조건</div>
+    <h2>세 번 모두 같은 조건</h2>
+    <table>
+      <tr><th></th><th>조건</th></tr>
+      <tr><td class="k">서비스</td><td>order-api, 레플리카 10개, 초당 1,000 요청</td></tr>
+      <tr><td class="k">평소</td><td>결제 5xx 비율 <b>0.1%</b></td></tr>
+      <tr><td class="k">버그</td><td>이모지, 일본어 쿠폰 코드 요청(전체의 3%)이 결제 실패. 새 버전 파드는 5xx 약 3.1%</td></tr>
+      <tr><td class="k">프로브</td><td>readiness, liveness는 <b>정상</b>으로 나온다. 서버는 멀쩡히 떠 있으니까</td></tr>
+      <tr><td class="k">알람</td><td>결제 5xx 비율이 1%를 넘은 채로 1분 지속되면 온콜 호출</td></tr>
+      <tr><td class="k">DB</td><td>쿠폰 컬럼은 1.6.3 배포 때 미리 추가해 둠 (뒤에서 설명할 확장 배포)</td></tr>
+    </table>
+    <p style="margin-top:20px">비교할 것: <b>몇 건이 실패했나, 언제 알았나, 어떻게 되돌렸나, 무엇이 더 들었나</b></p>
+    <aside class="notes"><b>발표 노트</b><ul><li>세 번 모두 조건은 같습니다. 레플리카 10개, 초당 1,000 요청, 그중 3%가 결제에 실패하는 버그입니다.</li><li>평소에도 결제 5xx가 0.1%쯤 있습니다. 새 버전 파드에서는 여기에 버그 3%가 더해져서 3.1%가 됩니다. 뒤에 나오는 숫자는 전부 이 두 값에서 나옵니다.</li><li>먼저 보셔야 할 건 프로브 줄입니다. 이 버그는 프로브로 안 잡힙니다. 서버는 멀쩡히 떠 있고 헬스 체크 경로도 200을 줍니다. 특정 입력에서만 실패하니까요. 실제 사고 대부분이 이런 모양입니다.</li><li>알람은 결제 5xx가 1%를 넘은 채로 1분 가면 울립니다. 비교할 건 네 가지입니다. 실패 건수, 알아챈 시점, 되돌린 방법, 추가로 든 것.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="1회차 롤링">
+    <div class="kicker">3부 · 1회차 · 5.7, 6.3</div>
+    <h2>1회차: 롤링 업데이트</h2>
+    <div class="cols">
+      <div>
+        <pre class="code" style="font-size:16px"><span class="k">spec</span>:
+  minReadySeconds: <span class="y">10</span>   <span class="c"># Ready 후 10초 버티면 가용</span>
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: <span class="y">25%</span>    <span class="c"># 10 × 25% = 3개 더 (올림)</span>
+      maxUnavailable: <span class="y">0</span> <span class="c"># 용량은 안 줄인다</span>
+  template: …
+      readinessProbe:
+        httpGet: {path: /readyz, port: 8080}
+        periodSeconds: <span class="y">5</span></pre>
+        <p class="dim" style="font-size:16px;margin:8px 0 0">maxSurge: 원래 개수보다 더 떠 있어도 되는 수<br>maxUnavailable: 모자라도 되는 수</p>
+        <ul style="margin-top:10px">
+          <li>새 파드 3개 띄움 → Ready → 옛 파드 3개 내림, 이걸 반복</li>
+          <li>교체되는 동안 두 버전이 <b>같이</b> 요청을 받는다</li>
+          <li>교재 5.10: CD가 처음이면 롤링부터. 쓰기 쉽고 배포하기 편하다</li>
+        </ul>
+      </div>
+      <div class="card"><h3>디플로이먼트 안에서는</h3>
+        <p style="font-size:19px">이미지 태그가 바뀌면 template 해시가 바뀌고, 새 ReplicaSet이 생긴다 (1부)</p>
+        <pre class="code" style="font-size:15px;margin-top:10px">order-api-5b8c4a  (1.7.0)  0 → 3 → 6 → 9 → 10
+order-api-7d9f5c  (1.6.3) 10 → 7 → 4 → 1 → 0</pre>
+        <p class="dim" style="font-size:17px;margin-top:10px">옛 RS는 지우지 않고 0으로 남긴다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>1회차는 쿠버네티스 기본값인 롤링 업데이트입니다. 설정 두 개를 먼저 보겠습니다. maxSurge는 교체하는 동안 원래 개수보다 몇 개까지 더 떠 있어도 되는지, maxUnavailable은 몇 개까지 모자라도 되는지입니다.</li><li>원래 10개인데 maxSurge가 25%라 10의 25%, 2.5개를 올림해서 3개까지 더 떠 있어도 됩니다. 그래서 롤링이 시작되면 옛 파드를 끄기 전에 새 버전 파드 3개를 먼저 만듭니다. 이 순간 파드는 옛 10개와 새 3개, 13개입니다.</li><li>maxUnavailable이 0이라서 쓸 수 있는 파드가 10개 아래로 내려가면 안 됩니다. 그래서 새 파드 3개가 Ready가 된 뒤에야 옛 파드 3개를 끕니다. 그다음 다시 새 파드 3개를 만들고 옛 3개를 끄고, 이렇게 3개, 3개, 3개, 마지막 1개로 네 번 반복하면 전부 새 버전이 됩니다.</li><li>잠깐 13개가 되니까 노드에 파드 3개분의 여유 자원이 있어야 합니다. 여유가 없으면 새 파드가 Pending에 걸리고 롤아웃이 거기서 멈춥니다.</li><li>나머지 두 줄은 시간에 관한 설정입니다. readiness는 5초마다 /readyz를 보고, Ready가 된 뒤 10초를 버텨야 가용으로 칩니다. 이 두 값이 뒤에서 시간을 계산할 때 쓰입니다.</li><li>오른쪽처럼 새 레플리카셋은 0, 3, 6, 9, 10으로 늘고 옛 레플리카셋은 10, 7, 4, 1, 0으로 줄어듭니다.</li><li>그리고 교체되는 동안 두 버전이 같이 요청을 받습니다. 이게 무슨 문제를 만드는지 바로 다음 장에서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="1회차 결과">
+    <div class="kicker">3부 · 1회차 결과</div>
+    <h2>1회차 결과: 롤아웃은 "성공"했다</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16.5px">17:59  롤링 시작
+18:01  새 버전 60%, 에러율 1% 넘음
+18:02  <span class="y">successfully rolled out</span>
+       모든 파드 Ready, 에러율 3.1%
+18:03  알람
+18:06  원인 모른 채 롤백 결정, git revert
+18:07  Flux 동기화, 거꾸로 롤링 시작
+18:10  1.6.3으로 복귀</pre>
+      <div>
+        <svg viewBox="0 0 520 220" role="img" aria-label="롤링 중 에러율이 계단식으로 3%까지 오르고, 롤백 중 다시 계단식으로 내려간다">
+          <line x1="40" y1="190" x2="510" y2="190" stroke="#2c3b61"/><line x1="40" y1="20" x2="40" y2="190" stroke="#2c3b61"/>
+          <line x1="40" y1="133" x2="510" y2="133" stroke="#fbbf24" stroke-dasharray="4 4"/><text x="505" y="126" font-size="12" fill="#fbbf24" text-anchor="end">알람 1%</text>
+          <polyline points="40,190 80,190 80,170 120,170 120,150 160,150 160,130 200,130 200,105 200,76 380,76 380,105 420,105 420,130 460,130 460,160 490,160 490,190 510,190" fill="rgba(251,113,133,.18)" stroke="#fb7185" stroke-width="2.5"/>
+          <text x="46" y="30" font-size="13" fill="#9db0d6">에러율 3%</text><line x1="40" y1="76" x2="46" y2="76" stroke="#9db0d6"/>
+          <g font-size="12" fill="#9db0d6" text-anchor="middle"><text x="80" y="208">17:59</text><text x="200" y="208">18:02</text><text x="380" y="208">18:07</text><text x="490" y="208">18:10</text></g>
+        </svg>
+        <table class="tight"><tr><td class="k">실패한 결제</td><td><b>약 1만 4천 건</b></td></tr><tr><td class="k">알아챈 방법</td><td>알람 (사용자가 먼저 겪은 뒤)</td></tr><tr><td class="k">되돌리기</td><td>거꾸로 롤링 한 번, 약 4분</td></tr><tr><td class="k">추가 자원</td><td>교체 중 파드 3개</td></tr></table>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>결과입니다. 18시 2분을 보세요. successfully rolled out, 롤아웃은 성공했습니다. 쿠버네티스 입장에서는 아무 문제가 없었습니다.</li><li>에러율은 교체된 비율만큼 계단식으로 올라 3.1%가 됐고, 알람은 사용자가 이미 겪고 있을 때 울렸습니다. 되돌리기도 롤링 한 번이라 또 몇 분 걸렸습니다. 결제 약 1만 4천 건이 실패했습니다.</li><li>시각마다 왜 그렇게 됐는지는 다음 장에서 설정으로 풀어 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="1회차 되돌리기">
+    <div class="kicker">3부 · 1회차 · 6.3</div>
+    <h2>롤링의 롤백은 롤링을 한 번 더 하는 것</h2>
+    <div class="cols">
+      <div class="card"><h3>되돌리는 방법</h3><ul>
+        <li><code>kubectl rollout undo</code>: 0으로 남겨 둔 옛 RS의 template을 다시 적용 → 거꾸로 롤링</li>
+        <li>깃옵스라면 배포 저장소에서 <code>git revert</code> → Flux가 맞춤</li>
+        <li>걸리는 시간 = 롤아웃 시간. 옛 이미지를 노드가 다시 받아야 하면 더 길다</li>
+      </ul></div>
+      <div class="card rose"><h3>롤링에서 주의할 것</h3><ul>
+        <li class="no">프로브가 못 잡는 버그는 롤아웃을 끝까지 통과한다</li>
+        <li class="no">롤아웃이 멈춰도 쿠버네티스는 되돌리지 않는다 (다음 장)</li>
+        <li class="no">되돌리는 동안에도 교체가 일어나서 요청이 끊길 수 있다 (뒤에서 따로 봅니다)</li>
+      </ul></div>
+    </div>
+    <p class="note">깃옵스에서 <code>rollout undo</code>만 하면 에이전트가 깃에 적힌 새 버전으로 다시 돌려놓는다. 4부에서 자세히 본다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>롤링의 롤백은 롤링을 한 번 더 하는 겁니다. rollout undo는 0으로 남겨 둔 옛 레플리카셋의 template을 다시 적용해서 거꾸로 교체합니다. 깃옵스라면 배포 저장소에서 git revert를 합니다.</li><li>그래서 되돌리는 시간이 롤아웃 시간과 같습니다. 옛 이미지를 노드가 다시 받아야 하면 더 깁니다. 1부에서 이미지를 작게 하자고 한 게 여기서 효과가 있습니다.</li><li>롤링에서 주의할 게 세 가지 있는데, 첫째는 방금 본 대로 프로브가 못 잡는 버그는 그냥 통과한다는 겁니다. 둘째는 바로 다음 장에서 보고, 셋째는 세 번을 다 비교한 뒤에 따로 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="실패해도 되돌리지 않는다">
+    <div class="kicker">3부 · 6.3 보충</div>
+    <h2>롤아웃이 실패해도 쿠버네티스는 되돌리지 않는다</h2>
+    <div class="cols">
+      <div>
+        <pre class="code" style="font-size:16px">$ kubectl rollout status deploy/web --timeout=90s
+Waiting for deployment "web" rollout to finish:
+  1 out of 3 new replicas have been updated...
+<span style="color:#fb7185">error: deployment "web" exceeded its
+  progress deadline</span>
+$ echo $?
+<span class="y">1</span>
+
+$ kubectl get deploy web -o jsonpath=\
+  '{.status.conditions[?(@.type=="Progressing")].reason}'
+<span class="y">ProgressDeadlineExceeded</span></pre>
+        <p class="dim" style="font-size:16px;margin-top:8px">kind에서 없는 태그로 바꿔서 확인한 출력. 데모 예제는 <code>progressDeadlineSeconds: 60</code></p>
+      </div>
+      <div>
+        <ul>
+          <li><code>progressDeadlineSeconds</code>(기본 600초)를 넘기면 상태 조건만 <code>Progressing=False</code>로 바뀐다</li>
+          <li class="no">옛 파드와 새 파드가 <b>섞인 채로</b> 멈춰 있다</li>
+          <li>되돌리는 건 바깥에서: 파이프라인이 <code>rollout status</code> 종료 코드를 보고 판단</li>
+          <li>깃옵스라면 Flux의 헬스 체크, Argo CD의 Health 상태가 이 조건을 읽는다</li>
+        </ul>
+        <p class="dim" style="font-size:18px;margin-top:14px">6.3: 이력이 남아서 "언제든 이전 버전으로 되돌릴 수 있다". 되돌릴 <b>수</b> 있을 뿐, 알아서 되돌리지는 않는다</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>의외로 많이들 모르는 부분입니다. 롤아웃이 실패하면 쿠버네티스가 알아서 되돌릴 것 같은데, 안 되돌립니다.</li><li>progressDeadlineSeconds를 넘기면 상태 조건 하나만 바뀌고, 옛 파드와 새 파드가 섞인 채로 멈춰 있습니다. kind에서 없는 태그로 바꿔 봤습니다. 데모 예제는 progressDeadlineSeconds를 60초로 줄여 둬서 1분이면 실패로 표시됩니다. 종료 코드 1이 나오고, 파드 하나는 ErrImagePull, 옛 파드 세 개는 그대로 Running이었습니다. unavailable이 0이라 서비스는 계속 됐습니다.</li><li>그래서 되돌리는 판단은 바깥에서 해야 합니다. 파이프라인이 종료 코드를 보고 판단하거나, 조금 뒤에 볼 카나리 컨트롤러가 합니다.</li><li>깃옵스 도구도 이 조건을 읽기만 합니다. 배경부터 보면, Flux Kustomization에 wait: true를 켜거나 healthChecks로 디플로이먼트를 지정하면, Flux가 적용한 뒤 그 리소스가 준비될 때까지 기다립니다.</li><li>디플로이먼트가 ProgressDeadlineExceeded로 멈추면 Flux는 Kustomization을 Ready=False로 표시하고 이유를 적어 둡니다. Argo CD도 같은 조건을 보고 앱을 Degraded로 표시합니다.</li><li>둘 다 표시만 합니다. 옛 버전으로 되돌리지는 않습니다. 깃에 새 버전이 적혀 있으니 계속 그 상태로 맞추려고 할 뿐입니다. 이 상태를 보고 알림을 보내거나 git revert를 하는 건 사람이나 다른 도구의 몫입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="롤링 업데이트가 끊기는 이유">
+    <div class="kicker">3부 · 공통 · 5.7 보충</div>
+    <h2>파드가 죽을 때 두 일이 동시에 시작된다</h2>
+    <svg viewBox="0 0 1150 300" role="img" aria-label="파드 삭제 시 엔드포인트 제거와 SIGTERM이 같이 시작돼서, 엔드포인트가 늦게 빠지면 종료 중인 파드로 요청이 간다">
+      <rect x="20" y="115" width="170" height="70" rx="10" fill="#141d33" stroke="#fb7185"/><text x="105" y="145" font-size="18" fill="#fb7185" text-anchor="middle" font-weight="700">파드 삭제</text><text x="105" y="170" font-size="14" fill="#9db0d6" text-anchor="middle">deletionTimestamp</text>
+      <line x1="190" y1="140" x2="250" y2="70" stroke="#9db0d6" stroke-width="2"/><line x1="190" y1="160" x2="250" y2="230" stroke="#9db0d6" stroke-width="2"/>
+      <text x="260" y="45" font-size="17" fill="#4f9cff" font-weight="700">A. 네트워크 쪽</text>
+      <g font-size="15" fill="#eaf0ff">
+        <rect x="260" y="55" width="200" height="40" rx="7" fill="#141d33" stroke="#4f9cff"/><text x="360" y="80" text-anchor="middle">엔드포인트에서 빠짐</text>
+        <rect x="480" y="55" width="200" height="40" rx="7" fill="#141d33" stroke="#4f9cff"/><text x="580" y="80" text-anchor="middle">kube-proxy 규칙 갱신</text>
+        <rect x="700" y="55" width="210" height="40" rx="7" fill="#141d33" stroke="#4f9cff"/><text x="805" y="80" text-anchor="middle">인그레스, LB가 알아챔</text>
+      </g>
+      <text x="940" y="80" font-size="15" fill="#9db0d6">곳마다 조금씩 늦다</text>
+      <text x="260" y="215" font-size="17" fill="#34d399" font-weight="700">B. kubelet 쪽</text>
+      <g font-size="15" fill="#eaf0ff">
+        <rect x="260" y="225" width="200" height="40" rx="7" fill="#141d33" stroke="#34d399"/><text x="360" y="250" text-anchor="middle">preStop 훅 실행</text>
+        <rect x="480" y="225" width="200" height="40" rx="7" fill="#141d33" stroke="#34d399"/><text x="580" y="250" text-anchor="middle">SIGTERM</text>
+        <rect x="700" y="225" width="210" height="40" rx="7" fill="#141d33" stroke="#fb7185"/><text x="805" y="250" text-anchor="middle">시간 초과 시 SIGKILL</text>
+      </g>
+      <rect x="470" y="120" width="560" height="60" rx="10" fill="rgba(251,191,36,.10)" stroke="#fbbf24" stroke-dasharray="7 5"/>
+      <text x="750" y="146" font-size="17" fill="#fbbf24" text-anchor="middle" font-weight="700">B가 A보다 빠르면 이미 닫힌 프로세스로 요청이 온다</text>
+      <text x="750" y="170" font-size="15" fill="#fbbf24" text-anchor="middle">connection refused, 502</text>
+    </svg>
+    <p class="note">교재 5.7: "롤링 업데이트 중에는 클라이언트와의 커넥션이 끊어질 수 있으니 주의하자. 그래서 레디니스 프로브와 preStop 라이프 사이클 훅이 필요하다"</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>세 번을 비교했으니, 어느 전략이든 파드를 바꿀 때 공통으로 챙길 것을 하나 보겠습니다. 1회차 되돌리기에서 미뤄 둔, 교체 중에 요청이 끊기는 문제입니다. 롤링은 물론이고, 블루/그린에서 블루를 내릴 때나 카나리 파드를 내릴 때도 똑같이 생깁니다.</li><li>교재는 롤링 중에 커넥션이 끊길 수 있으니 레디니스와 preStop이 필요하다고만 합니다. 왜 끊기는지 그림으로 보겠습니다.</li><li>파드를 지우면 두 일이 동시에 시작됩니다. 위는 네트워크 쪽입니다. 파드가 EndpointSlice에서 먼저 종료 중, 준비 안 됨으로 표시되고 그다음 빠집니다. kube-proxy와 로드밸런서가 그걸 알아채는 데 또 시간이 걸립니다. 아래는 kubelet 쪽입니다. preStop을 부르고 SIGTERM을 보냅니다. 둘 사이에 순서가 없습니다.</li><li>아래가 더 빠르면 앱은 이미 종료 중인데 로드밸런서는 아직 그 파드로 요청을 보냅니다. 롤링 업데이트가 끊기는 가장 흔한 이유입니다.</li><li>위쪽에는 클러스터 밖도 들어갑니다. 클라우드 로드밸런서가 타깃을 빼는 데는 수 초에서 수십 초가 걸립니다. 그래서 외부 LB를 쓰는 환경에서 더 잘 보입니다. 데모에서 다시 봅니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="끊기지 않게 하려면">
+    <div class="kicker">3부 · 공통 · 5.7 예제 보강</div>
+    <h2>끊기지 않게 하려면</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16px"><span class="k">spec</span>:
+  <span class="y">minReadySeconds: 10</span>   <span class="c"># ① 10초 버텨야 가용</span>
+  strategy:
+    rollingUpdate: {maxSurge: 25%, <span class="y">maxUnavailable: 0</span>}
+  template:
+    spec:
+      <span class="y">terminationGracePeriodSeconds: 45</span>  <span class="c"># ②</span>
+      containers:
+      - name: order-api
+        readinessProbe:           <span class="c"># 트래픽 받을 준비</span>
+          httpGet: {path: /readyz, port: 8080}
+          periodSeconds: 5
+        lifecycle:
+          preStop:
+            <span class="y">sleep: {seconds: 10}</span>  <span class="c"># ③ A가 끝날 시간</span></pre>
+      <div>
+        <ul>
+          <li><b>③ preStop sleep</b>: SIGTERM 전에 기다려서 엔드포인트가 먼저 빠지게 한다. v1.30부터 <code>sleep</code>을 바로 쓸 수 있다 (전에는 <code>exec</code>로 sleep을 불러야 해서 이미지에 sleep이 있어야 했다)</li>
+          <li>교재 예제의 <code>nginx -s quit</code>은 하던 요청을 마치고 닫는 쪽. sleep과 목적이 다르다</li>
+          <li class="no"><b>② grace period</b>는 preStop과 종료 시간을 합친 것보다 길게. 짧으면 SIGKILL</li>
+          <li class="no">liveness를 readiness와 같은 경로로 두면, 부하로 느려질 때 멀쩡한 파드를 재시작한다</li>
+        </ul>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재 5.7절 YAML에 몇 줄을 더했습니다. 노란 부분이 추가한 곳이고, 장표에는 필요한 줄만 남겼습니다. maxSurge 25%, readiness 5초, minReadySeconds 10초는 1회차 설정과 같습니다. 데모용 전체 파일은 examples/01-rolling에 있습니다.</li><li>먼저 보셔야 할 건 3번 preStop sleep입니다. SIGTERM 보내기 전에 10초 기다리면 그 사이 네트워크 쪽이 먼저 정리됩니다. 1.30부터 sleep을 바로 쓸 수 있고, 그전에는 exec로 sleep을 불러야 해서 distroless 이미지에서는 못 썼습니다.</li><li>교재 예제의 nginx quit은 하던 요청을 마치고 닫는 겁니다. sleep과 목적이 달라서 둘 다 필요할 수 있습니다.</li><li>1번 minReadySeconds는 Ready가 되자마자 가용으로 치지 않고 몇 초 버티는지 봅니다. 뜨자마자 죽는 이미지가 롤아웃을 끝까지 통과하는 걸 막아 줍니다. maxUnavailable 0은 새 파드가 가용이 되기 전에는 옛 파드를 내리지 않는다는 뜻입니다.</li><li>2번 grace period는 preStop sleep과 앱이 종료하는 시간을 합친 것보다 길어야 합니다. 짧으면 앱이 하던 요청을 마치기 전에 SIGKILL을 받습니다.</li><li>그리고 liveness를 readiness와 같은 경로로 두면 부하가 몰릴 때 멀쩡한 파드를 재시작해서 상황이 더 나빠집니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="2회차 블루/그린">
+    <div class="kicker">3부 · 2회차 · 5.7</div>
+    <h2>2회차: 블루/그린</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px"><span class="c"># Deployment order-api-blue   slot=blue   (1.6.3) 10개</span>
+<span class="c"># Deployment order-api-green  slot=green  (1.7.0) 10개</span>
+
+<span class="k">kind</span>: Service
+<span class="k">metadata</span>: {name: order-api}
+<span class="k">spec</span>:
+  selector:
+    app: order-api
+    <span class="y">slot: blue</span>     <span class="c"># green으로 바꾸면 전환</span>
+---
+<span class="c"># 전환 전에 그린만 따로 보는 서비스</span>
+<span class="k">kind</span>: Service
+<span class="k">metadata</span>: {name: order-api-preview}
+<span class="k">spec</span>:
+  selector: {app: order-api, slot: green}
+
+<span class="c"># 전환도 롤백도 이 한 줄</span>
+kubectl patch svc order-api -p \
+ '{"spec":{"selector":{"app":"order-api","slot":"green"}}}'</pre>
+      <div>
+        <ul>
+          <li>그린 10개를 옆에 띄우고, preview 서비스로 <b>트래픽 없이</b> 먼저 확인</li>
+          <li>확인이 끝나면 셀렉터 한 줄로 <b>한 번에</b> 넘긴다</li>
+          <li>블루는 그대로 떠 있다. 되돌리기도 셀렉터 한 줄</li>
+          <li>교재 5.7: 트래픽을 언제 새 환경으로 넘길지 조절할 수 있어서 롤아웃을 <b>예측 가능하게</b> 제어한다</li>
+        </ul>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>2회차는 블루/그린입니다. 쿠버네티스로 가장 단순하게 하면 디플로이먼트 두 개와 서비스 셀렉터 한 줄입니다.</li><li>그린 10개를 옆에 띄우고, preview 서비스로 트래픽 없이 먼저 확인합니다. 확인이 끝나면 셀렉터를 green으로 바꿔서 한 번에 넘깁니다.</li><li>블루는 그대로 떠 있어서 되돌리기도 셀렉터 한 줄입니다. kind에서 해 보니 nginx 1.26에서 1.27로 갔다가 다시 돌아오는 게 바로 됐습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="2회차 결과">
+    <div class="kicker">3부 · 2회차 결과</div>
+    <h2>2회차 결과: 되돌리는 데 2초, 그 전까지는 전원이 새 버전</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16.5px">17:55  그린 10개 기동
+17:58  preview로 스모크 테스트 통과
+       (쿠폰 코드는 영어로만 테스트)
+18:02  셀렉터 전환 → 즉시 에러율 3.1%
+18:04  알람
+18:05  셀렉터 되돌림 (2초)
+       블루가 바로 받는다</pre>
+      <div>
+        <svg viewBox="0 0 520 220" role="img" aria-label="전환 순간 에러율이 바로 3%가 되고, 되돌리는 순간 바로 0으로 떨어진다">
+          <line x1="40" y1="190" x2="510" y2="190" stroke="#2c3b61"/><line x1="40" y1="20" x2="40" y2="190" stroke="#2c3b61"/>
+          <line x1="40" y1="133" x2="510" y2="133" stroke="#fbbf24" stroke-dasharray="4 4"/><text x="505" y="126" font-size="12" fill="#fbbf24" text-anchor="end">알람 1%</text>
+          <polyline points="40,190 200,190 200,76 320,76 320,190 510,190" fill="rgba(251,113,133,.18)" stroke="#fb7185" stroke-width="2.5"/>
+          <g font-size="12" fill="#9db0d6" text-anchor="middle"><text x="200" y="208">18:02</text><text x="320" y="208">18:05</text></g>
+        </svg>
+        <table class="tight"><tr><td class="k">실패한 결제</td><td><b>약 5천 4백 건</b></td></tr><tr><td class="k">알아챈 방법</td><td>알람 (전환 직후 전부가 겪은 뒤)</td></tr><tr><td class="k">되돌리기</td><td>셀렉터 전환, 수 초</td></tr><tr><td class="k">추가 자원</td><td>파드 10개 더 (블루를 둔 동안)</td></tr></table>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>결과입니다. 스모크 테스트는 영어 쿠폰으로만 해서 통과했고, 전환하는 순간 전부가 새 버전을 받아 에러율이 바로 3.1%가 됐습니다.</li><li>대신 되돌리기도 순간입니다. 셀렉터를 되돌리면 블루가 바로 받습니다. 실패는 약 5천 4백 건입니다. 롤링보다 적은 건 되돌리는 시간이 짧아서고, 겪은 비율은 여전히 100%입니다.</li><li>이것도 다음 장에서 시각별로 풀어 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="블루는 언제 내리나">
+    <div class="kicker">3부 · 2회차 · 5.7</div>
+    <h2>블루는 언제 내리나</h2>
+    <div class="cols">
+      <div class="card"><h3>너무 빨리 내리면</h3><ul>
+        <li class="no">문제가 늦게 드러나면 되돌릴 곳이 없다. 다시 배포해야 한다</li>
+        <li class="no">Argo Rollouts 블루/그린의 <code>scaleDownDelaySeconds</code> 기본값은 <b>30초</b></li>
+        <li>→ 문제가 보이는 데 걸리는 시간만큼은 둬야 한다 (다음 카나리에서 다시)</li>
+      </ul></div>
+      <div class="card rose"><h3>교재가 꼽는 주의점</h3><ul>
+        <li class="no">두 환경을 동시에 띄울 용량이 필요하다</li>
+        <li class="no">진행 중인 트랜잭션, 스키마 호환 때문에 DB 마이그레이션이 어렵다. <b>DB는 보통 공유</b>한다</li>
+        <li class="no">실수로 두 환경을 다 지울 수 있다</li>
+      </ul></div>
+    </div>
+    <p class="note">셀렉터를 바꿔도 이미 맺은 keep-alive 커넥션은 한동안 옛 파드에 남는다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>블루/그린의 가치는 옛 버전이 살아 있어서 되돌리는 게 전환이 된다는 점입니다. 그러면 블루를 언제 내릴지 정해야 합니다.</li><li>너무 빨리 내리면 문제가 늦게 드러났을 때 되돌릴 곳이 없습니다. Argo Rollouts로 블루/그린을 하면 옛 버전을 내리는 기본값이 30초입니다. 그대로 두면 30초 뒤부터는 되돌리기가 재배포가 됩니다. 얼마나 둬야 하는지는 카나리에서 대기 시간을 보면서 같이 보겠습니다.</li><li>교재가 꼽는 주의점도 있습니다. 용량이 두 배 들고, DB는 보통 두 환경이 공유해서 여전히 두 버전을 다 지원해야 합니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="3회차 카나리">
+    <div class="kicker">3부 · 3회차 · 5.7</div>
+    <h2>3회차: 카나리</h2>
+    <ul>
+      <li>교재 5.7: 블루/그린과 흡사하지만 새 릴리스로 넘기는 트래픽을 <b>더 정교하게</b> 제어한다</li>
+      <li>예: 새 버전을 전체 유저의 10%에게만 먼저 열고, 별문제 없으면 점점 늘린다</li>
+      <li>교재가 남긴 질문 셋</li>
+    </ul>
+    <table style="margin-top:14px">
+      <tr><th>교재 5.7의 질문</th><th>이번 회차에서 답할 것</th></tr>
+      <tr><td class="k">일정 비율에만 트래픽을 흘리는 기능은?</td><td>어디서 나누나 (레플리카, Gateway API, 메시)</td></tr>
+      <tr><td class="k">새 릴리스가 정상 상태인지 어떻게 확신하나?</td><td><b>무엇과 비교하나</b> (프로덕션, 베이스라인, 카나리)</td></tr>
+      <tr><td class="k">양호, 불량을 판단하는 메트릭은?</td><td>무엇을 재나, 얼마나 기다리나</td></tr>
+    </table>
+    <aside class="notes"><b>발표 노트</b><ul><li>3회차는 카나리입니다. 교재는 블루/그린과 비슷하지만 넘기는 트래픽을 더 정교하게 조절한다고 설명합니다. 10%에게만 먼저 열고 괜찮으면 늘리는 거죠.</li><li>그리고 질문 세 개를 남기는데 답은 안 줍니다. 비율을 어떻게 나누는지, 정상인지 어떻게 확신하는지, 무슨 메트릭으로 판단하는지.</li><li>이번 회차는 이 세 질문에 답하면서 가겠습니다. 두 번째, 무엇과 비교하느냐에 시간을 제일 많이 쓰겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="베이스라인">
+    <div class="kicker">3부 · 3회차 · 5.7 보충</div>
+    <h2>카나리는 <span class="em">베이스라인</span>과 비교한다</h2>
+    <svg viewBox="0 0 1150 250" role="img" aria-label="트래픽을 프로덕션 90%, 베이스라인 5%, 카나리 5%로 나누고 카나리를 베이스라인과 비교한다">
+      <defs><marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <rect x="20" y="95" width="150" height="60" rx="10" fill="#141d33" stroke="#2c3b61"/><text x="95" y="131" font-size="18" fill="#eaf0ff" text-anchor="middle">요청</text>
+      <line x1="170" y1="115" x2="300" y2="50" stroke="#9db0d6" stroke-width="2" marker-end="url(#arb)"/>
+      <line x1="170" y1="125" x2="300" y2="125" stroke="#9db0d6" stroke-width="2" marker-end="url(#arb)"/>
+      <line x1="170" y1="135" x2="300" y2="200" stroke="#9db0d6" stroke-width="2" marker-end="url(#arb)"/>
+      <g font-size="15" fill="#9db0d6"><text x="215" y="70">90%</text><text x="215" y="118">5%</text><text x="215" y="190">5%</text></g>
+      <rect x="305" y="20" width="360" height="60" rx="10" fill="#141d33" stroke="#4f9cff"/><text x="325" y="46" font-size="18" fill="#4f9cff" font-weight="700">프로덕션 1.6.3</text><text x="325" y="68" font-size="14" fill="#9db0d6">파드 10개 (요청 90%), 며칠째 떠 있음, 캐시 따뜻함</text>
+      <rect x="305" y="95" width="360" height="60" rx="10" fill="#141d33" stroke="#4f9cff" stroke-dasharray="6 4"/><text x="325" y="121" font-size="18" fill="#4f9cff" font-weight="700">베이스라인 1.6.3</text><text x="325" y="143" font-size="14" fill="#9db0d6">파드 1개, 방금 새로 띄움</text>
+      <rect x="305" y="170" width="360" height="60" rx="10" fill="#141d33" stroke="#34d399"/><text x="325" y="196" font-size="18" fill="#34d399" font-weight="700">카나리 1.7.0</text><text x="325" y="218" font-size="14" fill="#9db0d6">파드 1개, 방금 새로 띄움</text>
+      <path d="M665 125 C720 125, 720 200, 665 200" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+      <text x="735" y="150" font-size="18" fill="#fbbf24" font-weight="700">이 둘을 비교</text>
+      <text x="735" y="178" font-size="15" fill="#eaf0ff">같은 크기, 같은 나이, 같은 시각, 같은 트래픽</text>
+      <text x="735" y="202" font-size="15" fill="#eaf0ff">다른 건 버전 하나 → 차이 = 버전 때문</text>
+      <text x="735" y="55" font-size="15" fill="#9db0d6">프로덕션과 바로 비교하면</text>
+      <text x="735" y="78" font-size="15" fill="#9db0d6">새 파드라서 느린 것과 새 버전이라 느린 것이 섞인다</text>
+    </svg>
+    <div class="cols" style="margin-top:6px">
+      <p style="font-size:19px"><b>배포 전후 비교</b>는 더 나쁘다. 그 사이 시간대, 트래픽, 다른 팀 배포가 바뀐다</p>
+      <p style="font-size:19px">베이스라인은 판정이 끝나면 카나리와 같이 내린다</p>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>이번 회차에서 먼저 보셔야 할 부분입니다. 카나리를 무엇과 비교하느냐입니다.</li><li>배경부터 보면, 카나리 판정은 결국 비교입니다. 새 버전 파드의 에러율이나 레이턴시가 옛 버전보다 나쁜지를 봅니다. 그래서 비교 상대를 잘못 고르면 멀쩡한 배포를 멈추거나, 나쁜 배포를 통과시킵니다.</li><li>흔히 카나리를 나머지 프로덕션과 비교합니다. 그런데 프로덕션 파드는 며칠째 떠 있어서 캐시가 따뜻하고, JVM이면 워밍업도 끝났고, 개수도 훨씬 많습니다. 카나리는 방금 떴습니다. 그러면 카나리가 느린 게 새 파드라서인지 새 버전이라서인지 구분이 안 됩니다.</li><li>그래서 옛 버전으로 카나리와 같은 크기의 파드를 하나 더 방금 새로 띄웁니다. 이게 베이스라인입니다. 트래픽도 카나리와 같은 비율로 줍니다. 그림에서는 프로덕션 90%, 베이스라인 5%, 카나리 5%입니다. 프로덕션 파드는 10개 그대로 둡니다. 트래픽 라우터로 비율을 나누면 Argo Rollouts가 기존 파드 수를 줄이지 않습니다.</li><li>그러면 베이스라인과 카나리는 같은 크기, 같은 나이, 같은 시각, 같은 트래픽이고 다른 건 버전 하나입니다. 그래서 둘 사이에 차이가 나면 버전 때문이라고 말할 수 있습니다.</li><li>배포 전 30분과 배포 후 30분을 비교하는 건 더 나쁩니다. 그 사이에 시간대도 바뀌고 다른 팀 배포도 나가니까요. 베이스라인은 판정이 끝나면 카나리와 같이 내립니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="무엇을 재나">
+    <div class="kicker">3부 · 3회차 · 5.7</div>
+    <h2>무엇을 재나</h2>
+    <div class="cols">
+      <div class="card green"><h3>고르는 기준</h3><ul>
+        <li class="ok"><b>적게</b>: 지표가 많으면 우연히 하나는 나빠 보인다</li>
+        <li class="ok"><b>사용자가 느끼는 것</b>: 에러율, 레이턴시(p99), 결제 성공률</li>
+        <li class="ok"><b>카나리 파드만 따로</b> 셀 수 있게: 레이블 (<code>role=canary</code>, <code>role=baseline</code>)</li>
+        <li class="ok">CPU, 메모리는 판정보다 참고용</li>
+      </ul></div>
+      <div class="card"><h3>예시 서비스라면</h3>
+        <table class="tight">
+          <tr><th>지표</th><th>불합격 조건</th></tr>
+          <tr><td class="k">결제 5xx 비율</td><td>카나리 − 베이스라인 &gt; 0.5%p</td></tr>
+          <tr><td class="k">결제 p99</td><td>카나리 &gt; 베이스라인 × 1.2</td></tr>
+        </table>
+        <p class="dim" style="font-size:17px;margin-top:10px">6장에서 본 레이블이 여기서 판정 도구의 입력이 된다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>무엇을 잴지입니다. 기준은 세 가지로 잡았습니다.</li><li>적게 고릅니다. 지표를 스무 개 보면 우연히 하나쯤은 나빠 보여서 멀쩡한 배포를 자꾸 멈추게 됩니다. 사용자가 느끼는 걸로 고릅니다. 에러율, 레이턴시, 결제 성공률 같은 것들이요. 그리고 카나리 파드만 따로 셀 수 있어야 합니다. 그래서 파드에 role 레이블을 붙입니다.</li><li>예시 서비스에서는 결제 5xx 비율과 p99 두 개만 봅니다. 둘 다 베이스라인과의 차이로 판정합니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="카나리는 어디서 나누나">
+    <div class="kicker">3부 · 5.7</div>
+    <h2>카나리 트래픽을 나누는 방법</h2>
+    <table class="tight">
+      <tr><th>나누는 곳</th><th>방법</th><th>단위</th><th>한계</th></tr>
+      <tr><td class="k">레플리카 비율</td><td>같은 셀렉터에 v1 9개 + v2 1개</td><td>파드 수 (약 10%)</td><td>1%를 하려면 파드 100개, 커넥션 단위라 흔들림</td></tr>
+      <tr><td class="k">인그레스 <span class="dim">(예전 방식)</span></td><td>ingress-nginx <code>canary-weight</code> 어노테이션 등</td><td>요청 %</td><td>구현체마다 문법이 다르다. 커뮤니티 ingress-nginx는 2026년 3월 유지보수 종료</td></tr>
+      <tr><td class="k">Gateway API</td><td><code>HTTPRoute</code>의 <code>weight</code></td><td>요청 %</td><td>표준 API (v1.0 GA)</td></tr>
+      <tr><td class="k">헤더, 쿠키</td><td>사내 사용자나 특정 사용자만</td><td>사람</td><td>교재의 A/B, 다크 릴리스</td></tr>
+      <tr><td class="k">서비스 메시</td><td>Istio, Linkerd 트래픽 분할</td><td>요청 %, 서비스 간 호출까지</td><td>메시 운영 부담 (5주차)</td></tr>
+    </table>
+    <pre class="code" style="font-size:16px;margin-top:14px"><span class="k">kind</span>: HTTPRoute        <span class="c"># gateway.networking.k8s.io/v1</span>
+<span class="k">spec</span>:
+  rules:
+  - backendRefs:
+    - {name: order-api-stable, port: 80, weight: <span class="y">95</span>}
+    - {name: order-api-canary, port: 80, weight: <span class="y">5</span>}</pre>
+    <aside class="notes"><b>발표 노트</b><ul><li>교재는 카나리를 일정 비율의 트래픽을 새 버전으로 보내는 거라고 하고, 대부분의 인그레스와 서비스 메시가 이 기능을 준다고 합니다. 쿠버네티스에서는 어디서 나누느냐에 따라 정밀도가 다릅니다.</li><li>제일 단순한 건 레플리카 비율입니다. 같은 셀렉터에 옛 버전 9개, 새 버전 1개를 두면 서비스가 둘을 구분하지 않고 나눠 줍니다. 그런데 1%를 하려면 파드가 100개 있어야 합니다.</li><li>비율이 흔들리는 이유도 있습니다. 배경부터 보면, 서비스로 가는 요청은 kube-proxy가 커넥션을 맺을 때 파드를 하나 고릅니다. 요청마다 고르는 게 아닙니다.</li><li>그래서 keep-alive를 쓰는 클라이언트나 HTTP/2처럼 커넥션 하나로 요청을 계속 보내는 클라이언트는 처음 고른 파드에 계속 붙습니다. 그런 클라이언트가 몇 개 없으면 10%로 잡아도 실제로는 0%나 30%가 될 수 있습니다.</li><li>요청 단위로 나누려면 인그레스나 게이트웨이가 필요합니다. 지금 표준은 Gateway API의 HTTPRoute weight입니다. 커뮤니티 ingress-nginx는 2026년 3월에 유지보수가 끝나서 지금은 은퇴한 프로젝트입니다. 그래서 표에 예전 방식으로 적었습니다. 새로 만든다면 Gateway API를 쓰면 됩니다. 서비스 메시는 5주차에 봤듯이 서비스끼리 호출까지 나눌 수 있습니다.</li><li>헤더, 쿠키 줄은 비율이 아니라 사람으로 나눕니다. 예를 들어 사내 직원 요청에만 헤더를 붙여 새 버전으로 보내는 식입니다. 교재가 A/B나 다크 릴리스라고 부르는 게 이 방식이고, 뒤에서 A/B와 카나리를 따로 비교합니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="얼마나 기다리나">
+    <div class="kicker">3부 · 3회차 · 5.8, 7.4.2, 7.4.4</div>
+    <h2>단계마다 얼마나 기다리나</h2>
+    <div class="cols">
+      <div>
+        <pre class="code" style="font-size:17px">5%   ─ 10분 ─┐ 판정
+25%  ─ 10분 ─┤ 판정
+50%  ─ 10분 ─┤ 판정
+100%         ┘</pre>
+        <ul style="margin-top:14px">
+          <li>교재 7.4.4 time-to-smoke: 배포 뒤 문제가 보이기까지 걸리는 시간</li>
+          <li>교재 경험칙: <b>과거 평균의 2배</b>를 기다린다</li>
+          <li>예: 지난 사고들이 평균 5분 만에 드러났다면 단계마다 10분</li>
+        </ul>
+      </div>
+      <div class="card"><h3>왜 기다려야 하나</h3><ul>
+        <li>교재 7.4.2: 버그는 확률적이다 (요청의 1%에만 영향)</li>
+        <li>메모리 누수처럼 1시간 넘게 걸려야 보이는 것도 있다</li>
+        <li>5.8: 스테이징은 프로덕션과 리소스, 구성, 트래픽, 데이터가 다르다. 그래서 프로덕션에서 조금씩 확인한다</li>
+        <li class="no">트래픽이 적으면 5%로는 표본이 모자란다 → 더 오래</li>
+      </ul></div>
+    </div>
+    <p class="note">블루/그린에서 블루를 남겨 둘 시간도 같은 기준으로 정한다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>단계마다 얼마나 기다리느냐입니다. 7장이 여러 리전에 배포할 때 쓰는 기준을 그대로 가져왔습니다. time-to-smoke, 연기가 날 때까지의 시간이라는 말인데, 배포 뒤 문제가 보이기까지 걸리는 시간입니다.</li><li>교재 경험칙은 과거 평균의 두 배입니다. 지난 사고들이 평균 5분 만에 드러났다면 단계마다 10분 기다립니다. 이걸 쓰려면 사고마다 배포 후 몇 분 만에 알았는지 적어 둬야 합니다.</li><li>기다리는 이유는 교재 7장과 5.8에 있습니다. 버그는 확률적이고, 늦게 보이는 것도 있고, 스테이징은 프로덕션과 다르니까 프로덕션에서 조금씩 확인하는 겁니다. 아까 블루를 언제 내리냐는 질문도 이 기준으로 답하면 됩니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="Argo Rollouts로 베이스라인 비교">
+    <div class="kicker">3부 · 3회차 · 5.7 보충</div>
+    <h2>자동으로 판정하기: Argo Rollouts</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14px;line-height:1.4"><span class="k">kind</span>: Rollout          <span class="c"># argoproj.io/v1alpha1</span>
+<span class="k">spec</span>:
+  strategy:
+    canary:
+      trafficRouting: {…}  <span class="c"># 가중치를 쓰려면 필요</span>
+      steps:               <span class="c"># 25%, 50% 단계는 examples/04</span>
+      - experiment:        <span class="c"># 베이스라인과 카나리를 같이 띄움</span>
+          duration: 10m
+          templates:
+          - {name: baseline, specRef: stable, weight: 5}
+          - {name: canary,   specRef: canary, weight: 5}
+          analyses:
+          - {name: compare, templateName: canary-vs-baseline}
+---
+<span class="k">kind</span>: AnalysisTemplate
+<span class="k">metadata</span>: {name: canary-vs-baseline}
+<span class="k">spec</span>:
+  metrics:
+  - name: error-rate-diff
+    <span class="y">initialDelay: 1m</span>        <span class="c"># 트래픽이 먼저 들어오게</span>
+    interval: 1m
+    count: 10
+    <span class="y">failureLimit: 0</span>        <span class="c"># 한 번만 넘어도 실패</span>
+    <span class="y">successCondition: result[0] &lt; 0.005</span>
+    provider:
+      prometheus:
+        query: 카나리 5xx 비율 − 베이스라인 5xx 비율  <span class="c"># 5xx 없으면 0</span></pre>
+      <div>
+        <ul>
+          <li>experiment 단계가 베이스라인(옛 버전)과 카나리(새 버전)를 같은 크기로 띄운다</li>
+          <li>1분 기다린 뒤, 1분마다 두 집단의 에러율 차이를 10번 잰다</li>
+          <li><code>failureLimit: 0</code>: 한 번만 기준을 넘어도 <b>자동으로 중단하고 가중치를 0으로</b></li>
+          <li>experiment의 <code>weight</code>는 <code>trafficRouting</code>이 있어야 쓸 수 있다</li>
+          <li>6.3에서 본 대로 쿠버네티스는 알아서 되돌리지 않는다. 그 판단을 이런 컨트롤러가 맡는다</li>
+          <li>Flagger도 같은 일을 한다. Argo Rollouts는 Flux와 같이 써도 된다</li>
+        </ul>
+        <p class="dim" style="font-size:16px;margin-top:10px">예제 전체는 examples/04-argo-rollouts. 필드는 쓰는 버전의 문서로 확인</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>이걸 사람이 대시보드를 보면서 하면 금요일 저녁에 아무도 안 봅니다. 그래서 자동으로 판정하는 도구를 씁니다. 예시는 Argo Rollouts입니다.</li><li>배경부터 보면, Argo Rollouts는 Deployment 대신 Rollout이라는 리소스를 씁니다. 파드 템플릿은 Deployment와 같고, strategy 부분에 카나리 단계를 순서대로 적습니다. 컨트롤러가 이 단계를 하나씩 실행합니다.</li><li>첫 단계가 experiment입니다. 여기서 베이스라인과 카나리를 같이 띄웁니다. specRef: stable은 지금 돌고 있는 옛 버전 템플릿으로, specRef: canary는 새 버전 템플릿으로 파드를 만든다는 뜻입니다. 둘 다 트래픽을 5%씩 받습니다. 이렇게 요청 비율로 가중치를 주려면 trafficRouting에 Gateway API나 Istio 같은 라우터가 설정돼 있어야 합니다.</li><li>experiment가 도는 동안 아래 AnalysisTemplate이 1분마다 프로메테우스에 물어봅니다. 카나리 5xx 비율에서 베이스라인 5xx 비율을 뺀 값이 0.5%p보다 작은지를 봅니다. count 10, interval 1m이라 약 10분 동안 재고, experiment 기간과 맞습니다. initialDelay 1m은 첫 측정 전에 트래픽이 먼저 들어오게 기다리는 시간입니다. 가중치가 막 붙은 직후에 재면 요청이 거의 없어서 값이 의미가 없으니까요.</li><li>실제 쿼리는 5xx가 한 건도 없을 때를 챙겨야 합니다. 5xx가 없으면 프로메테우스가 빈 결과를 돌려줘서 뺄셈이 안 됩니다. 그래서 예제 파일에서는 5xx 쪽을 or vector(0)으로 감싸서 0으로 칩니다.</li><li>failureLimit은 실패를 몇 번까지 봐줄지입니다. 0으로 두면 한 번만 기준을 넘어도 분석이 실패하고, 롤아웃이 바로 중단되면서 가중치가 0으로 돌아갑니다. 1로 두면 두 번째 실패에서 멈춥니다.</li><li>통과하면 다음 단계로 가서 25%, 50%로 늘립니다. 장표에서는 줄였고 전체는 examples/04에 있습니다.</li><li>1회차에서 롤아웃이 성공으로 끝나 버린 걸 기억하시죠. 쿠버네티스는 버전이 괜찮은지 판단하지 않습니다. 그 판단을 메트릭으로 해 주는 게 이 컨트롤러입니다. Flagger도 같은 일을 하고, Argo Rollouts는 Argo CD 없이 Flux와 같이 써도 됩니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="3회차 결과">
+    <div class="kicker">3부 · 3회차 결과</div>
+    <h2>3회차 결과: 약 90건, 알람은 안 울렸다</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:16.5px">18:01  베이스라인 1개(1.6.3), 카나리 1개(1.7.0)
+18:02  둘 다 Ready, 가중치 5% / 5% / 90%
+18:03  판정 1: 카나리 3.1%, 베이스라인 0.1%
+       차이 3.0%p &gt; 0.5%p → 실패
+18:03  failureLimit 0 → 첫 판정에서
+       자동 중단, 카나리 가중치 0
+18:04  슬랙 알림 "canary aborted"
+       온콜 호출 없음</pre>
+      <div>
+        <svg viewBox="0 0 520 220" role="img" aria-label="전체 에러율은 알람 기준에 닿지 않고, 카나리 구간에서만 잠깐 3%가 된다">
+          <line x1="40" y1="190" x2="510" y2="190" stroke="#2c3b61"/><line x1="40" y1="20" x2="40" y2="190" stroke="#2c3b61"/>
+          <line x1="40" y1="133" x2="510" y2="133" stroke="#fbbf24" stroke-dasharray="4 4"/><text x="505" y="126" font-size="12" fill="#fbbf24" text-anchor="end">알람 1%</text>
+          <polyline points="40,190 200,190 200,76 250,76 250,190 510,190" fill="none" stroke="#34d399" stroke-width="2" stroke-dasharray="5 4"/>
+          <polyline points="40,190 200,190 200,176 250,176 250,190 510,190" fill="rgba(251,113,133,.25)" stroke="#fb7185" stroke-width="2.5"/>
+          <text x="258" y="80" font-size="12" fill="#34d399">카나리 파드만 보면 3%</text><text x="258" y="172" font-size="12" fill="#fb7185">전체 0.25%</text>
+          <g font-size="12" fill="#9db0d6" text-anchor="middle"><text x="200" y="208">18:02</text><text x="250" y="208">18:03</text></g>
+        </svg>
+        <table class="tight"><tr><td class="k">실패한 결제</td><td><b>약 90건</b></td></tr><tr><td class="k">알아챈 방법</td><td>베이스라인과 비교해서 자동으로</td></tr><tr><td class="k">되돌리기</td><td>가중치 0, 자동</td></tr><tr><td class="k">추가 자원</td><td>파드 2개, 트래픽 나누는 장치, 메트릭</td></tr></table>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>결과입니다. 5%에게만 보여 줘서 전체 에러율은 0.25%였습니다. 평소 0.1%에 카나리 몫 0.15%가 더해진 값이라 알람 기준 1%에 닿지도 않았습니다. 카나리 파드만 따로 보면 3%라서 베이스라인과 비교하자마자 차이가 보였고, 자동으로 멈췄습니다.</li><li>실패는 약 90건입니다. 롤링의 1만 4천 건과 비교하면 150분의 1 정도입니다. 대신 트래픽을 나누는 장치와 판정할 메트릭이 미리 있어야 합니다.</li><li>설정별로는 다음 장에서 보겠습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="같은 버그, 세 번의 결과">
+    <div class="kicker">3부 · 비교</div>
+    <h2>같은 버그, 세 번의 결과</h2>
+    <table>
+      <tr><th></th><th>롤링</th><th>블루/그린</th><th>카나리</th></tr>
+      <tr><td class="k">실패한 결제</td><td>약 1만 4천 건</td><td>약 5천 4백 건</td><td><b>약 90건</b></td></tr>
+      <tr><td class="k">겪은 비율</td><td>0 → 100%로 점점</td><td>전환 순간 100%</td><td>5%</td></tr>
+      <tr><td class="k">알아챈 방법</td><td>알람, CS</td><td>알람</td><td>베이스라인 비교 (자동)</td></tr>
+      <tr><td class="k">되돌리기</td><td>거꾸로 롤링, 수 분</td><td>셀렉터 전환, 수 초</td><td>가중치 0, 자동</td></tr>
+      <tr><td class="k">추가 자원</td><td>교체 중 몇 개</td><td>두 배 (블루를 둔 동안)</td><td>카나리, 베이스라인 몇 개</td></tr>
+      <tr><td class="k">미리 있어야 할 것</td><td>좋은 프로브</td><td>두 배 용량, 전환 절차</td><td>트래픽 나누는 장치, 메트릭, 판정 컨트롤러</td></tr>
+    </table>
+    <p style="margin-top:18px">블루/그린은 <b>되돌리는 시간</b>을 줄이고, 카나리는 <b>겪는 사람</b>을 줄인다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>세 번을 한 표로 모았습니다.</li><li>블루/그린과 카나리가 줄이는 게 다릅니다. 블루/그린은 되돌리는 시간을 줄입니다. 겪는 비율은 여전히 100%입니다. 카나리는 겪는 사람 자체를 줄입니다. 5%만 겪었고, 그것도 자동으로 멈췄습니다.</li><li>숫자를 한 번에 다시 보면 이렇습니다. 롤링은 전부 새 버전인 300초에 초당 30건, 오르내리는 360초에 초당 15건이라 약 1만 4천 건입니다. 블루/그린은 초당 30건이 180초라 5,400건입니다. 카나리는 초당 50건의 3%, 1.5건이 60초라 약 90건입니다.</li><li>하나 감안할 게 있습니다. 롤링은 알람에서 결정까지 3분, 블루/그린은 1분으로 잡았습니다. 롤링도 1분 만에 결정했다면 약 1만 1천 건이고, 나머지 차이가 되돌리는 방식에서 나옵니다.</li><li>대신 아래 줄처럼 미리 있어야 할 게 늘어납니다. 롤링은 좋은 프로브만 있으면 되지만, 카나리는 트래픽을 나누는 장치, 메트릭, 판정 컨트롤러까지 필요합니다.</li><li>여러분 서비스라면 어느 쪽이 맞을까요? 트래픽이 적으면 카나리 5%로는 판정할 표본이 모자라서 블루/그린이 나을 수도 있습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="A/B 테스트는 카나리가 아니다">
+    <div class="kicker">3부 · 5.7, 5.8</div>
+    <h2>A/B 테스트와 카나리는 묻는 게 다르다</h2>
+    <table class="tight">
+      <tr><th></th><th>카나리</th><th>A/B 테스트</th></tr>
+      <tr><td class="k">묻는 것</td><td>새 버전이 <b>안전한가</b></td><td>두 안 중 <b>어느 쪽이 나은가</b></td></tr>
+      <tr><td class="k">비교 대상</td><td>베이스라인 (같은 코드의 옛 버전)</td><td>A안과 B안 (둘 다 정상 동작)</td></tr>
+      <tr><td class="k">지표</td><td>에러율, 레이턴시</td><td>전환율, 클릭률, 매출</td></tr>
+      <tr><td class="k">기간</td><td>분, 시간</td><td>일, 주 (통계적으로 유의할 때까지)</td></tr>
+      <tr><td class="k">사용자 나누기</td><td>요청마다 나눠도 된다 (한 사용자 요청이 두 버전을 오가도 괜찮은지는 확인)</td><td><b>같은 사용자는 계속 같은 쪽</b> (쿠키, 헤더, 사용자 ID)</td></tr>
+      <tr><td class="k">끝나면</td><td>100%로 가거나 되돌린다</td><td>이긴 안을 남긴다</td></tr>
+    </table>
+    <div class="cols" style="margin-top:16px">
+      <p style="font-size:18px">교재 5.7은 특정 사용자에게만 내보내는 카나리를 "A/B 또는 다크 릴리스"라고도 부른다고 쓴다. <b>나누는 방법은 같아도 목적이 다르다</b></p>
+      <p style="font-size:18px"><b>섀도잉</b>(5.8 트래픽 섀도잉): 실제 요청을 복사해 새 버전에도 보내고 응답은 버린다. 사용자 영향 없이 확인. Gateway API <code>RequestMirror</code>, Istio mirror</p>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>카나리와 자주 섞이는 게 A/B 테스트입니다. 트래픽을 나눈다는 모양은 같은데 묻는 게 다릅니다.</li><li>카나리는 새 버전이 안전한지를 묻고, 에러율 같은 걸 보고, 분이나 시간 단위로 끝납니다. A/B는 둘 다 정상인 두 안 중에 어느 쪽이 나은지를 묻고, 전환율 같은 비즈니스 지표를 보고, 통계적으로 의미가 나올 때까지 며칠이나 몇 주를 봅니다.</li><li>그래서 A/B는 같은 사용자가 계속 같은 쪽을 봐야 합니다. 들어올 때마다 화면이 바뀌면 비교가 안 되니까요. 카나리는 요청마다 나눠도 됩니다. 다만 한 사용자의 요청이 두 버전을 오가도 괜찮은지는 확인해야 합니다. 새 버전이 만든 세션이나 응답 형식을 옛 버전이 못 읽으면 카나리도 사용자를 고정해야 합니다.</li><li>교재는 특정 사용자에게만 내보내는 카나리를 A/B 또는 다크 릴리스라고도 부른다고 하는데, 나누는 방법이 같을 뿐 목적은 다르다고 정리하면 됩니다. 사용자에게 아예 안 보이게 확인하고 싶으면 5.8에 나오는 트래픽 섀도잉, 요청을 복사해서 새 버전에도 보내고 응답은 버리는 방법이 있습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="기능 플래그였다면">
+    <div class="kicker">3부 · 7.4 참고 상자</div>
+    <h2>기능 플래그였다면: 배포와 릴리스를 떼어 놓기</h2>
+    <div class="cols">
+      <div>
+        <div class="quote" style="font-size:19px">기능 플래그를 사용하면 릴리스할 때마다 일단 새 기능이 롤아웃되지만, 기능 플래그의 디폴트 값은 '꺼짐(off)' 상태다 … 전체 유저의 10%만 대상으로 기능을 활성화하고 그 다음에 20%를 대상으로 활성화하는 식으로 플래그를 점점 켜 나간다<span class="src">교재 7.4 참고 상자</span></div>
+        <pre class="code" style="font-size:16px;margin-top:14px">17:59  롤링으로 1.7.0 배포 (쿠폰 기능 꺼짐) → 에러 없음
+18:02  쿠폰 기능 5% 켬
+18:03  켠 사용자만 본 결제 에러율 3.1%
+       (전체는 약 0.25%)
+18:03  플래그 끔 (수 초, 배포 없음)</pre>
+      </div>
+      <div class="card"><h3>플래그 종류</h3>
+        <table class="tight">
+          <tr><td class="k">릴리스</td><td>덜 된 기능 숨기기. 짧게 쓰고 지운다</td></tr>
+          <tr><td class="k">실험</td><td>A/B 테스트</td></tr>
+          <tr><td class="k">운영</td><td>부하가 크면 기능 끄기</td></tr>
+          <tr><td class="k">권한</td><td>특정 사용자에게만</td></tr>
+        </table>
+        <p class="dim" style="font-size:17px;margin-top:10px">대가: 켜짐, 꺼짐 조합만큼 테스트할 경우가 늘어난다. 다 켠 플래그는 치워야 한다</p></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>네 번째 방법도 있습니다. 교재 7장 참고 상자에 짧게 나오는 기능 플래그입니다. 코드를 내보내는 배포와 기능을 여는 릴리스를 떼어 놓는 겁니다.</li><li>1.7.0을 쿠폰 기능이 꺼진 채로 롤링으로 배포하면 아무 일도 안 일어납니다. 나중에 기능을 5%에게 켰다가 에러가 나면 플래그만 끕니다. 배포도 롤백도 없이 몇 초면 끝납니다.</li><li>에러는 어떻게 알아챘을까요. 5%만 켰으니 전체 에러율은 0.25% 정도라 전체 알람으로는 안 보입니다. 플래그를 켠 사용자만 따로 본 결제 에러율로 알아챘습니다. 카나리처럼 켠 쪽과 안 켠 쪽을 나눠 비교해야 합니다.</li><li>대가도 있습니다. 플래그가 늘면 켜짐과 꺼짐 조합만큼 테스트할 경우가 늘어나고, 다 켠 플래그를 안 치우면 코드에 계속 남습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="컬럼 추가는 세 번에 나눠서">
+    <div class="kicker">3부 · 5.7, 5.10</div>
+    <h2>컬럼 추가는 세 번에 나눠서 배포한다</h2>
+    <svg viewBox="0 0 1150 230" role="img" aria-label="확장, 이전, 축소의 세 단계로 나눠 배포해서 두 버전이 같이 도는 동안 스키마가 양쪽을 지원하게 한다">
+      <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9db0d6"/></marker></defs>
+      <g text-anchor="middle">
+        <rect x="20" y="20" width="340" height="150" rx="12" fill="#141d33" stroke="#34d399"/>
+        <text x="190" y="55" font-size="21" fill="#34d399" font-weight="800">1. 확장 (expand)</text>
+        <text x="190" y="88" font-size="16" fill="#eaf0ff">coupon_discount 컬럼 추가 (1.6.3)</text><text x="190" y="112" font-size="16" fill="#eaf0ff">NULL 허용, 기본값</text>
+        <text x="190" y="145" font-size="15" fill="#9db0d6">옛 코드는 모르고 지나간다</text>
+        <rect x="405" y="20" width="340" height="150" rx="12" fill="#141d33" stroke="#fbbf24"/>
+        <text x="575" y="55" font-size="21" fill="#fbbf24" font-weight="800">2. 이전 (migrate)</text>
+        <text x="575" y="88" font-size="16" fill="#eaf0ff">새 코드 배포 (1.7.0, 3f9c2e1)</text><text x="575" y="112" font-size="16" fill="#eaf0ff">필요하면 데이터 채우기</text>
+        <text x="575" y="145" font-size="15" fill="#9db0d6">이 동안 옛 버전과 새 버전이 같이 돈다</text>
+        <rect x="790" y="20" width="340" height="150" rx="12" fill="#141d33" stroke="#fb7185"/>
+        <text x="960" y="55" font-size="21" fill="#fb7185" font-weight="800">3. 축소 (contract)</text>
+        <text x="960" y="88" font-size="16" fill="#eaf0ff">쿠폰 없는 옛 코드 경로 제거</text><text x="960" y="112" font-size="16" fill="#eaf0ff">NOT NULL 제약 추가</text>
+        <text x="960" y="145" font-size="15" fill="#9db0d6">여기부터는 롤백이 어려워진다</text>
+      </g>
+      <g stroke="#9db0d6" stroke-width="2" marker-end="url(#ar5)"><line x1="360" y1="95" x2="403" y2="95"/><line x1="745" y1="95" x2="788" y2="95"/></g>
+      <text x="575" y="210" font-size="17" fill="#eaf0ff" text-anchor="middle">각각 <tspan fill="#fbbf24" font-weight="700">따로 배포</tspan>한다. 어느 단계에서 멈춰도 두 버전이 다 돈다</text>
+    </svg>
+    <p class="note">교재 5.7: "데이터베이스 스키마는 두 버전의 애플리케이션을 모두 지원할 수 있어야 한다 … 롤링 업데이트가 끝나면 옛 컬럼은 삭제한다"</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>예시 서비스의 쿠폰 기능에는 DB 컬럼이 하나 필요합니다. 이 컬럼은 그 전 1.6.3 배포 때 먼저 추가해 뒀습니다. 왜 그랬는지 보겠습니다. 롤링이든 카나리든 옛 버전과 새 버전이 잠깐은 같이 돕니다. 교재 5.7절도 스키마가 두 버전을 다 지원해야 한다고 합니다.</li><li>보통 이걸 확장, 이전, 축소 세 번에 나눕니다. 먼저 컬럼만 추가하는 배포, 다음에 새 코드 배포, 마지막에 옛 것을 치우는 배포입니다.</li><li>롤백과 관련해서는 3번을 조심해야 합니다. 쿠폰 없는 옛 코드 경로를 지우고 NOT NULL 제약을 걸고 나면, 옛 버전은 새 제약을 모르는 채로 돌게 되고 되돌리기가 어려워집니다. 교재 예처럼 컬럼 이름을 바꾸는 경우라면 옛 컬럼을 지우는 게 축소입니다. 어느 쪽이든 축소는 새 버전이 충분히 안정된 뒤에 따로 합니다.</li><li>질문 하나 드리면, 컬럼 이름을 바꾸는 거라면 몇 번 배포해야 할까요? 새 컬럼 추가, 양쪽에 쓰기, 새 컬럼에서 읽기, 옛 컬럼 삭제까지 보통 서너 번입니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="데모">
+    <div class="kicker">3부 · 데모 (약 5분)</div>
+    <h2>kind 클러스터에서 직접 보기</h2>
+    <div class="cols">
+      <pre class="code" style="font-size:14.5px"><span class="c"># 0) 준비 (examples/README.md)</span>
+kind create cluster --name week07
+kubectl apply -f examples/01-rolling/
+
+<span class="c"># 1) 요청을 계속 보내 둔다</span>
+kubectl run poller --image=curlimages/curl --command -- \
+  sh -c 'while true; do curl -s -o /dev/null \
+  -w "%{http_code}\n" http://web; sleep .2; done'
+
+<span class="c"># 2) 이미지 교체, RS 두 개가 바뀌는 걸 본다</span>
+kubectl set image deploy/web web=nginx:1.27
+kubectl get rs -l app=web -w
+
+<span class="c"># 3) 없는 태그로 바꿔서 멈추기만 하는지 본다</span>
+kubectl set image deploy/web web=nginx:no-such-tag
+kubectl rollout status deploy/web --timeout=90s; echo $?
+
+<span class="c"># 4) 되돌린다</span>
+kubectl rollout history deploy/web
+kubectl rollout undo deploy/web</pre>
+      <div>
+        <table class="tight">
+          <tr><th>#</th><th>미리 돌려 본 결과</th></tr>
+          <tr><td class="k">2</td><td>RS 두 개가 교차, poller <b>160번 모두 200</b></td></tr>
+          <tr><td class="k">2′</td><td>preStop을 빼도 <b>343번 모두 200</b>. kind는 노드가 하나라 A가 짧다. 외부 LB를 거치면 드러난다</td></tr>
+          <tr><td class="k">3</td><td><code>ErrImagePull</code> 1개, 옛 파드 3개 Running, 종료 코드 <b>1</b>, poller는 계속 200</td></tr>
+          <tr><td class="k">4</td><td>직전 리비전 번호가 없어지고 <b>새 번호</b>로 다시 붙는다</td></tr>
+        </table>
+        <p class="dim" style="font-size:17px;margin-top:14px">kind v0.33, Kubernetes v1.37. 데모가 막히면 이 표로 설명</p>
+      </div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>5분 정도 직접 보여 드리겠습니다. kind 클러스터에 nginx 디플로이먼트를 띄우고 요청을 계속 보내 둔 상태에서 이미지를 바꿉니다.</li><li>2번에서는 레플리카셋 두 개가 바뀌는 것과 poller가 200만 찍는 걸 봅니다. 미리 해 보니 preStop을 빼도 에러가 안 났습니다. kind는 노드가 하나라 엔드포인트 제거가 거의 바로 반영돼서 그렇습니다. 앞에서 본 문제는 외부 로드밸런서처럼 A가 긴 환경에서 보입니다.</li><li>3번은 없는 태그로 바꿔서, 쿠버네티스가 되돌리지 않고 멈춰 있기만 하는 걸 봅니다. 4번에서 undo를 하면 직전 리비전 번호가 목록에서 없어지고, 같은 내용이 새 번호로 다시 붙습니다. 번호는 그동안 몇 번 배포했는지에 따라 다릅니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="3부 정리">
+    <div class="kicker">3부 정리</div>
+    <h2>어떤 전략을 고를까</h2>
+    <table>
+      <tr><th>상황</th><th>전략</th></tr>
+      <tr><td class="k">처음 시작, 트래픽 적음</td><td>롤링 + 좋은 프로브 + preStop (교재 5.10)</td></tr>
+      <tr><td class="k">되돌리는 시간을 줄이고 싶음, 용량 여유 있음</td><td>블루/그린. 블루는 문제가 보일 때까지 남겨 둔다</td></tr>
+      <tr><td class="k">트래픽 많음, 메트릭과 트래픽 나누는 장치가 있음</td><td>카나리 + 베이스라인 비교 + 자동 판정</td></tr>
+      <tr><td class="k">기능 단위로 조절하고 싶음</td><td>기능 플래그. 배포는 롤링으로</td></tr>
+      <tr><td class="k">잠깐 내려가도 됨 (큐 기반), 두 파드가 같은 데이터를 쓰면 안 됨</td><td>Recreate</td></tr>
+    </table>
+    <p style="margin-top:18px">어느 전략이든 <b>두 버전이 같이 돈다</b>(블루/그린도 DB는 공유). 그래서 확장, 이전, 축소는 전략과 상관없이 필요하다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>3부 정리입니다. 상황별로 이렇게 고르면 될 것 같습니다.</li><li>처음이면 교재 말대로 롤링부터 하고, 프로브와 preStop을 제대로 챙깁니다. 되돌리는 시간을 줄이고 싶고 용량이 있으면 블루/그린, 트래픽이 많고 메트릭이 갖춰져 있으면 카나리입니다. 기능 단위로 조절하고 싶으면 플래그를 같이 씁니다.</li><li>어느 전략이든 공통으로 걸리는 게 하나 있습니다. 두 버전이 같이 돈다는 겁니다. 블루/그린도 DB는 공유하니까요. 그래서 앞에서 본 확장, 이전, 축소는 전략과 상관없이 필요합니다. 4부로 가기 전에 교재 7장의 리전 이야기를 짧게 보겠습니다.</li></ul></aside>
+  </section>

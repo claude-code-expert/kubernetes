@@ -1,0 +1,18 @@
+# 3부 보충 7장 · 아직 옛 버전인 리전 (7.1 리전별 레지스트리, 7.2 파라미터화)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+namespace: order
+images:
+  - name: order-api
+    newName: eu.registry.example.com/order-api
+    newTag: 2b7e0d4
+labels:
+  - pairs:
+      release: order-api-stable
+      release-number: "1471"
+    includeTemplates: true
+replicas:
+  - name: order-api
+    count: 20

@@ -1,0 +1,189 @@
+  <section class="slide" data-t="4부 되돌리기">
+    <div class="kicker">4부 · 교재 7.5, 6.3, 6.5, 18장</div>
+    <h1>4부<br><span class="em">되돌리기</span></h1>
+    <p class="dim" style="margin-top:24px">실제로 되돌릴 때 챙길 것</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>4부입니다. 3부에서 전략마다 되돌리는 방법을 봤는데, 실제로 되돌릴 때 전략과 상관없이 챙겨야 하는 것들이 있습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="되돌리는 방법 세 가지">
+    <div class="kicker">4부 · 6.3, 18장</div>
+    <h2>깃옵스에서 되돌리는 방법 세 가지</h2>
+    <table class="tight">
+      <tr><th>방법</th><th>되돌리는 것</th><th>속도</th><th>깃옵스에서는</th></tr>
+      <tr><td class="k">트래픽 전환</td><td>사용자가 보는 버전 (블루/그린 셀렉터, 카나리 가중치 0)</td><td>수 초</td><td>전략이 허락할 때만. 코드는 그대로</td></tr>
+      <tr><td class="k">git revert</td><td>원하는 상태</td><td>동기화 + 롤아웃</td><td><b>기본은 이것</b>. 기록이 남는다</td></tr>
+      <tr><td class="r">kubectl rollout undo</td><td>클러스터의 실제 상태</td><td>롤아웃 시간</td><td><span class="warn">깃은 그대로라 에이전트가 새 버전으로 다시 돌려놓는다</span></td></tr>
+    </table>
+    <pre class="code" style="font-size:16px;margin-top:16px"><span class="c"># 기본: 깃을 되돌리고 바로 동기화</span>
+git revert a41d77c &amp;&amp; git push
+flux reconcile kustomization order-api --with-source   <span class="c"># interval을 기다리지 않는다</span>
+
+<span class="c"># 급해서 클러스터를 직접 만져야 한다면, 에이전트부터 멈춘다</span>
+flux suspend kustomization order-api        <span class="c"># Argo CD는 auto-sync 끄기</span>
+kubectl -n order rollout undo deploy/order-api
+<span class="c"># 그다음 깃을 맞추고 다시 켠다</span></pre>
+    <aside class="notes"><b>발표 노트</b><ul><li>깃옵스에서 되돌리는 방법은 세 가지입니다. 블루/그린이나 카나리처럼 옛 버전이 떠 있으면 트래픽 전환이 제일 빠릅니다. 기본은 git revert이고, 바로 flux reconcile을 해서 동기화 주기를 기다리지 않습니다.</li><li>세 번째 rollout undo가 함정입니다. undo로 되돌려도 깃에는 새 버전이 적혀 있어서, Flux나 selfHeal을 켠 Argo CD가 다시 새 버전으로 돌려놓습니다. 급하게 되돌렸는데 몇 분 뒤에 장애가 다시 나는 겁니다.</li><li>그래서 직접 만져야 한다면 에이전트를 먼저 멈추고, 되돌린 뒤 깃을 맞추고, 다시 켭니다. Argo CD에서 selfHeal이 꺼져 있으면 undo가 남는 대신 깃과 클러스터가 다른 채로 남습니다. 어느 쪽이든 깃을 맞춰야 끝납니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="되돌아갈 곳이 남아 있나">
+    <div class="kicker">4부 · 5.5, 6.3 보충</div>
+    <h2>되돌아갈 곳이 남아 있나</h2>
+    <table class="tight">
+      <tr><th>되돌아갈 곳</th><th>어디에 있나</th><th>없어지는 경우</th></tr>
+      <tr><td class="k">옛 ReplicaSet</td><td>클러스터, <code>revisionHistoryLimit</code>(기본 10)</td><td>한도를 줄여 뒀거나 배포가 잦아서 밀려남</td></tr>
+      <tr><td class="k">옛 이미지</td><td>레지스트리</td><td><span class="warn">"최근 N개만 보관" 수명 주기 정책이 지움</span>. undo 했더니 <code>ImagePullBackOff</code></td></tr>
+      <tr><td class="k">옛 태그가 가리키는 것</td><td>레지스트리</td><td>같은 태그로 다시 push (<code>latest</code>, 태그 불변 미설정)</td></tr>
+      <tr><td class="k">블루 환경</td><td>클러스터</td><td>너무 빨리 내림 (3부 "블루는 언제 내리나")</td></tr>
+      <tr><td class="k">옛 원하는 상태</td><td>깃</td><td>거의 안 없어진다</td></tr>
+    </table>
+    <p class="note">노드 캐시에 옛 이미지가 남아 있으면 undo는 되는데, 새 노드로 스케줄되는 순간 실패한다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>rollout undo가 있어도 돌아갈 이미지가 지워져 있으면 소용없습니다. 쿠버네티스에서 돌아갈 곳은 여러 군데에 흩어져 있습니다.</li><li>실무에서 자주 걸리는 건 두 번째입니다. 레지스트리 비용을 줄이려고 최근 이미지 몇 개만 남기는 정책을 걸어 두면, 롤백하려는 이미지가 이미 지워져 있습니다. 노드 캐시에 남아 있어서 당장은 되다가 새 노드로 갈 때 터지는 경우도 있습니다. 개수 기준보다 배포 저장소에서 쓰고 있는 태그는 안 지우는 방식이 낫습니다.</li><li>깃은 거의 안 없어집니다. 다만 깃이 가리키는 이미지는 레지스트리에 있어야 합니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="롤백해도 데이터는 안 돌아간다">
+    <div class="kicker">4부 · 5.7, 5.10</div>
+    <h2>롤백해도 데이터는 안 돌아간다</h2>
+    <svg viewBox="0 0 1150 190" role="img" aria-label="롤백하면 옛 코드가 새 버전이 만든 데이터와 만나 테스트한 적 없는 조합이 된다">
+      <g text-anchor="middle">
+        <rect x="20" y="30" width="300" height="110" rx="12" fill="#141d33" stroke="#9db0d6"/><text x="170" y="68" font-size="19" fill="#eaf0ff" font-weight="700">배포 전</text><text x="170" y="98" font-size="16" fill="#9db0d6">옛 코드 + 옛 데이터</text><text x="170" y="122" font-size="15" fill="#34d399">테스트함</text>
+        <rect x="425" y="30" width="300" height="110" rx="12" fill="#141d33" stroke="#9db0d6"/><text x="575" y="68" font-size="19" fill="#eaf0ff" font-weight="700">배포 후</text><text x="575" y="98" font-size="16" fill="#9db0d6">새 코드 + 새 데이터</text><text x="575" y="122" font-size="15" fill="#34d399">테스트함</text>
+        <rect x="830" y="30" width="300" height="110" rx="12" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-dasharray="7 5"/><text x="980" y="68" font-size="19" fill="#fbbf24" font-weight="700">롤백 후</text><text x="980" y="98" font-size="16" fill="#eaf0ff">옛 코드 + <tspan fill="#fbbf24">새 데이터</tspan></text><text x="980" y="122" font-size="15" fill="#fb7185">테스트한 적 없음</text>
+      </g>
+      <text x="575" y="178" font-size="16" fill="#9db0d6" text-anchor="middle">코드는 돌아가도, 새 버전이 쓴 데이터와 메시지는 안 돌아간다</text>
+    </svg>
+    <div class="cols" style="margin-top:8px">
+      <div class="card"><h3>예시 서비스라면</h3><ul>
+        <li class="ok">쿠폰 컬럼은 1.6.3 때 먼저 추가해 뒀다. 옛 코드는 무시하고 지나간다</li>
+        <li class="no">축소(NOT NULL 추가, 옛 경로 삭제)까지 끝냈다면 옛 코드가 새 제약과 부딪힌다</li>
+        <li class="no">새 버전이 큐에 넣은 새 형식 메시지를 옛 컨슈머가 못 읽는다</li>
+      </ul></div>
+      <div class="card violet"><h3>고쳐서 다시 내보내는 게 나을 때</h3><ul>
+        <li>되돌릴 수 없는 변경이 이미 나갔을 때</li>
+        <li>수정이 작고 확실하고, 트래픽은 이미 옛 버전으로 돌려 뒀을 때</li>
+        <li class="no">교재 7.5: 급하게 만든 "조치 완료" 빌드가 문제를 더 키우기도 한다. 같은 배포 전략으로 내보낸다</li>
+      </ul></div>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>롤백하면 코드는 옛 버전으로 돌아가지만 새 버전이 쓴 데이터는 그대로 남습니다. 옛 코드와 새 데이터 조합은 테스트한 적이 없습니다.</li><li>예시 서비스는 쿠폰 컬럼을 1.6.3 배포 때 먼저 추가해 뒀기 때문에 옛 코드가 새 컬럼을 무시하고 잘 돕니다. 3부에서 확장 배포를 따로 한 게 여기서 효과를 봅니다. 그런데 축소까지 끝냈거나 새 형식 메시지를 큐에 넣었다면 얘기가 다릅니다.</li><li>그럴 때는 고쳐서 다시 내보내는 게 나을 수 있습니다. 교재 7.5는 급하게 만든 수정 빌드가 더 나쁠 수 있다고 경고하니까, 수정 빌드도 카나리 같은 같은 전략으로 내보냅니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="헬름으로 묶어서 되돌리기">
+    <div class="kicker">4부 · 6.4, 6.5</div>
+    <h2>같이 되돌릴 것은 한 차트로 묶는다</h2>
+    <div class="cols">
+      <div>
+        <ul>
+          <li>교재 6.5: 함께 롤백하거나 업그레이드할 서비스는 <b>같은 헬름 차트</b>로</li>
+          <li><code>helm rollback</code> 한 번에 웹, DB 디플로이먼트, 잡 매니페스트가 같이 이전 버전으로 (데이터는 아니다)</li>
+          <li>6.4 예제는 헬름 훅으로 업그레이드, 삭제, 롤백 직전에 DB를 백업한다</li>
+          <li class="no">교재는 훅 키를 세 번 써서 <b>pre-rollback만 남는다</b> (1부)</li>
+          <li class="no">깃으로 되돌리면 Flux는 <b>upgrade</b>를 한다 (pre-rollback은 실패 대응으로 롤백할 때만). Argo CD는 <code>helm template</code>이라 롤백 훅이 없다</li>
+          <li class="no">→ 교재 예제 그대로면 깃으로 되돌릴 때 <b>백업이 안 돈다</b></li>
+        </ul>
+      </div>
+      <pre class="code" style="font-size:15px"><span class="k">kind</span>: Job
+<span class="k">metadata</span>:
+  name: db-backup
+  annotations:
+    "helm.sh/hook": <span class="y">pre-upgrade,pre-delete,pre-rollback</span>
+    "helm.sh/hook-delete-policy": hook-succeeded
+<span class="k">spec</span>:
+  template:
+    spec:
+      containers:
+      - name: mysqldump
+        image: evillgenius/mysqldump:v1
+      restartPolicy: Never</pre>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>6장 모범 사례 중 롤백과 바로 이어지는 게 이겁니다. 같이 되돌려야 하는 서비스는 같은 헬름 차트로 묶으라는 겁니다. 그러면 helm rollback 한 번에 웹, DB 디플로이먼트, 잡 매니페스트가 같이 이전 버전으로 돌아갑니다. 데이터까지 돌아가는 건 아닙니다. 앞 장에서 본 그대로입니다. 6.4 예제는 훅으로 업그레이드, 삭제, 롤백 직전에 DB를 백업합니다.</li><li>그런데 1부에서 봤듯이 교재는 훅 키를 세 번 써서 마지막 pre-rollback만 남습니다.</li><li>여기에 깃옵스가 겹치면 더 복잡해집니다. 도구마다 나눠 보겠습니다.</li><li>Flux helm-controller는 깃에서 차트 버전이나 값을 되돌리면 옛 버전으로 upgrade를 합니다. 그래서 pre-upgrade 훅이 걸립니다. pre-rollback 훅은 업그레이드가 실패해서 Flux의 실패 대응 설정이 helm rollback을 할 때만 걸립니다.</li><li>Argo CD는 헬름 차트를 helm template으로 매니페스트로 바꿔서 적용합니다. 헬름 릴리스 자체를 만들지 않아서 pre-rollback 훅은 아예 돌지 않습니다. pre-upgrade 같은 일부 훅은 Argo CD 동기화 훅으로 바꿔서 돌려 주지만 롤백 훅은 대응하는 게 없습니다.</li><li>그래서 교재 예제처럼 pre-rollback만 남아 있으면, 깃으로 되돌릴 때는 어느 도구든 백업이 돌지 않습니다. 오른쪽처럼 쉼표로 이어 쓰면 적어도 Flux에서는 pre-upgrade로 백업이 돕니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="롤백 체크리스트">
+    <div class="kicker">4부 · 7.5</div>
+    <h2>롤백 체크리스트 예시</h2>
+    <div class="cols">
+      <div class="card"><h3>배포 전에</h3><ul>
+        <li>직전 버전 태그와 배포 저장소 커밋</li>
+        <li>그 이미지가 레지스트리에 있나</li>
+        <li>이번 변경에 축소(옛 컬럼 삭제 등)가 있나</li>
+        <li>메시지 형식, 외부 API 계약이 바뀌었나</li>
+      </ul></div>
+      <div class="card rose"><h3>되돌릴 때</h3><ol style="font-size:19px;line-height:1.6;padding-left:22px;color:var(--ink)">
+        <li>옛 버전이 떠 있으면 트래픽부터 전환</li>
+        <li>배포 저장소에서 <code>git revert</code>, 바로 reconcile</li>
+        <li>급하면 에이전트 멈춤 → undo → 깃 맞춤 → 재개</li>
+        <li>에러율이 원래대로 왔는지 확인</li>
+        <li>걸린 시간과 막힌 곳 기록</li></ol></div>
+    </div>
+    <p class="note">교재 7.5: 아무리 뻔한 단계라도 빠짐없이 적는다. 급할 때는 가장 쉬운 단계부터 잊어버린다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>지금까지 내용을 체크리스트로 만들면 이렇게 됩니다. 교재 7.5절이 뻔한 단계까지 다 적으라고 해서 정말 뻔한 것까지 넣었습니다.</li><li>왼쪽은 배포 전에 볼 것입니다. 이번 변경에 되돌릴 수 없는 게 있는지를 배포 전에 알면, 이번엔 롤백보다 고쳐서 내보내는 쪽으로 가야겠다는 걸 미리 정할 수 있습니다.</li><li>오른쪽 마지막 줄, 걸린 시간과 막힌 곳은 꼭 적어 둡니다. 이게 쌓여야 3부에서 본 카나리 대기 시간도 정할 수 있습니다. 여러분 팀 체크리스트에 뭐가 더 있는지 토론 때 듣고 싶습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="롤백도 미리 연습한다">
+    <div class="kicker">4부 · 7.5, 5.8, 5.9.4</div>
+    <h2>롤백도 미리 연습한다</h2>
+    <div class="cols">
+      <div class="card"><h3>7.5: 급하지 않을 때 연습한다</h3><ul>
+        <li>트래픽 옮기기, 걸린 시간 기록</li>
+        <li>데이터 전체 복구</li>
+        <li>이전 버전으로 롤백</li>
+        <li>틀린 부분을 적어 두고 자동화한다</li>
+      </ul></div>
+      <div class="card violet"><h3>5.8: 카오스 실험</h3><ol style="font-size:19px;line-height:1.6;padding-left:22px;color:var(--ink)">
+        <li>정상 상태에 대한 가설</li><li>실제로 일어날 법한 이벤트 준비</li><li>대조군과 비교</li><li>가설 검증</li></ol>
+        <p style="font-size:18px;margin-top:10px">영향 범위는 작게, 실험은 자동화. 도구 예: Chaos Toolkit, KubeMonkey (5.9.4)</p></div>
+    </div>
+    <p class="note">연습하면 어디서 막히는지 미리 알 수 있다. 카오스는 8주차 20장에서 자세히</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>절차를 문서로만 두면 막상 돌릴 때 어디서 막히는지 모릅니다. 교재 7.5절은 급하지 않을 때 연습하라고 하고, 무엇을 연습할지도 적어 둡니다.</li><li>5.8절 카오스 실험도 같은 얘기입니다. 가설을 세우고 대조군과 비교합니다. 3부 카나리의 베이스라인이 여기서도 대조군으로 나옵니다.</li><li>연습해 보면 어디서 막히는지 미리 알 수 있습니다. 카오스는 다음 주에 남희 님이 자세히 다룹니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="처음 질문으로">
+    <div class="kicker">정리</div>
+    <h2>릴리스 파이프라인에서 제일 중요한 건?</h2>
+    <table class="tight">
+      <tr><th></th><th>롤백을 위해 한 것</th><th>교재</th></tr>
+      <tr><td class="k">1부 준비</td><td>돌아갈 이름(SHA 태그, 다이제스트), 기록(깃), 옛 RS가 남는 원리</td><td>5.1 ~ 5.6, 6장, 18장</td></tr>
+      <tr><td class="k">2부 전략 한눈에</td><td>누구에게, 얼마나, 어떤 순서로 보여 줄지 고르는 선택지</td><td>5.7, 6.3</td></tr>
+      <tr><td class="k">3부 같은 배포, 세 번</td><td>롤링 1만 4천 건 → 블루/그린 5천 4백 건 → 카나리 약 90건</td><td>5.7, 5.8, 7장</td></tr>
+      <tr><td class="k">4부 되돌리기</td><td>git revert, 돌아갈 곳 확인, 데이터, 헬름 훅, 연습</td><td>7.5, 6.5, 18장</td></tr>
+    </table>
+    <p style="margin-top:22px" class="big">제 답은 <span class="em">롤백</span>이고, 배포 전략은 롤백을 싸게 만드는 방법입니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>처음 질문으로 돌아가겠습니다. 릴리스 파이프라인에서 제일 중요한 게 뭘까요.</li><li>제 답은 롤백이고, 오늘 본 배포 전략들은 롤백을 싸게 만드는 방법이었습니다. 같은 버그였는데 전략만 바꿔서 실패가 1만 4천 건에서 약 90건이 됐습니다.</li><li>오늘은 네 장을 이 관점으로 묶어 봤습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="토론">
+    <div class="kicker">토론</div>
+    <h2>같이 얘기해 보고 싶은 것</h2>
+    <ul>
+      <li><b>Q1.</b> 우리 서비스라면 롤링, 블루/그린, 카나리 중 뭘 고를까? 카나리를 못 쓰게 막는 건 뭘까 (트래픽 양, 메트릭, 트래픽 나누는 장치)</li>
+      <li><b>Q2.</b> 쿠버네티스는 실패한 롤아웃을 자동으로 되돌리지 않는다. 맞는 설계일까? 자동 롤백이 오히려 위험한 경우는</li>
+      <li><b>Q3.</b> <span class="dim">(시간이 되면)</span> 확장/축소로 배포한다면 롤백은 여전히 필요할까? 고쳐서 다시 내보내는 것만으로 충분할까</li>
+      <li><b>Q4.</b> <span class="dim">(시간이 되면)</span> 교재는 5장, 18장 모두 앱 코드와 매니페스트를 한 저장소에 둔다. 배포 저장소를 따로 두는 게 나을까</li>
+    </ul>
+    <p class="note">정답이 있는 질문은 아닙니다. 각자 쓰는 환경 기준으로 얘기해 주세요</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>토론 질문 네 개입니다. Q1, Q2를 먼저 하고, Q3, Q4는 시간이 되면 하겠습니다.</li><li>Q1은 오늘 본론이라 먼저 해 보면 좋겠습니다. 여러분 서비스에서 카나리를 못 쓰게 막는 게 뭔지 궁금합니다.</li><li>Q2는 자동 롤백이 있으면 편할 것 같은데 왜 없는지, 있으면 오히려 위험한 때는 언제인지 얘기해 보면 좋겠습니다.</li><li>의견이 다 나온 뒤에: 제 생각은 이렇습니다. 롤아웃이 느린 이유가 이미지 오류일 수도 있지만 노드가 부족하거나 이미지 받는 게 느려서일 수도 있어서 컨트롤러가 실패라고 단정하기 어렵습니다. 그래서 판단을 메트릭을 보는 쪽에 맡긴 것 같습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="참고 자료">
+    <div class="kicker">참고 자료</div>
+    <h2>참고 자료</h2>
+    <div class="cols">
+      <ul style="gap:10px">
+        <li style="font-size:19px">『쿠버네티스 창시자에게 배우는 모범 사례 2판』 5, 6, 7, 18장</li>
+        <li style="font-size:19px">Kubernetes 문서: Deployments, Pod Lifecycle(종료), Container Lifecycle Hooks, kubectl debug</li>
+        <li style="font-size:19px">Gateway API 문서</li>
+      </ul>
+      <ul style="gap:10px">
+        <li style="font-size:19px">Flux, Argo CD, Argo Rollouts 문서</li>
+        <li style="font-size:19px">OpenGitOps 원칙 v1.0 (opengitops.dev)</li>
+        <li style="font-size:19px">예제와 실행 결과: <code>week-07/명주/examples/</code>, 교재 모범 사례 요약은 README</li>
+      </ul>
+    </div>
+    <aside class="notes"><b>발표 노트</b><ul><li>참고한 자료입니다. 예제는 kind에서 돌려 봤고 실행 결과를 examples README에 적어 뒀습니다. 교재 각 장의 모범 사례 요약은 README에 있습니다.</li></ul></aside>
+  </section>
+
+  <section class="slide" data-t="마무리">
+    <div class="kicker">마무리</div>
+    <h1 style="font-size:44px;line-height:1.45">같은 버그,<br>롤링 1만 4천 건, 블루/그린 5천 4백 건, <span class="em">카나리 약 90건</span></h1>
+    <p class="dim" style="margin-top:26px">감사합니다</p>
+    <aside class="notes"><b>발표 노트</b><ul><li>같은 버그였는데 전략에 따라 1만 4천 건, 5천 4백 건, 약 90건이 됐습니다. 이 세 숫자만 기억해 주시면 될 것 같습니다.</li><li>들어 주셔서 감사합니다.</li></ul></aside>
+  </section>

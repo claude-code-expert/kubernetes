@@ -1,0 +1,18 @@
+# 3부 · Gateway API 가중치로 카나리
+# 전제: Gateway API CRD 와 구현체(예: Envoy Gateway, Istio, Cilium)가 설치돼 있고
+#       Gateway "public" 이 존재한다. kind 기본 구성에는 없다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: order-api
+spec:
+  parentRefs:
+    - name: public
+  rules:
+    - backendRefs:
+        - name: order-api-stable
+          port: 80
+          weight: 95
+        - name: order-api-canary
+          port: 80
+          weight: 5

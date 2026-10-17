@@ -1,0 +1,52 @@
+# 5.9 실습(drone)을 GitHub Actions 로 옮긴 예. 깃옵스 전제라 클러스터 자격 증명이 없다.
+# 앱 저장소(.github/workflows/release.yaml)에 두고, 배포 저장소 쓰기 토큰만 시크릿으로 둔다.
+name: release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  packages: write
+  id-token: write          # 서명(cosign keyless)에 쓰는 OIDC 토큰
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 테스트 (실패하면 이미지를 만들지 않는다 · 5.3)
+        run: make test
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 빌드·푸시 (커밋 SHA 태그 · latest 없음 · 5.5)
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+      - uses: sigstore/cosign-installer@v3
+      - name: 서명 (다이제스트에)
+        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.push.outputs.digest }}
+
+  promote-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: example/order-api-deploy
+          token: ${{ secrets.DEPLOY_REPO_TOKEN }}   # 배포 저장소 쓰기 권한만
+      # 교재 18.7: 환경은 브랜치 말고 폴더로. 이 커밋(예: a41d77c)이 프로덕션 롤아웃 한 번이다
+      - name: prod overlay 를 올린다 (1부 CI는 커밋까지만)
+        run: |
+          cd overlays/prod
+          kustomize edit set image order-api=ghcr.io/${{ github.repository }}:${{ github.sha }}@${{ needs.build.outputs.digest }}
+          git config user.name  "release-bot"
+          git config user.email "release-bot@users.noreply.github.com"
+          git commit -am "release order-api ${GITHUB_SHA::7} · run #${{ github.run_number }}"
+          git push

@@ -1,0 +1,28 @@
+# 버전 올리기 B: 셀렉터와 template 모두 1.5.9 로
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gb-web-deploy
+  labels:
+    app: guest-book
+    appver: 1.6.9
+    environment: production
+    release: guest-book-stable
+    release-number: 34e57f01
+spec:
+  selector:
+    matchLabels:
+      app: gb-web
+      ver: 1.5.9
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: gb-web
+        ver: 1.5.9
+        environment: production
+    spec:
+      containers:
+        - name: gb-web-cont
+          image: nginx:1.26
