@@ -1,4 +1,4 @@
-# 알림 수신 서버. Alertmanager 가 보내는 웹훅(JSON)을 받아 한 줄씩 로그로 찍는다.
+# 알림 수신 서버. Alertmanager 가 보내는 웹훅(JSON)을 받아 한 줄씩 로그로 남긴다.
 # 실제 운영이라면 이 자리에 Slack · PagerDuty · 메일이 온다. 실습에서는 외부 계정 없이
 # "알림이 정말 도착했는가"를 kubectl logs 로 확인하려고 쓴다.
 #   kubectl apply -f labs/k8s/alert-sink.yaml
@@ -24,7 +24,7 @@ data:
                       f'severity={l.get("severity")} job={l.get("job", "-")} '
                       f'receiver={body.get("receiver")} | {n.get("summary", "")}', flush=True)
             self.send_response(200); self.end_headers()
-        def log_message(self, *args):   # 접속 기록은 찍지 않는다
+        def log_message(self, *args):   # 접속 기록은 남기지 않는다
             pass
 
     print("alert-sink listening on :8080", flush=True)

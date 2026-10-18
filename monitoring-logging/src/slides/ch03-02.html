@@ -45,7 +45,7 @@
   <li>먼저 클러스터 구성요소 용어입니다. 컨트롤 플레인은 클러스터 전체를 관리하는 묶음으로, API 서버, etcd, 스케줄러, 컨트롤러 매니저 네 개입니다.</li>
   <li>API 서버는 모든 요청이 거치는 입구이고, etcd는 오브젝트 상태를 저장하는 데이터베이스입니다. 스케줄러는 새 파드를 어느 노드에 놓을지 requests를 기준으로 고르고, 컨트롤러 매니저는 선언한 상태와 실제 상태를 맞춥니다.</li>
   <li>requests는 파드가 "최소 이만큼은 쓰겠다"고 매니페스트에 미리 적어 두는 CPU와 메모리 양입니다. 스케줄러는 실제 사용량이 아니라 이 값을 노드의 남은 자리와 비교합니다. 컨트롤러 매니저의 예를 들면, replicas를 3으로 적었는데 파드가 2개만 떠 있으면 하나를 더 만듭니다.</li>
-  <li>노드 쪽에는 kubelet, 컨테이너 런타임, kube-proxy, CoreDNS가 있습니다. 컨테이너 런타임은 containerd처럼 컨테이너를 실제로 만들고 실행하는 프로그램입니다. kubelet은 파드를 실행하고 감시하는 에이전트이고, 안에 cAdvisor가 들어 있습니다.</li>
+  <li>노드에는 kubelet, 컨테이너 런타임, kube-proxy, CoreDNS가 있습니다. 컨테이너 런타임은 containerd처럼 컨테이너를 실제로 만들고 실행하는 프로그램입니다. kubelet은 파드를 실행하고 감시하는 에이전트이고, 안에 cAdvisor가 들어 있습니다.</li>
   <li>kube-proxy는 서비스 주소로 온 트래픽을 파드로 보내는 규칙을 만들고, CoreDNS는 서비스 이름을 IP로 바꿔 줍니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -65,7 +65,7 @@
       <tbody>
         <tr><td>cAdvisor</td><td>Container Advisor</td><td>kubelet 안에 내장된 수집기. 노드의 컨테이너별 CPU·메모리·디스크·네트워크 사용량을 잰다</td></tr>
         <tr><td>cgroup</td><td>Control group (리눅스 커널 기능)</td><td>프로세스 묶음마다 CPU·메모리·I/O를 제한하고 사용량을 기록하는 커널 기능. 컨테이너 격리의 기반</td></tr>
-        <tr><td>statfs</td><td>statfs (리눅스 시스템 콜)</td><td>파일시스템의 전체·남은 용량을 묻는 커널 호출. cAdvisor가 디스크 사용량을 잴 때 쓴다</td></tr>
+        <tr><td>statfs</td><td>statfs (리눅스 시스템 콜)</td><td>파일시스템의 전체·남은 용량을 조회하는 커널 호출. cAdvisor가 디스크 사용량을 잴 때 쓴다</td></tr>
         <tr><td>metrics-server</td><td>Kubernetes Metrics Server</td><td>각 kubelet에서 CPU·메모리 최근값을 모아 API 서버로 제공한다. 기록은 남기지 않는다</td></tr>
         <tr><td>kube-state-metrics</td><td>kube-state-metrics (KSM)</td><td>API 서버의 오브젝트 상태(replicas, 파드 단계 등)를 읽어 메트릭으로 바꾼다. 사용량은 재지 않는다</td></tr>
       </tbody>
@@ -89,7 +89,7 @@
 
 <section class="slide expanded" data-label="2장 용어 ③ 메트릭 API와 소비자">
   <span class="kicker"><span class="n">02</span>GLOSSARY · 3/3</span>
-  <h1>용어 ③ <span class="hl">메트릭 API</span>와 그것을 쓰는 쪽</h1>
+  <h1>용어 ③ <span class="hl">메트릭 API</span>와 사용처</h1>
   <div class="body">
     <table class="compare gloss">
       <colgroup><col class="c1"><col class="c2"><col></colgroup>
@@ -105,10 +105,10 @@
   <div class="foot"><span>리소스 메트릭 API는 API 집계 계층을 거쳐 API 서버에 붙는다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>세 번째는 메트릭 API와 그것을 쓰는 쪽입니다. API 집계 계층은 외부 서버의 API를 쿠버네티스 API의 일부처럼 붙이는 구조이고, APIService 오브젝트로 등록합니다.</li>
-  <li>예를 들어 metrics-server를 설치하면 APIService가 하나 등록되고, 그 뒤로는 kubectl top이 API 서버에 물어도 뒤에서 metrics-server가 답합니다. 사용자는 metrics-server의 주소를 몰라도 됩니다.</li>
+  <li>세 번째는 메트릭 API와 그 사용처입니다. API 집계 계층은 외부 서버의 API를 쿠버네티스 API의 일부처럼 붙이는 구조이고, APIService 오브젝트로 등록합니다.</li>
+  <li>예를 들어 metrics-server를 설치하면 APIService가 하나 등록되고, 그 뒤로는 kubectl top이 API 서버에 요청해도 뒤에서 metrics-server가 답합니다. 사용자는 metrics-server의 주소를 몰라도 됩니다.</li>
   <li>이 강의에서 쓰는 메트릭 API는 리소스 메트릭 API입니다. 파드와 노드의 CPU, 메모리 사용량을 담고 metrics-server가 제공합니다.</li>
-    <li>이 메트릭을 쓰는 쪽이 HPA와 VPA입니다. HPA는 파드 개수를 조정합니다. 예를 들어 평균 CPU 사용률이 목표보다 높으면 파드를 늘리고, 낮으면 줄입니다. VPA는 파드 하나의 크기를 조정합니다. 실제 사용량에 비해 requests가 너무 작거나 크게 잡혀 있으면 맞는 값으로 바꿉니다.</li>
+    <li>이 메트릭은 HPA와 VPA가 사용합니다. HPA는 파드 개수를 조정합니다. 예를 들어 평균 CPU 사용률이 목표보다 높으면 파드를 늘리고, 낮으면 줄입니다. VPA는 파드 하나의 크기를 조정합니다. 실제 사용량에 비해 requests가 너무 작거나 크게 잡혀 있으면 맞는 값으로 바꿉니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/" target="_blank" rel="noopener">Kubernetes · API Aggregation Layer</a></li>
@@ -126,7 +126,7 @@
   <aside class="notes">
 <ul class="speaker-points">
   <li>사용량은 kubelet 안의 cAdvisor가 cgroup에서 잽니다. 그 값이 두 길로 나갑니다.</li>
-  <li>한 길은 프로메테우스가 30초마다 긁어 가서 시계열로 쌓는 길입니다. 다른 길은 metrics-server가 읽어 <code>kubectl top</code>과 HPA에 최근값을 넘기는 길입니다.</li>
+  <li>한 길은 프로메테우스가 30초마다 수집해 시계열로 쌓는 길입니다. 다른 길은 metrics-server가 읽어 <code>kubectl top</code>과 HPA에 최근값을 넘기는 길입니다.</li>
   <li>kube-state-metrics는 사용량이 아니라 API 서버의 오브젝트 상태를 읽어 프로메테우스로 보냅니다. metrics-server는 새로 재지 않고, kubelet이 잰 값을 전달할 뿐입니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -156,7 +156,7 @@ sum by (pod) (
       <table class="compare">
         <thead><tr><th>메트릭</th><th>뜻</th></tr></thead>
         <tbody>
-          <tr><td>container_memory_<br>working_set_bytes</td><td>지금 실제로 붙잡고 있는 메모리. 노드 메모리가 모자랄 때 kubelet이 내보낼(축출) 파드를 고르는 기준. limit에 가까우면 OOM 킬 위험</td></tr>
+          <tr><td>container_memory_<br>working_set_bytes</td><td>지금 실제로 사용 중인 메모리. 노드 메모리가 모자랄 때 kubelet이 내보낼(축출) 파드를 고르는 기준. limit에 가까우면 OOM 킬 위험</td></tr>
           <tr><td>container_cpu_<br>usage_seconds_total</td><td>CPU를 쓴 누적 초. <code>rate()</code>로 감싸야 초당 사용량(코어)이 된다</td></tr>
           <tr><td>container_network_<br>receive_bytes_total</td><td>받은 네트워크 바이트 누적</td></tr>
         </tbody>
@@ -167,9 +167,9 @@ sum by (pod) (
   <div class="foot"><span>메트릭 전체 목록: <a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor · prometheus.md</a> · <a href="lab-guide.html#s4-4" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-4 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>cAdvisor는 컨테이너가 실제로 얼마나 쓰는지 잽니다. 왼쪽 코드는 PromQL, 즉 프로메테우스에 던지는 질의입니다. 터미널이 아니라 브라우저의 Prometheus 화면, localhost:9090의 Query 입력칸에 붙여 넣고 Execute를 누르면 아래 Table 탭에 결과가 나옵니다. Prometheus는 4장에서 설치하니, 지금은 모양만 보고 4장 따라하기에서 직접 쳐 봅니다.</li>
+  <li>cAdvisor는 컨테이너가 실제로 얼마나 쓰는지 잽니다. 왼쪽 코드는 PromQL, 즉 프로메테우스에 보내는 질의입니다. 터미널이 아니라 브라우저의 Prometheus 화면, localhost:9090의 Query 입력칸에 붙여 넣고 Execute를 누르면 아래 Table 탭에 결과가 나옵니다. Prometheus는 4장에서 설치하니, 지금은 모양만 보고 4장 따라하기에서 직접 쳐 봅니다.</li>
   <li>질의를 안쪽부터 읽으면, container_memory_working_set_bytes 중에서 apps 네임스페이스의 order-api 컨테이너만 고르고, sum by (pod)로 파드별로 합친 뒤, 1024로 두 번 나눠 바이트를 MiB로 바꿉니다. 결과는 파드 두 개가 각각 약 208MiB, 217MiB를 쓰고 있다는 뜻입니다.</li>
-  <li><code>container_memory_working_set_bytes</code>는 지금 실제로 붙잡고 있는 메모리입니다. 노드 메모리가 모자랄 때 kubelet이 내보낼 파드를 고르는 기준입니다. 이렇게 내보내는 것을 축출이라고 하고, 축출된 파드는 다른 노드에서 다시 뜹니다. 또 이 값이 limit에 가까우면 OOM 킬 위험이 있습니다.</li>
+  <li><code>container_memory_working_set_bytes</code>는 지금 실제로 사용 중인 메모리입니다. 노드 메모리가 모자랄 때 kubelet이 내보낼 파드를 고르는 기준입니다. 이렇게 내보내는 것을 축출이라고 하고, 축출된 파드는 다른 노드에서 다시 뜹니다. 또 이 값이 limit에 가까우면 OOM 킬 위험이 있습니다.</li>
   <li><code>container_cpu_usage_seconds_total</code>은 CPU를 쓴 누적 초라서 <code>rate()</code>로 감싸야 초당 사용량이 됩니다. rate()는 계속 늘기만 하는 누적값이 일정 시간 동안 초당 얼마씩 늘었는지 계산하는 함수입니다. CPU라면 결과가 0.5일 때 0.5코어를 쓰고 있다는 뜻입니다. 이름이 <code>container_</code>로 시작하면 cAdvisor에서 온 값입니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -197,19 +197,19 @@ order-api-77bf967968-msnb6  6m          <span class="v">217Mi</span></pre>
       </div>
       <div class="stack">
         <div class="card"><h3>하는 일</h3><p>각 kubelet에서 CPU·메모리를 15초마다 읽어 <b>최근값 하나만</b> 메모리에 둔다. 이를 <code>metrics.k8s.io</code>로 제공한다.</p></div>
-        <div class="card"><h3>쓰는 쪽</h3><p>HPA · VPA · <code>kubectl top</code>. 대시보드 · 알림용으로는 쓰지 않는다. 지난 값을 저장하지 않기 때문이다(공식 README의 주의 문구). 그런 용도는 프로메테우스가 kubelet에서 직접 긁는다.</p></div>
+        <div class="card"><h3>사용처</h3><p>HPA · VPA · <code>kubectl top</code>. 대시보드 · 알림용으로는 쓰지 않는다. 지난 값을 저장하지 않기 때문이다(공식 README의 주의 문구). 그런 용도는 프로메테우스가 kubelet에서 직접 수집한다.</p></div>
       </div>
     </div>
   </div>
   <div class="foot"><span>제공 항목: <a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" target="_blank" rel="noopener">Resource metrics pipeline (CPU · 메모리뿐)</a> · <a href="lab-guide.html#s4-3" target="_blank" rel="noopener">실습 가이드 04 Prometheus 4-3 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>metrics-server는 오토스케일링 전용입니다. 첫 명령 <code>kubectl get apiservices</code>는 API 서버에 등록된 API 목록을 봅니다. 결과의 <code>v1beta1.metrics.k8s.io</code> 줄은 "Metrics API, 즉 파드와 노드의 CPU·메모리 사용량을 묻는 주소로 요청이 오면 kube-system의 metrics-server가 답한다"는 등록 정보입니다. 끝의 True는 그 연결이 지금 동작한다는 뜻입니다.</li>
-  <li>두 번째 명령 <code>kubectl top pod</code>가 바로 이 Metrics API를 씁니다. kubectl이 API 서버에 apps 네임스페이스 파드들의 사용량을 물으면, API 서버는 직접 답하지 않고 위에서 본 등록 정보에 따라 요청을 metrics-server로 넘깁니다. metrics-server가 들고 있던 최근값을 돌려주면 kubectl이 표로 찍습니다. 그래서 metrics-server가 없으면 <code>kubectl top</code>은 Metrics API를 쓸 수 없다는 오류를 냅니다.</li>
+  <li>metrics-server는 오토스케일링 전용입니다. 첫 명령 <code>kubectl get apiservices</code>는 API 서버에 등록된 API 목록을 봅니다. 결과의 <code>v1beta1.metrics.k8s.io</code> 줄은 "Metrics API, 즉 파드와 노드의 CPU·메모리 사용량을 조회하는 주소로 요청이 오면 kube-system의 metrics-server가 답한다"는 등록 정보입니다. 끝의 True는 그 연결이 지금 동작한다는 뜻입니다.</li>
+  <li>두 번째 명령 <code>kubectl top pod</code>가 바로 이 Metrics API를 씁니다. kubectl이 API 서버에 apps 네임스페이스 파드들의 사용량을 요청하면, API 서버는 직접 답하지 않고 위에서 본 등록 정보에 따라 요청을 metrics-server로 넘깁니다. metrics-server가 들고 있던 최근값을 돌려주면 kubectl이 표로 출력합니다. 그래서 metrics-server가 없으면 <code>kubectl top</code>은 Metrics API를 쓸 수 없다는 오류를 냅니다.</li>
   <li>표에는 order-api 파드 두 개의 CPU와 메모리가 나옵니다. CPU의 6m은 6밀리코어, 즉 0.006코어이고 1000m이 코어 하나입니다. 메모리는 208Mi, 217Mi입니다.</li>
   <li>metrics-server는 각 kubelet에서 15초마다 CPU와 메모리를 읽어서, 파드마다 지금 값 하나만 메모리에 둡니다. 지난 값은 남기지 않습니다. 그래서 "지금 얼마나 쓰나"는 답할 수 있지만 "어제 이 시각에는 얼마였나"나 "지난 1시간 그래프"는 답할 수 없습니다.</li>
-  <li>이 값을 쓰는 쪽은 셋입니다. HPA는 CPU 사용량이 목표를 넘으면 파드 개수를 늘리고, VPA는 파드 하나가 요청하는 CPU와 메모리 양을 조정하고, <code>kubectl top</code>은 지금 사용량을 터미널에 보여 줍니다. 셋 다 지금 값 하나만 있으면 되는 일입니다.</li>
-  <li>그래서 metrics-server 공식 문서는 이 값을 모니터링 도구의 데이터 출처로 쓰지 말라고 적어 둡니다. 대시보드나 알림을 만들려고 metrics-server를 긁지 말고, 원래 데이터가 있는 kubelet에서 직접 가져가라는 뜻입니다. 이 실습의 프로메테우스가 바로 그렇게 kubelet의 cAdvisor 경로를 직접 긁습니다.</li>
+  <li>이 값을 사용하는 것은 셋입니다. HPA는 CPU 사용량이 목표를 넘으면 파드 개수를 늘리고, VPA는 파드 하나가 요청하는 CPU와 메모리 양을 조정하고, <code>kubectl top</code>은 지금 사용량을 터미널에 보여 줍니다. 셋 다 지금 값 하나만 있으면 되는 일입니다.</li>
+  <li>그래서 metrics-server 공식 문서는 이 값을 모니터링 도구의 데이터 출처로 쓰지 말라고 적어 둡니다. 대시보드나 알림을 만들려고 metrics-server에서 수집하지 말고, 원래 데이터가 있는 kubelet에서 직접 가져가라는 뜻입니다. 이 실습의 프로메테우스가 바로 그렇게 kubelet의 cAdvisor 경로에서 직접 수집합니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/kubernetes-sigs/metrics-server#readme" target="_blank" rel="noopener">metrics-server README (Caution)</a></li>
@@ -222,6 +222,7 @@ order-api-77bf967968-msnb6  6m          <span class="v">217Mi</span></pre>
   <span class="kicker"><span class="n">02</span>KUBE-STATE-METRICS · 책 3.4.3</span>
   <h1>kube-state-metrics: <span class="hl">오브젝트 상태를 묻는 질문</span>마다 답하는 메트릭</h1>
   <div class="body">
+    <div class="access"><span><b>어디서 쳐 보나</b>브라우저 <code>localhost:9090</code>(Prometheus) → Query 입력칸 → Execute → Table 탭. 표의 메트릭 이름을 그대로 넣으면 된다. 직접 쳐 보는 것은 4장 설치 뒤</span></div>
     <table class="compare" style="table-layout:fixed;font-size:15px">
       <colgroup><col style="width:13%"><col style="width:33%"><col></colgroup>
       <thead><tr><th>대상</th><th>책의 질문</th><th>메트릭</th></tr></thead>
@@ -263,13 +264,13 @@ order-api-77bf967968-msnb6  6m          <span class="v">217Mi</span></pre>
         <span class="tag yellow">KUBECTL TOP · metrics-server</span>
         <pre class="code" style="font-size:14px;margin:10px 0">order-api-…-bj8c6   6m   <span class="v">208Mi</span>
 order-api-…-msnb6   6m   <span class="v">217Mi</span></pre>
-        <p>15초마다 읽은 최근값 하나. 한 시간 전 값은 물어볼 곳이 없다.</p>
+        <p>15초마다 읽은 최근값 하나. 한 시간 전 값은 조회할 방법이 없다.</p>
       </div>
       <div class="card teal">
         <span class="tag">PROMETHEUS · cAdvisor</span>
         <pre class="code" style="font-size:14px;margin:10px 0">{pod="order-api-…-bj8c6"}  <span class="v">208.0</span>
 {pod="order-api-…-msnb6"}  <span class="v">217.1</span></pre>
-        <p>30초마다 긁어 3일치를 쌓는다. 어제 같은 시각과 비교할 수 있다.</p>
+        <p>30초마다 수집해 3일치를 쌓는다. 어제 같은 시각과 비교할 수 있다.</p>
       </div>
     </div>
     <div class="callout"><b>두 값의 차이는 1Mi 안팎이다.</b> 둘 다 kubelet이 cgroup에서 잰 값을 읽기 때문이다. 그 차이는 읽은 시점과 반올림 차이다. 다른 것은 <b>보관</b>이다. 지난 일을 되짚으려면 프로메테우스가 필요하다.</div>
@@ -279,7 +280,7 @@ order-api-…-msnb6   6m   <span class="v">217Mi</span></pre>
 <ul class="speaker-points">
   <li><code>kubectl top</code>과 프로메테우스는 같은 kubelet에서 값을 읽습니다.</li>
   <li>왼쪽 <code>kubectl top</code>은 208Mi, 217Mi이고, 오른쪽 프로메테우스는 같은 파드가 208.0, 217.1(MiB)입니다. 차이는 1Mi 안팎으로, 읽은 시점과 반올림 차이입니다. 오른쪽 값은 앞에서 본 cAdvisor 질의를 Prometheus 화면 Query 입력칸에 넣어 얻은 결과입니다.</li>
-  <li>다른 것은 보관입니다. <code>kubectl top</code>은 15초마다 읽은 최근값 하나라 한 시간 전 값은 없습니다. 프로메테우스는 30초마다 긁어 3일치를 쌓아서 어제 같은 시각과 비교할 수 있습니다. 지난 일을 되짚으려면 프로메테우스가 필요합니다.</li>
+  <li>다른 것은 보관입니다. <code>kubectl top</code>은 15초마다 읽은 최근값 하나라 한 시간 전 값은 없습니다. 프로메테우스는 30초마다 수집해 3일치를 쌓아서 어제 같은 시각과 비교할 수 있습니다. 지난 일을 되짚으려면 프로메테우스가 필요합니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="lab-guide.html#p4" target="_blank" rel="noopener">실습 가이드 04 · Prometheus 둘러보기</a></li>
@@ -316,7 +317,7 @@ order-api-…-msnb6   6m   <span class="v">217Mi</span></pre>
   <li>확인할 항목을 노드, 클러스터 컴포넌트, 애드온, 애플리케이션 네 계층으로 나눴습니다.</li>
   <li>노드는 CPU 사용률, 메모리 여유, 네트워크 송수신량, 디스크 여유 공간을 <code>node_</code> 메트릭으로 봅니다. 클러스터 컴포넌트는 etcd 디스크 쓰기 지연과 API 서버 요청 지연을 봅니다.</li>
   <li>애드온은 기본 구성요소 말고 따로 설치하는 것이라 설치한 것에 따라 다릅니다. 클러스터 오토스케일러는 배치하지 못한 파드 수, 인그레스 컨트롤러는 요청 수를 봅니다. 클러스터 오토스케일러는 파드를 놓을 자리가 모자라면 노드 자체를 늘리는 도구이고, 인그레스 컨트롤러는 클러스터 밖에서 들어오는 HTTP 요청을 서비스로 나눠 주는 입구입니다.</li>
-  <li>애플리케이션은 컨테이너 메모리, CPU, 네트워크 에러와, Spring Boot 같은 프레임워크가 내놓는 요청 수와 지연을 봅니다.</li>
+  <li>애플리케이션은 컨테이너 메모리, CPU, 네트워크 에러와, Spring Boot 같은 프레임워크가 제공하는 요청 수와 지연을 봅니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">prometheus/node_exporter</a></li>

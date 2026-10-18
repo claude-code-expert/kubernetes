@@ -1,4 +1,4 @@
-# [kubectl logs 한계 실험용] JSON 로그 30줄을 1초 간격으로 찍고, 마지막에 error 한 줄을 남기고 죽는 파드.
+# [kubectl logs 한계 실험용] JSON 로그 30줄을 1초 간격으로 남기고, 마지막에 error 한 줄을 남긴 뒤 종료되는 파드.
 #   kubectl create namespace demo
 #   kubectl -n demo apply -f labs/k8s/noisy-pod.yaml
 apiVersion: v1

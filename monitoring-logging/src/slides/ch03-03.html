@@ -8,13 +8,13 @@
     <div class="quest">CHAPTER · 03 · 책 3.6 ~ 3.7</div>
     <div class="secnum">03</div>
     <h1>메트릭을 모으는 도구와 <span class="hl">프로메테우스의 동작 방식</span></h1>
-    <p class="sub">프로메테우스가 대상을 찾아 긁어 오고 저장하는 구조와, 쿠버네티스에 설치하는 kube-prometheus-stack의 구성을 본다.</p>
+    <p class="sub">프로메테우스가 대상을 찾아 수집하고 저장하는 구조와, 쿠버네티스에 설치하는 kube-prometheus-stack의 구성을 본다.</p>
   </div>
   <div class="foot"><span>개념 · 3.6 모니터링 툴 · 3.7 프로메테우스를 이용한 쿠버네티스 모니터링</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>3장은 메트릭을 모으는 도구와 프로메테우스의 동작 방식입니다.</li>
-  <li>2장에서 본 세 출처의 메트릭을 한곳에 모으는 도구가 프로메테우스입니다. 3장에서는 프로메테우스가 대상을 찾아서 긁어 오고 저장하는 구조를 정리합니다.</li>
+  <li>2장에서 본 세 출처의 메트릭을 한곳에 모으는 도구가 프로메테우스입니다. 3장에서는 프로메테우스가 대상을 찾아서 수집하고 저장하는 구조를 정리합니다.</li>
 </ul>
 </aside>
 </section>
@@ -27,14 +27,14 @@
       <colgroup><col class="c1"><col class="c2"><col></colgroup>
       <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
       <tbody>
-        <tr><td>익스포터</td><td>Exporter</td><td>다른 시스템의 상태를 읽어 프로메테우스 형식으로 내놓는 프로그램. 예: node-exporter</td></tr>
+        <tr><td>익스포터</td><td>Exporter</td><td>다른 시스템의 상태를 읽어 프로메테우스 형식의 HTTP 주소로 제공하는 프로그램. 예: node-exporter</td></tr>
         <tr><td>노출 형식</td><td>Exposition format</td><td>메트릭을 HTTP로 보여 주는 텍스트 형식. <code># HELP</code>·<code># TYPE</code> 줄과 <code>이름{라벨} 값</code> 줄</td></tr>
         <tr><td>샘플</td><td>Sample</td><td>저장의 최소 단위. float64 값 하나 + 밀리초 단위 시각</td></tr>
-        <tr><td>서비스 디스커버리</td><td>Service discovery</td><td>긁을 대상 목록을 외부(쿠버네티스 API 등)에서 자동으로 받아 오는 기능</td></tr>
-        <tr><td>Pushgateway</td><td>Prometheus Pushgateway</td><td>금방 끝나는 배치 잡이 값을 밀어 넣어 두는 곳. 프로메테우스가 대신 긁는다</td></tr>
+        <tr><td>서비스 디스커버리</td><td>Service discovery</td><td>수집할 대상 목록을 외부(쿠버네티스 API 등)에서 자동으로 받아 오는 기능</td></tr>
+        <tr><td>Pushgateway</td><td>Prometheus Pushgateway</td><td>금방 끝나는 배치 잡이 값을 밀어 넣어 두는 곳. 프로메테우스는 여기서 대신 가져간다</td></tr>
         <tr><td>오퍼레이터</td><td>Operator</td><td>특정 소프트웨어의 설치·설정을 쿠버네티스 리소스로 관리해 주는 컨트롤러</td></tr>
         <tr><td>CRD</td><td>Custom Resource Definition</td><td>쿠버네티스에 새 리소스 종류를 추가하는 정의. 예: ServiceMonitor</td></tr>
-        <tr><td>ServiceMonitor</td><td>ServiceMonitor (CRD)</td><td>"라벨이 X인 서비스의 포트 Y를 긁어라"를 적는 리소스</td></tr>
+        <tr><td>ServiceMonitor</td><td>ServiceMonitor (CRD)</td><td>"라벨이 X인 서비스의 포트 Y에서 수집하라"를 적는 리소스</td></tr>
         <tr><td>PrometheusRule</td><td>PrometheusRule (CRD)</td><td>알림 규칙과 기록 규칙을 담는 리소스</td></tr>
       </tbody>
     </table>
@@ -42,11 +42,11 @@
   <div class="foot"><span>수집 대상 · 형식 · 발견 · 관리 방식</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>프로메테우스 구조에서 쓰는 용어입니다. 익스포터는 다른 시스템의 상태를 읽어 프로메테우스 형식으로 내놓는 프로그램이고, node-exporter가 대표적입니다.</li>
+  <li>프로메테우스 구조에서 쓰는 용어입니다. 익스포터는 다른 시스템의 상태를 읽어 프로메테우스 형식으로 제공하는 프로그램이고, node-exporter가 대표적입니다.</li>
   <li>노출 형식은 메트릭을 HTTP로 보여 주는 텍스트 형식입니다. <code># HELP</code> 줄에 설명, <code># TYPE</code> 줄에 타입을 적고, 그 아래에 이름{라벨} 값 줄이 이어집니다. 샘플은 저장의 최소 단위로, 소수점 숫자(float64) 값 하나와 밀리초 단위 시각의 묶음입니다.</li>
-  <li>서비스 디스커버리는 긁을 대상 목록을 쿠버네티스 API 같은 외부에서 자동으로 받아 오는 기능입니다. 파드가 새로 뜨거나 지워져도 목록을 손으로 고칠 필요가 없습니다. Pushgateway는 금방 끝나는 배치 잡이 값을 밀어 넣어 두는 곳입니다. 예를 들어 새벽에 몇 초 만에 끝나는 백업 잡은 프로메테우스가 긁으러 갈 때 이미 없으니, 끝나기 전에 결과를 Pushgateway에 남겨 둡니다.</li>
+  <li>서비스 디스커버리는 수집할 대상 목록을 쿠버네티스 API 같은 외부에서 자동으로 받아 오는 기능입니다. 파드가 새로 뜨거나 지워져도 목록을 손으로 고칠 필요가 없습니다. Pushgateway는 금방 끝나는 배치 잡이 값을 밀어 넣어 두는 곳입니다. 예를 들어 새벽에 몇 초 만에 끝나는 백업 잡은 프로메테우스가 가져가려 할 때는 이미 종료된 뒤이니, 끝나기 전에 결과를 Pushgateway에 남겨 둡니다.</li>
   <li>오퍼레이터는 소프트웨어의 설치와 설정을 쿠버네티스 리소스로 관리하는 컨트롤러입니다. 이 실습의 프로메테우스 오퍼레이터는 우리가 적은 리소스를 읽어 프로메테우스 설정 파일을 대신 써 줍니다. CRD는 쿠버네티스에 새 리소스 종류를 추가하는 정의로, CRD가 있어서 <code>kubectl get servicemonitor</code>처럼 Deployment와 같은 방식으로 다룰 수 있습니다.</li>
-  <li>ServiceMonitor에는 무엇을 긁을지, PrometheusRule에는 알림 규칙과 기록 규칙을 적습니다. 기록 규칙은 자주 쓰는 계산 결과를 미리 계산해 새 시계열로 저장해 두는 규칙입니다.</li>
+  <li>ServiceMonitor에는 무엇을 수집할지, PrometheusRule에는 알림 규칙과 기록 규칙을 적습니다. 기록 규칙은 자주 쓰는 계산 결과를 미리 계산해 새 시계열로 저장해 두는 규칙입니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/introduction/glossary/" target="_blank" rel="noopener">Prometheus · Glossary</a></li>
@@ -69,7 +69,7 @@ container_memory_working_set_bytes{
   <span class="k">job</span>=<span class="v">"kubelet"</span>,  <span class="k">metrics_path</span>=<span class="v">"/metrics/cadvisor"</span>,  <span class="k">instance</span>=<span class="v">"172.20.0.2:10250"</span> }</pre>
     <div class="grid3">
       <div class="card teal"><h3>쿠버네티스에서 온 라벨</h3><p><code>namespace</code> · <code>pod</code> · <code>container</code> · <code>node</code>. 쿠버네티스에서 쓰던 이름으로 그대로 나눠 본다.</p></div>
-      <div class="card"><h3>수집 과정에서 붙은 라벨</h3><p><code>job</code>(어느 수집 설정인가) · <code>instance</code>(어느 주소에서 긁었나) · <code>metrics_path</code>.</p></div>
+      <div class="card"><h3>수집 과정에서 붙은 라벨</h3><p><code>job</code>(어느 수집 설정인가) · <code>instance</code>(어느 주소에서 수집했나) · <code>metrics_path</code>.</p></div>
       <div class="card"><h3>그래서 가능한 질의</h3><p>"apps 네임스페이스 전체", "obs-worker 노드 위의 컨테이너"처럼 라벨로 골라 합친다.</p></div>
     </div>
   </div>
@@ -79,7 +79,7 @@ container_memory_working_set_bytes{
   <li>이 줄은 Prometheus 화면에서 직접 볼 수 있습니다. 브라우저 localhost:9090의 Query 입력칸에 container_memory_working_set_bytes에 namespace="apps", container="order-api" 조건을 붙여 넣고 Execute를 누르면, 아래 Table 탭에 파드마다 한 줄씩 나옵니다. 중괄호 안이 그 시계열에 붙은 라벨 전체이고, 맨 끝 숫자가 바이트 단위 메모리입니다. sum by (pod)처럼 합치는 질의를 쓰면 pod 말고 다른 라벨은 사라지므로, 라벨을 다 보려면 이렇게 합치지 않은 질의를 씁니다.</li>
   <li>프로메테우스에 저장된 order-api 메모리 시계열 하나입니다. <code>container_memory_working_set_bytes</code>는 컨테이너가 지금 실제로 쓰고 있는 메모리 바이트 수이고, 메트릭 이름 뒤 중괄호 안이 이 시계열에 붙은 라벨입니다.</li>
   <li><code>namespace</code>, <code>pod</code>, <code>container</code>, <code>node</code>는 쿠버네티스에서 온 라벨입니다. 쿠버네티스에서 쓰던 이름 그대로 나눠 볼 수 있습니다.</li>
-  <li><code>job</code>, <code>instance</code>, <code>metrics_path</code>는 수집 과정에서 붙은 라벨로, 어느 수집 설정이 어느 주소에서 긁었는지를 나타냅니다.</li>
+  <li><code>job</code>, <code>instance</code>, <code>metrics_path</code>는 수집 과정에서 붙은 라벨로, 어느 수집 설정이 어느 주소에서 가져왔는지를 나타냅니다.</li>
   <li>그래서 "apps 네임스페이스 전체", "obs-worker 노드 위의 컨테이너"처럼 라벨로 골라서 합치는 질의가 가능합니다. 예를 들어 <code>sum by (node)</code>로 묶으면 노드별 메모리 합계가 됩니다.</li>
 </ul>
 </aside>
@@ -96,7 +96,7 @@ container_memory_working_set_bytes{
         <tr><td>Counter</td><td class="it">늘기만 한다. 재시작하면 0부터</td><td><code>node_cpu_seconds_total</code></td><td class="it"><code>rate()</code>로 초당 증가량을 본다</td></tr>
         <tr><td>Gauge</td><td class="it">오르내린다. 지금 상태</td><td><code>node_memory_MemAvailable_bytes</code></td><td class="it">값을 그대로 본다. <code>rate()</code>를 쓰지 않는다</td></tr>
         <tr><td>Histogram</td><td class="it">값을 구간(버킷)별로 센 누적 개수</td><td><code>http_server_requests_seconds_bucket</code></td><td class="it"><code>histogram_quantile()</code>로 P99</td></tr>
-        <tr><td>Summary</td><td class="it">앱이 분위수를 미리 계산해 내놓음</td><td>(order-api는 쓰지 않음)</td><td class="it">파드끼리 평균 내면 틀린 값</td></tr>
+        <tr><td>Summary</td><td class="it">앱이 분위수를 미리 계산해 제공</td><td>(order-api는 쓰지 않음)</td><td class="it">파드끼리 평균 내면 틀린 값</td></tr>
       </tbody>
     </table>
     <div class="callout">히스토그램은 파드마다 버킷을 합친 뒤 분위수를 계산할 수 있다. 서머리는 이미 계산된 분위수라 합칠 수 없다. 파드가 여러 개인 쿠버네티스에서는 히스토그램을 쓴다.</div>
@@ -106,7 +106,7 @@ container_memory_working_set_bytes{
 <ul class="speaker-points">
   <li>메트릭 타입은 네 가지이고, 타입마다 읽는 방법이 다릅니다.</li>
   <li>Counter는 늘기만 하고 재시작하면 0부터 다시 셉니다. 누적값은 계속 커지기만 해서 지금 바쁜지 알 수 없으므로 <code>rate()</code>로 봅니다. rate는 최근 일정 구간, 예를 들어 5분 동안 늘어난 양을 초당 값으로 바꾸는 함수입니다. Gauge는 오르내리는 현재 상태라 값을 그대로 봅니다. 예시의 MemAvailable은 지금 새로 쓸 수 있는 메모리 양입니다.</li>
-  <li>Histogram은 값을 구간별로 센 누적 개수입니다. 구간을 버킷이라고 부르고, 0.1초 이하가 몇 건, 0.5초 이하가 몇 건처럼 셉니다. <code>histogram_quantile()</code>은 이 버킷으로 P99 같은 분위수를 계산합니다. P99는 요청 100건 중 가장 느린 1건을 뺀 나머지 99건이 모두 이 시간 안에 끝났다는 뜻입니다. Summary는 앱이 분위수를 미리 계산해서 내놓는 방식입니다.</li>
+  <li>Histogram은 값을 구간별로 센 누적 개수입니다. 구간을 버킷이라고 부르고, 0.1초 이하가 몇 건, 0.5초 이하가 몇 건처럼 셉니다. <code>histogram_quantile()</code>은 이 버킷으로 P99 같은 분위수를 계산합니다. P99는 요청 100건 중 가장 느린 1건을 뺀 나머지 99건이 모두 이 시간 안에 끝났다는 뜻입니다. Summary는 앱이 분위수를 미리 계산해서 제공하는 방식입니다.</li>
   <li>히스토그램은 파드마다 버킷을 합친 뒤 분위수를 계산할 수 있지만, 서머리는 이미 계산된 분위수라 합칠 수 없습니다. 파드 두 개의 P99를 평균 내도 전체의 P99가 되지 않기 때문입니다. 그래서 파드가 여러 개인 쿠버네티스에서는 히스토그램을 씁니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -125,9 +125,9 @@ container_memory_working_set_bytes{
   <aside class="notes">
 <ul class="speaker-points">
   <li>프로메테우스 서버 안에서는 다섯 가지 일이 순서대로 일어납니다.</li>
-  <li>① 서비스 디스커버리로 쿠버네티스 API에서 긁을 대상 목록을 받아 오고, ② 30초마다 node-exporter, kubelet, kube-state-metrics, order-api 같은 대상에서 메트릭을 가져옵니다.</li>
+  <li>① 서비스 디스커버리로 쿠버네티스 API에서 수집할 대상 목록을 받아 오고, ② 30초마다 node-exporter, kubelet, kube-state-metrics, order-api 같은 대상에서 메트릭을 가져옵니다.</li>
   <li>③ 가져온 값을 시계열로 로컬 디스크에 저장하고, ④ 알림 조건을 주기적으로 계산합니다. 조건을 넘으면 Alertmanager로 보내고, Alertmanager가 묶고 억제해서 Slack이나 메일로 전달합니다.</li>
-  <li>⑤ 저장된 값은 PromQL과 HTTP API로 내주고, Grafana가 이것으로 대시보드를 그립니다. 금방 끝나는 배치 잡은 Pushgateway에 값을 남겨 두고, 프로메테우스가 그것을 대신 긁습니다.</li>
+  <li>⑤ 저장된 값은 PromQL과 HTTP API로 조회할 수 있고, Grafana가 이것으로 대시보드를 그립니다. 금방 끝나는 배치 잡은 Pushgateway에 값을 남겨 두고, 프로메테우스는 그 값을 대신 가져갑니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus.io/docs/introduction/overview/" target="_blank" rel="noopener">Prometheus · Overview (Architecture)</a></li>
@@ -137,18 +137,18 @@ container_memory_working_set_bytes{
 
 <section class="slide" data-label="pull 방식의 장단점">
   <span class="kicker"><span class="n">03</span>PULL MODEL</span>
-  <h1>가져오는 방식(pull)은 <span class="hl">대상이 죽었는지</span>를 수집 자체로 안다</h1>
+  <h1>pull 방식은 수집 성공 여부로 <span class="hl">대상이 살아 있는지</span> 안다</h1>
   <div class="body">
     <div class="split a">
       <div class="stack">
-        <pre class="code" style="font-size:14px"><span class="c"># 긁기에 성공하면 1, 실패하면 0 (실측)</span>
+        <pre class="code" style="font-size:14px"><span class="c"># 수집에 성공하면 1, 실패하면 0</span>
 up{job="order-api", pod="order-api-…-g247f"}  <span class="v">1</span>
 up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
-        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 긁기에 실패하면 0이 된다. 요청이 없는 한가한 앱도 <code>/metrics</code>에는 응답하므로 1이다. push 방식에서는 데이터가 안 오면 죽은 건지 한가한 건지 알 수 없다.</p></div>
+        <div class="card teal"><h3>얻는 것</h3><p>대상마다 <code>up</code> 시계열이 자동으로 생긴다. 수집에 실패하면 0이 된다. 요청이 없는 한가한 앱도 <code>/metrics</code>에는 응답하므로 1이다. push 방식에서는 데이터가 안 오면 죽은 건지 한가한 건지 알 수 없다.</p></div>
       </div>
       <div class="stack">
         <div class="card"><h3>대가 ①</h3><p>프로메테우스가 대상에 <b>네트워크로 닿아야</b> 한다. 방화벽·네트워크 정책이 막으면 수집이 안 된다.</p></div>
-        <div class="card"><h3>대가 ②</h3><p>수십 초 만에 끝나는 <b>배치 잡</b>은 긁으러 갈 때 이미 없다. 이때는 Pushgateway에 값을 남긴다.</p></div>
+        <div class="card"><h3>대가 ②</h3><p>수십 초 만에 끝나는 <b>배치 잡</b>은 수집하러 갈 때 이미 끝나 있다. 이때는 Pushgateway에 값을 남긴다.</p></div>
         <div class="card"><h3>대가 ③</h3><p>30초 간격 샘플이라 <b>요청 하나하나를 세는 과금</b>처럼 100% 정확도가 필요한 용도에는 맞지 않는다.</p></div>
       </div>
     </div>
@@ -156,9 +156,9 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <div class="foot"><span>대상은 메트릭을 보여 주기만 하고, 주기와 목록은 프로메테우스가 정한다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>프로메테우스는 대상에 가서 가져오는 pull 방식입니다. 반대인 push 방식은 대상이 수집기 쪽으로 데이터를 보내는 방식입니다. pull이라서 대상이 살아 있는지를 수집 자체로 압니다.</li>
-  <li>대상마다 <code>up</code> 시계열이 자동으로 생기고, 긁기에 성공하면 1, 실패하면 0이 됩니다. 요청이 없는 한가한 앱도 <code>/metrics</code>에는 응답하므로 1입니다.</li>
-  <li>대가도 있습니다. 프로메테우스가 대상에 네트워크로 닿아야 해서, 파드 사이 통신을 막는 NetworkPolicy나 방화벽이 있으면 수집이 안 됩니다. 수십 초 만에 끝나는 배치 잡은 긁으러 갈 때 이미 없어서 Pushgateway를 씁니다.</li>
+  <li>프로메테우스는 대상에 가서 가져오는 pull 방식입니다. 반대인 push 방식은 대상이 수집기로 데이터를 보내는 방식입니다. pull 방식에서는 수집이 성공했는지만 보면 대상이 살아 있는지 알 수 있습니다.</li>
+  <li>대상마다 <code>up</code> 시계열이 자동으로 생기고, 수집에 성공하면 1, 실패하면 0이 됩니다. 요청이 없는 한가한 앱도 <code>/metrics</code>에는 응답하므로 1입니다.</li>
+  <li>대가도 있습니다. 프로메테우스가 대상에 네트워크로 닿아야 해서, 파드 사이 통신을 막는 NetworkPolicy나 방화벽이 있으면 수집이 안 됩니다. 수십 초 만에 끝나는 배치 잡은 수집하러 갈 때 이미 끝나 있어서 Pushgateway를 씁니다.</li>
   <li>또 30초 간격 샘플이라, 과금처럼 요청 하나하나를 정확히 세야 하는 용도에는 맞지 않습니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -178,19 +178,19 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       <tbody>
         <tr><td>node</td><td class="it">노드마다 대상 하나 (kubelet 주소)</td><td class="it">kubelet · cAdvisor</td></tr>
         <tr><td>service</td><td class="it">서비스의 포트마다 대상 하나</td><td class="it">서비스 주소로 외부 점검(블랙박스)</td></tr>
-        <tr><td>pod</td><td class="it">파드의 컨테이너 포트마다 대상 하나</td><td class="it">서비스 없이 파드를 직접 긁을 때 (PodMonitor)</td></tr>
+        <tr><td>pod</td><td class="it">파드의 컨테이너 포트마다 대상 하나</td><td class="it">서비스 없이 파드에서 직접 수집할 때 (PodMonitor)</td></tr>
         <tr><td>endpoints</td><td class="it">서비스 뒤의 실제 파드 주소마다 대상 하나</td><td class="it">서비스로 묶인 앱 (ServiceMonitor 기본값)</td></tr>
         <tr><td>endpointslice</td><td class="it">endpoints와 같고 EndpointSlice API를 쓴다</td><td class="it">endpoints의 후속. 공식 문서가 전환을 권장</td></tr>
         <tr><td>ingress</td><td class="it">인그레스의 경로마다 대상 하나</td><td class="it">외부 URL 점검(블랙박스)</td></tr>
       </tbody>
     </table>
-    <div class="callout">대상을 찾을 때 파드의 네임스페이스·이름·라벨이 <code>__meta_kubernetes_*</code> 라벨로 함께 따라온다. 메트릭에 붙어 있던 <code>namespace</code>·<code>pod</code> 라벨은 여기서 옮겨 붙인 것이다.</div>
+    <div class="callout">대상을 찾을 때 파드의 네임스페이스·이름·라벨이 <code>__meta_kubernetes_*</code> 라벨로 함께 따라온다. 메트릭의 <code>namespace</code>·<code>pod</code> 라벨은 이 정보를 옮겨 붙인 것이다.</div>
   </div>
   <div class="foot"><span>kubernetes_sd_configs 의 role 값</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>프로메테우스가 쿠버네티스 API에서 대상을 찾는 방법은 role 값으로 정하고, 여섯 가지가 있습니다.</li>
-  <li>node는 노드마다 대상 하나로 kubelet과 cAdvisor를 긁을 때 씁니다. service와 ingress는 외부 점검용입니다. 외부 점검은 블랙박스 점검이라고도 하는데, 앱 내부 메트릭 없이 바깥에서 주소에 요청을 보내 응답이 오는지만 봅니다. pod는 서비스 없이 파드를 직접 긁을 때 쓰고, 이때는 ServiceMonitor 대신 파드를 직접 고르는 PodMonitor 리소스를 씁니다.</li>
+  <li>node는 노드마다 대상 하나로 kubelet과 cAdvisor에서 수집할 때 씁니다. service와 ingress는 외부 점검용입니다. 외부 점검은 블랙박스 점검이라고도 하는데, 앱 내부 메트릭 없이 바깥에서 주소에 요청을 보내 응답이 오는지만 봅니다. pod는 서비스 없이 파드에서 직접 수집할 때 쓰고, 이때는 ServiceMonitor 대신 파드를 직접 고르는 PodMonitor 리소스를 씁니다.</li>
   <li>endpoints는 서비스 뒤의 실제 파드 주소마다 대상을 만들고, ServiceMonitor의 기본값입니다. endpointslice는 같은 일을 EndpointSlice API로 합니다. EndpointSlice는 파드 주소 목록을 여러 조각으로 나눠 담는 리소스라, 파드가 많을 때 목록을 갱신하는 부담이 적습니다.</li>
   <li>대상을 찾을 때 파드의 네임스페이스, 이름, 라벨이 <code>__meta_kubernetes_*</code> 라벨로 함께 따라옵니다. <code>__meta_</code>로 시작하는 라벨은 대상을 찾는 동안에만 붙는 임시 라벨이라 저장 전에 사라집니다. 그래서 필요한 것만 <code>namespace</code>, <code>pod</code> 같은 이름으로 옮겨 붙여 두고, 앞에서 본 라벨이 바로 이것입니다.</li>
 </ul>
@@ -210,7 +210,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
       <tbody>
         <tr><td>프로메테우스 서버</td><td class="it">수집한 메트릭을 가져와 저장</td><td><code>prometheus-kps-kube-prometheus-stack-prometheus-0</code></td></tr>
         <tr><td>프로메테우스 오퍼레이터</td><td class="it">프로메테우스·Alertmanager를 쿠버네티스 리소스로 관리</td><td><code>kps-kube-prometheus-stack-operator-…</code></td></tr>
-        <tr><td>노드 익스포터</td><td class="it">노드의 호스트 메트릭을 내놓음</td><td><code>kps-prometheus-node-exporter-…</code> × 3 (노드마다)</td></tr>
+        <tr><td>노드 익스포터</td><td class="it">노드의 호스트 메트릭을 제공</td><td><code>kps-prometheus-node-exporter-…</code> × 3 (노드마다)</td></tr>
         <tr><td>kube-state-metrics</td><td class="it">쿠버네티스 오브젝트 상태 메트릭</td><td><code>kps-kube-state-metrics-…</code></td></tr>
         <tr><td>Alertmanager</td><td class="it">알림을 받아 외부로 전달</td><td><code>alertmanager-kps-kube-prometheus-stack-alertmanager-0</code></td></tr>
         <tr><td>Grafana</td><td class="it">메트릭을 대시보드로 시각화</td><td><code>kps-grafana-…</code></td></tr>
@@ -223,7 +223,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
 <ul class="speaker-points">
   <li>kube-prometheus-stack 차트 하나를 설치하면 여섯 가지 구성요소가 뜹니다. 차트는 헬름이 한 번에 설치하는 쿠버네티스 매니페스트 묶음입니다.</li>
   <li>프로메테우스 서버가 메트릭을 가져와 저장하고, 오퍼레이터가 프로메테우스와 Alertmanager를 쿠버네티스 리소스로 관리합니다.</li>
-  <li>노드 익스포터는 노드의 호스트 메트릭을, kube-state-metrics는 쿠버네티스 오브젝트 상태를 내놓습니다. Alertmanager는 알림을 외부로 전달하고, Grafana는 메트릭을 대시보드로 보여 줍니다.</li>
+  <li>노드 익스포터는 노드의 호스트 메트릭을, kube-state-metrics는 쿠버네티스 오브젝트 상태를 메트릭으로 제공합니다. Alertmanager는 알림을 외부로 전달하고, Grafana는 메트릭을 대시보드로 보여 줍니다.</li>
   <li>노드 익스포터는 DaemonSet으로 뜹니다. DaemonSet은 노드마다 파드를 하나씩 띄우는 방식이라 노드 세 대에 세 개가 뜨고, 나머지는 하나씩 뜹니다. 프로메테우스와 Alertmanager 이름 끝의 <code>-0</code>은 StatefulSet으로 떠 있다는 표시입니다. StatefulSet은 파드 이름과 디스크를 고정해 주는 방식이라, 파드가 다시 떠도 같은 이름으로 같은 저장소를 씁니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -237,13 +237,13 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <h1>수집 설정을 <span class="hl">YAML 리소스로 적으면</span> 오퍼레이터가 설정 파일을 만든다</h1>
   <div class="body">
     <div class="flow f4">
-      <div class="step-box teal"><span class="num">1</span><b>ServiceMonitor 적용</b><p>"라벨 app.kubernetes.io/name=order-api 서비스의 http 포트를 긁어라"</p></div>
+      <div class="step-box teal"><span class="num">1</span><b>ServiceMonitor 적용</b><p>"라벨 app.kubernetes.io/name=order-api 서비스의 http 포트에서 수집하라"</p></div>
       <div class="arrow-h"></div>
       <div class="step-box teal"><span class="num">2</span><b>오퍼레이터가 감지</b><p>CRD 변경을 watch 하고 있다</p></div>
       <div class="arrow-h"></div>
       <div class="step-box teal"><span class="num">3</span><b>수집 설정 생성</b><p>프로메테우스 설정 파일에 잡 추가</p></div>
       <div class="arrow-h"></div>
-      <div class="step-box blue"><span class="num">4</span><b>타깃 등록</b><p>설정을 다시 읽고 긁기 시작</p></div>
+      <div class="step-box blue"><span class="num">4</span><b>타깃 등록</b><p>설정을 다시 읽고 수집 시작</p></div>
     </div>
     <div class="split a">
       <pre class="code" style="font-size:14px"><span class="c"># 오퍼레이터가 만든 설정 (실측, 일부)</span>
@@ -254,19 +254,19 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
         <thead><tr><th>주요 CRD</th><th>담는 것</th></tr></thead>
         <tbody>
           <tr><td>Prometheus</td><td>프로메테우스 서버 자체(보존 기간, 자원)</td></tr>
-          <tr><td>ServiceMonitor · PodMonitor</td><td>무엇을 긁을지</td></tr>
+          <tr><td>ServiceMonitor · PodMonitor</td><td>무엇을 수집할지</td></tr>
           <tr><td>PrometheusRule</td><td>알림·기록 규칙</td></tr>
           <tr><td>Alertmanager</td><td>Alertmanager 서버 자체</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-  <div class="foot"><span>ServiceMonitor는 무엇을 긁을지, PrometheusRule은 언제 알릴지 적는다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>ServiceMonitor에는 무엇을 수집할지, PrometheusRule에는 언제 알릴지 적는다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
   <li>오퍼레이터를 쓰면 수집 설정을 YAML 리소스로 적고, 설정 파일은 오퍼레이터가 만듭니다.</li>
-  <li>흐름은 네 단계입니다. ServiceMonitor를 적용하면 오퍼레이터가 변경을 감지합니다. 오퍼레이터는 쿠버네티스 API를 watch, 즉 변경이 생기면 바로 통보받도록 지켜보고 있습니다. 이어서 프로메테우스 설정 파일에 수집 잡을 추가하고, 프로메테우스가 설정을 다시 읽어 긁기 시작합니다. 수집 잡은 같은 방식으로 긁는 대상들의 묶음입니다.</li>
-  <li>주요 CRD는 넷입니다. Prometheus는 서버 자체, ServiceMonitor와 PodMonitor는 무엇을 긁을지, PrometheusRule은 알림 규칙, Alertmanager는 Alertmanager 서버 자체를 담습니다.</li>
+  <li>흐름은 네 단계입니다. ServiceMonitor를 적용하면 오퍼레이터가 변경을 감지합니다. 오퍼레이터는 쿠버네티스 API를 watch, 즉 변경이 생기면 바로 통보받도록 지켜보고 있습니다. 이어서 프로메테우스 설정 파일에 수집 잡을 추가하고, 프로메테우스가 설정을 다시 읽어 수집을 시작합니다. 수집 잡은 같은 설정으로 수집하는 대상들의 묶음입니다.</li>
+  <li>주요 CRD는 넷입니다. Prometheus는 서버 자체, ServiceMonitor와 PodMonitor는 무엇을 수집할지, PrometheusRule은 알림 규칙, Alertmanager는 Alertmanager 서버 자체를 담습니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://prometheus-operator.dev/docs/getting-started/design/" target="_blank" rel="noopener">Prometheus Operator · Design</a></li>
@@ -281,7 +281,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <div class="body">
     <div class="split a" style="align-items:start">
       <div class="stack">
-        <p class="small"><b>ServiceMonitor</b> · 무엇을 긁을지</p>
+        <p class="small"><b>ServiceMonitor</b> · 무엇을 수집할지</p>
         <pre class="code" style="font-size:13.5px"><span class="k">apiVersion:</span> monitoring.coreos.com/v1
 <span class="k">kind:</span> ServiceMonitor
 <span class="k">metadata:</span>
@@ -323,7 +323,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <li>①은 ServiceMonitor의 <code>release: kps</code> 라벨입니다. kps는 차트를 설치할 때 붙인 릴리스 이름입니다. Prometheus 리소스의 <code>serviceMonitorSelector</code>가 이 라벨이 붙은 ServiceMonitor만 읽습니다.</li>
   <li>②는 <code>selector.matchLabels</code>의 <code>app.kubernetes.io/name: order-api</code>입니다. Service 자신의 <code>metadata.labels</code>와 맞아야 합니다.</li>
   <li>③은 <code>endpoints</code>의 <code>port: http</code>입니다. 포트 번호가 아니라 Service에 붙인 포트 이름과 맞춥니다. 셋 중 하나라도 어긋나면 에러 없이 수집 대상이 생기지 않습니다.</li>
-  <li>나머지 칸에서 namespaceSelector는 apps 네임스페이스에서만 서비스를 찾으라는 뜻이고, interval 30s는 30초마다 긁기, scrapeTimeout 10s는 10초 안에 응답이 없으면 그 회차를 실패로 친다는 뜻입니다.</li>
+  <li>나머지 칸에서 namespaceSelector는 apps 네임스페이스에서만 서비스를 찾으라는 뜻이고, interval 30s는 30초마다 수집, scrapeTimeout 10s는 10초 안에 응답이 없으면 그 회차를 실패로 친다는 뜻입니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/labs/k8s/servicemonitors.yaml" target="_blank" rel="noopener">servicemonitors.yaml</a></li>
@@ -352,7 +352,7 @@ up{job="order-api", pod="order-api-…-pjnk8"}  <span class="v">1</span></pre>
   <div class="foot"><span>책 3.6~3.7 정리</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>3장을 정리하겠습니다. 메트릭은 프로메테우스로 모읍니다. 라벨 기반 저장이 쿠버네티스 라벨과 같고, 구성요소들이 이미 이 형식으로 메트릭을 내놓습니다.</li>
+  <li>3장 정리입니다. 메트릭은 프로메테우스로 모읍니다. 프로메테우스의 라벨이 쿠버네티스 라벨과 그대로 맞고, 쿠버네티스 구성요소들이 이미 이 형식으로 메트릭을 제공합니다.</li>
   <li>대상은 쿠버네티스 API의 서비스 디스커버리로 자동으로 찾고, 이름과 라벨이 시계열 하나가 됩니다. 저장 단위는 값과 시각의 묶음인 샘플입니다.</li>
   <li>수집 설정은 ServiceMonitor 리소스로 적고, 오퍼레이터가 설정 파일로 바꿉니다. 다음 4장에서는 이 스택을 실제로 설치하고, 설치가 제대로 됐는지 확인합니다.</li>
 </ul>

@@ -40,7 +40,7 @@ Kustomize Version: v5.8.1
 v4.3.0+gbec5b06
 k6 v2.3.0 (commit/devel, go1.27.1, darwin/arm64)
 jq-1.8.2</pre>
-  <p class="verdict">docker 줄에 <code>Server</code> 버전까지 나오면 Docker 데몬이 떠 있다. <code>Cannot connect to the Docker daemon</code>이 나오면 Docker Desktop(또는 OrbStack)을 먼저 실행한다. 메뉴의 Quit가 먹지 않을 때는 <code>pkill -9 -f /Applications/Docker.app/Contents/MacOS/</code> 후 <code>open -a Docker</code>.</p>
+  <p class="verdict">docker 줄에 <code>Server</code> 버전까지 나오면 Docker 데몬이 떠 있다. <code>Cannot connect to the Docker daemon</code>이 나오면 Docker Desktop(또는 OrbStack)을 먼저 실행한다. 메뉴의 Quit로 종료되지 않을 때는 <code>pkill -9 -f /Applications/Docker.app/Contents/MacOS/</code> 후 <code>open -a Docker</code>.</p>
   <p class="note">JDK는 설치하지 않아도 된다. 두 앱 모두 Dockerfile 안에서 빌드한다(order-api는 JDK 21 이미지 안에서 Gradle이 돈다). Linux · WSL2는 <a href="https://kind.sigs.k8s.io/docs/user/quick-start/#installation" target="_blank" rel="noopener">kind</a> · <a href="https://kubernetes.io/docs/tasks/tools/" target="_blank" rel="noopener">kubectl</a> · <a href="https://helm.sh/docs/intro/install/" target="_blank" rel="noopener">Helm</a> · <a href="https://grafana.com/docs/k6/latest/set-up/install-k6/" target="_blank" rel="noopener">k6</a> · <a href="https://jqlang.org/download/" target="_blank" rel="noopener">jq</a> 공식 설치 문서를 따른다.</p>
 </div>
 
@@ -49,9 +49,9 @@ jq-1.8.2</pre>
   <p class="purpose">kind 노드 3개와 프로메테우스 스택 · Loki가 모두 Docker VM 안에서 돈다. 자원이 모자라거나 다른 kind 클러스터가 같이 떠 있으면 설치 도중 파드가 Pending · OOMKilled로 멈추고, port-forward가 끊긴다.</p>
   <pre class="cmd">docker info --format '{{.NCPU}} CPU, {{.MemTotal}} bytes'
 kind get clusters</pre>
-  <pre class="out">14 CPU, 8216498176 bytes
-study</pre>
-  <p class="verdict">CPU 4 이상, 메모리 약 7.6GB(8216498176 bytes) 이상. 위 결과의 <code>study</code>는 멈춰 둔 다른 실습 클러스터다(목록에는 멈춘 것도 나온다). Docker Desktop에서 메모리를 8GB로 설정하면 이 값이 나온다. 모자라면 Docker Desktop → Settings → Resources (OrbStack은 Settings → System)에서 메모리 8GB · CPU 4 · 디스크 40GB 이상으로 올리고 재시작한다. <code>kind get clusters</code>에 다른 클러스터가 나오면 실습 동안 멈춘다: <code>docker stop 이름-control-plane 이름-worker 이름-worker2</code> (다시 켜기: <code>docker start …</code>).</p>
+  <pre class="out">8 CPU, 8393605120 bytes
+No kind clusters found.</pre>
+  <p class="verdict">CPU 4 이상, 메모리 약 7.6GB(8216498176 bytes) 이상이면 된다. Docker Desktop이나 OrbStack에서 메모리를 8GB로 설정하면 8GB 안팎의 값이 나온다. 모자라면 Docker Desktop → Settings → Resources (OrbStack은 Settings → System)에서 메모리 8GB · CPU 4 · 디스크 40GB 이상으로 올리고 재시작한다. <code>kind get clusters</code>는 다른 kind 클러스터가 이미 있는지 보는 명령이다. 실습용 클러스터 <code>obs</code>는 1-1에서 만들므로, 처음이라면 <code>No kind clusters found.</code>가 정상이다. 다른 이름이 나오면 같은 Docker 메모리를 나눠 쓰므로 실습 동안 멈춘다: <code>docker stop 이름-control-plane 이름-worker 이름-worker2</code> (다시 켜기: <code>docker start …</code>).</p>
 </div>
 
 <div class="step" id="s0-3">
@@ -112,7 +112,7 @@ servicemonitors.yaml</pre>
       <tr><td>3100</td><td>Loki gateway</td><td>10-4</td></tr>
     </tbody>
   </table>
-  <p class="warn"><span class="badge warn">주의</span> port-forward 는 명령 끝에 <code>&amp;</code>를 붙여 백그라운드로 띄운다. 띄우면 <code>[1] 85712</code> 같은 작업 번호 줄이 찍히고, 연결까지 1~2초 걸린다. 이 문서의 실행 결과에는 작업 번호 줄을 대부분 생략했다. 파드가 다시 만들어지면 연결이 끊기므로 같은 명령으로 다시 띄운다. 떠 있는 것 확인: <code>pgrep -fl port-forward</code></p>
+  <p class="warn"><span class="badge warn">주의</span> port-forward 는 명령 끝에 <code>&amp;</code>를 붙여 백그라운드로 띄운다. 띄우면 <code>[1] 85712</code> 같은 작업 번호 줄이 출력되고, 연결까지 1~2초 걸린다. 이 문서의 실행 결과에는 작업 번호 줄을 대부분 생략했다. 파드가 다시 만들어지면 연결이 끊기므로 같은 명령으로 다시 띄운다. 떠 있는 것 확인: <code>pgrep -fl port-forward</code></p>
 </div>
 </section>
 
@@ -121,7 +121,7 @@ servicemonitors.yaml</pre>
 
 <div class="step" id="s1-1">
   <h3>1-1. kind 클러스터 만들기 <span class="badge">슬라이드 43 · 45</span></h3>
-  <p class="purpose">컨트롤 플레인 1대와 워커 2대로 된 쿠버네티스 1.37 클러스터를 Docker 컨테이너로 만든다. 이때 컨트롤 플레인 구성요소(컨트롤러 매니저 · 스케줄러 · etcd · kube-proxy)의 메트릭 주소를 0.0.0.0으로 열어, 다른 노드의 프로메테우스가 긁을 수 있게 한다.</p>
+  <p class="purpose">컨트롤 플레인 1대와 워커 2대로 된 쿠버네티스 1.37 클러스터를 Docker 컨테이너로 만든다. 이때 컨트롤 플레인 구성요소(컨트롤러 매니저 · 스케줄러 · etcd · kube-proxy)의 메트릭 주소를 0.0.0.0으로 열어, 다른 노드의 프로메테우스가 수집할 수 있게 한다.</p>
   <pre class="cmd">kind create cluster --config labs/kind-cluster.yaml</pre>
   <table class="t opt">
     <thead><tr><th>옵션 · 설정</th><th>설명</th></tr></thead>
@@ -192,7 +192,7 @@ clusterrolebinding.rbac.authorization.k8s.io/system:metrics-server created
 service/metrics-server created
 deployment.apps/metrics-server created
 apiservice.apiregistration.k8s.io/v1beta1.metrics.k8s.io created</pre>
-  <p class="purpose">kind의 kubelet은 자체 서명 인증서를 쓴다. metrics-server가 kubelet 인증서를 검증하지 않도록 인자 하나를 더한다. 이것이 없으면 파드가 Ready가 되지 않는다.</p>
+  <p class="purpose">kind의 kubelet은 자체 서명 인증서를 쓴다. metrics-server가 kubelet 인증서를 검증하지 않도록 인자를 하나 추가한다. 이것이 없으면 파드가 Ready가 되지 않는다.</p>
   <pre class="cmd">kubectl -n kube-system patch deployment metrics-server --type=json \
   -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
 kubectl -n kube-system rollout status deployment/metrics-server --timeout=180s
@@ -219,7 +219,7 @@ obs-worker2         Ready    &lt;none&gt;          36s   v1.37.0</pre>
 
 <section id="p2">
 <h2><span class="no">02</span>관측 대상 앱 두 개</h2>
-<p class="lead">언어가 다른 앱 두 개를 올린다. journal-api(Node.js)는 prom-client로 <code>/metrics</code>를 내놓고 JSON 로그를 쓴다. order-api(Spring Boot)는 <code>/actuator/prometheus</code>를 내놓고 톰캣 액세스 로그를 쓰며, <code>/api/chaos/slow</code> · <code>/api/chaos/error</code>로 느린 요청과 에러를 일부러 만든다.</p>
+<p class="lead">언어가 다른 앱 두 개를 올린다. journal-api(Node.js)는 prom-client로 <code>/metrics</code> 주소에 메트릭을 제공하고, 로그를 JSON 형식으로 남긴다. order-api(Spring Boot)는 <code>/actuator/prometheus</code> 주소로 메트릭을 제공하고 톰캣 액세스 로그를 남기며, <code>/api/chaos/slow</code> · <code>/api/chaos/error</code>로 느린 요청과 에러를 일부러 만든다.</p>
 
 <div class="step" id="s2-1">
   <h3>2-1. 이미지 빌드</h3>
@@ -244,7 +244,7 @@ order-api:v1 524MB</pre>
 
 <div class="step" id="s2-2">
   <h3>2-2. 이미지를 kind 노드에 넣기</h3>
-  <p class="purpose">kind 노드는 노트북의 Docker 이미지를 보지 못한다. 레지스트리에 올리는 대신 이미지를 노드 안으로 직접 복사한다.</p>
+  <p class="purpose">kind 노드는 노트북 Docker에 있는 이미지를 직접 쓰지 못한다. 레지스트리에 올리는 대신 이미지를 노드 안으로 직접 복사한다.</p>
   <pre class="cmd">kind load docker-image journal-api:v1 order-api:v1 --name obs</pre>
   <pre class="out">Image: "journal-api:v1" with ID "sha256:20ae5eac799d1eb7a2f38468369b61ff69111b92ca018b88c4791b83271cb869" not yet present on node "obs-worker", loading...
 Image: "journal-api:v1" with ID "sha256:20ae5eac799d1eb7a2f38468369b61ff69111b92ca018b88c4791b83271cb869" not yet present on node "obs-control-plane", loading...
@@ -309,13 +309,13 @@ curl -s localhost:18083/api/entries; echo</pre>
   </table>
   <pre class="out">{"data":[],"message":"조회 성공","timestamp":"2026-09-27T01:52:04.342940053Z"}
 {"entries":[]}</pre>
-  <p class="verdict">두 앱이 JSON으로 응답한다. 아직 저장된 주문 · 글이 없어서 목록이 비어 있다. 터미널에는 이 앞에 <code>[1] 85712</code> 같은 작업 번호 두 줄이 먼저 찍힌다(숫자는 매번 다르다).</p>
+  <p class="verdict">두 앱이 JSON으로 응답한다. 아직 저장된 주문 · 글이 없어서 목록이 비어 있다. 터미널에는 이 앞에 <code>[1] 85712</code> 같은 작업 번호 두 줄이 먼저 출력된다(숫자는 매번 다르다).</p>
   <p class="warn"><span class="badge warn">주의</span> port-forward는 서비스 뒤의 파드 하나에만 붙는다. 부하가 파드 여러 개로 고르게 나뉘지 않는다. 메트릭을 합쳐 보는 이 실습에는 문제가 없다.</p>
 </div>
 
 <div class="step" id="s2-5">
-  <h3>2-5. 앱이 내놓는 메트릭 <span class="badge">슬라이드 53</span></h3>
-  <p class="purpose">앱은 설치하자마자 HTTP 엔드포인트로 메트릭을 내놓는다. 메트릭 이름은 코드가 아니라 여기서 확인한다.</p>
+  <h3>2-5. 앱이 제공하는 메트릭 <span class="badge">슬라이드 53</span></h3>
+  <p class="purpose">앱은 뜨자마자 HTTP 엔드포인트로 메트릭을 제공한다. 메트릭 이름은 코드에서 짐작하지 말고 이 응답에서 확인한다.</p>
   <pre class="cmd">curl -s localhost:18082/actuator/prometheus | grep -c '^[a-z]'
 curl -s localhost:18082/actuator/prometheus | grep -E '^# TYPE (orders|http_server_requests_seconds )'
 curl -s localhost:18083/metrics | grep -E '^# TYPE http_server'</pre>
@@ -334,7 +334,7 @@ curl -s localhost:18083/metrics | grep -E '^# TYPE http_server'</pre>
 # TYPE orders_rejected_total counter
 # TYPE orders_stored gauge
 # TYPE http_server_requests_seconds histogram</pre>
-  <p class="verdict">order-api가 수백 줄을 내놓는다(요청 경로가 늘수록 는다). 코드의 <code>orders.created</code>는 <code>orders_total</code>로 나온다. 마이크로미터가 <code>_created</code>를 떼어 냈다(OpenMetrics가 <code>_created</code> 접미사를 예약해 둬서). 마지막 줄은 journal-api다. 두 앱이 같은 이름 <code>http_server_requests_seconds</code>를 쓰도록 맞춰 두었다.</p>
+  <p class="verdict">order-api는 수백 줄을 돌려준다(요청 경로가 늘수록 늘어난다). 코드의 <code>orders.created</code>는 <code>orders_total</code>로 나온다. Micrometer가 <code>_created</code>를 떼어 냈다. OpenMetrics가 <code>_created</code> 접미사를 다른 용도로 예약해 두었기 때문이다. 마지막 줄은 journal-api다. 두 앱이 같은 이름 <code>http_server_requests_seconds</code>를 쓰도록 맞춰 두었다.</p>
 </div>
 </section>
 
@@ -425,7 +425,7 @@ prometheus-kps-kube-prometheus-stack-prometheus-db-prometheus-kps-kube-prometheu
   <p class="purpose">설치 성공의 기준은 "파드 Running"이 아니라 "수집 대상(타깃)이 모두 up"이다. 프로메테우스를 노트북 포트로 연다.</p>
   <pre class="cmd">kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 &gt;/dev/null 2&gt;&amp;1 &amp;
 # 브라우저: http://localhost:9090</pre>
-  <p class="purpose">터미널에서도 PromQL을 칠 수 있게 짧은 함수를 하나 만든다. 프로메테우스 HTTP API(<code>/api/v1/query</code>)에 질의를 보내고, 돌아온 JSON에서 "라벨들 값" 한 줄씩만 뽑는다. 새 터미널을 열면 다시 붙여 넣는다.</p>
+  <p class="purpose">터미널에서도 PromQL을 칠 수 있게 짧은 함수 <code>promq</code>를 하나 만든다. 이름은 Prometheus Query를 줄여 이 실습에서 붙인 것으로, 원래 있는 명령이 아니다. 프로메테우스 HTTP API(<code>/api/v1/query</code>)에 질의를 보내고, 돌아온 JSON에서 결과마다 "라벨 값" 한 줄만 뽑는다. 새 터미널을 열면 함수를 다시 붙여 넣는다. <b>이 줄은 브라우저가 아니라 터미널에 붙여 넣는다.</b> 붙여 넣어도 아무것도 출력되지 않는 것이 정상이다. 이후 가이드의 <code>promq '…'</code> 명령은 브라우저로 해도 된다. 그때는 <code>promq</code>와 작은따옴표를 빼고 안쪽 질의만 <code>localhost:9090</code> → Query 입력칸에 넣고 Execute를 누른다. 예: <code>promq 'count(up)'</code> → 브라우저에는 <code>count(up)</code>.</p>
   <pre class="cmd">promq() { curl -s localhost:9090/api/v1/query --data-urlencode "query=$1" | jq -r '.data.result[] | "\(.metric | to_entries | map("\(.key)=\(.value)") | join(" "))  \(.value[1])"'; }</pre>
   <table class="t opt">
     <thead><tr><th>부분</th><th>설명</th></tr></thead>
@@ -469,7 +469,7 @@ job=kube-scheduler  1</pre>
 
 <section id="p4">
 <h2><span class="no">04</span>Prometheus 둘러보기</h2>
-<p class="lead">Prometheus 화면은 질문에 따라 메뉴를 고른다. "수집이 되나?"는 Target health, "지금 값은?"은 Query의 Table, "언제부터 변했나?"는 Graph. 같은 질의는 터미널의 <code>promq</code>로도 친다.</p>
+<p class="lead">Prometheus 화면은 질문에 따라 메뉴를 고른다. "수집이 되나?"는 Target health, "지금 값은?"은 Query의 Table, "언제부터 변했나?"는 Graph. 같은 질의를 터미널의 <code>promq</code>로도 실행할 수 있다.</p>
 
 <div class="step" id="s4-1">
   <h3>4-1. Target health: 수집이 되고 있나 <span class="badge">슬라이드 48</span></h3>
@@ -520,12 +520,12 @@ obs-worker2         80m          0%       1812Mi          23%
 NAME                         CPU(cores)   MEMORY(bytes)
 order-api-77bf967968-26zwl   4m           198Mi
 order-api-77bf967968-xbbfn   4m           156Mi</pre>
-  <p class="verdict"><code>metrics.k8s.io</code>가 <code>AVAILABLE True</code>. kubectl top은 이 API를 부른다. 값은 지금 이 순간의 것 하나뿐이고, 기록은 남지 않는다. 쓰임새: 지금 당장 누가 많이 쓰나.</p>
+  <p class="verdict"><code>metrics.k8s.io</code>가 <code>AVAILABLE True</code>. kubectl top은 이 API를 부른다. 값은 지금 이 순간의 것 하나뿐이고, 기록은 남지 않는다. 쓰임새: 지금 어느 파드가 많이 쓰는지 볼 때.</p>
 </div>
 
 <div class="step" id="s4-4">
   <h3>4-4. 세 출처 ② cAdvisor <span class="badge">슬라이드 25 · 28 · 32</span></h3>
-  <p class="purpose">kubelet 안의 cAdvisor가 내놓는 컨테이너 메모리 · CPU. 4-3의 kubectl top과 같은 파드, 같은 수준의 값이 나와야 한다.</p>
+  <p class="purpose">kubelet 안의 cAdvisor가 제공하는 컨테이너 메모리 · CPU 값을 본다. 4-3의 kubectl top과 같은 파드, 같은 수준의 값이 나와야 한다.</p>
   <pre class="cmd">promq 'sum by (pod) (container_memory_working_set_bytes{namespace="apps", container="order-api"}) / 1024 / 1024'
 promq 'sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="apps", container="order-api"}[2m]))'</pre>
   <table class="t opt">
@@ -566,7 +566,7 @@ __name__=etcd_request_duration_seconds_bucket  2550
 __name__=apiserver_watch_list_duration_seconds_bucket  2444
 __name__=kubernetes_feature_enabled  2285</pre>
   <p class="verdict">앱을 연결하기 전에 이미 수만 개. 상위는 대부분 <code>_bucket</code>(히스토그램 구간)이다. 히스토그램 하나가 구간 수만큼 시계열을 만든다.</p>
-  <p class="purpose">프로메테우스가 긁어 가는 텍스트를 직접 본다. node-exporter의 CPU 카운터 한 CPU분.</p>
+  <p class="purpose">프로메테우스가 수집해 가는 텍스트를 직접 본다. node-exporter가 내보내는 CPU 카운터 중 CPU 0번 몫이다.</p>
   <pre class="cmd">kubectl -n monitoring port-forward svc/kps-prometheus-node-exporter 19100:9100 &gt;/dev/null 2&gt;&amp;1 &amp;
 sleep 2
 curl -s localhost:19100/metrics | grep -E '^# (HELP|TYPE) node_cpu_seconds_total|^node_cpu_seconds_total\{cpu="0"'</pre>
@@ -665,7 +665,7 @@ job=order-api pod=order-api-77bf967968-xbbfn  1
 
 <div class="step" id="s6-3">
   <h3>6-3. 오퍼레이터가 만든 수집 설정</h3>
-  <p class="purpose">ServiceMonitor가 어떤 수집 설정으로 바뀌었는지 본다. 오퍼레이터는 설정을 gzip으로 싸서 시크릿에 넣는다(브라우저에서는 Status → Configuration).</p>
+  <p class="purpose">ServiceMonitor가 어떤 수집 설정으로 바뀌었는지 본다. 오퍼레이터는 설정을 gzip으로 압축해 시크릿에 넣는다(브라우저에서는 Status → Configuration).</p>
   <pre class="cmd">kubectl -n monitoring get secret prometheus-kps-kube-prometheus-stack-prometheus \
   -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip \
   | awk '/job_name: serviceMonitor\/apps\/order-api\/0/{f=1} f' | head -23</pre>
@@ -692,7 +692,7 @@ job=order-api pod=order-api-77bf967968-xbbfn  1
     source_labels:
     - __meta_kubernetes_endpoint_port_name
     regex: http</pre>
-  <p class="verdict"><code>role: endpoints</code>로 apps 네임스페이스를 뒤져서, 서비스 라벨 <code>app.kubernetes.io/name=order-api</code>(②)와 포트 이름 <code>http</code>(③)가 맞는 것만 남긴다(keep).</p>
+  <p class="verdict"><code>role: endpoints</code>로 apps 네임스페이스의 대상을 찾아서, 서비스 라벨 <code>app.kubernetes.io/name=order-api</code>(②)와 포트 이름 <code>http</code>(③)가 맞는 것만 남긴다(keep).</p>
 </div>
 </section>
 
@@ -730,13 +730,15 @@ running (15m00.8s), 000/035 VUs, 31502 complete and 0 interrupted iterations
 errors ✓ [ 100% ] 00/05 VUs  15m0s  3.00 iters/s
 normal ✓ [ 100% ] 00/20 VUs  15m0s  30.00 iters/s
 slow   ✓ [ 100% ] 00/10 VUs  15m0s  2.00 iters/s</pre>
-  <p class="verdict">15분이 지나면 요약이 나온다. 세 줄 모두 <code>✓</code>이고 <code>3.00</code> · <code>30.00</code> · <code>2.00 iters/s</code>이면 정해진 속도를 다 채운 것이다. <code>http_req_failed</code> 3% 남짓은 일부러 넣은 에러 요청이라 정상이다. 클라이언트 쪽에서 본 값이라 두 앱이 섞여 있다. 세 시나리오에 체크 표시가 붙으면 정해진 속도를 다 채운 것이다. 멈추려면 <code>Ctrl-C</code>.</p>
+  <p class="verdict">15분이 지나면 요약이 나온다. 세 줄 모두 <code>✓</code>이고 <code>3.00</code> · <code>30.00</code> · <code>2.00 iters/s</code>이면 정해진 속도를 다 채운 것이다. <code>http_req_failed</code> 3% 남짓은 일부러 넣은 에러 요청이라 정상이다. 클라이언트 쪽에서 본 값이라 두 앱이 섞여 있다. 멈추려면 <code>Ctrl-C</code>.</p>
   <details class="file"><summary>k6-red.js 전체</summary>{{FILE:labs/k6/k6-red.js}}</details>
 </div>
 
 <div class="step" id="s7-2">
   <h3>7-2. R · E · D <span class="badge">슬라이드 56 · 57</span></h3>
   <p class="purpose">부하를 시작하고 5분 뒤부터(5분 창이 부하로 채워진 뒤) 친다. 부하가 15분이라 7-5까지 모두 부하 중에 칠 수 있다. 모두 "고르기 → rate → sum by → 나누기" 순서다.</p>
+  <p class="purpose">질의는 k6가 돌고 있지 않은 다른 터미널에서 친다. <code>promq</code>는 3-3에서 만든 셸 함수라서 <b>함수를 붙여 넣은 터미널 창에서만</b> 동작한다. 새 창이면 <code>zsh: command not found: promq</code>가 나오므로 먼저 아래 줄을 다시 붙여 넣는다. 9090 port-forward도 떠 있어야 한다(<code>curl -s -o /dev/null -w '%{http_code}\n' localhost:9090/-/ready</code> → <code>200</code>).</p>
+  <pre class="cmd">promq() { curl -s localhost:9090/api/v1/query --data-urlencode "query=$1" | jq -r '.data.result[] | "\(.metric | to_entries | map("\(.key)=\(.value)") | join(" "))  \(.value[1])"'; }</pre>
   <pre class="cmd">promq 'sum by (job) (rate(http_server_requests_seconds_count[5m]))'
 promq 'sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum by (job) (rate(http_server_requests_seconds_count[5m]))'
 promq 'sum by (job) (rate(http_server_requests_seconds_sum[5m])) / sum by (job) (rate(http_server_requests_seconds_count[5m]))'</pre>
@@ -746,7 +748,7 @@ job=journal-api  0
 job=order-api  0.058371839498319665
 job=journal-api  0.0005273863748586853
 job=order-api  0.04535305933775905</pre>
-  <p class="verdict">위에서부터 R(초당 요청 수) · E(에러 비율) · D(평균 지연, 초). order-api에는 부하 외에 프로브와 수집 요청이 섞인다. journal-api의 에러 비율이 0으로 나오는 것은 기동 중 레디스가 준비되기 전 <code>/readyz</code>가 503을 낸 기록이 5xx 시계열로 남아 있기 때문이다.</p>
+  <p class="verdict">위에서부터 R(초당 요청 수) · E(에러 비율) · D(평균 지연, 초). order-api에는 부하 외에 프로브와 수집 요청이 섞인다. journal-api는 에러 요청을 받지 않는데도 결과가 빈 칸이 아니라 0으로 나온다. 기동 중 레디스가 준비되기 전에 <code>/readyz</code>가 503을 낸 적이 있어서 5xx 시계열이 남아 있고, 그 시계열의 최근 5분 증가량이 0이라 비율도 0이 된다. 5xx 시계열이 아예 없었다면 이 줄은 결과에 나오지 않는다.</p>
 </div>
 
 <div class="step" id="s7-3">
@@ -795,11 +797,11 @@ job=order-api  592</pre>
 
 <section id="p8">
 <h2><span class="no">08</span>알림 받기</h2>
-<p class="lead">규칙은 Prometheus가 평가하고, Alertmanager가 묶고 골라서 수신자에게 보낸다. 실습에서는 클러스터 안에 작은 웹훅 서버(alert-sink)를 띄워 알림이 실제로 도착하는지 <code>kubectl logs</code>로 본다. 운영에서는 같은 자리에 Slack · PagerDuty · 메일이 온다. 7-1의 부하가 끝나고 5분 이상 지난 뒤 시작한다.</p>
+<p class="lead">규칙은 Prometheus가 평가하고, Alertmanager가 묶고 골라서 수신자에게 보낸다. 실습에서는 클러스터 안에 작은 웹훅 서버(alert-sink)를 띄워 알림이 실제로 도착하는지 <code>kubectl logs</code>로 본다. 운영에서는 이 자리에 Slack · PagerDuty · 메일을 연결한다. 7-1의 부하가 끝나고 5분 이상 지난 뒤 시작한다.</p>
 
 <div class="step" id="s8-1">
   <h3>8-1. 수신 서버 띄우기 <span class="badge">슬라이드 66 · 67</span></h3>
-  <p class="purpose">Alertmanager의 수신자 설정(웹훅 URL)은 3-2의 값 파일로 이미 들어가 있다. 받는 쪽만 띄운다.</p>
+  <p class="purpose">Alertmanager의 수신자 설정(웹훅 URL)은 3-2의 값 파일로 이미 들어가 있다. 여기서는 알림을 받을 웹훅 서버(alert-sink)만 띄운다.</p>
   <pre class="cmd">kubectl apply -f labs/k8s/alert-sink.yaml
 kubectl -n monitoring rollout status deploy/alert-sink
 kubectl -n monitoring logs deploy/alert-sink</pre>
@@ -854,20 +856,20 @@ templates:
 kubectl apply -f labs/k8s/prometheusrule.yaml</pre>
   <pre class="out">ruleSelector={"matchLabels":{"release":"kps"}}
 prometheusrule.monitoring.coreos.com/study-app-rules created</pre>
-  <p class="purpose">1~2분 뒤 규칙이 로드됐는지 본다. 규칙 API(<code>/api/v1/rules</code>)에서 study-app 그룹의 규칙 이름 · 상태 · 건강만 뽑는다.</p>
+  <p class="purpose">1~2분 뒤 규칙이 로드됐는지 본다. 규칙 API(<code>/api/v1/rules</code>)에서 study-app 그룹의 규칙마다 이름, 상태(<code>state</code>), 평가 결과(<code>health</code>)만 뽑는다. <code>state</code>는 알림 조건이 지금 성립하는지(inactive · pending · firing), <code>health</code>는 마지막 평가가 오류 없이 돌았는지(ok · err · unknown)다. Prometheus 화면의 Status → Rule health가 같은 값을 보여 준다.</p>
   <pre class="cmd">curl -s localhost:9090/api/v1/rules \
   | jq -r '.data.groups[] | select(.name=="study-app") | .rules[] | "\(.name) \(.state) \(.health)"'</pre>
   <pre class="out">AppTargetDown inactive ok
 AppHighErrorRate inactive ok
 AppHighLatencyP95 inactive ok
 AppSLOFastBurn inactive ok</pre>
-  <p class="verdict">규칙 4개, 모두 <code>inactive ok</code>. 넣고 1분째에는 4개 모두 <code>unknown unknown</code>(아직 평가 전)으로 나올 수 있다. 실측에서는 80초째에 <code>inactive</code>가 됐다. 20~30초 뒤 다시 친다. pending이 보이면 직전 부하의 흔적이 5분 창에 남아 있는 것이다. inactive가 될 때까지 기다린 뒤 8-3으로 간다.</p>
+  <p class="verdict">규칙 4개가 모두 <code>inactive ok</code>이면 통과다. 조건은 아직 성립하지 않고(inactive) 평가는 오류 없이 돌았다(ok)는 뜻이다. 넣고 1분째에는 4개 모두 <code>unknown unknown</code>(아직 평가 전)으로 나올 수 있다. 실측에서는 80초째에 <code>inactive</code>가 됐다. 20~30초 뒤 다시 친다. pending이 보이면 직전 부하의 흔적이 5분 창에 남아 있는 것이다. inactive가 될 때까지 기다린 뒤 8-3으로 간다.</p>
   <details class="file"><summary>prometheusrule.yaml 전체</summary>{{FILE:labs/k8s/prometheusrule.yaml}}</details>
 </div>
 
 <div class="step" id="s8-3">
   <h3>8-3. 부하를 넣고 알림 받기 <span class="badge">슬라이드 68</span></h3>
-  <p class="purpose">터미널 세 개를 쓴다. ① 알림 수신 로그를 계속 본다. ② 20초마다 규칙 상태를 찍는다. ③ 15분 부하를 넣는다. 알림이 FIRING이 된 뒤 부하가 도는 동안 8-4 · 8-5를 먼저 하고, 부하가 끝나면 이 화면으로 돌아와 해소를 본다. 상태가 inactive → pending → firing → inactive로 바뀌는 시각과, 알림이 도착한 시각을 맞춰 본다.</p>
+  <p class="purpose">터미널 세 개를 쓴다. ① 알림 수신 로그를 계속 본다. ② 20초마다 규칙 상태를 출력한다. ③ 15분 부하를 넣는다. 알림이 FIRING이 된 뒤 부하가 도는 동안 8-4 · 8-5를 먼저 하고, 부하가 끝나면 이 화면으로 돌아와 해소를 본다. 상태가 inactive → pending → firing → inactive로 바뀌는 시각과, 알림이 도착한 시각을 맞춰 본다.</p>
   <pre class="cmd"># 터미널 ①  (Ctrl-C로 멈춘다)
 kubectl -n monitoring logs deploy/alert-sink -f</pre>
   <pre class="cmd"># 터미널 ②  (Ctrl-C로 멈춘다)
@@ -908,7 +910,7 @@ date -u +%T; k6 run -e DURATION=15m labs/k6/k6-red.js; date -u +%T</pre>
 
 <div class="step" id="s8-4">
   <h3>8-4. SLO 규칙이 울리지 않는 이유 <span class="badge">슬라이드 69</span></h3>
-  <p class="purpose">AppSLOFastBurn은 "200ms를 넘긴 요청 비율 &gt; 14.4%"일 때 울린다. 부하 중에 그 비율을 직접 계산한다(8-3 부하 중에 친다).</p>
+  <p class="purpose">AppSLOFastBurn은 "200ms를 넘긴 요청 비율 &gt; 14.4%"일 때 울린다. 부하 중에 그 비율을 직접 계산한다(8-3 부하 중에 친다). 새 터미널이면 3-3의 <code>promq</code> 함수를 먼저 다시 붙여 넣는다.</p>
   <pre class="cmd">promq '1 - (sum by (job) (rate(http_server_requests_seconds_bucket{job="order-api", le="0.2"}[5m])) / sum by (job) (rate(http_server_requests_seconds_count{job="order-api"}[5m])))'</pre>
   <pre class="out">job=order-api  0.056074764414093425</pre>
   <p class="verdict">5~6%. 느린 요청은 초당 2건뿐이라 14.4%에 한참 못 미친다. 울리지 않는 것이 설계대로다. "느리다"(P95 경고)와 "약속을 못 지킨다"(SLO 소진)는 다르다.</p>
@@ -983,7 +985,7 @@ curl -s -u admin:obs-study 'localhost:3000/api/search?query=RED' | jq -r '.[] | 
 {"time": "2026-09-27T02:02:58.481925+00:00", "level": "INFO", "msg": "Removing /tmp/dashboards/study-red.json"}
 null / CoreDNS  uid=vkQ0UHxik
 스터디 / 스터디 — 서비스 RED  uid=study-red</pre>
-  <p class="verdict">사이드카가 파일을 쓰고(폴더 이름은 유니코드 이스케이프로 찍힌다), Grafana 검색에 "스터디" 폴더의 대시보드가 uid <code>study-red</code>로 나온다. CoreDNS는 이름에 "RED"(CoREDns)가 들어 있어 함께 걸린 차트 기본 대시보드다. 브라우저: Dashboards → 스터디 → 스터디 — 서비스 RED. 로그 패널은 10장에서 Loki를 설치한 뒤 채워진다.</p>
+  <p class="verdict">사이드카가 파일을 쓰고(폴더 이름은 유니코드 이스케이프로 출력된다), Grafana 검색에 "스터디" 폴더의 대시보드가 uid <code>study-red</code>로 나온다. CoreDNS는 이름에 "RED"(CoREDns)가 들어 있어 함께 걸린 차트 기본 대시보드다. 브라우저: Dashboards → 스터디 → 스터디 — 서비스 RED. 로그 패널은 10장에서 Loki를 설치한 뒤 채워진다.</p>
 </div>
 </section>
 
@@ -992,7 +994,7 @@ null / CoreDNS  uid=vkQ0UHxik
 
 <div class="step" id="s10-1">
   <h3>10-1. kubectl logs가 멈추는 곳 <span class="badge">슬라이드 76</span></h3>
-  <p class="purpose">30초 동안 JSON 로그를 찍고 마지막에 에러 한 줄을 남기고 죽는 파드를 만든다. 파드가 지워지면 그 로그를 kubectl로는 다시 볼 수 없다는 것을 확인한다. 로그 저장소가 필요한 이유다.</p>
+  <p class="purpose">30초 동안 JSON 로그를 남기다가 마지막에 에러 한 줄을 남기고 종료되는 파드를 만든다. 파드가 지워지면 그 로그를 kubectl로는 다시 볼 수 없다는 것을 확인한다. 로그 저장소가 필요한 이유다.</p>
   <pre class="cmd">kubectl create namespace demo
 kubectl -n demo apply -f labs/k8s/noisy-pod.yaml
 sleep 8; kubectl -n demo logs noisy | tail -3</pre>
@@ -1065,14 +1067,14 @@ alloy-97cmk                     2/2     Running   0          33s   10.244.2.10  
 alloy-ns7dw                     2/2     Running   0          34s   10.244.1.16   obs-worker2   &lt;none&gt;           &lt;none&gt;
 loki-0                          2/2     Running   0          80s   10.244.1.15   obs-worker2   &lt;none&gt;           &lt;none&gt;
 loki-gateway-7747766d57-rxc72   1/1     Running   0          80s   10.244.1.13   obs-worker2   &lt;none&gt;           &lt;none&gt;</pre>
-  <p class="verdict">파드 4개. Alloy는 데몬셋인데 워커 두 대에만 떴다. 컨트롤 플레인의 테인트를 견디는 설정(toleration)이 없어서다. 그래도 로그는 쿠버네티스 API로 읽으므로 컨트롤 플레인 파드(kube-system) 로그까지 수집된다. 두 Alloy 파드는 클러스터링으로 수집 대상을 나눠 맡는다. Grafana의 Loki 데이터소스는 kps-values.yaml에 미리 넣어 두었다. 두 Alloy가 서로를 찾았는지는 기동 1분쯤 뒤 <code>kubectl -n logging logs ds/alloy -c alloy | grep "rejoining peers"</code>로 본다. <code>peers_count=2</code>가 나오면 된다. 기동 직후에는 자기 자신만 보여 <code>peers_count=1</code>이 찍힌다(실측).</p>
+  <p class="verdict">파드 4개. Alloy는 데몬셋인데 워커 두 대에만 떴다. 컨트롤 플레인의 테인트를 허용하는 설정(toleration)이 없어서다. 그래도 로그는 쿠버네티스 API로 읽으므로 컨트롤 플레인 파드(kube-system) 로그까지 수집된다. 두 Alloy 파드는 클러스터링으로 수집 대상을 나눠 맡는다. Grafana의 Loki 데이터소스는 kps-values.yaml에 미리 넣어 두었다. 두 Alloy가 서로를 찾았는지는 기동 1분쯤 뒤 <code>kubectl -n logging logs ds/alloy -c alloy | grep "rejoining peers"</code>로 본다. <code>peers_count=2</code>가 나오면 된다. 기동 직후에는 자기 자신만 보여 <code>peers_count=1</code>이 출력된다(실측).</p>
   <details class="file"><summary>loki-values.yaml 전체</summary>{{FILE:labs/helm/loki-values.yaml}}</details>
   <details class="file"><summary>alloy-values.yaml 전체</summary>{{FILE:labs/helm/alloy-values.yaml}}</details>
 </div>
 
 <div class="step" id="s10-4">
   <h3>10-4. 로그가 쌓이는지 확인 <span class="badge">슬라이드 80</span></h3>
-  <p class="purpose">터미널 ③에서 k6 부하(7-1과 같은 명령)를 다시 넣는다. Loki 포트를 열고, 어떤 라벨이 있는지와 앱별로 5분 동안 몇 줄이 들어왔는지 본다. 숫자를 돌려주는 LogQL 질의용 함수 <code>lokiq</code>를 만든다(<code>promq</code>와 같은 모양).</p>
+  <p class="purpose">터미널 ③에서 k6 부하(7-1과 같은 명령)를 다시 넣는다. Loki 포트를 열고, 어떤 라벨이 있는지와 앱별로 5분 동안 몇 줄이 들어왔는지 본다. 숫자를 돌려주는 LogQL 질의용 함수 <code>lokiq</code>를 만든다(<code>promq</code>와 같은 모양). 이름은 Loki Query를 줄여 이 실습에서 붙인 것으로, 원래 있는 명령이 아니다. <code>promq</code>처럼 터미널에 붙여 넣고, 브라우저로 할 때는 Grafana Explore의 Loki Code 모드에 작은따옴표 안의 질의만 넣는다.</p>
   <pre class="cmd"># 터미널 ③
 k6 run -e DURATION=15m labs/k6/k6-red.js</pre>
   <pre class="cmd">kubectl -n logging port-forward svc/loki-gateway 3100:80 &gt;/dev/null 2&gt;&amp;1 &amp;
@@ -1089,7 +1091,7 @@ app=order-api  10750</pre>
 
 <div class="step" id="s10-5">
   <h3>10-5. LogQL: 좁히고 · 거르고 · 꺼내고 · 센다 <span class="badge">슬라이드 81 · 82</span></h3>
-  <p class="purpose">같은 부하가 도는 동안 친다. 로그 줄을 돌려주는 질의용 함수 <code>logq</code>를 하나 더 만든다(최근 N줄의 본문만, 기본 3줄).</p>
+  <p class="purpose">같은 부하가 도는 동안 친다. 로그 줄을 돌려주는 질의용 함수 <code>logq</code>를 하나 더 만든다(최근 N줄의 본문만, 기본 3줄). 이름은 Log Query를 줄여 붙인 것이다. <code>lokiq</code>는 숫자를, <code>logq</code>는 로그 줄 자체를 보여 준다.</p>
   <pre class="cmd">logq()  { curl -sG localhost:3100/loki/api/v1/query_range --data-urlencode "query=$1" --data-urlencode "limit=${2:-3}" | jq -r '.data.result[].values[][1] | rtrimstr("\n")' | head -${2:-3}; }</pre>
   <p class="purpose">① 라벨로 좁히고, ② 본문 정규식으로 거른다. <code>|~</code>는 정규식이 맞는 줄만 남긴다. 상태 코드 앞뒤 공백까지 넣어야 응답 바이트 · 시간 속 "500"이 걸리지 않는다.</p>
   <pre class="cmd">logq '{namespace="apps", app="order-api"} |~ " 500 "'</pre>
@@ -1102,8 +1104,8 @@ lokiq 'sum by (path) (count_over_time({namespace="apps", app="order-api"} | patt
   <pre class="out">status=200  10115
 status=500  634
 path=/api/chaos/error?rate=0.7  634</pre>
-  <p class="verdict">상태 코드별 줄 수, 그리고 500을 낸 경로. 메트릭이 "에러율 6%"라고 말한 것을 로그는 "그 요청은 <code>GET /api/chaos/error?rate=0.7</code>이었다"로 말한다.</p>
-  <p class="purpose">journal-api 로그는 JSON이라 <code>| json</code> 한 번이면 필드가 모두 꺼내진다. 파서 뒤에는 <code>| __error__=""</code>를 붙여 파싱에 실패한 줄을 뺀다.</p>
+  <p class="verdict">상태 코드별 줄 수, 그리고 500을 낸 경로. 메트릭은 "에러율 6%"까지 알려 주고, 로그는 그 에러가 <code>GET /api/chaos/error?rate=0.7</code> 요청이었다는 것까지 알려 준다.</p>
+  <p class="purpose">journal-api 로그는 JSON이라 <code>| json</code> 한 번으로 필드를 모두 꺼낼 수 있다. 파서 뒤에는 <code>| __error__=""</code>를 붙여 파싱에 실패한 줄을 뺀다.</p>
   <pre class="cmd">logq '{namespace="journal", app="journal-api"} | json | __error__="" | status &gt;= 200' 2
 lokiq 'sum by (app) (count_over_time({namespace=~"journal|apps"} | json | __error__="" [5m]))'</pre>
   <pre class="out">{"level":"info","msg":"request","method":"GET","path":"/api/entries","status":200,"durationMs":1,"pod":"journal-api-5d8fcd6cf9-29mpw"}
@@ -1114,12 +1116,12 @@ app=journal-api  9084</pre>
 
 <div class="step" id="s10-6">
   <h3>10-6. 메트릭에서 로그로 넘어가기 <span class="badge">슬라이드 13</span></h3>
-  <p class="purpose">같은 5분 동안 order-api의 500을 두 방법으로 센다. 로그는 Loki에서, 메트릭은 프로메테우스에서.</p>
+  <p class="purpose">같은 5분 동안 order-api의 500을 두 방법으로 센다. 로그는 Loki에서, 메트릭은 프로메테우스에서. <code>promq</code>와 <code>lokiq</code>가 모두 정의된 터미널에서 친다.</p>
   <pre class="cmd">lokiq 'sum(count_over_time({namespace="apps", app="order-api"} |~ " 500 " [5m]))'
 promq 'sum(increase(http_server_requests_seconds_count{job="order-api", status=~"5.."}[5m]))'</pre>
   <pre class="out">  634
   633.3591368537236</pre>
-  <p class="verdict">두 값이 거의 같다. 로그는 실제로 찍힌 줄 수라 정수이고, <code>increase()</code>는 30초마다 긁은 카운터 값으로 5분 창의 증가량을 추정(외삽)하므로 소수점이 붙는다. 부하가 창 중간에 시작하거나 끝나면 20% 넘게 벌어지기도 한다.</p>
+  <p class="verdict">두 값이 거의 같다. 로그는 실제로 남은 줄 수라 정수이고, <code>increase()</code>는 30초마다 수집한 카운터 값으로 5분 창의 증가량을 추정(외삽)하므로 소수점이 붙는다. 부하가 창 중간에 시작하거나 끝나면 20% 넘게 벌어지기도 한다.</p>
   <p class="purpose">Grafana에서 두 신호를 한 화면에 놓는다. Explore 오른쪽 위 <b>Split</b>으로 화면을 둘로 나누고, 왼쪽 Prometheus에 에러율, 오른쪽 Loki에 500 줄 질의를 넣는다. 시간 범위가 함께 움직인다. 스터디 · 서비스 RED 대시보드 맨 아래 로그 패널도 이제 채워진다.</p>
 </div>
 </section>
@@ -1169,7 +1171,7 @@ logger=plugin.backgroundinstaller … level=error msg="Failed to install plugin"
   <p class="purpose">원인: Docker 메모리가 모자라다. 다른 kind 클러스터가 함께 떠 있는 경우가 많다. 이때 kubelet이 느려져 port-forward가 연결 단계에서 멈췄다가 죽고, metrics-server도 재시작한다(<code>kubectl top</code> → <code>Metrics API not available</code>).</p>
   <pre class="cmd">kind get clusters
 docker stats --no-stream --format '{{.Name}} {{.MemUsage}}' | grep -E 'control-plane|worker'</pre>
-  <p class="verdict">해결: 다른 클러스터를 <code>docker stop</code>으로 멈춘다(0-2). port-forward가 죽는 이유는 에러를 버리지 않고 앞에서 띄워 보면 보인다: <code>address already in use</code>면 포트가 겹친 것(<code>lsof -nP -iTCP:9090 -sTCP:LISTEN</code>), 아무 출력 없이 멈추면 자원 부족이다.</p>
+  <p class="verdict">해결: 다른 클러스터를 <code>docker stop</code>으로 멈춘다(0-2). port-forward가 죽는 이유는 출력을 버리지 않고 포그라운드로 띄워 보면 보인다: <code>address already in use</code>면 포트가 겹친 것(<code>lsof -nP -iTCP:9090 -sTCP:LISTEN</code>), 아무 출력 없이 멈추면 자원 부족이다.</p>
   <p class="purpose">증상 ②: <code>kind create cluster</code>가 노드 이미지를 받다가 <code>error getting credentials - err: exec: "docker-credential-desktop": executable file not found in $PATH</code>로 실패한다. 원인: Docker Desktop을 쓰다가 OrbStack으로 바꾸면 <code>~/.docker/config.json</code>에 <code>"credsStore": "desktop"</code>이 남는다. OrbStack의 docker는 Docker Desktop의 인증 도우미를 찾지 못한다(실측).</p>
   <pre class="cmd">grep credsStore ~/.docker/config.json</pre>
   <p class="verdict">해결: <code>"credsStore": "desktop"</code> 줄을 지우거나 <code>"osxkeychain"</code>으로 바꾼 뒤 <code>kind create cluster</code>를 다시 친다. 공개 이미지만 받는 실습이라 저장된 로그인 정보가 없어도 된다.</p>
@@ -1194,6 +1196,7 @@ order-api   90s   &lt;none&gt;
   <table class="t">
     <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
     <tbody>
+      <tr><td><code>zsh: command not found: promq</code> (<code>lokiq</code>, <code>logq</code>도 같음)</td><td>함수를 정의하지 않은 터미널 창에서 쳤다. 이 함수들은 설치되는 명령이 아니라 붙여 넣은 창에서만 사는 셸 함수다</td><td>그 창에 3-3(<code>promq</code>) · 10-4(<code>lokiq</code>) · 10-5(<code>logq</code>)의 정의 줄을 다시 붙여 넣는다. 매번 하기 싫으면 정의 줄을 <code>~/.zshrc</code>에 넣는다</td></tr>
       <tr><td>패널 No data, <code>orders_created_total</code> 결과 없음</td><td>코드의 이름으로 질의했다</td><td>2-5처럼 엔드포인트의 <code># TYPE</code> 줄에서 실제 이름(<code>orders_total</code>)을 확인</td></tr>
       <tr><td>에러 없는 앱이 표에서 사라진다</td><td>분자 시계열이 없으면 결과가 "없음"</td><td>7-4의 <code>or (… * 0)</code></td></tr>
       <tr><td>P50이 평균보다 수십 배 크다</td><td>버킷 경계가 앱 지연보다 훨씬 크다. 실측: 경계 [0.05, 0.1, 0.2, 0.5, 1]에서 1ms대 요청의 P50이 25ms</td><td>경계를 앱의 실제 지연(ms 단위)에 맞춘다</td></tr>

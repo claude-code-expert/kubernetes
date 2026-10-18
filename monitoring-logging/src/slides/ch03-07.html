@@ -13,8 +13,8 @@
   <aside class="notes">
 <ul class="speaker-points">
   <li>7장은 로그입니다. 파드 로그를 Alloy로 모아 Loki에 쌓고, LogQL로 찾아봅니다.</li>
-  <li>Alloy는 각 노드에서 파드 로그를 읽어 보내는 수집기이고, Loki는 그 로그를 받아 쌓아 두는 저장소입니다. LogQL은 Loki에 "어떤 로그를 보여 달라"고 묻는 질의 언어로, 프로메테우스의 PromQL과 모양이 비슷합니다.</li>
-  <li>목표는 order-api 로그에서 500 에러를 세고, 그 634건이 모두 <code>/api/chaos/error</code> 한 경로에서 났다는 것을 로그로 확인하는 것입니다.</li>
+  <li>Alloy는 각 노드에서 파드 로그를 읽어 보내는 수집기이고, Loki는 그 로그를 받아 쌓아 두는 저장소입니다. LogQL은 Loki에 "어떤 로그를 보여 달라"고 요청하는 질의 언어로, 프로메테우스의 PromQL과 모양이 비슷합니다.</li>
+  <li>목표는 order-api 로그에서 500 에러를 세고, 그 634건이 모두 <code>/api/chaos/error</code> 한 경로에서 났다는 것을 로그로 확인합니다.</li>
 </ul>
 </aside>
 </section>
@@ -28,7 +28,7 @@
       <colgroup><col class="c1"><col class="c2"><col></colgroup>
       <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
       <tbody>
-        <tr><td>구조화 로그</td><td>Structured logging</td><td>한 줄을 JSON처럼 키·값으로 찍는 방식. 질의할 때 필드를 꺼낼 수 있다</td></tr>
+        <tr><td>구조화 로그</td><td>Structured logging</td><td>한 줄을 JSON처럼 키·값으로 남기는 방식. 질의할 때 필드를 꺼낼 수 있다</td></tr>
         <tr><td>액세스 로그</td><td>Access log</td><td>웹 서버가 요청마다 한 줄씩 남기는 기록. 경로·상태 코드·처리 시간</td></tr>
         <tr><td>사이드카 로그 전달기</td><td>Sidecar log forwarder</td><td>같은 파드에 붙어 앱의 로그 파일을 읽어 옮기는 컨테이너</td></tr>
         <tr><td>로그 회전</td><td>Log rotation</td><td>로그 파일이 커지면 잘라 새 파일로 바꾸는 것. 오래된 줄은 사라진다</td></tr>
@@ -38,17 +38,17 @@
       </tbody>
     </table>
   </div>
-  <div class="foot"><span>앱은 stdout으로 찍고, 수집·보관은 플랫폼이 맡는다</span><span>{{PG}}</span></div>
+  <div class="foot"><span>앱은 stdout으로 내보내고, 수집·보관은 플랫폼이 맡는다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>로그 수집에 쓰는 용어입니다. 구조화 로그는 한 줄을 JSON처럼 키와 값으로 찍는 방식이라 질의할 때 필드를 바로 꺼낼 수 있습니다. 액세스 로그는 웹 서버가 요청마다 경로, 상태 코드, 처리 시간을 한 줄씩 남기는 기록입니다.</li>
-  <li>예를 들어 구조화 로그는 <code>{"level":"info","status":200,"durationMs":1}</code>처럼 찍혀서, 나중에 status가 500인 줄만 골라낼 수 있습니다. 일반 문장으로 찍은 로그는 이런 조건 검색이 어렵습니다.</li>
+  <li>로그 수집에 쓰는 용어입니다. 구조화 로그는 한 줄을 JSON처럼 키와 값으로 남기는 방식이라 질의할 때 필드를 바로 꺼낼 수 있습니다. 액세스 로그는 웹 서버가 요청마다 경로, 상태 코드, 처리 시간을 한 줄씩 남기는 기록입니다.</li>
+  <li>예를 들어 구조화 로그는 <code>{"level":"info","status":200,"durationMs":1}</code>처럼 남아서, 나중에 status가 500인 줄만 골라낼 수 있습니다. 일반 문장으로 남긴 로그는 이런 조건 검색이 어렵습니다.</li>
   <li>사이드카 로그 전달기는 같은 파드에 붙어 앱의 로그 파일을 옮기는 컨테이너입니다.</li>
   <li>사이드카는 앱이 로그를 화면(stdout)이 아니라 파일에만 쓸 때 씁니다. 같은 파드에 작은 컨테이너를 하나 더 붙여 그 파일을 읽고 수집기로 넘깁니다.</li>
   <li>로그 회전은 파일이 커지면 잘라 새 파일로 바꾸는 것이라 오래된 줄이 사라집니다. 보존 기간은 저장소가 로그를 지우기 전까지 들고 있는 기간입니다.</li>
-  <li>톨러레이션은 테인트가 걸린 노드에도 파드를 띄우는 설정이고, SingleBinary는 Loki의 모든 역할을 프로세스 하나로 돌리는 최소 구성입니다. 앱은 stdout으로 찍기만 하고 수집과 보관은 플랫폼이 맡습니다.</li>
-  <li>테인트는 노드에 붙이는 "아무 파드나 여기 오지 마라"는 표시이고, 컨트롤 플레인 노드에는 기본으로 걸려 있습니다. 톨러레이션은 파드 쪽에 붙이는 "그 표시를 견딜 수 있다"는 허가입니다. 둘이 짝이 맞아야 그 노드에 파드가 뜹니다.</li>
-  <li>stdout은 프로그램이 출력을 내보내는 기본 통로, 즉 표준 출력입니다. 컨테이너가 stdout으로 찍은 줄은 컨테이너 런타임이 노드의 <code>/var/log/pods</code> 아래 파일로 남기고, kubectl logs와 수집기가 그 내용을 읽습니다. SingleBinary는 이 실습처럼 작은 규모에서 Loki를 가볍게 띄울 때 씁니다.</li>
+  <li>톨러레이션은 테인트가 걸린 노드에도 파드를 띄우는 설정이고, SingleBinary는 Loki의 모든 역할을 프로세스 하나로 돌리는 최소 구성입니다. 앱은 stdout으로 내보내기만 하고 수집과 보관은 플랫폼이 맡습니다.</li>
+  <li>테인트는 노드에 붙이는 "아무 파드나 여기 오지 마라"는 표시이고, 컨트롤 플레인 노드에는 기본으로 걸려 있습니다. 톨러레이션은 파드에 붙이는 "그 표시를 견딜 수 있다"는 허가입니다. 둘이 짝이 맞아야 그 노드에 파드가 뜹니다.</li>
+  <li>stdout은 프로그램이 출력을 내보내는 기본 통로, 즉 표준 출력입니다. 컨테이너가 stdout으로 내보낸 줄은 컨테이너 런타임이 노드의 <code>/var/log/pods</code> 아래 파일로 남기고, kubectl logs와 수집기가 그 내용을 읽습니다. SingleBinary는 이 실습처럼 작은 규모에서 Loki를 가볍게 띄울 때 씁니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
 <li><a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/" target="_blank" rel="noopener">Kubernetes · Logging Architecture</a></li>
@@ -61,6 +61,7 @@
   <span class="kicker"><span class="n">07</span>GLOSSARY · 2/2</span>
   <h1>용어 ② <span class="hl">LogQL</span></h1>
   <div class="body">
+    <div class="access"><span><b>어디서 쳐 보나</b>브라우저 <code>localhost:3000</code>(Grafana) → Explore → 데이터소스 Loki → 편집기 오른쪽 Code → 질의 입력 → Run query. 직접 쳐 보는 것은 Loki 설치 뒤</span></div>
     <table class="compare gloss">
       <colgroup><col class="c1"><col class="c2"><col></colgroup>
       <thead><tr><th>용어</th><th>원어 · 풀 네임</th><th>뜻</th></tr></thead>
@@ -80,7 +81,7 @@
   <li>LogQL 용어입니다. 스트림 셀렉터는 <code>{namespace="apps", app="order-api"}</code>처럼 라벨로 로그 묶음을 고르는 부분입니다.</li>
   <li>줄 필터 <code>|=</code>와 <code>|~</code>는 본문에 문자열이나 정규식이 있는 줄만 남깁니다. 파서 <code>| json</code>, <code>| pattern</code>은 본문에서 필드를 꺼내고, 파싱에 실패한 줄에는 <code>__error__</code> 라벨이 붙어 <code>| __error__=""</code>로 걸러 냅니다.</li>
   <li>예를 들어 <code>|= "error"</code>는 본문에 error라는 글자가 있는 줄만 남기고, <code>|~ " 5.. "</code>처럼 정규식을 쓰면 500번대 상태 코드가 있는 줄을 한 번에 고릅니다. <code>!=</code>는 반대로 그 글자가 있는 줄을 뺍니다.</li>
-  <li><code>count_over_time</code>은 구간 안의 줄 수를 세서 로그를 시계열처럼 다루게 합니다. 순서는 셀렉터로 좁히고, 필터로 거르고, 파서로 꺼내는 것입니다.</li>
+  <li><code>count_over_time</code>은 구간 안의 줄 수를 세서 로그를 시계열처럼 다루게 합니다. 순서는 셀렉터로 좁히고, 필터로 거르고, 파서로 꺼냅니다.</li>
   <li>구조화 메타데이터는 라벨로 만들기에는 값의 가짓수가 너무 많은 정보, 예를 들어 요청마다 다른 요청 ID를 줄에 붙여 두는 방식입니다. 라벨처럼 색인하지 않아서 저장 비용이 늘지 않습니다.</li>
 </ul>
 <details class="note-sources"><summary>참고 자료</summary><ul>
@@ -98,9 +99,9 @@
       <colgroup><col style="width:30%"><col></colgroup>
       <thead><tr><th>판단</th><th>기준</th></tr></thead>
       <tbody>
-        <tr><td>찍는다</td><td>나중에 읽을 일이 있는 줄. 요청 경로·상태 코드·처리 시간, 에러와 원인</td></tr>
-        <tr><td>찍지 않는다</td><td>프로브 성공 로그(실패는 이벤트·메트릭에 남는다), "받았다"와 "처리했다" 중복, 정상 응답 본문</td></tr>
-        <tr><td>어디로 찍나</td><td>파일이 아니라 stdout · stderr. 파일에 쓰면 파드가 지워질 때 같이 사라지고 수집기도 읽지 못한다</td></tr>
+        <tr><td>남긴다</td><td>나중에 읽을 일이 있는 줄. 요청 경로·상태 코드·처리 시간, 에러와 원인</td></tr>
+        <tr><td>남기지 않는다</td><td>프로브 성공 로그(실패는 이벤트·메트릭에 남는다), "받았다"와 "처리했다" 중복, 정상 응답 본문</td></tr>
+        <tr><td>어디로 내보내나</td><td>파일이 아니라 stdout · stderr. 파일에 쓰면 파드가 지워질 때 같이 사라지고 수집기도 읽지 못한다</td></tr>
         <tr><td>보존 기간</td><td>30~45일. 지난주 장애를 이번 주에 조사하고 몇 주 전과 비교할 수 있는 길이</td></tr>
         <tr><td>규정상 장기 보관</td><td>더 저렴한 저장소로 옮겨 보관한다(예: 금융거래기록 5년)</td></tr>
       </tbody>
@@ -110,10 +111,10 @@
   <div class="foot"><span>책 3.8: 노이즈가 너무 많아 문제를 빠르게 찾기 힘들어지고, 과도한 리소스가 소모되어 비용이 많이 든다</span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li>전부 로깅하면 찾기 어렵고 비용이 큽니다. 그래서 무엇을 찍을지부터 정합니다.</li>
-  <li>찍을 것은 나중에 읽을 일이 있는 줄, 즉 요청 경로, 상태 코드, 처리 시간, 에러와 원인입니다. 프로브 성공 로그, 같은 내용을 두 번 찍는 줄, 정상 응답 본문은 찍지 않습니다.</li>
-  <li>프로브는 kubelet이 앱에 주기적으로 보내는 확인 요청입니다. readiness는 "요청을 받을 준비가 됐나", liveness는 "아직 살아 있나"를 묻습니다. 성공할 때마다 로그를 찍으면 의미 없는 줄만 쌓입니다.</li>
-  <li>어디로 찍느냐도 정해 둡니다. 앱은 로그를 파일이 아니라 표준 출력, stdout과 stderr로 내보냅니다. 컨테이너 안 파일에 쓰면 파드가 지워질 때 함께 사라지고 수집기도 읽지 못합니다. stdout으로 찍은 줄은 노드에 남고, 이 실습에서는 Alloy가 쿠버네티스 API로 모아 Loki로 보냅니다.</li>
+  <li>전부 로깅하면 찾기 어렵고 비용이 큽니다. 그래서 무엇을 남길지부터 정합니다.</li>
+  <li>남길 것은 나중에 읽을 일이 있는 줄, 즉 요청 경로, 상태 코드, 처리 시간, 에러와 원인입니다. 프로브 성공 로그, 같은 내용을 두 번 남기는 줄, 정상 응답 본문은 남기지 않습니다.</li>
+  <li>프로브는 kubelet이 앱에 주기적으로 보내는 확인 요청입니다. readiness는 "요청을 받을 준비가 됐나", liveness는 "아직 살아 있나"를 확인합니다. 성공할 때마다 로그를 남기면 의미 없는 줄만 쌓입니다.</li>
+  <li>어디로 내보낼지도 정해 둡니다. 앱은 로그를 파일이 아니라 표준 출력, stdout과 stderr로 내보냅니다. 컨테이너 안 파일에 쓰면 파드가 지워질 때 함께 사라지고 수집기도 읽지 못합니다. stdout으로 내보낸 줄은 노드에 남고, 이 실습에서는 Alloy가 쿠버네티스 API로 모아 Loki로 보냅니다.</li>
   <li>보존 기간은 지난주 장애를 이번 주에 조사하고 몇 주 전과 비교할 수 있도록 30~45일을 둡니다. 규정상 오래 보관해야 하는 로그는 더 저렴한 저장소로 옮깁니다.</li>
   <li>프로브 로그만으로도 양이 큽니다. readiness 5초, liveness 10초 간격이면 파드 둘에서 시간당 2,000줄이 넘습니다.</li>
 </ul>
@@ -126,7 +127,7 @@
   <div class="body">
     <div class="access"><span><b>접속</b>터미널 · 작업 폴더 <code>monitoring-logging</code></span><span><b>로그인</b>필요 없음</span><span><b>메뉴</b>없음 (명령만)</span></div>
     <div class="split a" style="align-items:start">
-      <pre class="code" style="font-size:12px"><span class="c"># 준비: 30초 동안 로그를 찍고 에러로 죽는 파드</span>
+      <pre class="code" style="font-size:12px"><span class="c"># 준비: 30초 동안 로그를 남기고 에러로 종료되는 파드</span>
 kubectl create namespace demo
 kubectl -n demo apply -f labs/k8s/noisy-pod.yaml
 
@@ -159,7 +160,7 @@ error: error from server (NotFound): pods "noisy"
   <div class="foot"><span>정리: kubectl delete namespace demo · <a href="lab-guide.html#s10-1" target="_blank" rel="noopener">실습 가이드 10 로그 10-1 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
 <ul class="speaker-points">
-  <li><code>kubectl logs</code>만으로는 왜 부족한지 직접 보겠습니다. 30초 동안 로그를 찍고 에러로 끝나는 noisy 파드를 demo 네임스페이스에 만듭니다.</li>
+  <li><code>kubectl logs</code>만으로는 왜 부족한지 직접 보겠습니다. 30초 동안 로그를 남기고 에러로 끝나는 noisy 파드를 demo 네임스페이스에 만듭니다.</li>
   <li>8초 뒤에는 "작업 4" 같은 진행 로그가, 30초 더 지나면 마지막 줄 "마지막에 터졌다"가 보입니다. 파드가 Error로 끝나도 로그는 아직 남아 있습니다.</li>
   <li>그런데 파드를 지우고 다시 <code>kubectl logs</code>를 치면 <code>NotFound</code>가 나옵니다. 로그가 파드와 함께 사라진 것입니다.</li>
   <li>오른쪽 표처럼 파드는 롤아웃, HPA 축소, 노드 비우기, OOM 재시작, 로그 회전 때마다 지워지거나 잘립니다. 그래서 노드, 파드와 수명이 분리된 별도 로그 저장소가 필요합니다. 실습이 끝나면 demo 네임스페이스를 지웁니다.</li>
@@ -233,10 +234,10 @@ error: error from server (NotFound): pods "noisy"
   <aside class="notes">
 <ul class="speaker-points">
   <li>수집기는 앱이 쓴 줄만 모읍니다. 그래서 앱이 요청마다 stdout에 한 줄 남기게 해야 합니다.</li>
-  <li>journal-api는 코드에 한 줄을 넣어 요청마다 JSON 한 줄을 찍습니다. <code>kubectl -n journal logs deploy/journal-api --tail=1</code>로 보면 method, path, status, 밀리초 단위의 durationMs, 파드 이름이 나옵니다.</li>
+  <li>journal-api는 코드에 한 줄을 넣어 요청마다 JSON 한 줄을 남깁니다. <code>kubectl -n journal logs deploy/journal-api --tail=1</code>로 보면 method, path, status, 밀리초 단위의 durationMs, 파드 이름이 나옵니다.</li>
   <li>order-api는 코드를 고치지 않고 환경 변수로 톰캣 액세스 로그를 켜서 stdout으로 보냅니다. 패턴의 마지막 <code>%D</code>가 처리 시간이고 단위는 마이크로초입니다.</li>
   <li>환경 변수를 하나씩 보면, ENABLED는 액세스 로그를 켜고, DIRECTORY <code>/dev</code>와 PREFIX <code>stdout</code>을 합쳐 <code>/dev/stdout</code>, 즉 표준 출력에 쓰게 합니다. ROTATE를 false로 두는 이유는, 켜 두면 톰캣이 파일 이름 뒤에 날짜를 붙여 존재하지 않는 파일에 쓰게 되고 로그가 사라지기 때문입니다.</li>
-  <li>PATTERN의 기호는 한 줄에 찍을 칸입니다. <code>%h</code>는 클라이언트 IP, <code>%l</code>과 <code>%u</code>는 쓰지 않는 칸이라 <code>-</code>로 찍히고, <code>%t</code>는 시각, <code>%r</code>은 요청 줄, <code>%s</code>는 상태 코드, <code>%b</code>는 헤더를 뺀 응답 바이트, <code>%D</code>는 처리 시간입니다.</li>
+  <li>PATTERN의 기호는 한 줄에 들어갈 칸입니다. <code>%h</code>는 클라이언트 IP, <code>%l</code>과 <code>%u</code>는 쓰지 않는 칸이라 <code>-</code>로 채워지고, <code>%t</code>는 시각, <code>%r</code>은 요청 줄, <code>%s</code>는 상태 코드, <code>%b</code>는 헤더를 뺀 응답 바이트, <code>%D</code>는 처리 시간입니다.</li>
   <li><code>kubectl -n apps logs deploy/order-api --tail=1</code>의 마지막 줄에서 <code>200</code>은 상태 코드, <code>25</code>는 응답 바이트, <code>662</code>는 662마이크로초입니다.</li>
 </ul>
 </aside>
@@ -330,7 +331,7 @@ error: error from server (NotFound): pods "noisy"
   <li>6번은 Explore에서 데이터소스 Loki를 고르고 편집기 오른쪽에서 Code를 선택한 뒤 Label browser를 엽니다. namespace, app, pod, container 라벨이 보이면 됩니다.</li>
   <li>Builder는 버튼과 목록으로 질의를 조립하는 화면이고, Code는 질의를 글자로 직접 입력하는 화면입니다. Label browser는 Loki에 들어와 있는 라벨 이름과 값을 목록으로 보여 주는 창이라, 어떤 라벨로 고를 수 있는지 바로 알 수 있습니다.</li>
   <li>7번은 <code>{namespace="apps", app="order-api"}</code>로 order-api 로그를 엽니다. 맨 위가 가장 최근인 액세스 로그 줄이 나옵니다.</li>
-  <li>8번은 부하 시작 5분 뒤 Options에서 Type을 Instant로 바꾸고 앱별 줄 수를 셉니다. 아래 Table에 앱마다 한 줄씩, Value #A 열에 journal-api 9087, order-api 10750 정도가 나오면 수집, 저장, 조회가 모두 동작하는 것입니다.</li>
+  <li>8번은 부하 시작 5분 뒤 Options에서 Type을 Instant로 바꾸고 앱별 줄 수를 셉니다. 아래 Table에 앱마다 한 줄씩, Value #A 열에 journal-api 9087, order-api 10750 정도가 나오면 수집, 저장, 조회가 모두 동작합니다.</li>
   <li>Type의 Range는 시간에 따라 값이 어떻게 변했는지 그래프로, Instant는 지금 시점의 값 하나만 보여 줍니다. 몇 줄인지 숫자로 확인할 때는 Instant가 편합니다. Value #A는 질의 A의 결과 값이 들어 있는 열이라는 뜻입니다.</li>
 </ul>
 </aside>
@@ -351,7 +352,7 @@ error: error from server (NotFound): pods "noisy"
         <tr><td>④ 세기</td><td><code>sum by (app) (count_over_time({namespace=~"journal|apps"}[5m]))</code></td><td class="it">줄 수를 메트릭처럼. 그래프 · 알림에 쓴다</td></tr>
       </tbody>
     </table>
-    <div class="callout">PromQL과 모양이 같다: <code>{라벨}</code>로 고르고, <code>[5m]</code> 창으로 세고, <code>sum by</code>로 묶는다. 다른 점은 ②③, 본문을 거르고 꺼내는 단계가 있다는 것이다.</div>
+    <div class="callout">PromQL과 모양이 같다: <code>{라벨}</code>로 고르고, <code>[5m]</code> 창으로 세고, <code>sum by</code>로 묶는다. 다른 점은 본문을 거르고(②) 꺼내는(③) 단계가 있다는 점이다.</div>
   </div>
   <div class="foot"><span>따라하기 ①에서 연 Explore의 Code 모드에 입력한다. 로그 질의는 줄 목록, 세기 질의는 Options → Type: Instant로 두면 숫자로 나온다 · <a href="lab-guide.html#s10-5" target="_blank" rel="noopener">실습 가이드 10 로그 10-5 섹션 참고</a></span><span>{{PG}}</span></div>
   <aside class="notes">
@@ -427,7 +428,7 @@ error: error from server (NotFound): pods "noisy"
 <ul class="speaker-points">
   <li>실습이 끝나면 부하, 포트, 클러스터를 정리합니다.</li>
   <li>1번, k6가 돌고 있으면 그 터미널에서 Ctrl-C를 누르거나 <code>pkill -f k6-red</code>로 멈춥니다. 2번, <code>pkill</code>로 port-forward를 모두 끕니다.</li>
-  <li>pkill은 이름으로 프로세스를 찾아 끄는 명령이고, <code>-f</code>는 프로그램 이름뿐 아니라 실행할 때 쓴 명령줄 전체에서 찾으라는 뜻입니다. pgrep은 끄지 않고 찾기만 합니다. 뒤의 <code>|| echo "없음"</code>은 찾은 것이 하나도 없을 때 "없음"을 찍게 합니다.</li>
+  <li>pkill은 이름으로 프로세스를 찾아 끄는 명령이고, <code>-f</code>는 프로그램 이름뿐 아니라 실행할 때 쓴 명령줄 전체에서 찾으라는 뜻입니다. pgrep은 끄지 않고 찾기만 합니다. 뒤의 <code>|| echo "없음"</code>은 찾은 것이 하나도 없을 때 "없음"을 출력합니다.</li>
   <li>3번, <code>pgrep</code>으로 확인해서 "없음" 한 줄이 나오면 백그라운드 프로세스가 모두 멈춘 것입니다. 4번, demo 네임스페이스를 지웁니다.</li>
   <li>5번은 클러스터를 통째로 지울 때만 합니다. <code>kind delete cluster --name obs</code>로 노드 세 개가 지워집니다. 5번을 하지 않으면 관측 스택과 두 앱이 남아 4장부터 다시 해 볼 수 있고, Docker 메모리를 돌려받으려면 5번까지 합니다.</li>
 </ul>

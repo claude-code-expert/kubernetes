@@ -54,7 +54,7 @@
 
   <rect class="in" x="588" y="120" width="404" height="110" rx="8"/>
   <text class="t" x="612" y="164" font-size="25" font-weight="700" style="fill:#0B5A54">① 서비스 디스커버리</text>
-  <text class="s" x="612" y="202" font-size="22">긁을 대상 목록을 자동으로 갱신</text>
+  <text class="s" x="612" y="202" font-size="22">수집할 대상 목록을 자동으로 갱신</text>
 
   <rect class="in" x="588" y="250" width="404" height="110" rx="8"/>
   <text class="t" x="612" y="294" font-size="25" font-weight="700" style="fill:#0B5A54">② 스크레이프</text>

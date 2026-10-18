@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t1 d1">
   <title id="t1">관측 파이프라인 전체 지도</title>
-  <desc id="d1">메트릭은 프로메테우스가 긁어 가 시계열 DB에 저장하고 그라파나와 알림매니저가 쓴다. 로그는 Alloy가 모아 Loki에 저장하고 그라파나 Explore에서 조회한다.</desc>
+  <desc id="d1">메트릭은 프로메테우스가 수집해 시계열 DB에 저장하고 그라파나와 알림매니저가 쓴다. 로그는 Alloy가 모아 Loki에 저장하고 그라파나 Explore에서 조회한다.</desc>
   <defs>
     <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
     <marker id="a1t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>

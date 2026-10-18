@@ -51,7 +51,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(http_server_requests_seconds_count{namespace=\"$namespace\"}, service)",
+        "query": "label_values(http_server_requests_seconds_count{namespace=~\"$namespace\"}, service)",
         "refresh": 1,
         "multi": true,
         "includeAll": true,
@@ -91,7 +91,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[2m]))"
+          "expr": "sum(rate(http_server_requests_seconds_count{namespace=~\"$namespace\", service=~\"$service\"}[2m]))"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\", status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[5m])) or vector(0))"
+          "expr": "100 * (sum(rate(http_server_requests_seconds_count{namespace=~\"$namespace\", service=~\"$service\", status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{namespace=~\"$namespace\", service=~\"$service\"}[5m])) or vector(0))"
         }
       ]
     },
@@ -158,7 +158,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))"
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{namespace=~\"$namespace\", service=~\"$service\"}[5m])))"
         }
       ]
     },
@@ -212,7 +212,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service) (rate(http_server_requests_seconds_count{namespace=\"$namespace\", service=~\"$service\"}[2m]))",
+          "expr": "sum by (service) (rate(http_server_requests_seconds_count{namespace=~\"$namespace\", service=~\"$service\"}[2m]))",
           "legendFormat": "{{service}}"
         }
       ]
@@ -239,12 +239,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=~\"$namespace\", service=~\"$service\"}[5m])))",
           "legendFormat": "{{service}} P95"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(http_server_requests_seconds_bucket{namespace=~\"$namespace\", service=~\"$service\"}[5m])))",
           "legendFormat": "{{service}} P99"
         }
       ]
@@ -271,7 +271,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "topk(5, histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", service=~\"$service\"}[5m]))))",
+          "expr": "topk(5, histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{namespace=~\"$namespace\", service=~\"$service\"}[5m]))))",
           "legendFormat": "{{uri}}"
         }
       ]

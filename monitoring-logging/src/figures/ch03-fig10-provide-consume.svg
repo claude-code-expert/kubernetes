@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t10 d10">
-  <title id="t10">메트릭을 제공하는 쪽과 시각화 · 알림을 맡는 쪽</title>
-  <desc id="d10">왼쪽은 메트릭을 제공하는 쪽이다. node-exporter, cAdvisor, kube-state-metrics, 앱의 /actuator/prometheus가 HTTP로 메트릭을 내놓는다. 가운데 Prometheus가 30초마다 긁어 저장하고, Loki는 로그를 저장한다. 오른쪽은 시각화와 알림을 맡는 쪽이다. Alertmanager는 Prometheus가 보낸 알림을 묶어 Slack이나 메일로 보내고, Grafana는 PromQL과 LogQL로 질의해 대시보드를 그린다.</desc>
+  <title id="t10">메트릭을 제공하는 구성요소와 시각화 · 알림 도구</title>
+  <desc id="d10">왼쪽은 메트릭을 제공하는 구성요소다. node-exporter, cAdvisor, kube-state-metrics, 앱의 /actuator/prometheus가 HTTP로 메트릭을 제공한다. 가운데 Prometheus가 30초마다 수집해 저장하고, Loki는 로그를 저장한다. 오른쪽은 시각화와 알림 도구다. Alertmanager는 Prometheus가 보낸 알림을 묶어 Slack이나 메일로 보내고, Grafana는 PromQL과 LogQL로 질의해 대시보드를 그린다.</desc>
   <defs>
     <marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
     <marker id="a10t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>
@@ -19,9 +19,9 @@
   <!-- 열 머리 -->
   <rect class="lane" x="30" y="28" width="500" height="844" rx="14"/>
   <rect class="lane" x="1070" y="28" width="500" height="844" rx="14"/>
-  <text class="t" x="280" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#0B5A54">① 메트릭을 제공하는 쪽</text>
+  <text class="t" x="280" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#0B5A54">① 메트릭을 제공하는 구성요소</text>
   <text class="t" x="800" y="72" font-size="32" font-weight="700" text-anchor="middle">저장</text>
-  <text class="t" x="1320" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#1D5FBF">② 시각화 · 알림을 맡는 쪽</text>
+  <text class="t" x="1320" y="72" font-size="32" font-weight="700" text-anchor="middle" style="fill:#1D5FBF">② 시각화 · 알림 도구</text>
 
   <!-- ① 제공하는 쪽 -->
   <rect class="teal" x="60" y="100" width="440" height="170" rx="10"/>
@@ -46,12 +46,12 @@
   <text class="t" x="84" y="716" font-size="32" font-weight="700">앱의 /actuator/prometheus</text>
   <text class="m" x="84" y="748" font-size="20">Spring Boot Actuator 엔드포인트</text>
   <text class="t" x="84" y="786" font-size="24">order-api가 자기 요청 수 · 에러 ·</text>
-  <text class="t" x="84" y="816" font-size="24">지연을 직접 내놓는 주소</text>
+  <text class="t" x="84" y="816" font-size="24">지연을 직접 제공하는 주소</text>
 
   <!-- 가운데: 저장 -->
   <rect class="box" x="640" y="250" width="320" height="220" rx="12" style="stroke:#24292A;stroke-width:2.5"/>
   <text class="t" x="800" y="312" font-size="36" font-weight="700" text-anchor="middle">Prometheus</text>
-  <text class="t" x="800" y="352" font-size="24" text-anchor="middle">30초마다 긁어(pull)</text>
+  <text class="t" x="800" y="352" font-size="24" text-anchor="middle">30초마다 수집(pull)</text>
   <text class="t" x="800" y="382" font-size="24" text-anchor="middle">시계열로 저장</text>
   <text class="m" x="800" y="428" font-size="20" text-anchor="middle">+ 알림 규칙 평가</text>
 
@@ -66,7 +66,7 @@
   <path d="M500 565 C 560 565, 590 400, 636 375" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
   <path d="M500 755 C 580 755, 590 430, 636 405" stroke="#5A6867" stroke-width="2.5" fill="none" marker-end="url(#a10)"/>
   <text class="m" x="570" y="140" font-size="20" text-anchor="middle">30초마다</text>
-  <text class="m" x="570" y="162" font-size="20" text-anchor="middle">긁어 감</text>
+  <text class="m" x="570" y="162" font-size="20" text-anchor="middle">수집해 감</text>
 
   <!-- ② 시각화 · 알림 -->
   <rect class="yel" x="1100" y="110" width="440" height="270" rx="10"/>

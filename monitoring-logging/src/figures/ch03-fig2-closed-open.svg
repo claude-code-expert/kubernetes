@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t2 d2">
   <title id="t2">폐쇄형 모니터링과 개방형 모니터링</title>
-  <desc id="d2">폐쇄형은 시스템 밖에서 사용자처럼 요청을 보내 응답만 본다. 개방형은 시스템이 스스로 내놓는 내부 수치를 프로메테우스가 긁어 간다.</desc>
+  <desc id="d2">폐쇄형은 시스템 밖에서 사용자처럼 요청을 보내 응답만 본다. 개방형은 시스템이 스스로 제공하는 내부 수치를 프로메테우스가 수집한다.</desc>
   <defs>
     <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A6867"/></marker>
     <marker id="a2t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F766E"/></marker>

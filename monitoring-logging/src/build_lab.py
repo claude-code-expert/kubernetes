@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
-"""실습 가이드 빌드.   python3 src/build_lab.py
+"""실습 가이드 빌드.   python3 src/build_lab.py        → lab-guide.html
+                      python3 src/build_lab.py ui     → ui-guide.html (화면 실습)
 
 src/lab-guide.src.html 의 FILE 자리표시자(경로는 이 폴더 루트 기준)를 파일 내용(HTML 이스케이프)으로
 바꾸고, 목차와 스타일·스크립트를 붙여 ../lab-guide.html 을 만든다.
 """
 import html
 import re
+import sys
 from pathlib import Path
 
 SRC = Path(__file__).parent
 ROOT = SRC.parent
-OUT = ROOT / "lab-guide.html"
 GH = "https://github.com/claude-code-expert/kubernetes/blob/main/monitoring-logging/"
+KIND = sys.argv[1] if len(sys.argv) > 1 else "lab"
+CONF = {
+    "lab": ("lab-guide.src.html", "lab-guide.html", "실습 가이드",
+            '발표 슬라이드(<a href="slides.html">slides.html</a>)의 내용을 빈 kind 클러스터에서 처음부터 따라 한다. 명령은 모두 이 폴더 루트에서 실행한다.'),
+    "ui": ("ui-guide.src.html", "ui-guide.html", "화면 실습",
+           'Prometheus · Grafana · Alertmanager 웹 화면에서 직접 질의하고, 대시보드와 알림을 만든다. <a href="lab-guide.html">실습 가이드</a>로 설치를 마친 클러스터에서 시작한다.'),
+}[KIND]
+OUT = ROOT / CONF[1]
 
-body = (SRC / "lab-guide.src.html").read_text(encoding="utf-8")
+body = (SRC / CONF[0]).read_text(encoding="utf-8")
 
 
 def embed(m):
@@ -39,7 +48,7 @@ page = f"""<!doctype html>
 <html lang="ko"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>모니터링과 로깅 · 실습 가이드</title>
+<title>모니터링과 로깅 · {CONF[2]}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{{--bg:#FAFAF7;--panel:#FFFFFF;--ink:#24292A;--muted:#5A6867;--line:#D8DDD6;--teal:#0F766E;--teal-deep:#0B5A54;--teal-bg:#E0EFEB;--yellow:#8A5813;--yellow-bg:#FFF1DE;--red:#C2414A;--mono:'SFMono-Regular',Consolas,'Liberation Mono',monospace;--sans:Pretendard,'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}}
@@ -91,19 +100,25 @@ table.opt td:first-child{{font-family:var(--mono);font-size:.85rem;white-space:n
 .verdict{{margin:10px 0;padding:8px 12px;background:#F2F8F6;border-radius:6px}}
 .verdict::before{{content:"판정 ";font-weight:700;color:var(--teal-deep)}}
 .why{{margin:6px 0 10px;color:var(--ink)}}
+figure.shot{{margin:12px 0}}
+figure.shot img{{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px}}
+figure.shot figcaption{{font-size:.85rem;color:var(--muted);margin-top:4px}}
+.shot-todo{{border:1px dashed var(--line);border-radius:6px;padding:18px;color:var(--muted);font-size:.9rem;margin:12px 0}}
+ol.click{{margin:6px 0 10px;padding-left:22px}}
+ol.click li{{margin:3px 0}}
 @media (max-width:900px){{.layout{{grid-template-columns:1fr}} nav{{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}} main{{padding:24px 16px 80px}}}}
 </style>
 </head>
 <body>
 <div class="layout">
 <nav>
-  <h1>실습 가이드</h1>
+  <h1>{CONF[2]}</h1>
   <ul>{"".join(toc)}</ul>
 </nav>
 <main>
 <header class="top">
-  <h1>모니터링과 로깅 · 실습 가이드</h1>
-  <p>발표 슬라이드(<a href="slides.html">slides.html</a>)의 내용을 빈 kind 클러스터에서 처음부터 따라 한다. 명령은 모두 이 폴더 루트에서 실행한다.</p>
+  <h1>모니터링과 로깅 · {CONF[2]}</h1>
+  <p>{CONF[3]}</p>
 </header>
 {body}
 </main>

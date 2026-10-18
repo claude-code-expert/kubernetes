@@ -88,7 +88,7 @@ async function connectRedis(): Promise<void> {
   log('info', 'redis connected', { url: REDIS_URL });
 }
 
-// 프로메테우스가 긁어 갈 엔드포인트 (M20).
+// 프로메테우스가 수집해 갈 엔드포인트 (M20).
 // order-api 는 액추에이터가 /actuator/prometheus 로 열지만, 여기서는 직접 연다.
 // 경로가 다르므로 ServiceMonitor 도 앱마다 따로 써야 한다.
 app.get('/metrics', async (_req: Request, res: Response) => {
